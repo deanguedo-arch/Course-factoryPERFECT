@@ -3166,6 +3166,12 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
   const [fullSiteCode, setFullSiteCode] = useState("");
   const [isGenerated, setIsGenerated] = useState(false);
 
+  // --- EXPORT MODULE PAGE STATE ---
+  const [exportModuleId, setExportModuleId] = useState('');
+  const [exportAssessments, setExportAssessments] = useState([]);
+  const [exportTools, setExportTools] = useState([]);
+  const [exportedHTML, setExportedHTML] = useState('');
+
   const modules = projectData["Current Course"]?.modules || [];
   const toolkit = projectData["Global Toolkit"] || [];
 
@@ -3177,6 +3183,133 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
       ...projectData,
       "Global Toolkit": newToolkit
     });
+  };
+
+  // Generate Single Module Page HTML
+  const generateModulePageHTML = () => {
+    const selectedMod = modules.find(m => m.id === exportModuleId);
+    if (!selectedMod) return;
+    
+    let modCode = selectedMod.code || {};
+    if (typeof modCode === 'string') {
+        try { modCode = JSON.parse(modCode); } catch(e) {}
+    }
+
+    const allAssessments = modules.flatMap(m => m.assessments || []);
+    const selectedAssessments = allAssessments.filter(a => exportAssessments.includes(a.id));
+    const selectedTools = toolkit.filter(t => exportTools.includes(t.id));
+
+    let sectionsHTML = '';
+    let combinedScripts = '';
+
+    // Module Content
+    if (modCode.html) {
+        // Remove HTML comments that break init checks (e.g., <!-- Rubric injection point -->)
+        let cleanHTML = modCode.html.replace(/<!--[\s\S]*?-->/g, '');
+        // Remove 'hidden' class for standalone display
+        cleanHTML = cleanHTML.replace(/class="([^"]*)\bhidden\b([^"]*)"/g, 'class="$1$2"');
+        // Remove 'custom-scroll' class (not needed without navigation container)
+        cleanHTML = cleanHTML.replace(/class="([^"]*)\bcustom-scroll\b([^"]*)"/g, 'class="$1$2"');
+        // Remove 'h-full' and 'w-full' classes that cause overlap issues
+        cleanHTML = cleanHTML.replace(/class="([^"]*)\bh-full\b([^"]*)"/g, 'class="$1$2"');
+        cleanHTML = cleanHTML.replace(/class="([^"]*)\bw-full\b([^"]*)"/g, 'class="$1 w-auto max-w-full$2"');
+        // Clean up any double spaces in class
+        cleanHTML = cleanHTML.replace(/class="([^"]*)"/g, (match) => {
+            const cleanedClass = match.replace(/\s+/g, ' ').trim();
+            return cleanedClass;
+        });
+        sectionsHTML += '<section id="module-content" class="mb-12">' + cleanHTML + '</section>';
+    }
+    if (modCode.script) {
+        // Fix initialization checks - force clearing and rebuilding
+        let cleanScript = modCode.script;
+        
+        // Replace innerHTML.trim() === "" with a forced clear + check
+        cleanScript = cleanScript.replace(
+            /if\s*\(\s*sc\s*&&\s*sc\.innerHTML\.trim\(\)\s*===\s*['"]['""]\s*\)\s*{/g,
+            'if (sc) { sc.innerHTML = "";'
+        );
+        
+        // Replace sc.children.length === 0 with a forced clear
+        cleanScript = cleanScript.replace(
+            /if\s*\(\s*sc\s*&&\s*sc\.children\.length\s*===\s*0\s*\)\s*{/g,
+            'if (sc) { sc.innerHTML = "";'
+        );
+        
+        combinedScripts += '// --- MODULE SCRIPT ---\n' + cleanScript + '\n\n';
+    }
+
+    // Assessments with Selection UI
+    if (selectedAssessments.length > 0) {
+        sectionsHTML += '<section id="assessments" class="mb-12"><h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-2">📝 Assessments</h2>';
+        
+        // Assessment List (Selection Page)
+        sectionsHTML += '<div id="assessment-list"><div class="grid grid-cols-1 gap-4">';
+        selectedAssessments.forEach((assess, idx) => {
+            const qCount = assess.questions ? assess.questions.length : 'Multiple';
+            sectionsHTML += '<div class="p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 transition-all cursor-pointer group" onclick="showAssessment(' + idx + ')">' +
+                '<div class="flex items-center justify-between">' +
+                '<div class="flex-1"><div class="flex items-center gap-3 mb-2">' +
+                '<span class="text-3xl">📋</span><div>' +
+                '<h3 class="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">' + assess.title + '</h3>' +
+                '<p class="text-xs text-slate-400 uppercase tracking-wider">Mixed Assessment • ' + qCount + ' Questions</p>' +
+                '</div></div></div>' +
+                '<div class="text-purple-400 group-hover:translate-x-1 transition-transform">' +
+                '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></div></div></div>';
+        });
+        sectionsHTML += '</div></div>';
+        
+        // Individual Assessment Containers
+        selectedAssessments.forEach((assess, idx) => {
+            sectionsHTML += '<div id="assessment-' + idx + '" class="assessment-container hidden">' +
+                '<button onclick="backToAssessmentList()" class="mb-6 flex items-center gap-2 text-purple-400 hover:text-purple-300 font-bold text-sm transition-colors">' +
+                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>' +
+                'Back to Assessments</button>' +
+                assess.html + '</div>';
+            if (assess.script) combinedScripts += '// --- ASSESSMENT: ' + assess.title + ' ---\n' + assess.script + '\n\n';
+        });
+        
+        // Assessment Navigation Script
+        combinedScripts += '\n// --- ASSESSMENT NAVIGATION ---\n' +
+            'window.showAssessment = function(index) {\n' +
+            '  var listEl = document.getElementById("assessment-list");\n' +
+            '  if (listEl) listEl.classList.add("hidden");\n' +
+            '  document.querySelectorAll(".assessment-container").forEach(function(c) { c.classList.add("hidden"); });\n' +
+            '  var targetEl = document.getElementById("assessment-" + index);\n' +
+            '  if (targetEl) targetEl.classList.remove("hidden");\n' +
+            '  window.scrollTo(0, 0);\n' +
+            '};\n' +
+            'window.backToAssessmentList = function() {\n' +
+            '  document.querySelectorAll(".assessment-container").forEach(function(c) { c.classList.add("hidden"); });\n' +
+            '  var listEl = document.getElementById("assessment-list");\n' +
+            '  if (listEl) listEl.classList.remove("hidden");\n' +
+            '  window.scrollTo(0, 0);\n' +
+            '};\n\n';
+        
+        sectionsHTML += '</section>';
+    }
+
+    // Tools
+    if (selectedTools.length > 0) {
+        sectionsHTML += '<section id="toolkit" class="mb-12"><h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-2">🛠️ Tools</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
+        selectedTools.forEach(tool => {
+            let toolCode = tool.code;
+            if (typeof toolCode === 'string') { try { toolCode = JSON.parse(toolCode); } catch(e){} }
+            
+            if (toolCode.html) {
+                const visibleHTML = toolCode.html.replace(/hidden fixed/g, 'relative block bg-slate-800 p-4 rounded-xl border border-slate-700').replace(/fixed bottom-4/g, 'relative');
+                sectionsHTML += '<div>' + visibleHTML + '</div>';
+            }
+            if (toolCode.script) combinedScripts += '// --- TOOL: ' + tool.title + ' ---\n' + toolCode.script + '\n\n';
+        });
+        sectionsHTML += '</div></section>';
+    }
+
+    const finalHTML = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>' + selectedMod.title + '</title><script src="https://cdn.tailwindcss.com"><\/script><link href="https://fonts.googleapis.com/css?family=Inter:ital,wght@0,400;0,700;1,400;1,900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet"><script>tailwind.config = { darkMode: "class", theme: { extend: { fontFamily: { sans: ["Inter", "sans-serif"], mono: ["JetBrains Mono", "monospace"] } } } }<\/script><style>body { background-color: #020617; color: #e2e8f0; font-family: "Inter", sans-serif; min-height: 100vh; overflow-x: hidden; } .mono { font-family: "JetBrains Mono", monospace; } .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); } input, textarea, select { background: #0f172a !important; border: 1px solid #1e293b !important; color: #e2e8f0; } input:focus, textarea:focus, select:focus { border-color: #0ea5e9 !important; outline: none; box-shadow: 0 0 0 1px #0ea5e9; } .score-btn, .mod-nav-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; } .score-btn:hover, .mod-nav-btn:hover { border-color: #0ea5e9; color: white; } .score-btn.active, .mod-nav-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; } .step-content { display: none; } .step-content.active { display: block; } .assessment-container.hidden { display: none; } #assessment-list.hidden { display: none; } .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; } .rubric-cell:hover { background: rgba(255,255,255,0.05); } .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; } .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; } .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; } .helper-text { font-size: 8px; color: #64748b; font-style: italic; margin-top: 4px; }<\/style></head><body class="p-4 md:p-8 max-w-6xl mx-auto">' + sectionsHTML + '<script>' + combinedScripts + '<\/script></body></html>';
+
+    setExportedHTML(finalHTML);
   };
 
   const generateFullSite = () => {
@@ -3503,8 +3636,21 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
             navInjection += `\n            <button onclick="switchView('${shortId}')" id="nav-${shortId}" class="nav-item">\n                <span class="w-2 h-2 rounded-full bg-slate-600"></span>${item.title}\n            </button>`;
         }
         if (itemCode.html) {
+          // Clean and fix module script for Google Sites compatibility
+          let cleanScript = itemCode.script || '';
+          if (cleanScript) {
+            // Apply initialization fixes - force clearing and rebuilding
+            cleanScript = cleanScript.replace(
+              /if\s*\(\s*sc\s*&&\s*sc\.innerHTML\.trim\(\)\s*===\s*['"]['""]\s*\)\s*{/g,
+              'if (sc) { sc.innerHTML = "";'
+            );
+            cleanScript = cleanScript.replace(
+              /if\s*\(\s*sc\s*&&\s*sc\.children\.length\s*===\s*0\s*\)\s*{/g,
+              'if (sc) { sc.innerHTML = "";'
+            );
+          }
           // Embed script INLINE with HTML for Google Sites compatibility
-          const htmlWithInlineScript = itemCode.html + (itemCode.script ? '\n<script>\n' + itemCode.script + '\n</script>' : '');
+          const htmlWithInlineScript = itemCode.html + (cleanScript ? '\n<script>\n' + cleanScript + '\n</script>' : '');
           contentInjection += '\n        ' + htmlWithInlineScript + '\n';
         }
       }
@@ -3677,6 +3823,83 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
           <Package className="text-purple-400" /> Phase 4: Compile & Export
         </h2>
+
+        {/* --- EXPORT MODULE PAGE UI --- */}
+        <div className="mb-8 bg-slate-900/50 p-6 rounded-xl border border-blue-500/30">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <LayoutTemplate size={20} className="text-blue-400" /> Export Single Module Page
+            </h3>
+            
+            <div className="space-y-4">
+                <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Select Primary Module</label>
+                    <select 
+                        value={exportModuleId} 
+                        onChange={(e) => setExportModuleId(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm"
+                    >
+                        <option value="">-- Choose a Module --</option>
+                        {modules.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+                    </select>
+                </div>
+
+                {exportModuleId && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 h-48 overflow-y-auto">
+                            <label className="block text-xs font-bold text-purple-400 uppercase mb-2 sticky top-0 bg-slate-950 pb-2">Include Assessments</label>
+                            <div className="space-y-2">
+                                {modules.flatMap(m => m.assessments || []).map(a => (
+                                    <label key={a.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-900 p-1 rounded">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={exportAssessments.includes(a.id)}
+                                            onChange={(e) => e.target.checked ? setExportAssessments([...exportAssessments, a.id]) : setExportAssessments(exportAssessments.filter(id => id !== a.id))}
+                                            className="rounded border-slate-700 bg-slate-900 text-purple-600"
+                                        />
+                                        <span className="text-xs text-slate-300 truncate">{a.title}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 h-48 overflow-y-auto">
+                            <label className="block text-xs font-bold text-orange-400 uppercase mb-2 sticky top-0 bg-slate-950 pb-2">Include Tools</label>
+                            <div className="space-y-2">
+                                {toolkit.map(t => (
+                                    <label key={t.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-900 p-1 rounded">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={exportTools.includes(t.id)}
+                                            onChange={(e) => e.target.checked ? setExportTools([...exportTools, t.id]) : setExportTools(exportTools.filter(id => id !== t.id))}
+                                            className="rounded border-slate-700 bg-slate-900 text-orange-600"
+                                        />
+                                        <span className="text-xs text-slate-300 truncate">{t.title}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <button 
+                    onClick={generateModulePageHTML} 
+                    disabled={!exportModuleId}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <FileCode size={16} /> Generate Module HTML
+                </button>
+
+                {exportedHTML && (
+                    <div className="animate-in fade-in slide-in-from-top-2">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs font-bold text-emerald-400">✅ Successfully Generated!</span>
+                            <button onClick={() => navigator.clipboard.writeText(exportedHTML)} className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded flex items-center gap-1"><Copy size={12}/> Copy Code</button>
+                        </div>
+                        <textarea readOnly value={exportedHTML} className="w-full h-32 bg-black border border-emerald-900/50 rounded-lg p-3 text-[10px] font-mono text-emerald-500/80 focus:outline-none resize-y" />
+                    </div>
+                )}
+            </div>
+        </div>
         
         {!isGenerated ? (
             <div className="text-center py-6">
