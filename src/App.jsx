@@ -3892,6 +3892,47 @@ export default function App() {
   const [scannerNotes, setScannerNotes] = useState("");
   // Initialize state with PROJECT_DATA constant
   const [projectData, setProjectData] = useState(PROJECT_DATA);
+  // --- AUTO-SAVE STATE ---
+  const STORAGE_KEY = 'course_factory_v2_data';
+  const [isAutoLoaded, setIsAutoLoaded] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
+
+  // 💾 AUTO-LOAD: Runs once on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Safety check: ensure it has the correct structure
+        if (parsed && parsed["Current Course"]) {
+          setProjectData(parsed);
+          console.log("✅ Project restored from storage");
+        }
+      }
+      setIsAutoLoaded(true); // Allow saving to start
+    } catch (error) {
+      console.error("❌ Load failed:", error);
+      setIsAutoLoaded(true);
+    }
+  }, []);
+
+  // 💾 AUTO-SAVE: Runs when projectData changes
+  useEffect(() => {
+    if (!isAutoLoaded) return; // Safety Lock: Don't save empty defaults
+
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(projectData));
+        setLastSaved(new Date());
+        console.log("💾 Auto-saved project");
+      } catch (error) {
+        console.error("❌ Save failed:", error);
+      }
+    }, 1000); // 1-second debounce
+
+    return () => clearTimeout(timer);
+  }, [projectData, isAutoLoaded]);
+
   const [excludedIds, setExcludedIds] = useState([]);
   const [editingModule, setEditingModule] = useState(null); 
   const [editForm, setEditForm] = useState({ title: '', html: '', script: '', id: '', section: '' });
@@ -4625,7 +4666,14 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-white tracking-tight">Course Factory Dashboard</h1>
-              <p className="text-xs text-blue-400 font-mono">LIVING DOCUMENT MODE</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-blue-400 font-mono">LIVING DOC</p>
+                {lastSaved && (
+                  <span className="text-[10px] text-emerald-500 font-mono animate-pulse">
+                    • SAVED {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           
