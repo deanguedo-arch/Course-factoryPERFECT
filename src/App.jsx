@@ -3980,6 +3980,22 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
   const generateFullSite = () => {
     let finalCode = MASTER_SHELL;
     
+    // Get the course name from settings or fall back to currentCourse.name
+    const courseName = projectData["Course Settings"]?.courseName || currentCourse.name || "Course Factory";
+    const courseNameUpper = courseName.toUpperCase();
+    
+    // Replace hardcoded course name in page title (browser tab)
+    finalCode = finalCode.replace(
+      '<title>MENTAL FITNESS | MASTER CONSOLE</title>',
+      `<title>${courseNameUpper} | MASTER CONSOLE</title>`
+    );
+    
+    // Replace hardcoded course name in sidebar header (top-left corner)
+    finalCode = finalCode.replace(
+      '<h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none">Mental<br><span class="text-sky-500">Fitness</span></h1>',
+      `<h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none"><span class="text-sky-500">${courseName}</span></h1>`
+    );
+    
     // Filter active modules
     const activeModules = modules.filter(m => !excludedIds.includes(m.id));
     
