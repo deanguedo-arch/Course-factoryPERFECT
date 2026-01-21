@@ -140,7 +140,9 @@ const PROJECT_DATA = {
         
         function openPDF(url, title) {
             const container = document.getElementById('pdf-viewer-container');
-            document.getElementById('pdf-frame').src = url;
+            // Convert /view to /preview for iframe embedding
+            const previewUrl = url.replace('/view', '/preview');
+            document.getElementById('pdf-frame').src = previewUrl;
             document.getElementById('viewer-title').innerText = "VIEWING: " + title;
             container.classList.remove('hidden');
             container.scrollIntoView({ behavior: 'smooth' });
@@ -262,7 +264,8 @@ const PROJECT_DATA = {
         title: "Empty Module",
         code: {}
       }
-    ]
+    ],
+    materials: []
   },
   "Global Toolkit": [
       {
@@ -522,7 +525,9 @@ const MASTER_SHELL = `<!DOCTYPE html>
 
         function openPDF(url, title) {
             const container = document.getElementById('pdf-viewer-container');
-            document.getElementById('pdf-frame').src = url;
+            // Convert /view to /preview for iframe embedding
+            const previewUrl = url.replace('/view', '/preview');
+            document.getElementById('pdf-frame').src = previewUrl;
             document.getElementById('viewer-title').innerText = "VIEWING: " + title;
             container.classList.remove('hidden');
             container.scrollIntoView({ behavior: 'smooth' });
@@ -895,7 +900,8 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     description: '',
     viewUrl: '',
     downloadUrl: '',
-    color: 'slate'
+    color: 'slate',
+    assignedModules: []
   });
   const [generatedPrompt, setGeneratedPrompt] = useState("");
   const [aiOutput, setAiOutput] = useState("");
@@ -1441,12 +1447,12 @@ Please add the following data to the \`PROJECT_DATA\` object.
                  <button onClick={() => { setIsBatchMode(false); setHarvestType('FEATURE'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'FEATURE' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
                      <Wrench size={14} /> Feature
                  </button>
-                 <button onClick={() => { setIsBatchMode(false); setHarvestType('ASSESSMENT'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'ASSESSMENT' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
-                     <CheckCircle size={14} /> Assessment
-                 </button>
-                 <button onClick={() => { setIsBatchMode(false); setHarvestType('MATERIALS'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'MATERIALS' ? 'bg-pink-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
-                     <BookOpen size={14} /> Materials
-                 </button>
+                <button onClick={() => { setIsBatchMode(false); setHarvestType('ASSESSMENT'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'ASSESSMENT' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                    <CheckCircle size={14} /> Assessment
+                </button>
+                <button onClick={() => { setIsBatchMode(false); setHarvestType('MATERIALS'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'MATERIALS' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                    <FolderOpen size={14} /> Materials
+                </button>
                  <button onClick={() => { setIsBatchMode(false); setHarvestType('AI_MODULE'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'AI_MODULE' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
                      <Sparkles size={14} /> AI Studio
                  </button>
@@ -2360,6 +2366,33 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 placeholder="Download URL (Google Drive /view link)"
                                 className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs mb-3"
                             />
+                            
+                            {/* Module Assignment */}
+                            <div className="mb-3 p-3 bg-slate-900 rounded border border-slate-700">
+                                <label className="block text-xs font-bold text-cyan-400 uppercase mb-2">Assign to Modules (Optional)</label>
+                                <div className="space-y-2 max-h-32 overflow-y-auto">
+                                    {(() => {
+                                        const allModules = projectData["Current Course"]?.modules || [];
+                                        return allModules.map(m => (
+                                            <label key={m.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-800 p-1.5 rounded">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={materialForm.assignedModules.includes(m.id)}
+                                                    onChange={(e) => {
+                                                        const updated = e.target.checked 
+                                                            ? [...materialForm.assignedModules, m.id]
+                                                            : materialForm.assignedModules.filter(id => id !== m.id);
+                                                        setMaterialForm({...materialForm, assignedModules: updated});
+                                                    }}
+                                                    className="rounded border-slate-700 bg-slate-900 text-cyan-600"
+                                                />
+                                                <span className="text-xs text-slate-300">{m.title}</span>
+                                            </label>
+                                        ));
+                                    })()}
+                                </div>
+                            </div>
+                            
                             <button 
                                 onClick={() => {
                                     if (!materialForm.title || !materialForm.viewUrl) {
@@ -2367,7 +2400,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         return;
                                     }
                                     addMaterial(materialForm);
-                                    setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate' });
+                                    setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', assignedModules: [] });
                                 }}
                                 className="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-2 rounded text-xs flex items-center justify-center gap-2"
                             >
@@ -2379,14 +2412,13 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                         <div className="space-y-2">
                             <h4 className="text-xs font-bold text-pink-300 mb-2">Current Materials</h4>
                             {(() => {
-                                const materialsModule = projectData["Current Course"].modules.find(m => m.id === "item-1768749223001");
-                                const materials = materialsModule?.materials || [];
+                                const courseMaterials = projectData["Current Course"]?.materials || [];
                                 
-                                if (materials.length === 0) {
+                                if (courseMaterials.length === 0) {
                                     return <p className="text-xs text-slate-500 italic text-center py-4">No materials yet. Add one above.</p>;
                                 }
 
-                                return materials.sort((a, b) => a.order - b.order).map((mat) => (
+                                return courseMaterials.sort((a, b) => a.order - b.order).map((mat) => (
                                     <div key={mat.id} className="p-3 bg-slate-900 rounded-lg border border-slate-800 hover:bg-slate-800/70 transition-colors">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3 flex-1">
@@ -2428,7 +2460,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 </button>
                                                 <button 
                                                     onClick={() => moveMaterial(mat.id, 'down')}
-                                                    disabled={mat.order === materials.length - 1}
+                                                    disabled={mat.order === courseMaterials.length - 1}
                                                     className="p-1.5 hover:bg-slate-700 rounded disabled:opacity-30 rotate-180"
                                                     title="Move down"
                                                 >
@@ -2503,12 +2535,39 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             placeholder="Download URL"
                                             className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
                                         />
+                                        
+                                        {/* Module Assignment */}
+                                        <div className="p-3 bg-black/50 rounded border border-slate-700">
+                                            <label className="block text-xs font-bold text-cyan-400 uppercase mb-2">Assign to Modules (Optional)</label>
+                                            <div className="space-y-2 max-h-32 overflow-y-auto">
+                                                {(() => {
+                                                    const allModules = projectData["Current Course"]?.modules || [];
+                                                    return allModules.map(m => (
+                                                        <label key={m.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-800 p-1.5 rounded">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                checked={(materialForm.assignedModules || []).includes(m.id)}
+                                                                onChange={(e) => {
+                                                                    const currentAssigned = materialForm.assignedModules || [];
+                                                                    const updated = e.target.checked 
+                                                                        ? [...currentAssigned, m.id]
+                                                                        : currentAssigned.filter(id => id !== m.id);
+                                                                    setMaterialForm({...materialForm, assignedModules: updated});
+                                                                }}
+                                                                className="rounded border-slate-700 bg-slate-900 text-cyan-600"
+                                                            />
+                                                            <span className="text-xs text-slate-300">{m.title}</span>
+                                                        </label>
+                                                    ));
+                                                })()}
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="flex gap-3 mt-6">
                                         <button 
                                             onClick={() => {
                                                 setEditingMaterial(null);
-                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate' });
+                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', assignedModules: [] });
                                             }}
                                             className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded font-bold"
                                         >
@@ -2518,7 +2577,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             onClick={() => {
                                                 editMaterial(editingMaterial, materialForm);
                                                 setEditingMaterial(null);
-                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate' });
+                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', assignedModules: [] });
                                             }}
                                             className="flex-1 bg-pink-600 hover:bg-pink-500 text-white py-2 rounded font-bold flex items-center justify-center gap-2"
                                         >
@@ -2843,14 +2902,23 @@ ${aiDescription}
   );
 };
 
-const Phase2 = ({ projectData, onEdit, onPreview, onDelete }) => {
-  const [sourceType, setSourceType] = useState('MODULE'); // 'MODULE' or 'FEATURE'
+const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, onDelete }) => {
+  const [sourceType, setSourceType] = useState('MODULE'); // 'MODULE', 'ASSESSMENT', 'MATERIAL', or 'FEATURE'
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
+  const [materialPreview, setMaterialPreview] = useState(null);
+  const [materialEdit, setMaterialEdit] = useState(null);
   
   const currentCourse = projectData["Current Course"]?.modules || [];
   const globalToolkit = projectData["Global Toolkit"] || [];
-  const items = sourceType === 'MODULE' ? currentCourse : globalToolkit;
+  const courseMaterials = projectData["Current Course"]?.materials || [];
+  const allAssessments = currentCourse.flatMap(m => (m.assessments || []).map(a => ({...a, moduleName: m.title})));
+  
+  const items = sourceType === 'MODULE' ? currentCourse 
+                : sourceType === 'FEATURE' ? globalToolkit 
+                : sourceType === 'ASSESSMENT' ? allAssessments
+                : sourceType === 'MATERIAL' ? courseMaterials
+                : [];
   
   // Filter items based on search query
   const filteredItems = items.filter(item => 
@@ -2861,25 +2929,40 @@ const Phase2 = ({ projectData, onEdit, onPreview, onDelete }) => {
   const handlePreview = (index) => {
     const item = filteredItems[index];
     setSelectedItem(item);
-    console.log('Preview clicked:', { item, index, sourceType });
+    
+    // Show material preview modal
+    if (sourceType === 'MATERIAL') {
+      setMaterialPreview(item);
+      return;
+    }
+    if (sourceType === 'ASSESSMENT') {
+      alert('Assessment preview coming soon! Use Phase 1 to manage assessments.');
+      return;
+    }
+    
     if (onPreview) {
       // Find the original index in the unfiltered items array
       const originalIndex = items.findIndex(i => i.id === item.id);
-      console.log('Original index found:', originalIndex);
       if (originalIndex !== -1) {
         const typeParam = sourceType === 'MODULE' ? 'module' : 'toolkit';
-        console.log('Calling onPreview with:', originalIndex, typeParam);
         onPreview(originalIndex, typeParam);
-      } else {
-        console.error('Could not find original index for item:', item);
       }
-    } else {
-      console.error('onPreview prop is not defined');
     }
   };
 
   const handleEdit = (index) => {
     const item = filteredItems[index];
+    
+    // Show material edit modal
+    if (sourceType === 'MATERIAL') {
+      setMaterialEdit(item);
+      return;
+    }
+    if (sourceType === 'ASSESSMENT') {
+      alert('Please edit assessments in Phase 1');
+      return;
+    }
+    
     if (onEdit) {
       const originalIndex = items.findIndex(i => i.id === item.id);
       onEdit(originalIndex, sourceType === 'MODULE' ? 'module' : 'toolkit');
@@ -2895,6 +2978,10 @@ const Phase2 = ({ projectData, onEdit, onPreview, onDelete }) => {
 
   const getCodeStats = (item) => {
     try {
+      // Materials and Assessments don't have code property
+      if (!item.code) {
+        return { htmlLength: 0, scriptLength: 0, total: 0 };
+      }
       const code = typeof item.code === 'string' ? JSON.parse(item.code) : item.code;
       const htmlLength = code.html?.length || 0;
       const scriptLength = code.script?.length || 0;
@@ -2915,18 +3002,30 @@ const Phase2 = ({ projectData, onEdit, onPreview, onDelete }) => {
         </p>
 
         {/* SOURCE TOGGLE */}
-        <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-700 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-900 p-1 rounded-lg border border-slate-700 mb-4">
             <button 
                 onClick={() => { setSourceType('MODULE'); setSearchQuery(""); setSelectedItem(null); }}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-xs font-bold transition-all ${sourceType === 'MODULE' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all ${sourceType === 'MODULE' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
             >
-                <Box size={14} /> Course Modules ({currentCourse.length})
+                <Box size={14} /> Modules ({currentCourse.length})
+            </button>
+            <button 
+                onClick={() => { setSourceType('ASSESSMENT'); setSearchQuery(""); setSelectedItem(null); }}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all ${sourceType === 'ASSESSMENT' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+                <CheckCircle size={14} /> Assessments
+            </button>
+            <button 
+                onClick={() => { setSourceType('MATERIAL'); setSearchQuery(""); setSelectedItem(null); }}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all ${sourceType === 'MATERIAL' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+                <FolderOpen size={14} /> Materials
             </button>
             <button 
                 onClick={() => { setSourceType('FEATURE'); setSearchQuery(""); setSelectedItem(null); }}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-xs font-bold transition-all ${sourceType === 'FEATURE' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all ${sourceType === 'FEATURE' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
             >
-                <Wrench size={14} /> Global Toolkit ({globalToolkit.length})
+                <Wrench size={14} /> Toolkit ({globalToolkit.length})
             </button>
         </div>
 
@@ -3019,6 +3118,196 @@ const Phase2 = ({ projectData, onEdit, onPreview, onDelete }) => {
             </div>
         )}
       </div>
+      
+      {/* MATERIAL PREVIEW MODAL */}
+      {materialPreview && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setMaterialPreview(null)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Eye size={20} className="text-cyan-400" />
+                  Material Preview: {materialPreview.title}
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">{materialPreview.description}</p>
+              </div>
+              <button onClick={() => setMaterialPreview(null)} className="text-slate-400 hover:text-white transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+              {materialPreview.viewUrl && (
+                <div className="mb-6">
+                  <div className="bg-black rounded-lg border border-slate-700 overflow-hidden">
+                    <iframe 
+                      src={materialPreview.viewUrl.replace('/view', '/preview')} 
+                      width="100%" 
+                      height="600" 
+                      style={{border: 'none'}}
+                      title={materialPreview.title}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4 bg-slate-950 p-4 rounded-lg border border-slate-800">
+                <div>
+                  <span className="text-xs font-bold text-slate-500 uppercase">Number</span>
+                  <p className="text-white">{materialPreview.number || 'N/A'}</p>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-500 uppercase">Color</span>
+                  <p className="text-white capitalize">{materialPreview.color || 'slate'}</p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-xs font-bold text-slate-500 uppercase">View URL</span>
+                  <p className="text-cyan-400 text-xs break-all">{materialPreview.viewUrl || 'N/A'}</p>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-xs font-bold text-slate-500 uppercase">Download URL</span>
+                  <p className="text-cyan-400 text-xs break-all">{materialPreview.downloadUrl || 'N/A'}</p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-6">
+                <button 
+                  onClick={() => {
+                    setMaterialPreview(null);
+                    setMaterialEdit(materialPreview);
+                  }}
+                  className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+                >
+                  <PenTool size={16} /> Edit Material
+                </button>
+                {materialPreview.downloadUrl && (
+                  <a 
+                    href={materialPreview.downloadUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+                  >
+                    <Download size={16} /> Download
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* MATERIAL EDIT MODAL */}
+      {materialEdit && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setMaterialEdit(null)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <PenTool size={20} className="text-cyan-400" />
+                Edit Material
+              </h3>
+              <button onClick={() => setMaterialEdit(null)} className="text-slate-400 hover:text-white transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Number</label>
+                    <input 
+                      type="text"
+                      value={materialEdit.number || ''}
+                      onChange={(e) => setMaterialEdit({...materialEdit, number: e.target.value})}
+                      placeholder="e.g., 05"
+                      className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Color</label>
+                    <select
+                      value={materialEdit.color || 'slate'}
+                      onChange={(e) => setMaterialEdit({...materialEdit, color: e.target.value})}
+                      className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                    >
+                      <option value="slate">Gray</option>
+                      <option value="rose">Red</option>
+                      <option value="amber">Orange</option>
+                      <option value="emerald">Green</option>
+                      <option value="sky">Blue</option>
+                      <option value="purple">Purple</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Title</label>
+                  <input 
+                    type="text"
+                    value={materialEdit.title || ''}
+                    onChange={(e) => setMaterialEdit({...materialEdit, title: e.target.value})}
+                    placeholder="Material title"
+                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Description</label>
+                  <input 
+                    type="text"
+                    value={materialEdit.description || ''}
+                    onChange={(e) => setMaterialEdit({...materialEdit, description: e.target.value})}
+                    placeholder="Brief description"
+                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">View URL</label>
+                  <input 
+                    type="text"
+                    value={materialEdit.viewUrl || ''}
+                    onChange={(e) => setMaterialEdit({...materialEdit, viewUrl: e.target.value})}
+                    placeholder="Google Drive /preview or /view link"
+                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-xs font-mono"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Download URL</label>
+                  <input 
+                    type="text"
+                    value={materialEdit.downloadUrl || ''}
+                    onChange={(e) => setMaterialEdit({...materialEdit, downloadUrl: e.target.value})}
+                    placeholder="Google Drive /view link"
+                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-xs font-mono"
+                  />
+                </div>
+                
+                <div className="flex gap-3 mt-6">
+                  <button 
+                    onClick={() => setMaterialEdit(null)}
+                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (editMaterial) {
+                        editMaterial(materialEdit.id, materialEdit);
+                      }
+                      setMaterialEdit(null);
+                    }}
+                    className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+                  >
+                    <Save size={16} /> Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -3169,10 +3458,12 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
   // --- EXPORT MODULE PAGE STATE ---
   const [exportModuleId, setExportModuleId] = useState('');
   const [exportAssessments, setExportAssessments] = useState([]);
+  const [exportMaterials, setExportMaterials] = useState([]);
   const [exportTools, setExportTools] = useState([]);
   const [exportedHTML, setExportedHTML] = useState('');
 
   const modules = projectData["Current Course"]?.modules || [];
+  const materials = projectData["Current Course"]?.materials || [];
   const toolkit = projectData["Global Toolkit"] || [];
 
   // Toolkit toggle functions
@@ -3291,6 +3582,74 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
         sectionsHTML += '</section>';
     }
 
+    // Materials (selected by user)
+    const selectedMaterials = materials.filter(mat => exportMaterials.includes(mat.id));
+    if (selectedMaterials.length > 0) {
+        sectionsHTML += '<section id="materials" class="mb-12"><h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-2">📚 Materials</h2>';
+        
+        // Material viewer container
+        sectionsHTML += '<div id="material-viewer" class="hidden mb-8 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl">' +
+            '<div class="flex justify-between items-center p-3 bg-slate-800 border-b border-slate-700">' +
+            '<span id="material-viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Material Viewer</span>' +
+            '<button onclick="closeMaterialViewer()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>' +
+            '</div>' +
+            '<iframe id="material-frame" src="" width="100%" height="600" style="border:none;"></iframe>' +
+            '</div>';
+        
+        sectionsHTML += '<div class="space-y-4">';
+        selectedMaterials.forEach((mat, idx) => {
+            const colorClass = mat.color || 'slate';
+            const bgClass = colorClass !== 'slate' ? 'bg-' + colorClass + '-500/10' : 'bg-slate-800';
+            const borderClass = colorClass !== 'slate' ? 'border-l-4 border-l-' + colorClass + '-500' : '';
+            const textColorClass = colorClass !== 'slate' ? 'text-' + colorClass + '-500' : 'text-slate-500';
+            const buttonColorClass = colorClass !== 'slate' ? 'bg-' + colorClass + '-600 hover:bg-' + colorClass + '-500' : 'bg-sky-600 hover:bg-sky-500';
+            
+            // Convert /view to /preview for iframe embedding
+            const previewUrl = mat.viewUrl ? mat.viewUrl.replace('/view', '/preview') : '';
+            
+            sectionsHTML += '<div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-xl border border-slate-700 ' + bgClass + ' ' + borderClass + '">' +
+                '<div class="flex items-center gap-4">' +
+                '<div class="w-12 h-12 rounded-lg flex items-center justify-center ' + textColorClass + ' font-black text-xl border border-slate-700">' + (mat.number || '📄') + '</div>' +
+                '<div>' +
+                '<h3 class="text-lg font-bold text-white uppercase italic">' + mat.title + '</h3>' +
+                '<p class="text-xs text-slate-400">' + (mat.description || '') + '</p>' +
+                '</div></div>' +
+                '<div class="flex gap-3 w-full md:w-auto">';
+            
+            if (mat.viewUrl) {
+                sectionsHTML += '<button onclick="openMaterialViewer(\'' + previewUrl.replace(/'/g, "\\'") + '\', \'' + mat.title.replace(/'/g, "\\'") + '\')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase px-6 py-3 rounded-lg border border-slate-600 transition-all text-center">View Inline</button>';
+            }
+            if (mat.downloadUrl) {
+                sectionsHTML += '<a href="' + mat.downloadUrl + '" target="_blank" class="flex-1 ' + buttonColorClass + ' text-white text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center">Download</a>';
+            }
+            
+            sectionsHTML += '</div></div>';
+        });
+        sectionsHTML += '</div></section>';
+        
+        // Add material viewer functions to script
+        combinedScripts += '\n// --- MATERIAL VIEWER FUNCTIONS ---\n' +
+            'window.openMaterialViewer = function(url, title) {\n' +
+            '  var viewer = document.getElementById("material-viewer");\n' +
+            '  var frame = document.getElementById("material-frame");\n' +
+            '  var titleEl = document.getElementById("material-viewer-title");\n' +
+            '  if (viewer && frame && titleEl) {\n' +
+            '    frame.src = url;\n' +
+            '    titleEl.textContent = title;\n' +
+            '    viewer.classList.remove("hidden");\n' +
+            '    viewer.scrollIntoView({ behavior: "smooth", block: "start" });\n' +
+            '  }\n' +
+            '};\n' +
+            'window.closeMaterialViewer = function() {\n' +
+            '  var viewer = document.getElementById("material-viewer");\n' +
+            '  var frame = document.getElementById("material-frame");\n' +
+            '  if (viewer && frame) {\n' +
+            '    viewer.classList.add("hidden");\n' +
+            '    frame.src = "";\n' +
+            '  }\n' +
+            '};\n\n';
+    }
+
     // Tools
     if (selectedTools.length > 0) {
         sectionsHTML += '<section id="toolkit" class="mb-12"><h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-2">🛠️ Tools</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
@@ -3336,7 +3695,9 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
       
       // Special handling for Course Materials module
       if (item.id === "item-1768749223001" || item.title === "Course Materials") {
-        const materials = (item.materials || []).filter(m => !m.hidden).sort((a, b) => a.order - b.order);
+        // Use course-level materials instead of module-specific materials
+        const courseMaterials = projectData["Current Course"]?.materials || [];
+        const materials = courseMaterials.filter(m => !m.hidden).sort((a, b) => a.order - b.order);
         
         // Generate material cards dynamically
         const materialCards = materials.map(mat => {
@@ -3844,7 +4205,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
                 </div>
 
                 {exportModuleId && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 h-48 overflow-y-auto">
                             <label className="block text-xs font-bold text-purple-400 uppercase mb-2 sticky top-0 bg-slate-950 pb-2">Include Assessments</label>
                             <div className="space-y-2">
@@ -3857,6 +4218,23 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
                                             className="rounded border-slate-700 bg-slate-900 text-purple-600"
                                         />
                                         <span className="text-xs text-slate-300 truncate">{a.title}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 h-48 overflow-y-auto">
+                            <label className="block text-xs font-bold text-cyan-400 uppercase mb-2 sticky top-0 bg-slate-950 pb-2">Include Materials</label>
+                            <div className="space-y-2">
+                                {materials.map(mat => (
+                                    <label key={mat.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-900 p-1 rounded">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={exportMaterials.includes(mat.id)}
+                                            onChange={(e) => e.target.checked ? setExportMaterials([...exportMaterials, mat.id]) : setExportMaterials(exportMaterials.filter(id => id !== mat.id))}
+                                            className="rounded border-slate-700 bg-slate-900 text-cyan-600"
+                                        />
+                                        <span className="text-xs text-slate-300 truncate">{mat.title}</span>
                                     </label>
                                 ))}
                             </div>
@@ -4327,59 +4705,6 @@ export default function App() {
     });
   };
 
-  const addMaterial = (materialData) => {
-    const materialsModule = getMaterialsModule();
-    const materials = materialsModule?.materials || [];
-    const newMaterial = {
-      id: `mat-${Date.now()}`,
-      order: materials.length,
-      hidden: false,
-      ...materialData
-    };
-    updateMaterialsModule([...materials, newMaterial]);
-  };
-
-  const editMaterial = (materialId, updatedData) => {
-    const materialsModule = getMaterialsModule();
-    const materials = materialsModule?.materials || [];
-    const updated = materials.map(m => m.id === materialId ? { ...m, ...updatedData } : m);
-    updateMaterialsModule(updated);
-  };
-
-  const deleteMaterial = (materialId) => {
-    if (!confirm("Delete this material? This cannot be undone.")) return;
-    const materialsModule = getMaterialsModule();
-    const materials = materialsModule?.materials || [];
-    const updated = materials.filter(m => m.id !== materialId);
-    updateMaterialsModule(updated);
-  };
-
-  const moveMaterial = (materialId, direction) => {
-    const materialsModule = getMaterialsModule();
-    const materials = materialsModule?.materials || [];
-    const index = materials.findIndex(m => m.id === materialId);
-    if (index === -1) return;
-    
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= materials.length) return;
-    
-    const newMaterials = [...materials];
-    [newMaterials[index], newMaterials[newIndex]] = [newMaterials[newIndex], newMaterials[index]];
-    
-    // Update order values
-    newMaterials.forEach((m, idx) => m.order = idx);
-    updateMaterialsModule(newMaterials);
-  };
-
-  const toggleMaterialHidden = (materialId) => {
-    const materialsModule = getMaterialsModule();
-    const materials = materialsModule?.materials || [];
-    const updated = materials.map(m => 
-      m.id === materialId ? { ...m, hidden: !m.hidden } : m
-    );
-    updateMaterialsModule(updated);
-  };
-
   const updateAssessmentsModule = (updatedAssessments) => {
     const moduleIndex = currentCourse.modules.findIndex(m => m.id === "item-assessments" || m.title === "Assessments");
     if (moduleIndex === -1) return;
@@ -4449,6 +4774,87 @@ export default function App() {
       a.id === assessmentId ? { ...a, hidden: !a.hidden } : a
     );
     updateAssessmentsModule(updated);
+  };
+
+  // MATERIALS FUNCTIONS
+  const addMaterial = (materialData) => {
+    const currentMaterials = projectData["Current Course"]?.materials || [];
+    const newMaterial = {
+      id: `mat-${Date.now()}`,
+      order: currentMaterials.length,
+      hidden: false,
+      assignedModules: [],
+      ...materialData
+    };
+    setProjectData({
+      ...projectData,
+      "Current Course": {
+        ...projectData["Current Course"],
+        materials: [...currentMaterials, newMaterial]
+      }
+    });
+  };
+
+  const editMaterial = (materialId, updatedData) => {
+    const currentMaterials = projectData["Current Course"]?.materials || [];
+    const updated = currentMaterials.map(m => m.id === materialId ? { ...m, ...updatedData } : m);
+    setProjectData({
+      ...projectData,
+      "Current Course": {
+        ...projectData["Current Course"],
+        materials: updated
+      }
+    });
+  };
+
+  const deleteMaterial = (materialId) => {
+    if (!confirm("Delete this material? This cannot be undone.")) return;
+    const currentMaterials = projectData["Current Course"]?.materials || [];
+    const updated = currentMaterials.filter(m => m.id !== materialId);
+    setProjectData({
+      ...projectData,
+      "Current Course": {
+        ...projectData["Current Course"],
+        materials: updated
+      }
+    });
+  };
+
+  const moveMaterial = (materialId, direction) => {
+    const currentMaterials = projectData["Current Course"]?.materials || [];
+    const index = currentMaterials.findIndex(m => m.id === materialId);
+    if (index === -1) return;
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === currentMaterials.length - 1) return;
+
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    const reordered = [...currentMaterials];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(newIndex, 0, moved);
+    
+    // Update order property
+    const updated = reordered.map((m, i) => ({ ...m, order: i }));
+    setProjectData({
+      ...projectData,
+      "Current Course": {
+        ...projectData["Current Course"],
+        materials: updated
+      }
+    });
+  };
+
+  const toggleMaterialHidden = (materialId) => {
+    const currentMaterials = projectData["Current Course"]?.materials || [];
+    const updated = currentMaterials.map(m => 
+      m.id === materialId ? { ...m, hidden: !m.hidden } : m
+    );
+    setProjectData({
+      ...projectData,
+      "Current Course": {
+        ...projectData["Current Course"],
+        materials: updated
+      }
+    });
   };
 
   // MASTER ASSESSMENT FUNCTIONS
@@ -5075,7 +5481,7 @@ export default function App() {
         <main className="flex-grow min-h-[600px]">
           {activePhase === 0 && <Phase0 />}
           {activePhase === 1 && <Phase1 projectData={projectData} setProjectData={setProjectData} scannerNotes={scannerNotes} setScannerNotes={setScannerNotes} addMaterial={addMaterial} editMaterial={editMaterial} deleteMaterial={deleteMaterial} moveMaterial={moveMaterial} toggleMaterialHidden={toggleMaterialHidden} addAssessment={addAssessment} editAssessment={editAssessment} deleteAssessment={deleteAssessment} moveAssessment={moveAssessment} toggleAssessmentHidden={toggleAssessmentHidden} addQuestionToMaster={addQuestionToMaster} moveQuestion={moveQuestion} deleteQuestion={deleteQuestion} updateQuestion={updateQuestion} clearMasterAssessment={clearMasterAssessment} masterQuestions={masterQuestions} setMasterQuestions={setMasterQuestions} masterAssessmentTitle={masterAssessmentTitle} setMasterAssessmentTitle={setMasterAssessmentTitle} currentQuestionType={currentQuestionType} setCurrentQuestionType={setCurrentQuestionType} currentQuestion={currentQuestion} setCurrentQuestion={setCurrentQuestion} editingQuestion={editingQuestion} setEditingQuestion={setEditingQuestion} generateMixedAssessment={generateMixedAssessment} generatedAssessment={generatedAssessment} setGeneratedAssessment={setGeneratedAssessment} assessmentType={assessmentType} setAssessmentType={setAssessmentType} assessmentTitle={assessmentTitle} setAssessmentTitle={setAssessmentTitle} quizQuestions={quizQuestions} setQuizQuestions={setQuizQuestions} printInstructions={printInstructions} setPrintInstructions={setPrintInstructions} editingAssessment={editingAssessment} setEditingAssessment={setEditingAssessment} migrateCode={migrateCode} setMigrateCode={setMigrateCode} migratePrompt={migratePrompt} setMigratePrompt={setMigratePrompt} migrateOutput={migrateOutput} setMigrateOutput={setMigrateOutput} />}
-          {activePhase === 2 && <Phase2 projectData={projectData} onEdit={openEditModule} onPreview={openPreview} onDelete={deleteModule} />}
+          {activePhase === 2 && <Phase2 projectData={projectData} setProjectData={setProjectData} editMaterial={editMaterial} onEdit={openEditModule} onPreview={openPreview} onDelete={deleteModule} />}
           {activePhase === 3 && <Phase3 onGoToMaster={() => setActivePhase(0)} projectData={projectData} setProjectData={setProjectData} />}
           {activePhase === 4 && <Phase4 projectData={projectData} setProjectData={setProjectData} excludedIds={excludedIds} toggleModule={toggleModuleExclusion} />}
           {activePhase === 5 && <PhaseToolkit projectData={projectData} />}
