@@ -84,7 +84,7 @@ const PROJECT_DATA = {
             order: 4
           }
         ],
-        html: `<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
+          html: `<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
             <div class="max-w-5xl mx-auto space-y-8">
                 <div class="mb-12">
                     <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Course <span class="text-sky-500">Materials</span></h2>
@@ -211,7 +211,7 @@ const PROJECT_DATA = {
         id: "item-1768750987350",
         title: "Phase 1: The Engine",
         type: "standalone",
-        html: `<div id="view-phase1" class="w-full h-full custom-scroll hidden p-4 md:p-8">
+          html: `<div id="view-phase1" class="w-full h-full custom-scroll hidden p-4 md:p-8">
             <div class="max-w-6xl mx-auto">
                 <header class="mb-8 text-center"><h1 class="text-3xl font-black italic tracking-tighter text-white uppercase mb-2 text-sky-500">Elite Operator Toolkit</h1><p class="text-[10px] font-mono uppercase tracking-[0.3em] text-slate-500 mb-6 font-bold underline decoration-sky-500/30 underline-offset-4">Regulation Engine: Tactical Assignment</p><div class="flex flex-wrap justify-center gap-3 mb-6 bg-slate-900/50 p-3 rounded-xl border border-slate-800 max-w-2xl mx-auto"><div class="flex items-center gap-2 px-3"><div id="p1-save-indicator" class="w-2 h-2 rounded-full bg-slate-600"></div><span id="p1-save-text" class="text-[9px] uppercase font-bold text-slate-500 tracking-widest">System Ready</span></div><div class="w-px h-6 bg-slate-800 mx-2 hidden sm:block"></div><button onclick="p1_downloadBackup()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-[10px] uppercase font-bold tracking-wider transition-colors border border-slate-700">Save Backup File</button><button onclick="document.getElementById('p1-file-upload').click()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-sky-400 px-3 py-1.5 rounded-lg text-[10px] uppercase font-bold tracking-wider transition-colors border border-slate-700">Load Backup</button><input type="file" id="p1-file-upload" accept=".json" style="display: none;" onchange="p1_loadBackup(this)"></div><div class="flex justify-center gap-2 overflow-x-auto pb-2 px-2"><button onclick="p1_showStep(0)" class="mod-nav-btn active px-4 py-2 rounded-lg border border-slate-700 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">Briefing</button><button onclick="p1_showStep(1)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-700 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">01 Stress Reset</button><button onclick="p1_showStep(2)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-700 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">02 Arousal</button><button onclick="p1_showStep(3)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-800 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">03 Targeting</button><button onclick="p1_showStep(4)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-800 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">04 Confidence</button><button onclick="p1_showStep(5)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-800 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">Review & Print</button></div></header>
                 <div class="glass rounded-3xl shadow-2xl overflow-hidden min-h-[500px]">
@@ -772,6 +772,111 @@ function cleanModuleScript(script) {
   return cleaned;
 }
 
+/**
+ * Validate module before saving
+ * Returns: { isValid, errors, warnings }
+ */
+function validateModule(module, isNew = false) {
+  const errors = [];
+  const warnings = [];
+
+  // Required fields
+  if (!module.id || !module.id.trim()) {
+    errors.push('Module ID is required');
+  } else {
+    // ID format validation
+    if (!module.id.startsWith('view-') && !module.id.startsWith('item-')) {
+      warnings.push('Module ID should start with "view-" or "item-"');
+    }
+    
+    // Check for invalid characters
+    if (!/^[a-z0-9-_]+$/i.test(module.id)) {
+      errors.push('Module ID can only contain letters, numbers, hyphens, and underscores');
+    }
+  }
+
+  if (!module.title || !module.title.trim()) {
+    errors.push('Module title is required');
+  }
+
+  // Type-specific validation
+  if (module.type === 'standalone') {
+    if (!module.html || !module.html.trim()) {
+      errors.push('Standalone modules must have HTML content');
+    } else {
+      // Check if HTML has a root container with matching ID
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(module.html, 'text/html');
+        const rootElement = doc.querySelector(`#${module.id}`);
+        if (!rootElement) {
+          warnings.push(`HTML should contain a root element with id="${module.id}"`);
+        }
+      } catch (e) {
+        warnings.push('Could not parse HTML to check for root element');
+      }
+    }
+  } else if (module.type === 'external') {
+    if (!module.url || !module.url.trim()) {
+      errors.push('External modules must have a URL');
+    } else {
+      // URL validation
+      try {
+        new URL(module.url);
+      } catch (e) {
+        errors.push('Invalid URL format');
+      }
+    }
+    if (!module.linkType || !['iframe', 'newtab'].includes(module.linkType)) {
+      errors.push('External modules must specify linkType as "iframe" or "newtab"');
+    }
+  } else if (!module.type) {
+    // Legacy module
+    if (!module.code) {
+      errors.push('Legacy modules must have a code property');
+    } else {
+      let code = module.code;
+      if (typeof code === 'string') {
+        try {
+          code = JSON.parse(code);
+        } catch (e) {
+          errors.push('Invalid code JSON format');
+          return { isValid: false, errors, warnings };
+        }
+      }
+      if (!code.html || !code.html.trim()) {
+        errors.push('Legacy modules must have code.html');
+      }
+    }
+  }
+
+  // Script validation (warnings only - scripts might be optional)
+  if (module.script) {
+    // Check for common issues
+    if (module.script.includes('document.write')) {
+      warnings.push('Using document.write() can cause issues in iframes');
+    }
+    if (module.script.includes('window.location') && !module.script.includes('preventDefault')) {
+      warnings.push('Direct window.location changes may break navigation');
+    }
+  }
+
+  // CSS validation (warnings only)
+  if (module.css) {
+    // Check for unscoped selectors that might conflict (basic check)
+    const hasUnscopedSelectors = /^[^{}@]+{/gm.test(module.css);
+    if (hasUnscopedSelectors && module.id && !module.css.includes('#' + module.id)) {
+      warnings.push('Some CSS selectors may not be scoped to the module ID - may cause conflicts');
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings
+  };
+}
+
 // --- Phases ---
 
 const Phase0 = () => {
@@ -1012,7 +1117,7 @@ const BatchHarvester = ({ onImport }) => {
 
 const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, assessmentType, setAssessmentType, assessmentTitle, setAssessmentTitle, quizQuestions, setQuizQuestions, printInstructions, setPrintInstructions, editingAssessment, setEditingAssessment, migrateCode, setMigrateCode, migratePrompt, setMigratePrompt, migrateOutput, setMigrateOutput }) => {
   const [harvestType, setHarvestType] = useState('MODULE_MANAGER'); // 'FEATURE', 'ASSET', 'ASSESSMENT', 'AI_MODULE', 'MODULE_MANAGER'
-  const [mode, setMode] = useState('B');
+  const [mode, setMode] = useState('B'); 
   
   // MODULE MANAGER STATE
   const [moduleManagerType, setModuleManagerType] = useState('standalone'); // 'standalone' | 'external'
@@ -1028,7 +1133,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   const [stagingJson, setStagingJson] = useState("");
   const [stagingTitle, setStagingTitle] = useState("");
   const [saveStatus, setSaveStatus] = useState(null); // 'success'
-  
+
   // NEW: Error State for manual imports
   const [importError, setImportError] = useState(null);
 
@@ -1093,62 +1198,62 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     
     // MULTIPLE CHOICE QUIZ
     if (assessmentType === 'quiz') {
-      const questionsHtml = quizQuestions.map((q, idx) => `
-        <div class="mb-8 p-6 bg-slate-900 rounded-xl border border-slate-700">
-          <h3 class="text-lg font-bold text-white mb-4">${idx + 1}. ${q.question}</h3>
-          <div class="space-y-2">
-            ${q.options.map((opt, optIdx) => `
-              <label class="flex items-center gap-3 p-3 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-750 transition-colors">
-                <input type="radio" name="q${idx}" value="${optIdx}" class="w-4 h-4" />
-                <span class="text-slate-300">${opt}</span>
-              </label>
-            `).join('')}
-          </div>
+    const questionsHtml = quizQuestions.map((q, idx) => `
+      <div class="mb-8 p-6 bg-slate-900 rounded-xl border border-slate-700">
+        <h3 class="text-lg font-bold text-white mb-4">${idx + 1}. ${q.question}</h3>
+        <div class="space-y-2">
+          ${q.options.map((opt, optIdx) => `
+            <label class="flex items-center gap-3 p-3 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-750 transition-colors">
+              <input type="radio" name="q${idx}" value="${optIdx}" class="w-4 h-4" />
+              <span class="text-slate-300">${opt}</span>
+            </label>
+          `).join('')}
         </div>
-      `).join('');
+      </div>
+    `).join('');
 
-      const answers = quizQuestions.map(q => q.correct);
+    const answers = quizQuestions.map(q => q.correct);
 
-      const html = `<div id="${quizId}" class="w-full h-full custom-scroll p-8">
-        <div class="max-w-4xl mx-auto">
-          <header class="mb-8">
-            <h1 class="text-3xl font-black text-white italic mb-2">${assessmentTitle}</h1>
-            <p class="text-sm text-slate-400">Select the best answer for each question.</p>
-          </header>
-          <form id="${quizId}-form" class="space-y-6">
-            ${questionsHtml}
-            <div class="flex gap-4">
+    const html = `<div id="${quizId}" class="w-full h-full custom-scroll p-8">
+      <div class="max-w-4xl mx-auto">
+        <header class="mb-8">
+          <h1 class="text-3xl font-black text-white italic mb-2">${assessmentTitle}</h1>
+          <p class="text-sm text-slate-400">Select the best answer for each question.</p>
+        </header>
+        <form id="${quizId}-form" class="space-y-6">
+          ${questionsHtml}
+          <div class="flex gap-4">
               <button type="button" onclick="${quizId}_submit()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-8 rounded-lg">Submit Quiz</button>
-              <button type="button" onclick="${quizId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-8 rounded-lg">Reset</button>
-            </div>
-          </form>
-          <div id="${quizId}-result" class="hidden mt-6 p-6 rounded-xl"></div>
-        </div>
-      </div>`;
+            <button type="button" onclick="${quizId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-8 rounded-lg">Reset</button>
+          </div>
+        </form>
+        <div id="${quizId}-result" class="hidden mt-6 p-6 rounded-xl"></div>
+      </div>
+    </div>`;
 
-      const script = `
-      const ${quizId}_answers = ${JSON.stringify(answers)};
-      function ${quizId}_submit() {
-        const form = document.getElementById('${quizId}-form');
-        let score = 0;
-        let total = ${quizId}_answers.length;
-        ${quizId}_answers.forEach((correctAnswer, idx) => {
-          const selected = form.querySelector('input[name="q' + idx + '"]:checked');
-          if (selected && parseInt(selected.value) === correctAnswer) {
-            score++;
-          }
-        });
-        const percentage = Math.round((score / total) * 100);
-        const resultDiv = document.getElementById('${quizId}-result');
-        resultDiv.className = percentage >= 70 ? 'mt-6 p-6 rounded-xl bg-emerald-900/20 border border-emerald-500' : 'mt-6 p-6 rounded-xl bg-rose-900/20 border border-rose-500';
-        resultDiv.innerHTML = '<h3 class="text-2xl font-bold mb-2">' + (percentage >= 70 ? '✅ Passed!' : '❌ Keep Trying') + '</h3><p class="text-lg">Score: ' + score + '/' + total + ' (' + percentage + '%)</p>';
-        resultDiv.classList.remove('hidden');
-      }
-      function ${quizId}_reset() {
-        document.getElementById('${quizId}-form').reset();
-        document.getElementById('${quizId}-result').classList.add('hidden');
-      }
-      `;
+    const script = `
+    const ${quizId}_answers = ${JSON.stringify(answers)};
+    function ${quizId}_submit() {
+      const form = document.getElementById('${quizId}-form');
+      let score = 0;
+      let total = ${quizId}_answers.length;
+      ${quizId}_answers.forEach((correctAnswer, idx) => {
+        const selected = form.querySelector('input[name="q' + idx + '"]:checked');
+        if (selected && parseInt(selected.value) === correctAnswer) {
+          score++;
+        }
+      });
+      const percentage = Math.round((score / total) * 100);
+      const resultDiv = document.getElementById('${quizId}-result');
+      resultDiv.className = percentage >= 70 ? 'mt-6 p-6 rounded-xl bg-emerald-900/20 border border-emerald-500' : 'mt-6 p-6 rounded-xl bg-rose-900/20 border border-rose-500';
+      resultDiv.innerHTML = '<h3 class="text-2xl font-bold mb-2">' + (percentage >= 70 ? '✅ Passed!' : '❌ Keep Trying') + '</h3><p class="text-lg">Score: ' + score + '/' + total + ' (' + percentage + '%)</p>';
+      resultDiv.classList.remove('hidden');
+    }
+    function ${quizId}_reset() {
+      document.getElementById('${quizId}-form').reset();
+      document.getElementById('${quizId}-result').classList.add('hidden');
+    }
+    `;
 
       setGeneratedAssessment(JSON.stringify({ id: quizId, html, script, type: 'quiz', title: assessmentTitle }, null, 2));
     }
@@ -1435,17 +1540,17 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
               <div><span class="font-bold text-white">Student Name:</span> <span class="inline-block border-b border-slate-600 w-64 ml-2"></span></div>
               <div><span class="font-bold text-white">Date:</span> <span class="inline-block border-b border-slate-600 w-48 ml-2"></span></div>
               <div><span class="font-bold text-white">Assignment:</span> <span class="text-purple-400">${assessmentTitle}</span></div>
-            </div>
+                </div>
           </div>
           <div class="mt-6 flex gap-4">
             <button type="button" onclick="window.print()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-8 rounded-lg">Print & Submit</button>
           </div>
           <div class="mt-4 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg">
             <p class="text-amber-300 text-sm">📋 <strong>Reminder:</strong> Print this page, complete the assignment, and submit to your instructor.</p>
-          </div>
-        </div>
-      </div>`;
-
+                </div>
+            </div>
+        </div>`;
+          
       const script = `console.log('Print & Submit assessment loaded: ${assessmentTitle}');`;
 
       setGeneratedAssessment(JSON.stringify({ id: quizId, html, script, type: 'print', title: assessmentTitle }, null, 2));
@@ -1481,6 +1586,21 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
           title: titleToUse, 
           code: parsedCode 
       };
+
+      // Validate module before saving
+      const validation = validateModule(newItem, true);
+      if (!validation.isValid) {
+        setImportError('Validation failed: ' + validation.errors.join(', '));
+        if (validation.warnings.length > 0) {
+          console.warn('Module warnings:', validation.warnings);
+        }
+        return;
+      }
+      
+      // Show warnings but allow save
+      if (validation.warnings.length > 0) {
+        console.warn('Module warnings:', validation.warnings);
+      }
 
       // FUNCTIONAL UPDATE TO PREVENT STATE OVERWRITE
       setProjectData(prev => {
@@ -1602,6 +1722,23 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         script: scripts || ''
       };
       
+      // Validate module before saving
+      const validation = validateModule(newModule, true);
+      if (!validation.isValid) {
+        setModuleManagerStatus('error');
+        setModuleManagerMessage('Validation failed: ' + validation.errors.join(', '));
+        if (validation.warnings.length > 0) {
+          console.warn('Module warnings:', validation.warnings);
+        }
+        return;
+      }
+      
+      // Show warnings but allow save
+      if (validation.warnings.length > 0) {
+        console.warn('Module warnings:', validation.warnings);
+        // Don't change status to warning, just log it - success message is more important
+      }
+      
       // Add to project
       setProjectData(prev => {
         const newData = { ...prev };
@@ -1674,6 +1811,22 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         url: moduleManagerURL,
         linkType: moduleManagerLinkType
       };
+      
+      // Validate module before saving
+      const validation = validateModule(newModule, true);
+      if (!validation.isValid) {
+        setModuleManagerStatus('error');
+        setModuleManagerMessage('Validation failed: ' + validation.errors.join(', '));
+        if (validation.warnings.length > 0) {
+          console.warn('Module warnings:', validation.warnings);
+        }
+        return;
+      }
+      
+      // Show warnings but allow save
+      if (validation.warnings.length > 0) {
+        console.warn('Module warnings:', validation.warnings);
+      }
       
       // Add to project
       setProjectData(prev => {
@@ -1783,10 +1936,10 @@ Please add the following data to the \`PROJECT_DATA\` object.
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
              <div className="flex gap-2 bg-slate-900 p-1 rounded-lg border border-slate-700 w-full md:w-auto overflow-x-auto">
                  <button onClick={() => { setIsBatchMode(false); setHarvestType('FEATURE'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'FEATURE' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
-                     <Wrench size={14} /> Feature
-                 </button>
+                <Wrench size={14} /> Feature
+            </button>
                 <button onClick={() => { setIsBatchMode(false); setHarvestType('ASSESSMENT'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'ASSESSMENT' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
-                    <CheckCircle size={14} /> Assessment
+                <CheckCircle size={14} /> Assessment
                 </button>
                 <button onClick={() => { setIsBatchMode(false); setHarvestType('MATERIALS'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'MATERIALS' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
                    <FolderOpen size={14} /> Materials
@@ -1803,8 +1956,8 @@ Please add the following data to the \`PROJECT_DATA\` object.
                  className={`w-full md:w-auto flex items-center justify-center gap-2 py-2 px-4 rounded-lg border text-xs font-bold transition-all ${isBatchMode ? 'bg-indigo-600 border-indigo-500 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}
              >
                  <Layers size={14} /> BATCH MODE
-             </button>
-         </div>
+            </button>
+        </div>
 
         {/* CONDITIONAL RENDER: BATCH VS STANDARD */}
         {isBatchMode ? (
@@ -1812,7 +1965,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
         ) : (
          <>
             {harvestType === 'ASSESSMENT' && (
-                 <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
+             <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
                      <div className="p-4 bg-purple-900/20 border border-purple-700/50 rounded-lg">
                         <h3 className="text-sm font-bold text-purple-400 mb-4">Assessment Center</h3>
                         
@@ -1869,7 +2022,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                     >
                                         ✍️ Long Answer
                                     </button>
-                                </div>
+                        </div>
 
                                 {/* Multiple Choice Question Builder */}
                                 {currentQuestionType === 'multiple-choice' && (
@@ -1884,8 +2037,8 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                 placeholder="Enter your question..."
                                                 className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm h-20 resize-none"
                                             />
-                                        </div>
-
+                    </div>
+                    
                                         <div>
                                             <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Answer Options</label>
                                             <div className="space-y-2">
@@ -1936,8 +2089,8 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                             className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded flex items-center justify-center gap-2"
                                         >
                                             <Plus size={16} /> Add to Master Assessment
-                                        </button>
-                                    </div>
+                        </button>
+                    </div>
                                 )}
 
                                 {/* Long Answer Question Builder */}
@@ -1972,109 +2125,109 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                         >
                                             <Plus size={16} /> Add to Master Assessment
                                         </button>
-                                    </div>
-                                )}
+                         </div>
+                    )}
 
                                 {/* Quick Info */}
                                 <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg">
                                     <p className="text-purple-300 text-xs">
                                         💡 <strong>Tip:</strong> Add all your questions here, then go to the "Master Assessment" tab to organize them and generate the final assessment.
                                     </p>
-                                </div>
-                            </div>
-                        )}
+                 </div>
+             </div>
+        )}
 
                         {/* CREATE NEW MODE - OLD (KEEPING FOR BACKWARDS COMPAT) */}
                         {mode === 'CREATE' && (
                             <>
-                                <div className="mb-4">
-                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Assessment Title</label>
-                                    <input 
-                                        type="text" 
-                                        value={assessmentTitle} 
-                                        onChange={(e) => setAssessmentTitle(e.target.value)} 
-                                        placeholder="e.g., Mental Fitness Quiz 1" 
-                                        className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
-                                    />
-                                </div>
+                    <div className="mb-4">
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Assessment Title</label>
+                        <input 
+                            type="text" 
+                            value={assessmentTitle} 
+                            onChange={(e) => setAssessmentTitle(e.target.value)} 
+                            placeholder="e.g., Mental Fitness Quiz 1" 
+                            className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                        />
+                    </div>
 
-                                <div className="flex gap-2 mb-4">
-                                    <button 
-                                        onClick={() => setAssessmentType('quiz')} 
-                                        className={`flex-1 py-2 px-3 rounded text-xs font-bold ${assessmentType === 'quiz' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400'}`}
-                                    >
-                                        Multiple Choice
-                                    </button>
+                    <div className="flex gap-2 mb-4">
+                        <button 
+                            onClick={() => setAssessmentType('quiz')} 
+                            className={`flex-1 py-2 px-3 rounded text-xs font-bold ${assessmentType === 'quiz' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                        >
+                            Multiple Choice
+                        </button>
                                     <button 
                                         onClick={() => setAssessmentType('longanswer')} 
                                         className={`flex-1 py-2 px-3 rounded text-xs font-bold ${assessmentType === 'longanswer' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400'}`}
                                     >
                                         Long Answer
                                     </button>
-                                    <button 
-                                        onClick={() => setAssessmentType('print')} 
-                                        className={`flex-1 py-2 px-3 rounded text-xs font-bold ${assessmentType === 'print' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400'}`}
-                                    >
-                                        Print & Submit
-                                    </button>
-                                </div>
+                        <button 
+                            onClick={() => setAssessmentType('print')} 
+                            className={`flex-1 py-2 px-3 rounded text-xs font-bold ${assessmentType === 'print' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                        >
+                            Print & Submit
+                        </button>
+                    </div>
                             </>
                         )}
 
                         {mode === 'CREATE' && assessmentType === 'quiz' && (
-                            <div className="space-y-4">
-                                <div className="max-h-96 overflow-y-auto space-y-3 p-3 bg-slate-950 rounded border border-slate-700">
-                                    {quizQuestions.map((q, idx) => (
-                                        <div key={idx} className="p-3 bg-slate-900 rounded border border-slate-800">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-xs font-bold text-purple-400">Question {idx + 1}</span>
-                                                {quizQuestions.length > 1 && (
-                                                    <button 
-                                                        onClick={() => setQuizQuestions(quizQuestions.filter((_, i) => i !== idx))}
-                                                        className="text-rose-400 hover:text-rose-300"
-                                                    >
-                                                        <Trash2 size={12} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <input 
-                                                type="text" 
-                                                value={q.question}
-                                                onChange={(e) => updateQuizQuestion(idx, 'question', e.target.value)}
-                                                placeholder="Enter question..."
-                                                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs mb-2"
-                                            />
-                                            <div className="space-y-1">
-                                                {q.options.map((opt, optIdx) => (
-                                                    <div key={optIdx} className="flex items-center gap-2">
-                                                        <input 
-                                                            type="radio" 
-                                                            name={`correct-${idx}`}
-                                                            checked={q.correct === optIdx}
-                                                            onChange={() => updateQuizQuestion(idx, 'correct', optIdx)}
-                                                            className="w-3 h-3"
-                                                        />
-                                                        <input 
-                                                            type="text"
-                                                            value={opt}
-                                                            onChange={(e) => updateQuizQuestion(idx, `option-${optIdx}`, e.target.value)}
-                                                            placeholder={`Option ${optIdx + 1}`}
-                                                            className="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
+                        <div className="space-y-4">
+                            <div className="max-h-96 overflow-y-auto space-y-3 p-3 bg-slate-950 rounded border border-slate-700">
+                                {quizQuestions.map((q, idx) => (
+                                    <div key={idx} className="p-3 bg-slate-900 rounded border border-slate-800">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-bold text-purple-400">Question {idx + 1}</span>
+                                            {quizQuestions.length > 1 && (
+                                                <button 
+                                                    onClick={() => setQuizQuestions(quizQuestions.filter((_, i) => i !== idx))}
+                                                    className="text-rose-400 hover:text-rose-300"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            )}
                                         </div>
-                                    ))}
-                                </div>
-                                <button 
-                                    onClick={addQuizQuestion}
-                                    className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded text-xs flex items-center justify-center gap-2"
-                                >
-                                    <Plus size={14} /> Add Question
-                                </button>
+                                        <input 
+                                            type="text" 
+                                            value={q.question}
+                                            onChange={(e) => updateQuizQuestion(idx, 'question', e.target.value)}
+                                            placeholder="Enter question..."
+                                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs mb-2"
+                                        />
+                                        <div className="space-y-1">
+                                            {q.options.map((opt, optIdx) => (
+                                                <div key={optIdx} className="flex items-center gap-2">
+                                                    <input 
+                                                        type="radio" 
+                                                        name={`correct-${idx}`}
+                                                        checked={q.correct === optIdx}
+                                                        onChange={() => updateQuizQuestion(idx, 'correct', optIdx)}
+                                                        className="w-3 h-3"
+                                                    />
+                                                    <input 
+                                                        type="text"
+                                                        value={opt}
+                                                        onChange={(e) => updateQuizQuestion(idx, `option-${optIdx}`, e.target.value)}
+                                                        placeholder={`Option ${optIdx + 1}`}
+                                                        className="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        )}
+                            <button 
+                                onClick={addQuizQuestion}
+                                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded text-xs flex items-center justify-center gap-2"
+                            >
+                                <Plus size={14} /> Add Question
+                            </button>
+                        </div>
+                    )}
 
                         {mode === 'CREATE' && assessmentType === 'longanswer' && (
                             <div className="space-y-4">
@@ -2108,8 +2261,8 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                 >
                                     <Plus size={14} /> Add Prompt
                                 </button>
-                            </div>
-                        )}
+                        </div>
+                    )}
 
                         {mode === 'CREATE' && assessmentType === 'print' && (
                             <div className="space-y-4">
@@ -2126,18 +2279,18 @@ Please add the following data to the \`PROJECT_DATA\` object.
 
                         {mode === 'CREATE' && (
                             <>
-                                <div className="flex gap-2 mt-4">
-                                    <button 
-                                        onClick={generateQuizAssessment} 
+                    <div className="flex gap-2 mt-4">
+                        <button 
+                            onClick={generateQuizAssessment} 
                                         disabled={!assessmentTitle || (assessmentType === 'quiz' && quizQuestions.some(q => !q.question)) || (assessmentType === 'longanswer' && quizQuestions.some(q => !q.question))}
-                                        className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        Generate Assessment Code
-                                    </button>
-                                </div>
+                            className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Generate Assessment Code
+                        </button>
+                    </div>
 
-                                {generatedAssessment && (
-                                    <div className="mt-4">
+                    {generatedAssessment && (
+                        <div className="mt-4">
                                         <CodeBlock label="Assessment JSON Preview" code={generatedAssessment} height="h-64" />
                                         <button 
                                             onClick={() => {
@@ -3279,10 +3432,10 @@ ${aiDescription}
                                         </div>
                                     </div>
                                     
-                                    <input 
-                                        type="text"
-                                        value={stagingTitle}
-                                        onChange={(e) => setStagingTitle(e.target.value)}
+                                <input 
+                                    type="text" 
+                                    value={stagingTitle} 
+                                    onChange={(e) => setStagingTitle(e.target.value)} 
                                         placeholder={aiTargetType === 'MODULE' 
                                             ? "Module title for sidebar (e.g., Goal Setting Activity)"
                                             : "Feature title for Global Toolkit (e.g., Save/Load System)"
@@ -3292,8 +3445,8 @@ ${aiDescription}
                                 </div>
                             )}
 
-                            <button 
-                                onClick={() => {
+                                <button 
+                                    onClick={() => {
                                     try {
                                         const trimmed = aiOutput.trim();
                                         // Try to extract JSON from markdown code blocks if present
@@ -3324,8 +3477,8 @@ ${aiDescription}
                                 className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 <FileJson size={14} /> Parse & Validate JSON
-                            </button>
-                        </div>
+                                </button>
+                            </div>
                      </div>
 
                      {/* STEP 3: COMMIT */}
@@ -3357,39 +3510,39 @@ ${aiDescription}
                                         ? 'Module added! Check Phase 2 to preview or Phase 4 to compile.'
                                         : 'Feature added to Global Toolkit! Check Phase 2 to preview or Phase 4 to add to a course.'
                                     }
-                                </div>
-                            )}
-                         </div>
-                     )}
+                        </div>
+                    )}
                  </div>
-            )}
+                     )}
+             </div>
+        )}
 
             {harvestType !== 'ASSET' && harvestType !== 'ASSESSMENT' && harvestType !== 'AI_MODULE' && (
-             <>
-                <Toggle active={mode} onToggle={setMode} labelA="New Content (PDF)" labelB="Migrate Code" iconA={Sparkles} iconB={Scissors} />
-                {mode === 'B' && (
-                    <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-8">
-                        
-                        {/* STEP 1: SCANNER */}
-                        <div className="bg-slate-900/50 p-4 rounded-xl border border-blue-900/50">
-                            <h3 className="text-sm font-bold text-blue-400 flex items-center gap-2 mb-2"><Search size={16} /> Step 1: The Scanner</h3>
-                            <CodeBlock label="Analysis Prompt" code={analysisPrompt} height="h-24" />
-                            <div className="mt-4 pt-4 border-t border-slate-800"><textarea value={scannerNotes} onChange={(e) => setScannerNotes(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-300 font-mono h-24 focus:border-blue-500 outline-none resize-y" placeholder="Paste results here..." /></div>
-                        </div>
+         <>
+            <Toggle active={mode} onToggle={setMode} labelA="New Content (PDF)" labelB="Migrate Code" iconA={Sparkles} iconB={Scissors} />
+            {mode === 'B' && (
+                <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-8">
+                    
+                    {/* STEP 1: SCANNER */}
+                    <div className="bg-slate-900/50 p-4 rounded-xl border border-blue-900/50">
+                        <h3 className="text-sm font-bold text-blue-400 flex items-center gap-2 mb-2"><Search size={16} /> Step 1: The Scanner</h3>
+                        <CodeBlock label="Analysis Prompt" code={analysisPrompt} height="h-24" />
+                        <div className="mt-4 pt-4 border-t border-slate-800"><textarea value={scannerNotes} onChange={(e) => setScannerNotes(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-300 font-mono h-24 focus:border-blue-500 outline-none resize-y" placeholder="Paste results here..." /></div>
+                    </div>
 
-                        {/* STEP 2: EXTRACTOR */}
-                        <div className="bg-slate-900/50 p-4 rounded-xl border border-pink-900/50">
-                            <h3 className="text-sm font-bold text-pink-400 flex items-center gap-2 mb-2"><Scissors size={16} /> Step 2: The Extractor</h3>
-                            <div className="grid grid-cols-2 gap-4 mb-4">
-                                <input type="text" value={divId} onChange={(e) => setDivId(e.target.value)} placeholder="Target ID..." className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-pink-400 font-mono text-xs" />
-                                <input type="text" value={jsPrefix} onChange={(e) => setJsPrefix(e.target.value)} placeholder="JS Prefix..." className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-pink-400 font-mono text-xs" />
-                            </div>
-                            <CodeBlock label="Deconstruction Prompt" code={deconstructPrompt} height="h-32" />
+                    {/* STEP 2: EXTRACTOR */}
+                    <div className="bg-slate-900/50 p-4 rounded-xl border border-pink-900/50">
+                        <h3 className="text-sm font-bold text-pink-400 flex items-center gap-2 mb-2"><Scissors size={16} /> Step 2: The Extractor</h3>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <input type="text" value={divId} onChange={(e) => setDivId(e.target.value)} placeholder="Target ID..." className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-pink-400 font-mono text-xs" />
+                            <input type="text" value={jsPrefix} onChange={(e) => setJsPrefix(e.target.value)} placeholder="JS Prefix..." className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-pink-400 font-mono text-xs" />
                         </div>
+                        <CodeBlock label="Deconstruction Prompt" code={deconstructPrompt} height="h-32" />
+                    </div>
 
-                        {/* STEP 3: STORAGE */}
-                        <div className="bg-emerald-900/20 border border-emerald-700/50 p-4 rounded-xl">
-                            <div className="flex items-center justify-between mb-2"><h3 className="text-sm font-bold text-emerald-400 flex items-center gap-2"><Database size={16} /> Step 3: Commit to {targetCollection}</h3>{saveStatus === 'success' && (<span className="flex items-center gap-1 text-xs text-emerald-300 animate-in fade-in zoom-in"><CheckCircle size={14} /> Saved to Session!</span>)}</div>
+                    {/* STEP 3: STORAGE */}
+                    <div className="bg-emerald-900/20 border border-emerald-700/50 p-4 rounded-xl">
+                        <div className="flex items-center justify-between mb-2"><h3 className="text-sm font-bold text-emerald-400 flex items-center gap-2"><Database size={16} /> Step 3: Commit to {targetCollection}</h3>{saveStatus === 'success' && (<span className="flex items-center gap-1 text-xs text-emerald-300 animate-in fade-in zoom-in"><CheckCircle size={14} /> Saved to Session!</span>)}</div>
                             
                             {/* ERROR MESSAGE DISPLAY */}
                             {importError && (
@@ -3398,16 +3551,16 @@ ${aiDescription}
                                 </div>
                             )}
 
-                            <input type="text" value={stagingTitle} onChange={(e) => setStagingTitle(e.target.value)} placeholder="Title (e.g. Save System)" className="w-full mb-2 bg-slate-950 border border-emerald-900 rounded p-2 text-white text-sm"/>
-                            <textarea value={stagingJson} onChange={(e) => setStagingJson(e.target.value)} className="w-full bg-slate-950 border border-emerald-900 rounded-lg p-3 text-xs text-emerald-100 font-mono h-24 focus:border-emerald-500 outline-none resize-y mb-2" placeholder='Paste output JSON here...' />
+                        <input type="text" value={stagingTitle} onChange={(e) => setStagingTitle(e.target.value)} placeholder="Title (e.g. Save System)" className="w-full mb-2 bg-slate-950 border border-emerald-900 rounded p-2 text-white text-sm"/>
+                        <textarea value={stagingJson} onChange={(e) => setStagingJson(e.target.value)} className="w-full bg-slate-950 border border-emerald-900 rounded-lg p-3 text-xs text-emerald-100 font-mono h-24 focus:border-emerald-500 outline-none resize-y mb-2" placeholder='Paste output JSON here...' />
                             <div className="flex gap-2 mb-6"><button onClick={() => handleSessionSave()} disabled={!stagingJson || !stagingTitle} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-xs shadow-lg"><Zap size={14} /> ⚡ Add to Session (Instant)</button></div>
-                            <div className="pt-4 border-t border-emerald-800/50"><div className="flex items-center justify-between mb-2"><p className="text-[10px] text-emerald-400/60 uppercase font-bold">Optional: Hard Save</p><span className="text-[9px] text-emerald-600 bg-emerald-950/50 px-2 py-0.5 rounded">Only do this once at the end</span></div><CodeBlock label="Permanent Save Prompt (Use Sparingly)" code={saveToDocPrompt} height="h-24" /></div>
-                        </div>
+                        <div className="pt-4 border-t border-emerald-800/50"><div className="flex items-center justify-between mb-2"><p className="text-[10px] text-emerald-400/60 uppercase font-bold">Optional: Hard Save</p><span className="text-[9px] text-emerald-600 bg-emerald-950/50 px-2 py-0.5 rounded">Only do this once at the end</span></div><CodeBlock label="Permanent Save Prompt (Use Sparingly)" code={saveToDocPrompt} height="h-24" /></div>
                     </div>
+                </div>
                 )}
              </>
             )}
-         </>
+        </>
         )}
       </div>
     </div>
@@ -3674,7 +3827,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
             
             <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
               {materialPreview.viewUrl && (
-                <div className="mb-6">
+        <div className="mb-6">
                   <div className="bg-black rounded-lg border border-slate-700 overflow-hidden">
                     <iframe 
                       src={materialPreview.viewUrl.replace('/view', '/preview')} 
@@ -3761,7 +3914,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Color</label>
-                    <select
+            <select 
                       value={materialEdit.color || 'slate'}
                       onChange={(e) => setMaterialEdit({...materialEdit, color: e.target.value})}
                       className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
@@ -3772,10 +3925,10 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                       <option value="emerald">Green</option>
                       <option value="sky">Blue</option>
                       <option value="purple">Purple</option>
-                    </select>
+            </select>
                   </div>
-                </div>
-                
+        </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Title</label>
                   <input 
@@ -3913,7 +4066,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
               </div>
               
               <div className="space-y-4">
-                <div>
+                        <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Assessment Title</label>
                   <input 
                     type="text"
@@ -3922,21 +4075,21 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                     placeholder="Assessment title"
                     className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
                   />
-                </div>
+                        </div>
                 
                 <div className="grid grid-cols-2 gap-4 bg-slate-950 p-4 rounded-lg border border-slate-800">
-                  <div>
+                        <div>
                     <span className="text-xs font-bold text-slate-500 uppercase">Type</span>
                     <p className="text-white capitalize">{assessmentEdit.type || 'Quiz'}</p>
-                  </div>
-                  <div>
+                        </div>
+                        <div>
                     <span className="text-xs font-bold text-slate-500 uppercase">Question Count</span>
                     <p className="text-white">{assessmentEdit.questionCount || 'N/A'}</p>
-                  </div>
+                        </div>
                   <div className="col-span-2">
                     <span className="text-xs font-bold text-slate-500 uppercase">Assessment ID</span>
                     <p className="text-blue-400 text-xs font-mono">{assessmentEdit.id}</p>
-                  </div>
+                    </div>
                 </div>
                 
                 <div className="flex gap-3 mt-6">
@@ -3968,9 +4121,9 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                   >
                     <Save size={16} /> Save Changes
                   </button>
-                </div>
-              </div>
+                    </div>
             </div>
+      </div>
           </div>
         </div>
       )}
@@ -5794,9 +5947,9 @@ const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel }) => {
                     <button onClick={onCancel} className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition-colors">Cancel</button>
                     <button onClick={onConfirm} className="flex-1 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-sm font-bold shadow-lg shadow-rose-900/20 transition-colors">Delete Forever</button>
                 </div>
-            </div>
-        </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default function App() {
@@ -6040,7 +6193,7 @@ export default function App() {
         }
       };
     }
-
+    
     setProjectData({
       ...projectData,
       [section]: {
@@ -6092,8 +6245,8 @@ export default function App() {
       
       let items = projectData["Current Course"]?.modules || [];
       items = items.filter(m => m.id !== deleteConfirmation.id);
-      setProjectData({
-        ...projectData,
+    setProjectData({
+      ...projectData,
         "Current Course": {
           ...projectData["Current Course"],
           modules: items
@@ -6145,19 +6298,19 @@ export default function App() {
     const moduleIndex = currentCourse.modules.findIndex(m => m.id === "item-assessments" || m.title === "Assessments");
     if (moduleIndex === -1) return;
     
-    const newModules = [...currentCourse.modules];
+      const newModules = [...currentCourse.modules];
     newModules[moduleIndex] = {
       ...newModules[moduleIndex],
       assessments: updatedAssessments
     };
     
-    setProjectData({
-      ...projectData,
-      "Current Course": {
+      setProjectData({
+        ...projectData,
+        "Current Course": {
         ...projectData["Current Course"],
-        modules: newModules
-      }
-    });
+          modules: newModules
+        }
+      });
   };
 
   const addMaterial = (materialData) => {
@@ -6175,8 +6328,8 @@ export default function App() {
       assignedModules: materialData.assignedModules || []
     };
     
-    setProjectData({
-      ...projectData,
+      setProjectData({
+        ...projectData,
       "Current Course": {
         ...projectData["Current Course"],
         materials: [...currentMaterials, newMaterial]
@@ -6374,7 +6527,7 @@ Questions.filter((_, i) => i !== index);
       {/* Top Header */}
       <header className="bg-slate-900 border-b border-slate-800 p-4">
         <div className="flex items-center justify-between max-w-[1800px] mx-auto">
-          <div>
+            <div>
             <h1 className="text-lg font-bold flex items-center gap-2">
               <Settings className="text-blue-400" size={20} />
               Course Factory Dashboard
@@ -6430,37 +6583,37 @@ Questions.filter((_, i) => i !== index);
             <div>
               <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3">Factory Line</h3>
               <div className="space-y-1">
-                <Section 
-                  title="Phase 0: Master Shell" 
-                  icon={Layers} 
-                  isActive={activePhase === 0} 
-                  onClick={() => setActivePhase(0)} 
-                />
-                <Section 
-                  title="Phase 1: Harvest" 
-                  icon={FileJson} 
-                  isActive={activePhase === 1} 
-                  onClick={() => setActivePhase(1)} 
-                />
-                <Section 
+            <Section 
+              title="Phase 0: Master Shell" 
+              icon={Layers} 
+              isActive={activePhase === 0} 
+              onClick={() => setActivePhase(0)}
+            />
+            <Section 
+              title="Phase 1: Harvest" 
+              icon={FileJson} 
+              isActive={activePhase === 1} 
+              onClick={() => setActivePhase(1)} 
+            />
+            <Section 
                   title="Phase 2: Preview & Test" 
                   icon={Eye} 
-                  isActive={activePhase === 2} 
-                  onClick={() => setActivePhase(2)} 
+              isActive={activePhase === 2} 
+              onClick={() => setActivePhase(2)}
                   badge={currentCourse.modules.length}
                   badgeColor="bg-purple-600"
-                />
-                <Section 
-                  title="Phase 3: Manage & Reset" 
-                  icon={BookOpen} 
-                  isActive={activePhase === 3} 
-                  onClick={() => setActivePhase(3)} 
-                />
-                <Section 
-                  title="Phase 4: Compile" 
-                  icon={Package} 
-                  isActive={activePhase === 4} 
-                  onClick={() => setActivePhase(4)} 
+            />
+             <Section 
+              title="Phase 3: Manage & Reset" 
+              icon={BookOpen} 
+              isActive={activePhase === 3} 
+              onClick={() => setActivePhase(3)} 
+            />
+            <Section 
+              title="Phase 4: Compile" 
+              icon={Package} 
+              isActive={activePhase === 4} 
+              onClick={() => setActivePhase(4)} 
                 />
                 <Section 
                   title="Phase 5: Settings" 
@@ -6482,7 +6635,7 @@ Questions.filter((_, i) => i !== index);
                     <Eye size={12} className="text-emerald-500" />
                     <span className="text-slate-300 truncate flex-1">{mod.title}</span>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
+                                                    <button 
                         onClick={() => {
                           if (idx === 0) return;
                           const newModules = [...currentCourse.modules];
@@ -6492,13 +6645,13 @@ Questions.filter((_, i) => i !== index);
                             "Current Course": { ...projectData["Current Course"], modules: newModules }
                           });
                         }}
-                        disabled={idx === 0}
+                                                        disabled={idx === 0}
                         className="p-0.5 hover:text-sky-400 disabled:opacity-30 disabled:cursor-not-allowed"
                         title="Move Up"
-                      >
+                                                    >
                         <ChevronUp size={12} />
-                      </button>
-                      <button
+                                                    </button>
+                                                    <button 
                         onClick={() => {
                           if (idx === currentCourse.modules.length - 1) return;
                           const newModules = [...currentCourse.modules];
@@ -6508,26 +6661,26 @@ Questions.filter((_, i) => i !== index);
                             "Current Course": { ...projectData["Current Course"], modules: newModules }
                           });
                         }}
-                        disabled={idx === currentCourse.modules.length - 1}
+                                                        disabled={idx === currentCourse.modules.length - 1}
                         className="p-0.5 hover:text-sky-400 disabled:opacity-30 disabled:cursor-not-allowed"
                         title="Move Down"
-                      >
+                                                    >
                         <ChevronDown size={12} />
-                      </button>
-                      <button
+                                                    </button>
+                                                    <button 
                         onClick={() => deleteModule(mod)}
                         disabled={isProtectedModule(mod)}
                         className={`p-0.5 ${isProtectedModule(mod) ? 'opacity-30 cursor-not-allowed' : 'hover:text-rose-400'}`}
                         title={isProtectedModule(mod) ? 'Core module (cannot be deleted)' : 'Delete'}
                       >
                         <X size={12} />
-                      </button>
-                    </div>
-                  </div>
+                                                    </button>
+                                                </div>
+                            </div>
                 ))}
-              </div>
+                </div>
             </div>
-            
+
             {/* GLOBAL TOOLKIT */}
             <div>
               <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3">Global Toolkit</h3>
@@ -6539,10 +6692,10 @@ Questions.filter((_, i) => i !== index);
                     <div key={tool.id} className="flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-slate-800 transition-colors">
                       <Wrench size={12} className="text-orange-500" />
                       <span className="text-slate-300 truncate flex-1">{tool.title}</span>
-                    </div>
-                  ))}
+                            </div>
+                    ))}
                 </div>
-              )}
+                    )}
             </div>
           </div>
         </aside>
@@ -6583,15 +6736,15 @@ Questions.filter((_, i) => i !== index);
             <div className="flex-1 overflow-y-auto p-6">
               <div className="mb-4">
                 <label className="block text-sm font-bold text-slate-300 mb-2">Module Title</label>
-                <input 
-                  type="text"
+                  <input 
+                    type="text"
                   value={editForm.title || ''} 
-                  onChange={(e) => setEditForm({...editForm, title: e.target.value})}
+                    onChange={(e) => setEditForm({...editForm, title: e.target.value})}
                   className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
                   placeholder="Module title"
-                />
-              </div>
-
+                  />
+                </div>
+                
               {/* External Link Module Form */}
               {editForm.moduleType === 'external' && (
                 <div className="space-y-4">
@@ -6604,13 +6757,13 @@ Questions.filter((_, i) => i !== index);
                       className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white font-mono text-sm"
                       placeholder="https://example.com/module"
                     />
-                  </div>
-                  
-                  <div>
+              </div>
+              
+              <div>
                     <label className="block text-sm font-bold text-slate-300 mb-2">Link Type</label>
                     <div className="flex gap-4">
                       <label className="flex items-center gap-2 cursor-pointer">
-                        <input 
+                <input 
                           type="radio"
                           name="linkType"
                           value="iframe"
@@ -6631,17 +6784,17 @@ Questions.filter((_, i) => i !== index);
                         />
                         <span className="text-sm text-slate-300">Open in new tab</span>
                       </label>
-                    </div>
+              </div>
                   </div>
                 </div>
               )}
 
               {/* Standalone HTML Module Form - Full Document View */}
               {editForm.moduleType === 'standalone' && (
-                <div>
+              <div>
                   <label className="block text-sm font-bold text-slate-300 mb-2">Full HTML Document</label>
                   <p className="text-xs text-slate-400 mb-2">Edit the complete HTML document (includes CSS and JavaScript)</p>
-                  <textarea 
+                <textarea 
                     value={editForm.fullDocument || ''} 
                     onChange={(e) => setEditForm({...editForm, fullDocument: e.target.value})}
                     className="w-full h-96 bg-slate-950 border border-slate-700 rounded p-3 text-white font-mono text-xs"
@@ -6657,23 +6810,23 @@ Questions.filter((_, i) => i !== index);
                     <label className="block text-sm font-bold text-slate-300 mb-2">HTML</label>
                     <textarea 
                       value={editForm.html || ''} 
-                      onChange={(e) => setEditForm({...editForm, html: e.target.value})}
+                  onChange={(e) => setEditForm({...editForm, html: e.target.value})}
                       className="w-full h-64 bg-slate-950 border border-slate-700 rounded p-3 text-white font-mono text-sm"
-                    />
-                  </div>
-                  
-                  <div>
+                />
+              </div>
+
+              <div>
                     <label className="block text-sm font-bold text-slate-300 mb-2">Script</label>
-                    <textarea 
+                <textarea 
                       value={editForm.script || ''} 
-                      onChange={(e) => setEditForm({...editForm, script: e.target.value})}
+                  onChange={(e) => setEditForm({...editForm, script: e.target.value})}
                       className="w-full h-64 bg-slate-950 border border-slate-700 rounded p-3 text-white font-mono text-sm"
-                    />
-                  </div>
+                />
+              </div>
                 </div>
               )}
             </div>
-            
+
             <div className="bg-slate-800 border-t border-slate-700 p-4 flex gap-3">
               <button onClick={() => setEditingModule(null)} className="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors">Cancel</button>
               <button onClick={saveEditModule} className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold shadow-lg transition-colors">Save Changes</button>
@@ -6681,7 +6834,7 @@ Questions.filter((_, i) => i !== index);
           </div>
         </div>
       )}
-      
+
       {/* PREVIEW MODAL */}
       {previewModule && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
