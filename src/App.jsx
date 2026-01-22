@@ -4377,7 +4377,7 @@ const PROJECT_DATA = {
   );
 };
 
-const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
+const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onError }) => {
   const [fullSiteCode, setFullSiteCode] = useState("");
   const [isGenerated, setIsGenerated] = useState(false);
 
@@ -4409,8 +4409,12 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
 
   // Generate Single Module Page HTML
   const generateModulePageHTML = () => {
-    const selectedMod = modules.find(m => m.id === exportModuleId);
-    if (!selectedMod) return;
+    try {
+      const selectedMod = modules.find(m => m.id === exportModuleId);
+      if (!selectedMod) {
+        if (onError) onError('module', `Module "${exportModuleId}" not found. Please select a valid module.`);
+        return;
+      }
 
     const allAssessments = modules.flatMap(m => m.assessments || []);
     const selectedAssessments = allAssessments.filter(a => exportAssessments.includes(a.id));
@@ -4580,7 +4584,13 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
 
     const finalHTML = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>' + selectedMod.title + '</title><script src="https://cdn.tailwindcss.com"><\/script><link href="https://fonts.googleapis.com/css?family=Inter:ital,wght@0,400;0,700;1,400;1,900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet"><script>tailwind.config = { darkMode: "class", theme: { extend: { fontFamily: { sans: ["Inter", "sans-serif"], mono: ["JetBrains Mono", "monospace"] } } } }<\/script><style>body { background-color: #020617; color: #e2e8f0; font-family: "Inter", sans-serif; min-height: 100vh; overflow-x: hidden; } .mono { font-family: "JetBrains Mono", monospace; } .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); } input, textarea, select { background: #0f172a !important; border: 1px solid #1e293b !important; color: #e2e8f0; } input:focus, textarea:focus, select:focus { border-color: #0ea5e9 !important; outline: none; box-shadow: 0 0 0 1px #0ea5e9; } .score-btn, .mod-nav-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; } .score-btn:hover, .mod-nav-btn:hover { border-color: #0ea5e9; color: white; } .score-btn.active, .mod-nav-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; } .step-content { display: none; } .step-content.active { display: block; } .assessment-container.hidden { display: none; } #assessment-list.hidden { display: none; } .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; } .rubric-cell:hover { background: rgba(255,255,255,0.05); } .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; } .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; } .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; } .helper-text { font-size: 8px; color: #64748b; font-style: italic; margin-top: 4px; }<\/style></head><body class="p-4 md:p-8 max-w-6xl mx-auto">' + sectionsHTML + '<script>' + combinedScripts + '<\/script></body></html>';
 
-    setExportedHTML(finalHTML);
+      setExportedHTML(finalHTML);
+    } catch (error) {
+      if (onError) {
+        onError('compile', `Failed to generate module page HTML: ${error.message}`, error.stack);
+      }
+      console.error('Module page generation error:', error);
+    }
   };
 
   const generateHubPage = () => {
@@ -4765,7 +4775,8 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
   };
 
   const generateFullSite = () => {
-    let finalCode = MASTER_SHELL;
+    try {
+      let finalCode = MASTER_SHELL;
     
     // ========================================
     // PHASE 5 SETTINGS APPLICATION
@@ -5414,6 +5425,13 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
 
     setFullSiteCode(finalCode);
     setIsGenerated(true);
+    } catch (error) {
+      if (onError) {
+        onError('compile', `Failed to compile full site: ${error.message}`, error.stack);
+      }
+      console.error('Full site compilation error:', error);
+      setIsGenerated(false);
+    }
   };
 
   const downloadFile = () => {
@@ -6039,6 +6057,73 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
   );
 };
 
+// --- UNIFIED ERROR DISPLAY COMPONENT ---
+const ErrorDisplay = ({ error, onDismiss }) => {
+  if (!error) return null;
+  
+  const getErrorIcon = () => {
+    switch (error.type) {
+      case 'compile': return <FileCode size={20} />;
+      case 'preview': return <Eye size={20} />;
+      case 'module': return <Box size={20} />;
+      default: return <AlertTriangle size={20} />;
+    }
+  };
+  
+  const getErrorColor = () => {
+    switch (error.type) {
+      case 'compile': return 'rose';
+      case 'preview': return 'amber';
+      case 'module': return 'purple';
+      default: return 'rose';
+    }
+  };
+  
+  const color = getErrorColor();
+  const colorClasses = {
+    rose: { bg: 'bg-rose-900/20', border: 'border-rose-500/50', text: 'text-rose-400', icon: 'text-rose-500' },
+    amber: { bg: 'bg-amber-900/20', border: 'border-amber-500/50', text: 'text-amber-400', icon: 'text-amber-500' },
+    purple: { bg: 'bg-purple-900/20', border: 'border-purple-500/50', text: 'text-purple-400', icon: 'text-purple-500' }
+  };
+  const colors = colorClasses[color];
+  
+  return (
+    <div className={`fixed top-4 right-4 z-[100] max-w-md animate-in slide-in-from-top-4 fade-in duration-300 ${colors.bg} ${colors.border} border rounded-xl p-4 shadow-2xl backdrop-blur-sm`}>
+      <div className="flex items-start gap-3">
+        <div className={`${colors.icon} flex-shrink-0 mt-0.5`}>
+          {getErrorIcon()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <h3 className={`${colors.text} font-bold text-sm uppercase tracking-wider`}>
+              {error.type === 'compile' ? 'Compilation Error' : 
+               error.type === 'preview' ? 'Preview Error' : 
+               error.type === 'module' ? 'Module Error' : 'Error'}
+            </h3>
+            <button
+              onClick={onDismiss}
+              className={`${colors.text} hover:text-white transition-colors flex-shrink-0`}
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <p className="text-white text-sm mb-2">{error.message}</p>
+          {error.details && (
+            <details className="mt-2">
+              <summary className={`${colors.text} text-xs cursor-pointer hover:text-white transition-colors`}>
+                Technical Details
+              </summary>
+              <pre className="mt-2 text-xs text-slate-300 bg-slate-950/50 p-2 rounded border border-slate-700 overflow-auto max-h-32 font-mono">
+                {error.details}
+              </pre>
+            </details>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- CONFIRMATION MODAL HELPER ---
 const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel }) => {
     if (!isOpen) return null;
@@ -6068,6 +6153,20 @@ export default function App() {
   const STORAGE_KEY = 'course_factory_v2_data';
   const [isAutoLoaded, setIsAutoLoaded] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
+  
+  // --- UNIFIED ERROR HANDLING STATE ---
+  const [appError, setAppError] = useState(null); // { type: 'compile' | 'preview' | 'module' | 'general', message: string, details?: string }
+  
+  // --- ERROR HANDLING UTILITIES ---
+  const handleError = (type, message, details = null) => {
+    const error = { type, message, details };
+    setAppError(error);
+    console.error(`[${type.toUpperCase()}]`, message, details || '');
+    // Auto-dismiss after 10 seconds
+    setTimeout(() => setAppError(null), 10000);
+  };
+  
+  const dismissError = () => setAppError(null);
 
   // 💾 AUTO-LOAD: Runs once on mount
   useEffect(() => {
@@ -6813,10 +6912,13 @@ Questions.filter((_, i) => i !== index);
           {activePhase === 1 && <Phase1 projectData={projectData} setProjectData={setProjectData} scannerNotes={scannerNotes} setScannerNotes={setScannerNotes} addMaterial={addMaterial} editMaterial={editMaterial} deleteMaterial={deleteMaterial} moveMaterial={moveMaterial} toggleMaterialHidden={toggleMaterialHidden} addAssessment={addAssessment} editAssessment={editAssessment} deleteAssessment={deleteAssessment} moveAssessment={moveAssessment} toggleAssessmentHidden={toggleAssessmentHidden} addQuestionToMaster={addQuestionToMaster} moveQuestion={moveQuestion} deleteQuestion={deleteQuestion} updateQuestion={updateQuestion} clearMasterAssessment={clearMasterAssessment} masterQuestions={masterQuestions} setMasterQuestions={setMasterQuestions} masterAssessmentTitle={masterAssessmentTitle} setMasterAssessmentTitle={setMasterAssessmentTitle} currentQuestionType={currentQuestionType} setCurrentQuestionType={setCurrentQuestionType} currentQuestion={currentQuestion} setCurrentQuestion={setCurrentQuestion} editingQuestion={editingQuestion} setEditingQuestion={setEditingQuestion} generateMixedAssessment={generateMixedAssessment} generatedAssessment={generatedAssessment} setGeneratedAssessment={setGeneratedAssessment} assessmentType={assessmentType} setAssessmentType={setAssessmentType} assessmentTitle={assessmentTitle} setAssessmentTitle={setAssessmentTitle} quizQuestions={quizQuestions} setQuizQuestions={setQuizQuestions} printInstructions={printInstructions} setPrintInstructions={setPrintInstructions} editingAssessment={editingAssessment} setEditingAssessment={setEditingAssessment} migrateCode={migrateCode} setMigrateCode={setMigrateCode} migratePrompt={migratePrompt} setMigratePrompt={setMigratePrompt} migrateOutput={migrateOutput} setMigrateOutput={setMigrateOutput} />}
           {activePhase === 2 && <Phase2 projectData={projectData} setProjectData={setProjectData} editMaterial={editMaterial} onEdit={openEditModule} onPreview={openPreview} onDelete={deleteModule} />}
           {activePhase === 3 && <Phase3 onGoToMaster={() => setActivePhase(0)} projectData={projectData} setProjectData={setProjectData} />}
-          {activePhase === 4 && <Phase4 projectData={projectData} setProjectData={setProjectData} excludedIds={excludedIds} toggleModule={toggleModuleExclusion} />}
+          {activePhase === 4 && <Phase4 projectData={projectData} setProjectData={setProjectData} excludedIds={excludedIds} toggleModule={toggleModuleExclusion} onError={handleError} />}
           {activePhase === 5 && <Phase5Settings projectData={projectData} setProjectData={setProjectData} />}
         </main>
       </div>
+
+      {/* UNIFIED ERROR DISPLAY */}
+      <ErrorDisplay error={appError} onDismiss={dismissError} />
 
       {/* CONFIRMATION MODAL */}
       <ConfirmationModal
