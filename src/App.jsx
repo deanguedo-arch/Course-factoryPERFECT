@@ -6681,54 +6681,292 @@ Questions.filter((_, i) => i !== index);
             <div className="p-0 overflow-hidden max-h-[calc(90vh-80px)]">
               <iframe 
                 srcDoc={(() => {
-                  let itemCode = previewModule.code || {};
-                  if (typeof itemCode === 'string') {
-                    try { itemCode = JSON.parse(itemCode); } catch(e) {}
-                  }
-                  return `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                      <script src="https://cdn.tailwindcss.com"><\/script>
-                      <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-                      <script>
-                        tailwind.config = {
-                          darkMode: "class",
-                          theme: {
-                            extend: {
-                              fontFamily: {
-                                sans: ["Inter", "sans-serif"],
-                                mono: ["JetBrains Mono", "monospace"]
+                  // Debug: Log module structure first
+                  console.log('🔍 Preview Module Structure:', {
+                    type: previewModule.type,
+                    hasHTML: !!previewModule.html,
+                    hasCSS: !!previewModule.css,
+                    hasScript: !!previewModule.script,
+                    hasCode: !!previewModule.code,
+                    codeHasHTML: !!previewModule.code?.html,
+                    allKeys: Object.keys(previewModule),
+                    title: previewModule.title
+                  });
+                  
+                  // Handle different module types
+                  // Check for standalone module: has html/css/script directly (not nested in code) OR type === 'standalone'
+                  const hasDirectHTML = previewModule.html && !previewModule.code?.html;
+                  const isStandaloneType = previewModule.type === 'standalone';
+                  
+                  if (isStandaloneType || hasDirectHTML) {
+                    // Standalone HTML module - combine html, css, and script
+                    // Try direct properties first, then fall back to code if needed
+                    let moduleHTML = previewModule.html || '';
+                    let moduleCSS = previewModule.css || '';
+                    let moduleScript = previewModule.script || '';
+                    
+                    // Fallback: if no direct html but has code.html, use that (for backwards compatibility)
+                    if (!moduleHTML && previewModule.code?.html) {
+                      moduleHTML = previewModule.code.html;
+                      moduleScript = previewModule.code.script || moduleScript;
+                    }
+                    
+                    // Debug logging
+                    console.log('Previewing standalone module:', {
+                      type: previewModule.type,
+                      hasDirectHTML: hasDirectHTML,
+                      isStandaloneType: isStandaloneType,
+                      hasHTML: !!moduleHTML,
+                      hasCSS: !!moduleCSS,
+                      hasScript: !!moduleScript,
+                      htmlLength: moduleHTML.length,
+                      moduleKeys: Object.keys(previewModule)
+                    });
+                    
+                    return `
+                      <!DOCTYPE html>
+                      <html>
+                      <head>
+                        <script src="https://cdn.tailwindcss.com"><\/script>
+                        <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+                        <script>
+                          tailwind.config = {
+                            darkMode: "class",
+                            theme: {
+                              extend: {
+                                fontFamily: {
+                                  sans: ["Inter", "sans-serif"],
+                                  mono: ["JetBrains Mono", "monospace"]
+                                }
                               }
                             }
                           }
-                        }
-                      <\/script>
-                      <style>
-                        body { background: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 20px; min-height: 100vh; }
-                        .mono { font-family: 'JetBrains Mono', monospace; }
-                        .score-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; }
-                        .score-btn:hover { border-color: #0ea5e9; color: white; }
-                        .score-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; }
-                        .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
-                        .rubric-cell:hover { background: rgba(255,255,255,0.05); }
-                        .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
-                        .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
-                        .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; }
-                        .custom-scroll::-webkit-scrollbar { width: 8px; }
-                        .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
-                        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-                        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
-                        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
-                      </style>
-                    </head>
-                    <body>
-                      ${itemCode.html || '<p class="p-8 text-slate-500">No HTML content</p>'}
-                      <script>${itemCode.script || ''}<\/script>
-                    </body>
-                    </html>
-                  `;
+                        <\/script>
+                        ${moduleCSS ? `<style>${moduleCSS}</style>` : ''}
+                        <style>
+                          body { background: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 20px; min-height: 100vh; }
+                          .mono { font-family: 'JetBrains Mono', monospace; }
+                          .score-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; }
+                          .score-btn:hover { border-color: #0ea5e9; color: white; }
+                          .score-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; }
+                          .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+                          .rubric-cell:hover { background: rgba(255,255,255,0.05); }
+                          .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
+                          .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
+                          .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; }
+                          .custom-scroll::-webkit-scrollbar { width: 8px; }
+                          .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
+                          .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+                          .custom-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
+                          .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
+                        </style>
+                      </head>
+                      <body>
+                        ${moduleHTML || '<p class="p-8 text-slate-500">No HTML content</p>'}
+                        ${moduleScript ? `<script>${moduleScript}<\/script>` : ''}
+                      </body>
+                      </html>
+                    `;
+                  } else if (previewModule.type === 'external') {
+                    // External link module - show iframe or redirect message
+                    if (previewModule.linkType === 'iframe') {
+                      return `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                          <style>
+                            body { 
+                              margin: 0; 
+                              padding: 0; 
+                              background: #020617; 
+                              display: flex; 
+                              align-items: center; 
+                              justify-content: center; 
+                              min-height: 100vh; 
+                              font-family: 'Inter', sans-serif; 
+                              color: #e2e8f0; 
+                            }
+                            iframe { 
+                              width: 100%; 
+                              height: 100vh; 
+                              border: none; 
+                            }
+                          </style>
+                        </head>
+                        <body>
+                          <iframe src="${previewModule.url || ''}" width="100%" height="100%" style="border:none;"></iframe>
+                        </body>
+                        </html>
+                      `;
+                    } else {
+                      return `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                          <style>
+                            body { 
+                              background: #020617; 
+                              color: #e2e8f0; 
+                              font-family: 'Inter', sans-serif; 
+                              padding: 40px; 
+                              text-align: center; 
+                              min-height: 100vh; 
+                              display: flex; 
+                              flex-direction: column; 
+                              align-items: center; 
+                              justify-content: center; 
+                            }
+                            a { 
+                              color: #0ea5e9; 
+                              text-decoration: underline; 
+                            }
+                          </style>
+                        </head>
+                        <body>
+                          <h2 class="text-2xl font-bold mb-4">${previewModule.title || 'External Module'}</h2>
+                          <p class="mb-6 text-slate-400">This module opens in a new tab.</p>
+                          <a href="${previewModule.url || '#'}" target="_blank" rel="noopener noreferrer" class="text-lg">
+                            Open ${previewModule.title || 'Module'} →
+                          </a>
+                        </body>
+                        </html>
+                      `;
+                    }
+                  } else {
+                    // Legacy module format
+                    console.log('📦 Using legacy module format');
+                    let itemCode = previewModule.code || {};
+                    if (typeof itemCode === 'string') {
+                      try { itemCode = JSON.parse(itemCode); } catch(e) {
+                        console.error('Failed to parse code:', e);
+                      }
+                    }
+                    console.log('📦 Legacy code structure:', {
+                      hasCodeHTML: !!itemCode.html,
+                      hasCodeScript: !!itemCode.script,
+                      htmlLength: itemCode.html?.length || 0,
+                      scriptLength: itemCode.script?.length || 0,
+                      codeKeys: Object.keys(itemCode)
+                    });
+                    
+                    // Clean up HTML - remove hidden classes and ensure visibility
+                    let cleanHTML = itemCode.html || '';
+                    if (cleanHTML) {
+                      // Remove hidden class from any elements
+                      cleanHTML = cleanHTML.replace(/class="([^"]*)\bhidden\b([^"]*)"/g, 'class="$1$2"');
+                      // Remove display: none inline styles
+                      cleanHTML = cleanHTML.replace(/style="([^"]*)\bdisplay\s*:\s*none([^"]*)"/gi, 'style="$1$2"');
+                      // Ensure main container is visible
+                      cleanHTML = cleanHTML.replace(/<div\s+id="[^"]*"\s+class="[^"]*hidden/g, '<div id="$1" class="');
+                    }
+                    
+                    // Clean up script - convert const/let to var to prevent redeclaration errors
+                    let cleanScript = itemCode.script || '';
+                    if (cleanScript) {
+                      cleanScript = cleanScript.replace(/\bconst\s+(\w+)\s*=/g, 'var $1 =');
+                      cleanScript = cleanScript.replace(/\blet\s+(\w+)\s*=/g, 'var $1 =');
+                      // Fix initialization checks that might prevent content from showing
+                      cleanScript = cleanScript.replace(
+                        /if\s*\(\s*sc\s*&&\s*sc\.innerHTML\.trim\(\)\s*===\s*['"]['""]\s*\)\s*{/g,
+                        'if (sc) { sc.innerHTML = "";'
+                      );
+                      cleanScript = cleanScript.replace(
+                        /if\s*\(\s*sc\s*&&\s*sc\.children\.length\s*===\s*0\s*\)\s*{/g,
+                        'if (sc) { sc.innerHTML = "";'
+                      );
+                    }
+                    
+                    return `
+                      <!DOCTYPE html>
+                      <html>
+                      <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <script src="https://cdn.tailwindcss.com"><\/script>
+                        <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+                        <script>
+                          tailwind.config = {
+                            darkMode: "class",
+                            theme: {
+                              extend: {
+                                fontFamily: {
+                                  sans: ["Inter", "sans-serif"],
+                                  mono: ["JetBrains Mono", "monospace"]
+                                }
+                              }
+                            }
+                          }
+                        <\/script>
+                        <style>
+                          body { background: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 20px; min-height: 100vh; }
+                          .mono { font-family: 'JetBrains Mono', monospace; }
+                          .score-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; }
+                          .score-btn:hover { border-color: #0ea5e9; color: white; }
+                          .score-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; }
+                          .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+                          .rubric-cell:hover { background: rgba(255,255,255,0.05); }
+                          .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
+                          .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
+                          .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; }
+                          .custom-scroll::-webkit-scrollbar { width: 8px; }
+                          .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
+                          .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+                          .custom-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
+                          .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
+                          /* Force visibility for preview */
+                          [id^="view-"] { display: block !important; visibility: visible !important; opacity: 1 !important; }
+                          .hidden { display: block !important; visibility: visible !important; }
+                          body > div { display: block !important; }
+                          /* Ensure main content containers are visible */
+                          #sc-container, [id*="container"], [id*="content"] { display: block !important; visibility: visible !important; }
+                        </style>
+                      </head>
+                      <body>
+                        ${cleanHTML || '<p class="p-8 text-slate-500">No HTML content</p>'}
+                        <script>
+                          (function() {
+                            try {
+                              ${cleanScript}
+                            } catch(e) {
+                              console.error('Module script error:', e);
+                            }
+                            
+                            // Force initialization after DOM is ready
+                            function forceShow() {
+                              // Force show any hidden elements
+                              document.querySelectorAll('.hidden, [style*="display: none"], [style*="display:none"]').forEach(function(el) {
+                                el.classList.remove('hidden');
+                                el.style.display = '';
+                                el.style.visibility = 'visible';
+                                el.style.opacity = '1';
+                              });
+                              // Trigger any initialization functions
+                              var initFunctions = ['init', 'initialize', 'setup', 'load'];
+                              initFunctions.forEach(function(fnName) {
+                                if (typeof window[fnName] === 'function') {
+                                  try { window[fnName](); } catch(e) { console.error('Init error:', e); }
+                                }
+                              });
+                              console.log('Preview: Forced visibility, body children:', document.body.children.length);
+                            }
+                            
+                            if (document.readyState === 'loading') {
+                              document.addEventListener('DOMContentLoaded', forceShow);
+                            } else {
+                              forceShow();
+                            }
+                            
+                            // Fallback timeout to ensure content shows
+                            setTimeout(forceShow, 100);
+                            setTimeout(forceShow, 500);
+                          })();
+                        <\/script>
+                      </body>
+                      </html>
+                    `;
+                  }
                 })()}
+                key={previewModule.id || previewModule.title}
                 className="w-full h-full border-0"
                 style={{ minHeight: 'calc(90vh - 80px)' }}
               />
