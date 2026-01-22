@@ -1022,6 +1022,55 @@ function validateModule(module, isNew = false) {
   };
 }
 
+/**
+ * Run validation across all course modules and toolkit features.
+ * Returns: { isValid, errors, warnings }
+ * Each error/warning is { message, context } where context is e.g. "Module 'Intro'" or "Toolkit 'Save System'".
+ */
+function validateProject(projectData) {
+  const errors = [];
+  const warnings = [];
+  const idsSeen = new Map(); // id -> { context, type: 'module'|'toolkit' }
+
+  const modules = projectData["Current Course"]?.modules || [];
+  const toolkit = projectData["Global Toolkit"] || [];
+
+  const checkDuplicateId = (id, context, type) => {
+    if (!id || !id.trim()) return;
+    const existing = idsSeen.get(id);
+    if (existing) {
+      errors.push({
+        message: `Duplicate ID "${id}" (also used in ${existing.context})`,
+        context
+      });
+    } else {
+      idsSeen.set(id, { context, type });
+    }
+  };
+
+  modules.forEach((mod, idx) => {
+    const ctx = `Module "${mod.title || mod.id || 'Untitled'}"`;
+    checkDuplicateId(mod.id, ctx, 'module');
+    const v = validateModule(mod, false);
+    v.errors.forEach((e) => errors.push({ message: e, context: ctx }));
+    v.warnings.forEach((w) => warnings.push({ message: w, context: ctx }));
+  });
+
+  toolkit.forEach((t, idx) => {
+    const ctx = `Toolkit "${t.title || t.id || 'Untitled'}"`;
+    checkDuplicateId(t.id, ctx, 'toolkit');
+    const v = validateModule(t, false);
+    v.errors.forEach((e) => errors.push({ message: e, context: ctx }));
+    v.warnings.forEach((w) => warnings.push({ message: w, context: ctx }));
+  });
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings
+  };
+}
+
 // --- Phases ---
 
 const Phase0 = () => {
@@ -4821,6 +4870,7 @@ const PROJECT_DATA = {
 const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onToggleHidden, onError }) => {
   const [fullSiteCode, setFullSiteCode] = useState("");
   const [isGenerated, setIsGenerated] = useState(false);
+  const [compileValidation, setCompileValidation] = useState(null); // { isValid, errors, warnings }
 
   // --- EXPORT MODULE PAGE STATE ---
   const [exportModuleId, setExportModuleId] = useState('');
@@ -5793,6 +5843,16 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     }
   };
 
+  const handleCompileClick = () => {
+    const v = validateProject(projectData);
+    if (!v.isValid) {
+      setCompileValidation(v);
+      return;
+    }
+    setCompileValidation(v.warnings.length > 0 ? v : null);
+    generateFullSite();
+  };
+
   const downloadFile = () => {
     const blob = new Blob([fullSiteCode], { type: "text/html" });
     const url = URL.createObjectURL(blob);
@@ -6021,8 +6081,45 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                     </div>
                 )}
 
+                {/* Validation summary */}
+                {compileValidation && (
+                  <div className={`mb-6 rounded-xl border p-4 text-left ${compileValidation.errors.length > 0 ? 'bg-rose-950/40 border-rose-700' : 'bg-amber-950/40 border-amber-700'}`}>
+                    {compileValidation.errors.length > 0 ? (
+                      <>
+                        <div className="flex items-center gap-2 text-rose-300 font-bold mb-2">
+                          <AlertTriangle size={18} />
+                          {compileValidation.errors.length} validation error{compileValidation.errors.length !== 1 ? 's' : ''} — fix before compiling
+                        </div>
+                        <ul className="list-disc list-inside space-y-1 text-sm text-rose-200/90">
+                          {compileValidation.errors.map((e, i) => (
+                            <li key={i}>
+                              <span className="text-rose-400/80">{typeof e === 'object' && e.context ? e.context + ': ' : ''}</span>
+                              {typeof e === 'object' && e.message ? e.message : e}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    ) : compileValidation.warnings.length > 0 ? (
+                      <>
+                        <div className="flex items-center gap-2 text-amber-300 font-bold mb-2">
+                          <AlertTriangle size={18} />
+                          {compileValidation.warnings.length} warning{compileValidation.warnings.length !== 1 ? 's' : ''}
+                        </div>
+                        <ul className="list-disc list-inside space-y-1 text-sm text-amber-200/90">
+                          {compileValidation.warnings.map((w, i) => (
+                            <li key={i}>
+                              <span className="text-amber-400/80">{typeof w === 'object' && w.context ? w.context + ': ' : ''}</span>
+                              {typeof w === 'object' && w.message ? w.message : w}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    ) : null}
+                  </div>
+                )}
+
                 <button 
-                    onClick={generateFullSite}
+                    onClick={handleCompileClick}
                     disabled={modules.length === 0}
                     className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-transform hover:scale-105 flex items-center gap-3 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -6041,13 +6138,29 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                             <Download size={12} /> Download File
                         </button>
                         <button 
-                            onClick={() => setIsGenerated(false)}
+                            onClick={() => { setIsGenerated(false); setCompileValidation(null); }}
                             className="text-xs text-slate-500 hover:text-white px-2 py-1"
                         >
                             Reset
                         </button>
                     </div>
                 </div>
+                {compileValidation?.warnings?.length > 0 && (
+                  <div className="mb-4 p-4 bg-amber-950/40 border border-amber-700 rounded-xl text-left">
+                    <div className="flex items-center gap-2 text-amber-300 font-bold mb-2">
+                      <AlertTriangle size={16} />
+                      Compiled with {compileValidation.warnings.length} warning{compileValidation.warnings.length !== 1 ? 's' : ''}
+                    </div>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-amber-200/90">
+                      {compileValidation.warnings.map((w, i) => (
+                        <li key={i}>
+                          <span className="text-amber-400/80">{typeof w === 'object' && w.context ? w.context + ': ' : ''}</span>
+                          {typeof w === 'object' && w.message ? w.message : w}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <CodeBlock label="Full Website Source" code={fullSiteCode} height="h-96" />
                 <div className="mt-4 p-4 bg-purple-900/20 border border-purple-700/50 rounded-lg text-sm text-purple-200">
                     <strong>Next Step:</strong> Download the file above, or copy the block and paste it into your Google Sites "Embed Code" widget.
