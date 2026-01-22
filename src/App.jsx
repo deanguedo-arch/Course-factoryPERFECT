@@ -26,6 +26,7 @@ const PROJECT_DATA = {
       {
         id: "item-1768749223001",
         title: "Course Materials",
+        type: "standalone",
         materials: [
           {
             id: "mat-00",
@@ -83,9 +84,7 @@ const PROJECT_DATA = {
             order: 4
           }
         ],
-        code: {
-          id: "view-materials",
-          html: `<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
+        html: `<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
             <div class="max-w-5xl mx-auto space-y-8">
                 <div class="mb-12">
                     <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Course <span class="text-sky-500">Materials</span></h2>
@@ -103,7 +102,8 @@ const PROJECT_DATA = {
                 </div>
             </div>
         </div>`,
-          script: `
+        css: "",
+        script: `
         // Dynamic Materials Renderer (runs in builder and compiled site)
         function renderMaterials() {
             // This will be populated by the compile process
@@ -159,15 +159,13 @@ const PROJECT_DATA = {
         } else {
             renderMaterials();
         }`
-        }
       },
       {
         id: "item-assessments",
         title: "Assessments",
+        type: "standalone",
         assessments: [],
-        code: {
-          id: "view-assessments",
-          html: `<div id="view-assessments" class="w-full h-full custom-scroll p-8 md:p-12">
+        html: `<div id="view-assessments" class="w-full h-full custom-scroll p-8 md:p-12">
             <div class="max-w-5xl mx-auto space-y-8">
                 <div class="mb-12">
                     <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Assessment <span class="text-purple-500">Center</span></h2>
@@ -178,7 +176,8 @@ const PROJECT_DATA = {
                 </div>
             </div>
         </div>`,
-          script: `
+        css: "",
+        script: `
         // Dynamic Assessments Renderer
         function renderAssessments() {
             const container = document.getElementById('assessments-container');
@@ -207,14 +206,12 @@ const PROJECT_DATA = {
         } else {
             renderAssessments();
         }`
-        }
       },
       {
         id: "item-1768750987350",
         title: "Phase 1: The Engine",
-        code: {
-          id: "view-phase1",
-          html: `<div id="view-phase1" class="w-full h-full custom-scroll hidden p-4 md:p-8">
+        type: "standalone",
+        html: `<div id="view-phase1" class="w-full h-full custom-scroll hidden p-4 md:p-8">
             <div class="max-w-6xl mx-auto">
                 <header class="mb-8 text-center"><h1 class="text-3xl font-black italic tracking-tighter text-white uppercase mb-2 text-sky-500">Elite Operator Toolkit</h1><p class="text-[10px] font-mono uppercase tracking-[0.3em] text-slate-500 mb-6 font-bold underline decoration-sky-500/30 underline-offset-4">Regulation Engine: Tactical Assignment</p><div class="flex flex-wrap justify-center gap-3 mb-6 bg-slate-900/50 p-3 rounded-xl border border-slate-800 max-w-2xl mx-auto"><div class="flex items-center gap-2 px-3"><div id="p1-save-indicator" class="w-2 h-2 rounded-full bg-slate-600"></div><span id="p1-save-text" class="text-[9px] uppercase font-bold text-slate-500 tracking-widest">System Ready</span></div><div class="w-px h-6 bg-slate-800 mx-2 hidden sm:block"></div><button onclick="p1_downloadBackup()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-[10px] uppercase font-bold tracking-wider transition-colors border border-slate-700">Save Backup File</button><button onclick="document.getElementById('p1-file-upload').click()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-sky-400 px-3 py-1.5 rounded-lg text-[10px] uppercase font-bold tracking-wider transition-colors border border-slate-700">Load Backup</button><input type="file" id="p1-file-upload" accept=".json" style="display: none;" onchange="p1_loadBackup(this)"></div><div class="flex justify-center gap-2 overflow-x-auto pb-2 px-2"><button onclick="p1_showStep(0)" class="mod-nav-btn active px-4 py-2 rounded-lg border border-slate-700 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">Briefing</button><button onclick="p1_showStep(1)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-700 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">01 Stress Reset</button><button onclick="p1_showStep(2)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-700 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">02 Arousal</button><button onclick="p1_showStep(3)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-800 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">03 Targeting</button><button onclick="p1_showStep(4)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-800 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">04 Confidence</button><button onclick="p1_showStep(5)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-800 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">Review & Print</button></div></header>
                 <div class="glass rounded-3xl shadow-2xl overflow-hidden min-h-[500px]">
@@ -256,13 +253,16 @@ const PROJECT_DATA = {
             const scoreDetails = p1_cats.map(c => \`<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:6px 0;"><span style="font-size:10px; font-weight:bold; color:#666; text-transform:uppercase;">\${c.label}</span><span style="font-weight:900; font-style:italic;">\${p1_scores[c.id] || 0}/5</span></div>\`).join('');
             const html = \`<!DOCTYPE html><html><head><title>Elite Operator Report</title><link href="https://cdn.tailwindcss.com" rel="stylesheet"><style>body{font-family:sans-serif;padding:40px;color:black;background:white;line-height:1.3}.header{border-bottom:5px solid black;padding-bottom:10px;margin-bottom:25px}.section{margin-bottom:20px;border-left:4px solid black;padding-left:15px}.label{font-size:8px;font-weight:bold;text-transform:uppercase;color:#888}.val{font-size:13px;font-weight:900;font-style:italic;border-bottom:1px solid #ddd;margin-bottom:8px;min-height:18px;color:#111}.narr-val{font-size:11px;line-height:1.4;padding:12px;background:#f9f9f9;border-radius:8px;border:1px solid #eee;margin-top:5px}</style></head><body><div style="max-width:800px;margin:auto"><div class="header flex justify-between items-end"><div><h1 class="text-3xl font-black italic uppercase">Operator Report</h1><p style="font-size:10px;letter-spacing:3px;text-transform:uppercase;font-weight:bold">Regulation Engine Tactical Assessment</p></div><div style="text-align:right"><p style="font-size:10px;text-transform:uppercase;font-weight:bold">Mental Fitness Score</p><p style="font-size:40px;font-weight:900;font-style:italic;line-height:1">\${total}/25</p></div></div><div class="grid grid-cols-2 gap-8"><div class="section" style="border-left-color:#f43f5e"><h2 style="font-size:12px;font-weight:900;text-transform:uppercase;margin-bottom:10px;color:#f43f5e">01 Stress Loop Reset</h2><div class="label">Deployment Scenario</div><div class="val">\${data.b_scenario||'...'}</div><div class="label">Centering Action</div><div class="val">\${data.b_detail||'...'}</div></div><div class="section" style="border-left-color:#f59e0b"><h2 style="font-size:12px;font-weight:900;text-transform:uppercase;margin-bottom:10px;color:#f59e0b">02 Arousal Tuning</h2><div class="label">Down-Regulation (PMR)</div><div class="val">\${data.relax||'...'}</div><div class="label">Up-Regulation (Active)</div><div class="val">\${data.active||'...'}</div></div></div><div class="grid grid-cols-2 gap-8"><div class="section" style="border-left-color:#10b981"><h2 style="font-size:12px;font-weight:900;text-transform:uppercase;margin-bottom:10px;color:#10b981">03 Targeting (Cues)</h2><div class="label">Instructional Cue</div><div class="val">\${data.inst||'...'}</div><div class="label">Motivational Cue</div><div class="val">\${data.mot||'...'}</div><div class="label">Jamming Scenario</div><div class="val" style="font-size:11px">\${data.jam||'...'}</div></div><div class="section" style="border-left-color:#0ea5e9"><h2 style="font-size:12px;font-weight:900;text-transform:uppercase;margin-bottom:10px;color:#0ea5e9">04 Confidence (SMART)</h2><div class="label">Process Goal (100% Control)</div><div class="val">\${data.proc||'...'}</div><div class="label">Full SMART Statement</div><div class="val" style="font-size:11px">\${data.smart_final||'...'}</div></div></div><div class="section"><h2 style="font-size:12px;font-weight:900;text-transform:uppercase;margin-bottom:5px">Integration Narrative</h2><div class="narr-val">\${data.narr||'---'}</div></div><div style="margin-top:20px;border-top:2px solid black;padding-top:15px"><h2 style="font-size:10px;font-weight:900;text-transform:uppercase;margin-bottom:8px">Evaluation Breakdown</h2>\${scoreDetails}</div></div><script>window.onload=function(){setTimeout(function(){window.print()},500)};<\\/script></body></html>\`; 
             const win = window.open('','_blank'); win.document.write(html); win.document.close(); 
-        }`
-        }
+        }`,
+        css: ""
       },
       {
         id: "item-x",
         title: "Empty Module",
-        code: {}
+        type: "standalone",
+        html: "",
+        css: "",
+        script: ""
       }
     ],
     materials: []
@@ -4674,8 +4674,9 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
         // Inject the dynamically generated HTML
         contentInjection += '\n        ' + materialsHTML + '\n';
         
-        // Inject the scripts
-        if (itemCode.script) scriptInjection += '\n        ' + itemCode.script + '\n';
+        // Inject the scripts (use standalone format if available, fallback to legacy)
+        const materialsScript = item.script || itemCode.script || '';
+        if (materialsScript) scriptInjection += '\n        ' + materialsScript + '\n';
         
       }
       // Special handling for Assessments module
