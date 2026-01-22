@@ -799,6 +799,50 @@ function getModuleType(module) {
 }
 
 /**
+ * Escape HTML entities to prevent XSS
+ */
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/**
+ * Validate URL and reject dangerous protocols
+ * Returns: { isValid: boolean, safeUrl: string, error?: string }
+ */
+function validateUrl(url) {
+  if (!url || !url.trim()) {
+    return { isValid: false, safeUrl: '#', error: 'Empty URL' };
+  }
+  
+  const trimmed = url.trim();
+  const lower = trimmed.toLowerCase();
+  
+  // Reject dangerous protocols
+  const dangerousProtocols = ['javascript:', 'data:', 'vbscript:', 'file:', 'about:'];
+  for (const protocol of dangerousProtocols) {
+    if (lower.startsWith(protocol)) {
+      return { isValid: false, safeUrl: '#', error: `Dangerous protocol: ${protocol}` };
+    }
+  }
+  
+  // Try to construct a URL object to validate format
+  try {
+    const urlObj = new URL(trimmed);
+    // Only allow http, https, and relative URLs
+    if (!['http:', 'https:', ''].includes(urlObj.protocol) && urlObj.protocol !== '') {
+      return { isValid: false, safeUrl: '#', error: `Unsupported protocol: ${urlObj.protocol}` };
+    }
+    return { isValid: true, safeUrl: trimmed };
+  } catch (e) {
+    // If URL parsing fails, it might be a relative URL - allow it but escape it
+    return { isValid: true, safeUrl: escapeHtml(trimmed) };
+  }
+}
+
+/**
  * Extract module content (HTML, CSS, Script) from any module type
  * Returns: { html, css, script, type }
  */
@@ -4615,11 +4659,14 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
             <div className="p-0 max-h-[calc(90vh-80px)] overflow-y-auto">
               <iframe 
                 srcDoc={(() => {
-                  return `<!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"><\/script><link href="https://fonts.googleapis.com/css?family=Inter:wght@400;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet"><style>body{background:#020617;color:#e2e8f0;font-family:'Inter',sans-serif;padding:20px;}.mono{font-family:'JetBrains Mono',monospace;}.score-btn{background:#0f172a;border:1px solid #1e293b;color:#64748b;transition:all 0.2s;}.score-btn:hover{border-color:#0ea5e9;color:white;}.score-btn.active{background:#0ea5e9;color:#000;font-weight:900;border-color:#0ea5e9;}.rubric-cell{cursor:pointer;transition:all 0.2s;border:1px solid transparent;}.rubric-cell:hover{background:rgba(255,255,255,0.05);}.active-proficient{background:rgba(16,185,129,0.2);border:1px solid #10b981;color:#10b981;}.active-developing{background:rgba(245,158,11,0.2);border:1px solid #f59e0b;color:#f59e0b;}.active-emerging{background:rgba(244,63,94,0.2);border:1px solid #f43f5e;color:#f43f5e;}</style></head><body>${assessmentPreview.html || '<p class="text-slate-500">No HTML content</p>'}<script>${assessmentPreview.script || ''}<\/script></body></html>`;
+                  // Sanitize assessment content for preview
+                  const safeHtml = assessmentPreview.html || '<p class="text-slate-500">No HTML content</p>';
+                  const safeScript = cleanModuleScript(assessmentPreview.script || '');
+                  return `<!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"><\/script><link href="https://fonts.googleapis.com/css?family=Inter:wght@400;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet"><style>body{background:#020617;color:#e2e8f0;font-family:'Inter',sans-serif;padding:20px;}.mono{font-family:'JetBrains Mono',monospace;}.score-btn{background:#0f172a;border:1px solid #1e293b;color:#64748b;transition:all 0.2s;}.score-btn:hover{border-color:#0ea5e9;color:white;}.score-btn.active{background:#0ea5e9;color:#000;font-weight:900;border-color:#0ea5e9;}.rubric-cell{cursor:pointer;transition:all 0.2s;border:1px solid transparent;}.rubric-cell:hover{background:rgba(255,255,255,0.05);}.active-proficient{background:rgba(16,185,129,0.2);border:1px solid #10b981;color:#10b981;}.active-developing{background:rgba(245,158,11,0.2);border:1px solid #f59e0b;color:#f59e0b;}.active-emerging{background:rgba(244,63,94,0.2);border:1px solid #f43f5e;color:#f43f5e;}</style></head><body>${safeHtml}<script>${safeScript}<\/script></body></html>`;
                 })()}
                 className="w-full border-0"
                 style={{ minHeight: '600px' }}
-                title={assessmentPreview.title}
+                title={assessmentPreview.title || 'Assessment Preview'}
               />
             </div>
             
@@ -7958,7 +8005,7 @@ Questions.filter((_, i) => i !== index);
             <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Eye size={20} className="text-purple-400" />
-                Preview: {previewModule.title}
+                Preview: {previewModule.title || 'Untitled Module'}
               </h3>
               <button onClick={() => setPreviewModule(null)} className="text-slate-400 hover:text-white">
                 <X size={24} />
@@ -7983,6 +8030,11 @@ Questions.filter((_, i) => i !== index);
                   
                   // Handle external modules separately (they need special iframe handling)
                   if (moduleType === 'external') {
+                    // Validate and sanitize URL
+                    const urlValidation = validateUrl(previewModule.url || '');
+                    const safeUrl = urlValidation.safeUrl;
+                    const safeTitle = escapeHtml(previewModule.title || 'External Module');
+                    
                     if (previewModule.linkType === 'iframe') {
                       return `
                         <!DOCTYPE html>
@@ -8008,7 +8060,7 @@ Questions.filter((_, i) => i !== index);
                           </style>
                         </head>
                         <body>
-                          <iframe src="${previewModule.url || ''}" width="100%" height="100%" style="border:none;"></iframe>
+                          <iframe src="${safeUrl}" width="100%" height="100%" style="border:none;"></iframe>
                         </body>
                         </html>
                       `;
@@ -8037,10 +8089,10 @@ Questions.filter((_, i) => i !== index);
                           </style>
                         </head>
                         <body>
-                          <h2 class="text-2xl font-bold mb-4">${previewModule.title || 'External Module'}</h2>
+                          <h2 class="text-2xl font-bold mb-4">${safeTitle}</h2>
                           <p class="mb-6 text-slate-400">This module opens in a new tab.</p>
-                          <a href="${previewModule.url || '#'}" target="_blank" rel="noopener noreferrer" class="text-lg">
-                            Open ${previewModule.title || 'Module'} →
+                          <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-lg">
+                            Open ${safeTitle} →
                           </a>
                         </body>
                         </html>
