@@ -4782,7 +4782,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onErro
     // PHASE 5 SETTINGS APPLICATION
     // ========================================
     const courseSettings = projectData["Course Settings"] || {};
-    const courseName = courseSettings.courseName || currentCourse.name || "Course Factory";
+    const courseName = courseSettings.courseName || projectData["Current Course"]?.name || "Course Factory";
     const courseNameUpper = courseName.toUpperCase();
     const courseCode = courseSettings.courseCode || "";
     const instructor = courseSettings.instructor || "";
