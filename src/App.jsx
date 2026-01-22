@@ -4025,10 +4025,94 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
     let sectionsHTML = '';
     let combinedScripts = '';
 
-    // Module Content
-    if (modCode.html) {
+    // Add navigation/viewer functions FIRST (before module scripts) to ensure they're available immediately
+    // Assessment Navigation Functions (will be used if assessments are included)
+    combinedScripts += '// --- ASSESSMENT NAVIGATION (Pre-declared) ---\n' +
+        'window.showAssessment = window.showAssessment || function(index) {\n' +
+        '  var listEl = document.getElementById("assessment-list");\n' +
+        '  if (listEl) listEl.classList.add("hidden");\n' +
+        '  document.querySelectorAll(".assessment-container").forEach(function(c) { c.classList.add("hidden"); });\n' +
+        '  var targetEl = document.getElementById("assessment-" + index);\n' +
+        '  if (targetEl) targetEl.classList.remove("hidden");\n' +
+        '  window.scrollTo(0, 0);\n' +
+        '};\n' +
+        'window.backToAssessmentList = window.backToAssessmentList || function() {\n' +
+        '  document.querySelectorAll(".assessment-container").forEach(function(c) { c.classList.add("hidden"); });\n' +
+        '  var listEl = document.getElementById("assessment-list");\n' +
+        '  if (listEl) listEl.classList.remove("hidden");\n' +
+        '  window.scrollTo(0, 0);\n' +
+        '};\n\n';
+
+    // Material Viewer Functions (will be used if materials are included)
+    combinedScripts += '// --- MATERIAL VIEWER (Pre-declared) ---\n' +
+        'window.openMaterialViewer = window.openMaterialViewer || function(url, title) {\n' +
+        '  var viewer = document.getElementById("material-viewer");\n' +
+        '  var frame = document.getElementById("material-frame");\n' +
+        '  var titleEl = document.getElementById("material-viewer-title");\n' +
+        '  if (viewer && frame && titleEl) {\n' +
+        '    frame.src = url;\n' +
+        '    titleEl.textContent = title;\n' +
+        '    viewer.classList.remove("hidden");\n' +
+        '    viewer.scrollIntoView({ behavior: "smooth", block: "start" });\n' +
+        '  }\n' +
+        '};\n' +
+        'window.closeMaterialViewer = window.closeMaterialViewer || function() {\n' +
+        '  var viewer = document.getElementById("material-viewer");\n' +
+        '  var frame = document.getElementById("material-frame");\n' +
+        '  if (viewer && frame) {\n' +
+        '    viewer.classList.add("hidden");\n' +
+        '    frame.src = "";\n' +
+        '  }\n' +
+        '};\n\n';
+
+    // Module Content - Support both legacy and standalone formats
+    let moduleHTML = '';
+    let moduleCSS = '';
+    let moduleScript = '';
+
+    // Check for standalone module format (new Module Manager)
+    if (selectedMod.type === 'standalone') {
+        moduleHTML = selectedMod.html || '';
+        moduleCSS = selectedMod.css || '';
+        moduleScript = selectedMod.script || '';
+    }
+    // Check for external link module format
+    else if (selectedMod.type === 'external') {
+        // For external links, create appropriate HTML based on linkType
+        if (selectedMod.linkType === 'iframe') {
+            moduleHTML = `<div id="${selectedMod.id}" class="w-full h-full" style="min-height: 600px;">
+                <iframe src="${selectedMod.url}" width="100%" height="100%" style="border:none;" frameborder="0"></iframe>
+            </div>`;
+        } else {
+            // For new tab links, create a redirect/instruction page
+            moduleHTML = `<div id="${selectedMod.id}" class="w-full h-full p-8 text-center">
+                <h2 class="text-2xl font-bold text-white mb-4">${selectedMod.title}</h2>
+                <p class="text-slate-400 mb-6">This module opens in a new tab.</p>
+                <a href="${selectedMod.url}" target="_blank" rel="noopener noreferrer" 
+                   class="inline-block bg-sky-600 hover:bg-sky-500 text-white px-8 py-4 rounded-lg text-sm font-bold uppercase transition-all">
+                    Open ${selectedMod.title}
+                </a>
+            </div>`;
+        }
+    }
+    // Check for legacy format (old code structure)
+    else {
+        // Try to get from code property
+        if (modCode && modCode.html) {
+            moduleHTML = modCode.html;
+            moduleScript = modCode.script || '';
+        }
+        // Also check if html/script are directly on the module (fallback)
+        else if (selectedMod.html) {
+            moduleHTML = selectedMod.html;
+            moduleScript = selectedMod.script || '';
+        }
+    }
+
+    // Process HTML if found
+    if (moduleHTML) {
         // Remove HTML comments that break init checks (e.g., <!-- Rubric injection point -->)
-        let cleanHTML = modCode.html.replace(/<!--[\s\S]*?-->/g, '');
+        let cleanHTML = moduleHTML.replace(/<!--[\s\S]*?-->/g, '');
         // Remove 'hidden' class for standalone display
         cleanHTML = cleanHTML.replace(/class="([^"]*)\bhidden\b([^"]*)"/g, 'class="$1$2"');
         // Remove 'custom-scroll' class (not needed without navigation container)
@@ -4043,9 +4127,21 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
         });
         sectionsHTML += '<section id="module-content" class="mb-12">' + cleanHTML + '</section>';
     }
-    if (modCode.script) {
+
+    // Inject CSS if found (standalone modules only)
+    if (moduleCSS) {
+        sectionsHTML = '<style id="module-styles">' + moduleCSS + '</style>' + sectionsHTML;
+    }
+
+    // Process script if found
+    if (moduleScript) {
         // Fix initialization checks - force clearing and rebuilding
-        let cleanScript = modCode.script;
+        let cleanScript = moduleScript;
+        
+        // Replace const/let declarations that might conflict (convert to var for compatibility)
+        // This prevents "Identifier already declared" errors when scripts run multiple times
+        cleanScript = cleanScript.replace(/\bconst\s+(\w+)\s*=/g, 'var $1 =');
+        cleanScript = cleanScript.replace(/\blet\s+(\w+)\s*=/g, 'var $1 =');
         
         // Replace innerHTML.trim() === "" with a forced clear + check
         cleanScript = cleanScript.replace(
@@ -4094,23 +4190,6 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
             if (assess.script) combinedScripts += '// --- ASSESSMENT: ' + assess.title + ' ---\n' + assess.script + '\n\n';
         });
         
-        // Assessment Navigation Script
-        combinedScripts += '\n// --- ASSESSMENT NAVIGATION ---\n' +
-            'window.showAssessment = function(index) {\n' +
-            '  var listEl = document.getElementById("assessment-list");\n' +
-            '  if (listEl) listEl.classList.add("hidden");\n' +
-            '  document.querySelectorAll(".assessment-container").forEach(function(c) { c.classList.add("hidden"); });\n' +
-            '  var targetEl = document.getElementById("assessment-" + index);\n' +
-            '  if (targetEl) targetEl.classList.remove("hidden");\n' +
-            '  window.scrollTo(0, 0);\n' +
-            '};\n' +
-            'window.backToAssessmentList = function() {\n' +
-            '  document.querySelectorAll(".assessment-container").forEach(function(c) { c.classList.add("hidden"); });\n' +
-            '  var listEl = document.getElementById("assessment-list");\n' +
-            '  if (listEl) listEl.classList.remove("hidden");\n' +
-            '  window.scrollTo(0, 0);\n' +
-            '};\n\n';
-        
         sectionsHTML += '</section>';
     }
 
@@ -4158,28 +4237,6 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
             sectionsHTML += '</div></div>';
         });
         sectionsHTML += '</div></section>';
-        
-        // Add material viewer functions to script
-        combinedScripts += '\n// --- MATERIAL VIEWER FUNCTIONS ---\n' +
-            'window.openMaterialViewer = function(url, title) {\n' +
-            '  var viewer = document.getElementById("material-viewer");\n' +
-            '  var frame = document.getElementById("material-frame");\n' +
-            '  var titleEl = document.getElementById("material-viewer-title");\n' +
-            '  if (viewer && frame && titleEl) {\n' +
-            '    frame.src = url;\n' +
-            '    titleEl.textContent = title;\n' +
-            '    viewer.classList.remove("hidden");\n' +
-            '    viewer.scrollIntoView({ behavior: "smooth", block: "start" });\n' +
-            '  }\n' +
-            '};\n' +
-            'window.closeMaterialViewer = function() {\n' +
-            '  var viewer = document.getElementById("material-viewer");\n' +
-            '  var frame = document.getElementById("material-frame");\n' +
-            '  if (viewer && frame) {\n' +
-            '    viewer.classList.add("hidden");\n' +
-            '    frame.src = "";\n' +
-            '  }\n' +
-            '};\n\n';
     }
 
     // Tools
