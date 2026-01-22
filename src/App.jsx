@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Wrench, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X, Edit } from 'lucide-react';
+import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Wrench, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X, Edit, Clock, RotateCcw } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
@@ -1164,11 +1164,20 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
 
   // NEW: Handler for Batch Imports
   const handleBatchImport = (items) => {
-     const newModules = items.map(item => ({
+     const newModules = items.map(item => {
+       const moduleCode = { id: item.id, html: item.html, script: item.script };
+       return {
          id: item.id || `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
          title: item.title,
-         code: { id: item.id, html: item.html, script: item.script }
-     }));
+         code: moduleCode,
+         // Initialize history with version 1 (original state)
+         history: [{
+           timestamp: new Date().toISOString(),
+           title: item.title,
+           code: moduleCode
+         }]
+       };
+     });
      
      setProjectData(prev => ({
          ...prev,
@@ -1586,7 +1595,13 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       const newItem = { 
           id: divId || (parsedCode.id ? parsedCode.id : `item-${Date.now()}`), 
           title: titleToUse, 
-          code: parsedCode 
+          code: parsedCode,
+          // Initialize history with version 1 (original state)
+          history: [{
+            timestamp: new Date().toISOString(),
+            title: titleToUse,
+            code: parsedCode
+          }]
       };
 
       // Validate module before saving
@@ -1721,7 +1736,15 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         type: 'standalone',
         html: wrappedHTML,
         css: scopedCSS,
-        script: scripts || ''
+        script: scripts || '',
+        // Initialize history with version 1 (original state)
+        history: [{
+          timestamp: new Date().toISOString(),
+          title: moduleManagerTitle || moduleId.replace('view-', '').replace(/-/g, ' '),
+          html: wrappedHTML,
+          css: scopedCSS,
+          script: scripts || ''
+        }]
       };
       
       // Validate module before saving
@@ -1811,7 +1834,14 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         title: moduleManagerTitle || moduleId.replace('view-', '').replace(/-/g, ' '),
         type: 'external',
         url: moduleManagerURL,
-        linkType: moduleManagerLinkType
+        linkType: moduleManagerLinkType,
+        // Initialize history with version 1 (original state)
+        history: [{
+          timestamp: new Date().toISOString(),
+          title: moduleManagerTitle || moduleId.replace('view-', '').replace(/-/g, ' '),
+          url: moduleManagerURL,
+          linkType: moduleManagerLinkType
+        }]
       };
       
       // Validate module before saving
@@ -6124,20 +6154,183 @@ const ErrorDisplay = ({ error, onDismiss }) => {
   );
 };
 
-// --- CONFIRMATION MODAL HELPER ---
-const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel }) => {
+// --- DEPENDENCY TRACKING UTILITY ---
+const checkModuleDependencies = (moduleId, projectData) => {
+  const dependencies = {
+    modules: [],
+    assessments: [],
+    toolkit: [],
+    materials: []
+  };
+  
+  const moduleTitle = projectData["Current Course"]?.modules?.find(m => m.id === moduleId)?.title || moduleId;
+  const shortId = moduleId.replace('view-', '').replace('item-', '');
+  
+  // Check all modules for references
+  const allModules = projectData["Current Course"]?.modules || [];
+  allModules.forEach(mod => {
+    if (mod.id === moduleId) return; // Skip self
+    
+    // Check HTML content
+    const moduleContent = mod.html || mod.code?.html || '';
+    if (moduleContent.includes(moduleId) || moduleContent.includes(shortId)) {
+      dependencies.modules.push({
+        id: mod.id,
+        title: mod.title,
+        type: 'HTML reference'
+      });
+    }
+    
+    // Check script content
+    const moduleScript = mod.script || mod.code?.script || '';
+    if (moduleScript.includes(moduleId) || moduleScript.includes(shortId)) {
+      const existing = dependencies.modules.find(d => d.id === mod.id);
+      if (existing) {
+        existing.type = 'HTML & Script reference';
+      } else {
+        dependencies.modules.push({
+          id: mod.id,
+          title: mod.title,
+          type: 'Script reference'
+        });
+      }
+    }
+  });
+  
+  // Check assessments
+  allModules.forEach(mod => {
+    const assessments = mod.assessments || [];
+    assessments.forEach(assess => {
+      const assessHTML = assess.html || '';
+      const assessScript = assess.script || '';
+      const content = assessHTML + assessScript;
+      
+      if (content.includes(moduleId) || content.includes(shortId)) {
+        dependencies.assessments.push({
+          id: assess.id,
+          title: assess.title,
+          moduleTitle: mod.title
+        });
+      }
+    });
+  });
+  
+  // Check toolkit items
+  const toolkit = projectData["Global Toolkit"] || [];
+  toolkit.forEach(tool => {
+    const toolCode = typeof tool.code === 'string' ? JSON.parse(tool.code || '{}') : (tool.code || {});
+    const toolContent = (toolCode.html || '') + (toolCode.script || '');
+    
+    if (toolContent.includes(moduleId) || toolContent.includes(shortId)) {
+      dependencies.toolkit.push({
+        id: tool.id,
+        title: tool.title
+      });
+    }
+  });
+  
+  // Check materials (less common, but possible)
+  const materials = projectData["Current Course"]?.materials || [];
+  materials.forEach(mat => {
+    const matContent = (mat.title || '') + (mat.description || '') + (mat.viewUrl || '');
+    if (matContent.includes(moduleId) || matContent.includes(shortId)) {
+      dependencies.materials.push({
+        id: mat.id,
+        title: mat.title
+      });
+    }
+  });
+  
+  const totalDeps = dependencies.modules.length + dependencies.assessments.length + 
+                    dependencies.toolkit.length + dependencies.materials.length;
+  
+  return {
+    hasDependencies: totalDeps > 0,
+    dependencies,
+    totalCount: totalDeps,
+    moduleTitle
+  };
+};
+
+// --- CONFIRMATION MODAL HELPER (Enhanced with Dependencies) ---
+const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies }) => {
     if (!isOpen) return null;
+    
+    const hasDeps = dependencies && dependencies.hasDependencies;
+    
     return (
         <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onCancel}>
-            <div className="bg-slate-900 border border-rose-900 rounded-xl p-6 max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center gap-3 text-rose-500 mb-4">
+            <div className={`bg-slate-900 border rounded-xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto ${hasDeps ? 'border-amber-900' : 'border-rose-900'}`} onClick={e => e.stopPropagation()}>
+                <div className={`flex items-center gap-3 mb-4 ${hasDeps ? 'text-amber-500' : 'text-rose-500'}`}>
                     <AlertOctagon size={24} />
-                    <h3 className="text-lg font-bold">Delete Item?</h3>
+                    <h3 className="text-lg font-bold">{hasDeps ? '⚠️ Dependencies Found' : 'Delete Item?'}</h3>
                 </div>
-                <p className="text-slate-300 text-sm mb-6">{message}</p>
+                
+                {hasDeps ? (
+                    <>
+                        <div className="mb-4 p-4 bg-amber-900/20 border border-amber-700/50 rounded-lg">
+                            <p className="text-amber-200 text-sm mb-3">
+                                <strong>"{dependencies.moduleTitle}"</strong> is referenced in {dependencies.totalCount} place{dependencies.totalCount !== 1 ? 's' : ''}:
+                            </p>
+                            
+                            {dependencies.dependencies.modules.length > 0 && (
+                                <div className="mb-3">
+                                    <p className="text-xs font-bold text-amber-400 uppercase mb-1">Modules ({dependencies.dependencies.modules.length}):</p>
+                                    <ul className="text-xs text-amber-200 space-y-1 ml-4">
+                                        {dependencies.dependencies.modules.map(dep => (
+                                            <li key={dep.id}>• {dep.title} <span className="text-amber-500">({dep.type})</span></li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            
+                            {dependencies.dependencies.assessments.length > 0 && (
+                                <div className="mb-3">
+                                    <p className="text-xs font-bold text-amber-400 uppercase mb-1">Assessments ({dependencies.dependencies.assessments.length}):</p>
+                                    <ul className="text-xs text-amber-200 space-y-1 ml-4">
+                                        {dependencies.dependencies.assessments.map(dep => (
+                                            <li key={dep.id}>• {dep.title} <span className="text-amber-500">(in {dep.moduleTitle})</span></li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            
+                            {dependencies.dependencies.toolkit.length > 0 && (
+                                <div className="mb-3">
+                                    <p className="text-xs font-bold text-amber-400 uppercase mb-1">Toolkit Items ({dependencies.dependencies.toolkit.length}):</p>
+                                    <ul className="text-xs text-amber-200 space-y-1 ml-4">
+                                        {dependencies.dependencies.toolkit.map(dep => (
+                                            <li key={dep.id}>• {dep.title}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            
+                            {dependencies.dependencies.materials.length > 0 && (
+                                <div className="mb-3">
+                                    <p className="text-xs font-bold text-amber-400 uppercase mb-1">Materials ({dependencies.dependencies.materials.length}):</p>
+                                    <ul className="text-xs text-amber-200 space-y-1 ml-4">
+                                        {dependencies.dependencies.materials.map(dep => (
+                                            <li key={dep.id}>• {dep.title}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            
+                            <p className="text-xs text-amber-300 mt-3 italic">
+                                Deleting this module may break these items. Proceed with caution.
+                            </p>
+                        </div>
+                    </>
+                ) : (
+                    <p className="text-slate-300 text-sm mb-6">{message}</p>
+                )}
+                
                 <div className="flex gap-3">
                     <button onClick={onCancel} className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition-colors">Cancel</button>
-                    <button onClick={onConfirm} className="flex-1 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-sm font-bold shadow-lg shadow-rose-900/20 transition-colors">Delete Forever</button>
+                    <button onClick={onConfirm} className={`flex-1 py-2 rounded-lg text-sm font-bold shadow-lg transition-colors ${hasDeps ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-900/20' : 'bg-rose-600 hover:bg-rose-500 shadow-rose-900/20'}`}>
+                        {hasDeps ? '⚠️ Delete Anyway' : 'Delete Forever'}
+                    </button>
                 </div>
       </div>
     </div>
@@ -6149,6 +6342,32 @@ export default function App() {
   const [scannerNotes, setScannerNotes] = useState("");
   // Initialize state with PROJECT_DATA constant
   const [projectData, setProjectData] = useState(PROJECT_DATA);
+
+  // CSS AUTO-SCOPING FUNCTION (moved here to be accessible to all App functions)
+  const scopeCSS = (css, viewId) => {
+    if (!css || !viewId) return css;
+    
+    // Add #view-{id} prefix to CSS selectors
+    // Handle various CSS patterns
+    let scoped = css;
+    
+    // Scope regular selectors (but not @rules)
+    scoped = scoped.replace(/([^{}@]+)\{/g, (match, selector) => {
+      // Skip if already scoped or is @rule
+      if (selector.trim().startsWith('@') || selector.includes(`#${viewId}`)) {
+        return match;
+      }
+      
+      // Clean selector and add scope
+      const cleanSelector = selector.trim();
+      if (cleanSelector) {
+        return `#${viewId} ${cleanSelector} {`;
+      }
+      return match;
+    });
+    
+    return scoped;
+  };
   // --- AUTO-SAVE STATE ---
   const STORAGE_KEY = 'course_factory_v2_data';
   const [isAutoLoaded, setIsAutoLoaded] = useState(false);
@@ -6207,10 +6426,11 @@ export default function App() {
   const [excludedIds, setExcludedIds] = useState([]);
   const [editingModule, setEditingModule] = useState(null); 
   const [editForm, setEditForm] = useState({ title: '', html: '', script: '', id: '', section: '', moduleType: '', url: '', linkType: 'iframe', fullDocument: '' });
-  const [previewModule, setPreviewModule] = useState(null); 
+  const [previewModule, setPreviewModule] = useState(null);
+  const [moduleHistory, setModuleHistory] = useState(null); // { moduleId, history: [...] }
   
   // Custom Confirmation State to replace window.confirm
-  const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { id, type: 'module' | 'tool' }
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { id, type: 'module' | 'tool', dependencies?: {...} }
   
   // Course Name Rename State
   const [isRenamingCourse, setIsRenamingCourse] = useState(false);
@@ -6342,6 +6562,38 @@ export default function App() {
     const idx = items.findIndex(m => m.id === editingModule);
     if (idx === -1) return;
 
+    // Save current version to history before updating
+    const currentModule = { ...items[idx] }; // Create a copy to avoid mutation issues
+    const history = currentModule.history || [];
+    
+    // Create history snapshot (only save if content actually changed)
+    const newSnapshot = {
+      timestamp: new Date().toISOString(),
+      title: currentModule.title,
+      ...(currentModule.type === 'standalone' ? {
+        html: currentModule.html,
+        css: currentModule.css,
+        script: currentModule.script
+      } : currentModule.type === 'external' ? {
+        url: currentModule.url,
+        linkType: currentModule.linkType
+      } : {
+        code: currentModule.code
+      })
+    };
+    
+    // Only add to history if it's different from the last snapshot (avoid duplicates)
+    const lastSnapshot = history[history.length - 1];
+    const hasChanged = !lastSnapshot || 
+      JSON.stringify(newSnapshot) !== JSON.stringify({...lastSnapshot, timestamp: newSnapshot.timestamp});
+    
+    // Calculate updated history
+    let updatedHistory = history;
+    if (hasChanged) {
+      // Keep only last 10 versions to prevent storage bloat
+      updatedHistory = [...history, newSnapshot].slice(-10);
+    }
+
     // Handle external link modules
     if (editForm.moduleType === 'external') {
       items[idx] = {
@@ -6349,7 +6601,8 @@ export default function App() {
         title: editForm.title,
         url: editForm.url,
         linkType: editForm.linkType || 'iframe',
-        type: 'external'
+        type: 'external',
+        history: updatedHistory
       };
     }
     // Handle standalone HTML modules - parse full document
@@ -6384,7 +6637,8 @@ export default function App() {
         html: bodyContent.trim(),
         css: scopedCSS,
         script: scripts.trim(),
-        type: 'standalone'
+        type: 'standalone',
+        history: updatedHistory
       };
     }
     // Legacy module format
@@ -6396,7 +6650,8 @@ export default function App() {
           id: items[idx].code?.id || editForm.id,
           html: editForm.html,
           script: editForm.script
-        }
+        },
+        history: updatedHistory
       };
     }
     
@@ -6408,6 +6663,60 @@ export default function App() {
       }
     });
     setEditingModule(null);
+  };
+
+  // Revert module to a previous version
+  const revertModuleVersion = (moduleId, versionIndex) => {
+    const section = 'Current Course';
+    let items = projectData[section]?.modules || [];
+    const idx = items.findIndex(m => m.id === moduleId);
+    if (idx === -1) return;
+    
+    const module = items[idx];
+    const history = module.history || [];
+    if (versionIndex < 0 || versionIndex >= history.length) return;
+    
+    const version = history[versionIndex];
+    
+    // Restore the version based on module type
+    if (module.type === 'standalone') {
+      items[idx] = {
+        ...items[idx],
+        title: version.title,
+        html: version.html || '',
+        css: version.css || '',
+        script: version.script || ''
+      };
+    } else if (module.type === 'external') {
+      items[idx] = {
+        ...items[idx],
+        title: version.title,
+        url: version.url || '',
+        linkType: version.linkType || 'iframe'
+      };
+    } else {
+      items[idx] = {
+        ...items[idx],
+        title: version.title,
+        code: version.code || {}
+      };
+    }
+    
+    setProjectData({
+      ...projectData,
+      [section]: {
+        ...projectData[section],
+        modules: items
+      }
+    });
+    
+    // Refresh edit form if module is currently being edited
+    if (editingModule === moduleId) {
+      const updatedModule = items[idx];
+      openEditModule(updatedModule);
+    }
+    
+    setModuleHistory(null);
   };
 
   const openPreview = (item) => {
@@ -6431,9 +6740,17 @@ export default function App() {
     
     // Determine if this is a module or a toolkit feature
     const isToolkitItem = projectData["Global Toolkit"]?.some(t => t.id === item.id);
+    
+    // Check dependencies for modules
+    let dependencies = null;
+    if (!isToolkitItem) {
+      dependencies = checkModuleDependencies(item.id, projectData);
+    }
+    
     setDeleteConfirmation({ 
       id: item.id, 
-      type: isToolkitItem ? 'tool' : 'module' 
+      type: isToolkitItem ? 'tool' : 'module',
+      dependencies: dependencies
     });
   };
 
@@ -6926,6 +7243,7 @@ Questions.filter((_, i) => i !== index);
         message={deleteConfirmation?.type === 'module' ? "This will permanently delete this module and all its content." : "This will permanently delete this toolkit item."}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteConfirmation(null)}
+        dependencies={deleteConfirmation?.dependencies || null}
       />
       
       {/* EDIT MODAL */}
@@ -7038,7 +7356,114 @@ Questions.filter((_, i) => i !== index);
 
             <div className="bg-slate-800 border-t border-slate-700 p-4 flex gap-3">
               <button onClick={() => setEditingModule(null)} className="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors">Cancel</button>
+              <button 
+                onClick={() => {
+                  const module = projectData["Current Course"]?.modules?.find(m => m.id === editingModule);
+                  if (module?.history && module.history.length > 0) {
+                    setModuleHistory({ moduleId: editingModule, history: module.history });
+                  } else {
+                    alert('No version history available for this module yet. History is created when you save changes.');
+                  }
+                }}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded flex items-center gap-2 transition-colors"
+                title="View version history"
+              >
+                <Clock size={16} />
+                History
+              </button>
               <button onClick={saveEditModule} className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold shadow-lg transition-colors">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VERSION HISTORY MODAL */}
+      {moduleHistory && (
+        <div className="fixed inset-0 bg-black/80 z-[55] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setModuleHistory(null)}>
+          <div className="bg-slate-900 border border-amber-900 rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Clock size={20} className="text-amber-400" />
+                Version History
+              </h3>
+              <button onClick={() => setModuleHistory(null)} className="text-slate-400 hover:text-white">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              {moduleHistory.history.length === 0 ? (
+                <p className="text-slate-400 text-sm text-center py-8">No version history available yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {moduleHistory.history.map((version, idx) => {
+                    const date = new Date(version.timestamp);
+                    const isLatest = idx === moduleHistory.history.length - 1;
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`p-4 rounded-lg border ${
+                          isLatest 
+                            ? 'bg-amber-900/20 border-amber-700/50' 
+                            : 'bg-slate-800/50 border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-white">
+                                Version {moduleHistory.history.length - idx}
+                              </span>
+                              {isLatest && (
+                                <span className="text-xs bg-amber-600 text-white px-2 py-0.5 rounded uppercase font-bold">
+                                  Current
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-400 mt-1">
+                              {date.toLocaleString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                          {!isLatest && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`Revert to this version? This will replace the current version.`)) {
+                                  revertModuleVersion(moduleHistory.moduleId, idx);
+                                }
+                              }}
+                              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded flex items-center gap-1 transition-colors"
+                            >
+                              <RotateCcw size={12} />
+                              Revert
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-300 font-mono truncate" title={version.title}>
+                          {version.title}
+                        </p>
+                        <div className="mt-2 text-[10px] text-slate-500">
+                          {version.html && <span>HTML: {(version.html.length / 1024).toFixed(1)}KB</span>}
+                          {version.css && <span className="ml-2">CSS: {(version.css.length / 1024).toFixed(1)}KB</span>}
+                          {version.script && <span className="ml-2">Script: {(version.script.length / 1024).toFixed(1)}KB</span>}
+                          {version.url && <span className="ml-2">External Link</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            
+            <div className="bg-slate-800 border-t border-slate-700 p-4">
+              <p className="text-xs text-slate-400 text-center">
+                History is automatically saved when you make changes. Last 10 versions are kept.
+              </p>
             </div>
           </div>
         </div>
