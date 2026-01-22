@@ -869,27 +869,18 @@ const BatchHarvester = ({ onImport }) => {
 };
 
 const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, assessmentType, setAssessmentType, assessmentTitle, setAssessmentTitle, quizQuestions, setQuizQuestions, printInstructions, setPrintInstructions, editingAssessment, setEditingAssessment, migrateCode, setMigrateCode, migratePrompt, setMigratePrompt, migrateOutput, setMigrateOutput }) => {
-  const [harvestType, setHarvestType] = useState('MODULE'); // 'MODULE', 'FEATURE', 'ASSET', 'ASSESSMENT', 'AI_MODULE', 'CONVERTER', 'WRAPPER'
+  const [harvestType, setHarvestType] = useState('MODULE'); // 'MODULE', 'FEATURE', 'ASSET', 'ASSESSMENT', 'AI_MODULE', 'MODULE_MANAGER'
   const [mode, setMode] = useState('B');
   
-  // MODULE CONVERTER STATE
-  const [converterModuleId, setConverterModuleId] = useState('');
-  const [converterModuleTitle, setConverterModuleTitle] = useState('');
-  const [converterHTMLInput, setConverterHTMLInput] = useState('');
-  const [convertedModuleJSON, setConvertedModuleJSON] = useState(null);
-  const [converterStatus, setConverterStatus] = useState(null); // 'success', 'error'
-  const [converterMessage, setConverterMessage] = useState('');
-  
-  // FEATURE WRAPPER STATE
-  const [wrapperFeatureJSON, setWrapperFeatureJSON] = useState('');
-  const [wrapperFeatureTitle, setWrapperFeatureTitle] = useState('');
-  const [wrapperEnabled, setWrapperEnabled] = useState(true);
-  const [wrapperToggleable, setWrapperToggleable] = useState(true);
-  const [wrapperHidden, setWrapperHidden] = useState(false);
-  const [wrapperIncludeUI, setWrapperIncludeUI] = useState(true);
-  const [wrappedFeatureJSON, setWrappedFeatureJSON] = useState(null);
-  const [wrapperStatus, setWrapperStatus] = useState(null);
-  const [wrapperMessage, setWrapperMessage] = useState(''); 
+  // MODULE MANAGER STATE
+  const [moduleManagerType, setModuleManagerType] = useState('standalone'); // 'standalone' | 'external'
+  const [moduleManagerHTML, setModuleManagerHTML] = useState('');
+  const [moduleManagerURL, setModuleManagerURL] = useState('');
+  const [moduleManagerID, setModuleManagerID] = useState('');
+  const [moduleManagerTitle, setModuleManagerTitle] = useState('');
+  const [moduleManagerLinkType, setModuleManagerLinkType] = useState('iframe'); // 'iframe' | 'newtab'
+  const [moduleManagerStatus, setModuleManagerStatus] = useState(null);
+  const [moduleManagerMessage, setModuleManagerMessage] = useState(''); 
   const [divId, setDivId] = useState("");
   const [jsPrefix, setJsPrefix] = useState("");
   const [stagingJson, setStagingJson] = useState("");
@@ -1377,223 +1368,199 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       setTimeout(() => setSaveStatus(null), 3000);
   };
 
-  // MODULE CONVERTER FUNCTION
-  const convertStandaloneToModule = () => {
+  // CSS AUTO-SCOPING FUNCTION
+  const scopeCSS = (css, viewId) => {
+    if (!css || !viewId) return css;
+    
+    // Add #view-{id} prefix to CSS selectors
+    // Handle various CSS patterns
+    let scoped = css;
+    
+    // Scope regular selectors (but not @rules)
+    scoped = scoped.replace(/([^{}@]+)\{/g, (match, selector) => {
+      // Skip if already scoped or is @rule
+      if (selector.trim().startsWith('@') || selector.includes(`#${viewId}`)) {
+        return match;
+      }
+      
+      // Clean selector and add scope
+      const cleanSelector = selector.trim();
+      if (cleanSelector) {
+        return `#${viewId} ${cleanSelector} {`;
+      }
+      return match;
+    });
+    
+    return scoped;
+  };
+
+  // MODULE MANAGER FUNCTIONS
+  const addStandaloneModule = () => {
     try {
-      if (!converterModuleId.trim()) {
-        setConverterStatus('error');
-        setConverterMessage('Please provide a Module ID (e.g., view-biology-ch1)');
+      if (!moduleManagerID.trim()) {
+        setModuleManagerStatus('error');
+        setModuleManagerMessage('Please provide a Module ID (e.g., view-hss3020)');
         return;
       }
       
-      if (!converterHTMLInput.trim()) {
-        setConverterStatus('error');
-        setConverterMessage('Please paste your standalone HTML file');
+      if (!moduleManagerHTML.trim()) {
+        setModuleManagerStatus('error');
+        setModuleManagerMessage('Please paste your complete standalone HTML file');
         return;
       }
+      
+      // Ensure ID starts with 'view-'
+      const moduleId = moduleManagerID.startsWith('view-') ? moduleManagerID : `view-${moduleManagerID}`;
       
       // Check for duplicate module ID
-      const existingModule = projectData["Current Course"].modules?.find(m => m.id === converterModuleId);
+      const existingModule = projectData["Current Course"].modules?.find(m => m.id === moduleId);
       if (existingModule) {
-        setConverterStatus('error');
-        setConverterMessage(`Module ID "${converterModuleId}" already exists! Use a different ID like "${converterModuleId}-v2"`);
+        setModuleManagerStatus('error');
+        setModuleManagerMessage(`Module ID "${moduleId}" already exists! Use a different ID.`);
         return;
       }
       
       // Parse the HTML
       const parser = new DOMParser();
-      const doc = parser.parseFromString(converterHTMLInput, 'text/html');
+      const doc = parser.parseFromString(moduleManagerHTML, 'text/html');
       
       // Extract body content
       let bodyContent = doc.body ? doc.body.innerHTML : '';
       
       if (!bodyContent.trim()) {
-        setConverterStatus('error');
-        setConverterMessage('No HTML content found in <body> tag');
+        setModuleManagerStatus('error');
+        setModuleManagerMessage('No HTML content found in <body> tag');
         return;
       }
       
-      // Wrap in module container with correct ID and classes
-      const wrappedHTML = `<div id="${converterModuleId}" class="w-full h-full custom-scroll hidden p-4 md:p-8">\n${bodyContent}\n</div>`;
+      // Extract and scope CSS
+      let scopedCSS = '';
+      const styleTags = Array.from(doc.querySelectorAll('style'));
+      styleTags.forEach(style => {
+        const originalCSS = style.textContent || style.innerHTML;
+        scopedCSS += scopeCSS(originalCSS, moduleId) + '\n';
+      });
       
-      // Extract scripts (exclude CDN scripts like Tailwind)
+      // Extract scripts (exclude CDN scripts)
       const scripts = Array.from(doc.querySelectorAll('script'))
-        .filter(s => !s.src || !s.src.includes('cdn')) // Remove external CDN scripts
+        .filter(s => !s.src || (!s.src.includes('cdn') && !s.src.includes('tailwind')))
         .map(s => s.textContent)
         .join('\n\n');
       
-      if (!scripts.trim()) {
-        setConverterStatus('error');
-        setConverterMessage('No JavaScript found in the HTML. Make sure your file includes <script> tags with the module logic.');
-        return;
-      }
+      // Wrap body content in module container
+      const wrappedHTML = `<div id="${moduleId}" class="w-full h-full custom-scroll hidden p-4 md:p-8">\n${bodyContent}\n</div>`;
       
-      // Convert const/let to var for Google Sites compatibility
-      let convertedScript = scripts;
-      const constMatches = scripts.match(/\bconst\s+\w+/g) || [];
-      const letMatches = scripts.match(/\blet\s+\w+/g) || [];
-      
-      convertedScript = convertedScript.replace(/\bconst\s+/g, 'var ');
-      convertedScript = convertedScript.replace(/\blet\s+/g, 'var ');
-      
-      // Extract function names to attach to window
-      const functionMatches = convertedScript.match(/function\s+(\w+)\s*\(/g) || [];
-      const functionNames = functionMatches.map(match => match.match(/function\s+(\w+)/)[1]);
-      
-      // Add window attachments at the end
-      if (functionNames.length > 0) {
-        const windowAttachments = functionNames.map(name => `window.${name} = ${name};`).join('\n');
-        convertedScript += '\n\n// Attach functions to window for Google Sites compatibility\n' + windowAttachments;
-      }
-      
-      // Create module JSON
-      const moduleJSON = {
-        id: converterModuleId,
+      // Create module object
+      const newModule = {
+        id: moduleId,
+        title: moduleManagerTitle || moduleId.replace('view-', '').replace(/-/g, ' '),
+        type: 'standalone',
         html: wrappedHTML,
-        script: convertedScript
+        css: scopedCSS,
+        script: scripts || ''
       };
       
-      setConvertedModuleJSON(moduleJSON);
-      setConverterStatus('success');
-      setConverterMessage(`✅ Conversion successful! Found ${functionNames.length} functions, ${constMatches.length + letMatches.length} variables converted to var. Ready to add to project.`);
+      // Add to project
+      setProjectData(prev => {
+        const newData = { ...prev };
+        const currentModules = newData["Current Course"].modules || [];
+        newData["Current Course"] = {
+          ...newData["Current Course"],
+          modules: [...currentModules, newModule]
+        };
+        return newData;
+      });
+      
+      // Clear state
+      setModuleManagerHTML('');
+      setModuleManagerID('');
+      setModuleManagerTitle('');
+      setModuleManagerStatus('success');
+      setModuleManagerMessage(`✅ Module "${newModule.title}" added successfully!`);
+      
+      setTimeout(() => {
+        setModuleManagerStatus(null);
+        setModuleManagerMessage('');
+      }, 3000);
       
     } catch (err) {
-      setConverterStatus('error');
-      setConverterMessage('Conversion error: ' + err.message);
-      console.error('Conversion error:', err);
+      setModuleManagerStatus('error');
+      setModuleManagerMessage('Error: ' + err.message);
+      console.error('Module manager error:', err);
     }
   };
   
-  const addConvertedModuleToProject = () => {
-    if (!convertedModuleJSON) {
-      alert('Please convert your HTML first');
-      return;
-    }
-    
-    const newModule = {
-      id: converterModuleId,
-      title: converterModuleTitle || converterModuleId,
-      code: convertedModuleJSON
-    };
-    
-    setProjectData(prev => {
-      const newData = { ...prev };
-      const currentModules = newData["Current Course"].modules || [];
-      newData["Current Course"] = {
-        ...newData["Current Course"],
-        modules: [...currentModules, newModule]
-      };
-      return newData;
-    });
-    
-    // Clear converter state
-    setConverterModuleId('');
-    setConverterModuleTitle('');
-    setConverterHTMLInput('');
-    setConvertedModuleJSON(null);
-    setConverterStatus(null);
-    setConverterMessage('');
-    
-    alert(`✅ Module "${newModule.title}" added to project!`);
-  };
-
-  // FEATURE WRAPPER FUNCTIONS
-  const wrapSimpleFeature = () => {
+  const addExternalLinkModule = () => {
     try {
-      if (!wrapperFeatureJSON.trim()) {
-        setWrapperStatus('error');
-        setWrapperMessage('Please paste your simple feature JSON');
+      if (!moduleManagerID.trim()) {
+        setModuleManagerStatus('error');
+        setModuleManagerMessage('Please provide a Module ID (e.g., view-biology-ch1)');
         return;
       }
       
-      if (!wrapperFeatureTitle.trim()) {
-        setWrapperStatus('error');
-        setWrapperMessage('Please provide a feature title');
+      if (!moduleManagerURL.trim()) {
+        setModuleManagerStatus('error');
+        setModuleManagerMessage('Please provide a URL');
         return;
       }
       
-      // Parse the simple JSON
-      let simpleCode;
+      // Validate URL
       try {
-        simpleCode = JSON.parse(wrapperFeatureJSON);
-      } catch (parseErr) {
-        setWrapperStatus('error');
-        setWrapperMessage('Invalid JSON format. Make sure your JSON is properly formatted.');
+        new URL(moduleManagerURL);
+      } catch {
+        setModuleManagerStatus('error');
+        setModuleManagerMessage('Invalid URL format. Please include http:// or https://');
         return;
       }
       
-      // Validate required properties
-      if (!simpleCode.id) {
-        setWrapperStatus('error');
-        setWrapperMessage('JSON must have an "id" property');
-        return;
-      }
-      
-      if (!simpleCode.html && !simpleCode.script) {
-        setWrapperStatus('error');
-        setWrapperMessage('JSON must have at least "html" or "script" property');
-        return;
-      }
-      
-      // Generate feat- ID from the tool ID
-      const toolId = simpleCode.id.replace(/^tool-/, '').replace(/^feat-/, '');
-      const featId = `feat-${toolId}`;
+      // Ensure ID starts with 'view-'
+      const moduleId = moduleManagerID.startsWith('view-') ? moduleManagerID : `view-${moduleManagerID}`;
       
       // Check for duplicate
-      const existingFeature = projectData["Global Toolkit"]?.find(f => f.id === featId);
-      if (existingFeature) {
-        setWrapperStatus('error');
-        setWrapperMessage(`Feature ID "${featId}" already exists! Change the ID in your simple JSON or delete the existing feature first.`);
+      const existingModule = projectData["Current Course"].modules?.find(m => m.id === moduleId);
+      if (existingModule) {
+        setModuleManagerStatus('error');
+        setModuleManagerMessage(`Module ID "${moduleId}" already exists! Use a different ID.`);
         return;
       }
       
-      // Create wrapped feature
-      const wrappedFeature = {
-        id: featId,
-        title: wrapperFeatureTitle,
-        enabled: wrapperEnabled,
-        userToggleable: wrapperToggleable,
-        hiddenFromUser: wrapperHidden,
-        includeUi: wrapperIncludeUI,
-        code: simpleCode
+      // Create module object
+      const newModule = {
+        id: moduleId,
+        title: moduleManagerTitle || moduleId.replace('view-', '').replace(/-/g, ' '),
+        type: 'external',
+        url: moduleManagerURL,
+        linkType: moduleManagerLinkType
       };
       
-      setWrappedFeatureJSON(wrappedFeature);
-      setWrapperStatus('success');
-      setWrapperMessage(`✅ Feature wrapped successfully! Generated ID: ${featId}`);
+      // Add to project
+      setProjectData(prev => {
+        const newData = { ...prev };
+        const currentModules = newData["Current Course"].modules || [];
+        newData["Current Course"] = {
+          ...newData["Current Course"],
+          modules: [...currentModules, newModule]
+        };
+        return newData;
+      });
+      
+      // Clear state
+      setModuleManagerURL('');
+      setModuleManagerID('');
+      setModuleManagerTitle('');
+      setModuleManagerStatus('success');
+      setModuleManagerMessage(`✅ External link module "${newModule.title}" added successfully!`);
+      
+      setTimeout(() => {
+        setModuleManagerStatus(null);
+        setModuleManagerMessage('');
+      }, 3000);
       
     } catch (err) {
-      setWrapperStatus('error');
-      setWrapperMessage('Wrapping error: ' + err.message);
-      console.error('Wrapper error:', err);
+      setModuleManagerStatus('error');
+      setModuleManagerMessage('Error: ' + err.message);
+      console.error('Module manager error:', err);
     }
-  };
-  
-  const addWrappedFeatureToProject = () => {
-    if (!wrappedFeatureJSON) {
-      alert('Please wrap your feature first');
-      return;
-    }
-    
-    setProjectData(prev => {
-      const newData = { ...prev };
-      const currentTools = newData["Global Toolkit"] || [];
-      newData["Global Toolkit"] = [...currentTools, wrappedFeatureJSON];
-      return newData;
-    });
-    
-    // Clear wrapper state
-    setWrapperFeatureJSON('');
-    setWrapperFeatureTitle('');
-    setWrapperEnabled(true);
-    setWrapperToggleable(true);
-    setWrapperHidden(false);
-    setWrapperIncludeUI(true);
-    setWrappedFeatureJSON(null);
-    setWrapperStatus(null);
-    setWrapperMessage('');
-    
-    alert(`✅ Feature "${wrappedFeatureJSON.title}" added to Global Toolkit!`);
   };
 
   // Prompts for the standard harvester
@@ -1688,11 +1655,8 @@ Please add the following data to the \`PROJECT_DATA\` object.
                  <button onClick={() => { setIsBatchMode(false); setHarvestType('AI_MODULE'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'AI_MODULE' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
                      <Sparkles size={14} /> AI Studio
                  </button>
-                 <button onClick={() => { setIsBatchMode(false); setHarvestType('CONVERTER'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'CONVERTER' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
-                     <Zap size={14} /> Converter
-                 </button>
-                 <button onClick={() => { setIsBatchMode(false); setHarvestType('WRAPPER'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'WRAPPER' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
-                     <Package size={14} /> Wrapper
+                 <button onClick={() => { setIsBatchMode(false); setHarvestType('MODULE_MANAGER'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'MODULE_MANAGER' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                     <Box size={14} /> Module Manager
                  </button>
              </div>
              <button 
@@ -2829,15 +2793,31 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                  </div>
             )}
 
-            {harvestType === 'CONVERTER' && (
+            {harvestType === 'MODULE_MANAGER' && (
                 <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
-                    <div className="p-6 bg-purple-900/20 border border-purple-700/50 rounded-xl">
-                        <h3 className="text-lg font-bold text-purple-400 mb-2 flex items-center gap-2">
-                            <Zap size={20} /> Standalone HTML → Module Converter
+                    <div className="p-6 bg-indigo-900/20 border border-indigo-700/50 rounded-xl">
+                        <h3 className="text-lg font-bold text-indigo-400 mb-2 flex items-center gap-2">
+                            <Box size={20} /> Module Manager
                         </h3>
                         <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-                            Paste your complete standalone HTML file from AI Studio (or any source), and it will be automatically converted to Course Factory module format. The converter extracts the HTML body, scripts, converts variables to Google Sites-compatible format, and generates proper JSON.
+                            Add standalone HTML modules (like HSS3020) or external link modules to your course. Modules appear as sidebar buttons and can be shown/hidden.
                         </p>
+                        
+                        {/* Type Selector */}
+                        <div className="flex gap-2 mb-6 bg-slate-900 p-1 rounded-lg border border-slate-700">
+                            <button
+                                onClick={() => setModuleManagerType('standalone')}
+                                className={`flex-1 py-2 px-4 rounded text-xs font-bold transition-all ${moduleManagerType === 'standalone' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                            >
+                                Standalone HTML
+                            </button>
+                            <button
+                                onClick={() => setModuleManagerType('external')}
+                                className={`flex-1 py-2 px-4 rounded text-xs font-bold transition-all ${moduleManagerType === 'external' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                            >
+                                External Link
+                            </button>
+                        </div>
                         
                         <div className="space-y-4">
                             {/* Module ID */}
@@ -2847,256 +2827,136 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 </label>
                                 <input
                                     type="text"
-                                    value={converterModuleId}
-                                    onChange={(e) => setConverterModuleId(e.target.value)}
-                                    placeholder="view-biology-ch1 (must start with 'view-')"
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm font-mono focus:border-purple-500 outline-none"
+                                    value={moduleManagerID}
+                                    onChange={(e) => setModuleManagerID(e.target.value)}
+                                    placeholder="hss3020 or view-hss3020"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm font-mono focus:border-indigo-500 outline-none"
                                 />
                                 <p className="text-[10px] text-slate-500 mt-1 italic">
-                                    Unique identifier for this module (e.g., view-blueprint4, view-physics-ch2)
+                                    Unique identifier (will be prefixed with 'view-' if needed)
                                 </p>
                             </div>
                             
                             {/* Module Title */}
                             <div>
                                 <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
-                                    Module Title
+                                    Module Title <span className="text-rose-500">*</span>
                                 </label>
                                 <input
                                     type="text"
-                                    value={converterModuleTitle}
-                                    onChange={(e) => setConverterModuleTitle(e.target.value)}
-                                    placeholder="User Blueprint Phase 4"
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:border-purple-500 outline-none"
-                                />
-                                <p className="text-[10px] text-slate-500 mt-1 italic">
-                                    Display name for the module in the sidebar
-                                </p>
-                            </div>
-                            
-                            {/* HTML Input */}
-                            <div>
-                                <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
-                                    Paste Complete HTML File <span className="text-rose-500">*</span>
-                                </label>
-                                <textarea
-                                    value={converterHTMLInput}
-                                    onChange={(e) => setConverterHTMLInput(e.target.value)}
-                                    placeholder="<!DOCTYPE html>&#10;<html>&#10;<head>...</head>&#10;<body>...</body>&#10;</html>"
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-purple-100 text-xs font-mono h-48 resize-y focus:border-purple-500 outline-none"
-                                />
-                                <p className="text-[10px] text-slate-500 mt-1 italic">
-                                    Paste your entire standalone HTML file including DOCTYPE, head, body, and scripts
-                                </p>
-                            </div>
-                            
-                            {/* Convert Button */}
-                            <button
-                                onClick={convertStandaloneToModule}
-                                className="w-full bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                            >
-                                <Zap size={16} /> Convert to Module JSON
-                            </button>
-                            
-                            {/* Status Messages */}
-                            {converterStatus && (
-                                <div className={`p-4 rounded-lg border ${converterStatus === 'success' ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-rose-900/20 border-rose-500/30'}`}>
-                                    <p className={`text-sm ${converterStatus === 'success' ? 'text-emerald-300' : 'text-rose-300'}`}>
-                                        {converterMessage}
-                                    </p>
-                                </div>
-                            )}
-                            
-                            {/* Preview & Add Button */}
-                            {convertedModuleJSON && (
-                                <div className="space-y-3 p-4 bg-slate-950 border border-emerald-500/30 rounded-lg">
-                                    <h4 className="text-xs font-bold text-emerald-400 uppercase flex items-center gap-2">
-                                        <CheckCircle size={14} /> Conversion Preview
-                                    </h4>
-                                    <div className="p-3 bg-slate-900 rounded border border-slate-800 overflow-x-auto">
-                                        <pre className="text-[10px] text-slate-300 font-mono whitespace-pre-wrap">
-                                            {JSON.stringify({
-                                                id: convertedModuleJSON.id,
-                                                htmlLength: convertedModuleJSON.html.length + ' characters',
-                                                scriptLength: convertedModuleJSON.script.length + ' characters',
-                                                preview: convertedModuleJSON.html.substring(0, 150) + '...'
-                                            }, null, 2)}
-                                        </pre>
-                                    </div>
-                                    
-                                    <button
-                                        onClick={addConvertedModuleToProject}
-                                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all"
-                                    >
-                                        <Plus size={16} /> Add This Module to Project
-                                    </button>
-                                </div>
-                            )}
-                            
-                            {/* Help Section */}
-                            <div className="p-4 bg-indigo-900/10 border border-indigo-500/20 rounded-lg">
-                                <h4 className="text-xs font-bold text-indigo-400 uppercase mb-2">💡 How It Works</h4>
-                                <ul className="text-[10px] text-slate-400 space-y-1 leading-relaxed">
-                                    <li>✅ Extracts HTML from &lt;body&gt; tag and wraps it in module container</li>
-                                    <li>✅ Extracts all JavaScript (removes CDN scripts like Tailwind)</li>
-                                    <li>✅ Converts <code className="text-indigo-300">const</code>/<code className="text-indigo-300">let</code> → <code className="text-indigo-300">var</code> for Google Sites compatibility</li>
-                                    <li>✅ Attaches all functions to <code className="text-indigo-300">window</code> object</li>
-                                    <li>✅ Validates module ID uniqueness</li>
-                                    <li>✅ Generates proper JSON format ready for Course Factory</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {harvestType === 'WRAPPER' && (
-                <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
-                    <div className="p-6 bg-indigo-900/20 border border-indigo-700/50 rounded-xl">
-                        <h3 className="text-lg font-bold text-indigo-400 mb-2 flex items-center gap-2">
-                            <Package size={20} /> Feature Wrapper
-                        </h3>
-                        <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-                            Convert simple feature JSON (<code className="text-indigo-300">id, html, script</code>) to full Course Factory toolkit format with metadata (<code className="text-indigo-300">enabled, userToggleable, etc.</code>).
-                        </p>
-                        
-                        <div className="space-y-4">
-                            {/* Feature Title */}
-                            <div>
-                                <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
-                                    Feature Title <span className="text-rose-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={wrapperFeatureTitle}
-                                    onChange={(e) => setWrapperFeatureTitle(e.target.value)}
-                                    placeholder="Confidence Bank"
+                                    value={moduleManagerTitle}
+                                    onChange={(e) => setModuleManagerTitle(e.target.value)}
+                                    placeholder="HSS3020 Course"
                                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:border-indigo-500 outline-none"
                                 />
                                 <p className="text-[10px] text-slate-500 mt-1 italic">
-                                    Display name for the feature in the toolkit menu
+                                    Display name for the sidebar button
                                 </p>
                             </div>
                             
-                            {/* Simple JSON Input */}
-                            <div>
-                                <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
-                                    Paste Simple Feature JSON <span className="text-rose-500">*</span>
-                                </label>
-                                <textarea
-                                    value={wrapperFeatureJSON}
-                                    onChange={(e) => setWrapperFeatureJSON(e.target.value)}
-                                    placeholder='{"id": "tool-confidence-unit", "html": "...", "script": "..."}'
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-indigo-100 text-xs font-mono h-48 resize-y focus:border-indigo-500 outline-none"
-                                />
-                                <p className="text-[10px] text-slate-500 mt-1 italic">
-                                    Simple JSON with just id, html, and script properties
-                                </p>
-                            </div>
-                            
-                            {/* Settings Checkboxes */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <label className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500 transition">
-                                    <input
-                                        type="checkbox"
-                                        checked={wrapperEnabled}
-                                        onChange={(e) => setWrapperEnabled(e.target.checked)}
-                                        className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600"
-                                    />
-                                    <span className="text-xs text-slate-300">Enabled by default</span>
-                                </label>
-                                
-                                <label className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500 transition">
-                                    <input
-                                        type="checkbox"
-                                        checked={wrapperToggleable}
-                                        onChange={(e) => setWrapperToggleable(e.target.checked)}
-                                        className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600"
-                                    />
-                                    <span className="text-xs text-slate-300">User can toggle</span>
-                                </label>
-                                
-                                <label className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500 transition">
-                                    <input
-                                        type="checkbox"
-                                        checked={wrapperIncludeUI}
-                                        onChange={(e) => setWrapperIncludeUI(e.target.checked)}
-                                        className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600"
-                                    />
-                                    <span className="text-xs text-slate-300">Include UI (has HTML)</span>
-                                </label>
-                                
-                                <label className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500 transition">
-                                    <input
-                                        type="checkbox"
-                                        checked={wrapperHidden}
-                                        onChange={(e) => setWrapperHidden(e.target.checked)}
-                                        className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600"
-                                    />
-                                    <span className="text-xs text-slate-300">Hidden from menu</span>
-                                </label>
-                            </div>
-                            
-                            {/* Wrap Button */}
-                            <button
-                                onClick={wrapSimpleFeature}
-                                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                            >
-                                <Package size={16} /> Wrap Feature with Metadata
-                            </button>
-                            
-                            {/* Status Messages */}
-                            {wrapperStatus && (
-                                <div className={`p-4 rounded-lg border ${wrapperStatus === 'success' ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-rose-900/20 border-rose-500/30'}`}>
-                                    <p className={`text-sm ${wrapperStatus === 'success' ? 'text-emerald-300' : 'text-rose-300'}`}>
-                                        {wrapperMessage}
-                                    </p>
-                                </div>
-                            )}
-                            
-                            {/* Preview & Add Button */}
-                            {wrappedFeatureJSON && (
-                                <div className="space-y-3 p-4 bg-slate-950 border border-emerald-500/30 rounded-lg">
-                                    <h4 className="text-xs font-bold text-emerald-400 uppercase flex items-center gap-2">
-                                        <CheckCircle size={14} /> Wrapped Feature Preview
-                                    </h4>
-                                    <div className="p-3 bg-slate-900 rounded border border-slate-800 overflow-x-auto">
-                                        <pre className="text-[10px] text-slate-300 font-mono whitespace-pre-wrap">
-                                            {JSON.stringify({
-                                                id: wrappedFeatureJSON.id,
-                                                title: wrappedFeatureJSON.title,
-                                                enabled: wrappedFeatureJSON.enabled,
-                                                userToggleable: wrappedFeatureJSON.userToggleable,
-                                                hiddenFromUser: wrappedFeatureJSON.hiddenFromUser,
-                                                includeUi: wrappedFeatureJSON.includeUi,
-                                                code: {
-                                                    id: wrappedFeatureJSON.code.id,
-                                                    htmlLength: wrappedFeatureJSON.code.html?.length || 0,
-                                                    scriptLength: wrappedFeatureJSON.code.script?.length || 0
-                                                }
-                                            }, null, 2)}
-                                        </pre>
+                            {/* Standalone HTML Input */}
+                            {moduleManagerType === 'standalone' && (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
+                                            Paste Complete HTML File <span className="text-rose-500">*</span>
+                                        </label>
+                                        <textarea
+                                            value={moduleManagerHTML}
+                                            onChange={(e) => setModuleManagerHTML(e.target.value)}
+                                            placeholder="<!DOCTYPE html>&#10;<html>&#10;<head>...</head>&#10;<body>...</body>&#10;</html>"
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-indigo-100 text-xs font-mono h-64 resize-y focus:border-indigo-500 outline-none"
+                                        />
+                                        <p className="text-[10px] text-slate-500 mt-1 italic">
+                                            Paste your entire standalone HTML file. CSS will be auto-scoped to prevent conflicts.
+                                        </p>
                                     </div>
                                     
                                     <button
-                                        onClick={addWrappedFeatureToProject}
-                                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all"
+                                        onClick={addStandaloneModule}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                                     >
-                                        <Plus size={16} /> Add Feature to Global Toolkit
+                                        <Plus size={16} /> Add Standalone Module
                                     </button>
+                                </>
+                            )}
+                            
+                            {/* External Link Input */}
+                            {moduleManagerType === 'external' && (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
+                                            External URL <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            type="url"
+                                            value={moduleManagerURL}
+                                            onChange={(e) => setModuleManagerURL(e.target.value)}
+                                            placeholder="https://myhostedmodule.com"
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm font-mono focus:border-indigo-500 outline-none"
+                                        />
+                                        <p className="text-[10px] text-slate-500 mt-1 italic">
+                                            Full URL to the hosted module page
+                                        </p>
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
+                                            Link Behavior
+                                        </label>
+                                        <div className="flex gap-3">
+                                            <label className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500 transition flex-1">
+                                                <input
+                                                    type="radio"
+                                                    name="linkType"
+                                                    value="iframe"
+                                                    checked={moduleManagerLinkType === 'iframe'}
+                                                    onChange={(e) => setModuleManagerLinkType(e.target.value)}
+                                                    className="w-4 h-4 text-indigo-600"
+                                                />
+                                                <span className="text-xs text-slate-300">Open in iframe</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500 transition flex-1">
+                                                <input
+                                                    type="radio"
+                                                    name="linkType"
+                                                    value="newtab"
+                                                    checked={moduleManagerLinkType === 'newtab'}
+                                                    onChange={(e) => setModuleManagerLinkType(e.target.value)}
+                                                    className="w-4 h-4 text-indigo-600"
+                                                />
+                                                <span className="text-xs text-slate-300">Open in new tab</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <button
+                                        onClick={addExternalLinkModule}
+                                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                                    >
+                                        <Plus size={16} /> Add External Link Module
+                                    </button>
+                                </>
+                            )}
+                            
+                            {/* Status Messages */}
+                            {moduleManagerStatus && (
+                                <div className={`p-4 rounded-lg border ${moduleManagerStatus === 'success' ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-rose-900/20 border-rose-500/30'}`}>
+                                    <p className={`text-sm ${moduleManagerStatus === 'success' ? 'text-emerald-300' : 'text-rose-300'}`}>
+                                        {moduleManagerMessage}
+                                    </p>
                                 </div>
                             )}
                             
                             {/* Help Section */}
                             <div className="p-4 bg-sky-900/10 border border-sky-500/20 rounded-lg">
-                                <h4 className="text-xs font-bold text-sky-400 uppercase mb-2">💡 What This Does</h4>
+                                <h4 className="text-xs font-bold text-sky-400 uppercase mb-2">💡 Module Types</h4>
                                 <ul className="text-[10px] text-slate-400 space-y-1 leading-relaxed">
-                                    <li>✅ Takes simple <code className="text-sky-300">{'{ id, html, script }'}</code> JSON</li>
-                                    <li>✅ Wraps it in Course Factory toolkit structure</li>
-                                    <li>✅ Adds metadata: enabled, userToggleable, hiddenFromUser, includeUi</li>
-                                    <li>✅ Generates proper <code className="text-sky-300">feat-*</code> ID</li>
-                                    <li>✅ Validates against duplicate IDs</li>
-                                    <li>✅ Ready to add to Global Toolkit</li>
+                                    <li><strong className="text-sky-300">Standalone HTML:</strong> Complete HTML file (like HSS3020). CSS auto-scoped, wrapped in view container.</li>
+                                    <li><strong className="text-sky-300">External Link:</strong> Link to hosted module. Choose iframe (embedded) or new tab (external).</li>
+                                    <li>✅ Modules appear in sidebar navigation</li>
+                                    <li>✅ Can be hidden/shown in Phase 2</li>
+                                    <li>✅ Included in compiled site</li>
                                 </ul>
                             </div>
                         </div>
@@ -3478,8 +3338,23 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
     }
   };
 
+  // Check if module is protected (Course Materials or Assessments)
+  const isProtectedModule = (item) => {
+    return item.id === 'item-1768749223001' || 
+           item.id === 'item-assessments' || 
+           item.title === 'Course Materials' || 
+           item.title === 'Assessments';
+  };
+
   const handleDelete = (index) => {
     const item = filteredItems[index];
+    
+    // Prevent deletion of protected modules
+    if (isProtectedModule(item)) {
+      alert('⚠️ Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle.');
+      return;
+    }
+    
     if (onDelete) {
       onDelete(item);
     }
@@ -3615,12 +3490,25 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                                 </button>
                                 <button 
                                     onClick={() => handleDelete(idx)}
-                                    className="flex items-center justify-center gap-1 bg-slate-700 hover:bg-rose-600 text-white text-xs font-bold px-3 py-2 rounded transition-colors"
-                                    title="Delete"
+                                    disabled={isProtectedModule(item)}
+                                    className={`flex items-center justify-center gap-1 text-white text-xs font-bold px-3 py-2 rounded transition-colors ${
+                                        isProtectedModule(item) 
+                                            ? 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50' 
+                                            : 'bg-slate-700 hover:bg-rose-600'
+                                    }`}
+                                    title={isProtectedModule(item) ? 'Core modules cannot be deleted. Hide them instead.' : 'Delete'}
                                 >
                                     <Trash2 size={12} />
                                 </button>
                             </div>
+                            
+                            {/* Protected Module Indicator */}
+                            {isProtectedModule(item) && (
+                                <div className="mt-2 flex items-center gap-1 text-[10px] text-amber-400">
+                                    <Lock size={10} />
+                                    <span>Core module (cannot be deleted)</span>
+                                </div>
+                            )}
                         </div>
                     );
                 })}
@@ -4569,9 +4457,10 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
     }
     
     // 5. FILTER MODULES & TOOLKIT BASED ON COMPILATION DEFAULTS
+    // Course Materials and Assessments are core modules - always included unless explicitly excluded
     let activeModules = modules.filter(m => !excludedIds.includes(m.id));
     
-    // Respect compilation defaults
+    // Respect compilation defaults (only exclude if explicitly set to false)
     if (compDefaults.includeMaterials === false) {
       activeModules = activeModules.filter(m => 
         m.id !== 'item-1768749223001' && m.title !== 'Course Materials'
@@ -4902,12 +4791,67 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
         scriptInjection += `\n        ${navScripts}\n        ${assessmentScripts}\n`;
         
       } else {
-        // Normal module handling (WITH INLINE SCRIPTS FOR GOOGLE SITES)
-        if (itemCode.id) {
-            const shortId = itemCode.id.replace('view-', '');
+        // Handle different module types
+        const moduleId = item.id || itemCode.id || '';
+        const shortId = moduleId.replace('view-', '');
+        
+        // Add navigation button
+        if (moduleId) {
+          // External link modules with newtab open in new window
+          if (item.type === 'external' && item.linkType === 'newtab') {
+            navInjection += `\n            <button onclick="window.open('${item.url}', '_blank', 'noopener,noreferrer')" id="nav-${shortId}" class="nav-item">\n                <span class="w-2 h-2 rounded-full bg-slate-600"></span>${item.title}\n            </button>`;
+          } else {
             navInjection += `\n            <button onclick="switchView('${shortId}')" id="nav-${shortId}" class="nav-item">\n                <span class="w-2 h-2 rounded-full bg-slate-600"></span>${item.title}\n            </button>`;
+          }
         }
-        if (itemCode.html) {
+        
+        // Standalone HTML Module
+        if (item.type === 'standalone') {
+          // Inject scoped CSS if provided
+          if (item.css) {
+            contentInjection += `\n        <style id="style-${moduleId}">\n${item.css}\n        </style>`;
+          }
+          
+          // Inject HTML
+          if (item.html) {
+            let cleanScript = item.script || '';
+            if (cleanScript) {
+              // Apply initialization fixes
+              cleanScript = cleanScript.replace(
+                /if\s*\(\s*sc\s*&&\s*sc\.innerHTML\.trim\(\)\s*===\s*['"]['""]\s*\)\s*{/g,
+                'if (sc) { sc.innerHTML = "";'
+              );
+              cleanScript = cleanScript.replace(
+                /if\s*\(\s*sc\s*&&\s*sc\.children\.length\s*===\s*0\s*\)\s*{/g,
+                'if (sc) { sc.innerHTML = "";'
+              );
+            }
+            const htmlWithScript = item.html + (cleanScript ? '\n<script>\n' + cleanScript + '\n</script>' : '');
+            contentInjection += '\n        ' + htmlWithScript + '\n';
+          }
+        }
+        // External Link Module
+        else if (item.type === 'external') {
+          if (item.linkType === 'iframe') {
+            // Create iframe container
+            contentInjection += `\n        <div id="${moduleId}" class="w-full h-full custom-scroll hidden">
+            <iframe src="${item.url}" width="100%" height="100%" style="border:none;" frameborder="0"></iframe>
+        </div>`;
+          } else {
+            // Create link that opens in new tab
+            contentInjection += `\n        <div id="${moduleId}" class="w-full h-full custom-scroll hidden p-8">
+            <div class="max-w-4xl mx-auto text-center space-y-6">
+                <h2 class="text-2xl font-bold text-white uppercase">${item.title}</h2>
+                <p class="text-slate-400">This module opens in a new tab.</p>
+                <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="inline-block bg-sky-600 hover:bg-sky-500 text-white px-8 py-4 rounded-lg text-sm font-bold uppercase transition-all">
+                    Open ${item.title}
+                </a>
+            </div>
+        </div>`;
+          }
+        }
+        // Legacy module format (old code structure)
+        else if (itemCode.html) {
           // Clean and fix module script for Google Sites compatibility
           let cleanScript = itemCode.script || '';
           if (cleanScript) {
@@ -6021,7 +5965,21 @@ export default function App() {
     setPreviewModule(item);
   };
 
+  // Check if module is protected (Course Materials or Assessments)
+  const isProtectedModule = (item) => {
+    return item.id === 'item-1768749223001' || 
+           item.id === 'item-assessments' || 
+           item.title === 'Course Materials' || 
+           item.title === 'Assessments';
+  };
+
   const deleteModule = (item) => {
+    // Prevent deletion of protected modules
+    if (isProtectedModule(item)) {
+      alert('⚠️ Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle in Phase 2.');
+      return;
+    }
+    
     // Determine if this is a module or a toolkit feature
     const isToolkitItem = projectData["Global Toolkit"]?.some(t => t.id === item.id);
     setDeleteConfirmation({ 
@@ -6034,6 +5992,14 @@ export default function App() {
     if (!deleteConfirmation) return;
     
     if (deleteConfirmation.type === 'module') {
+      // Safety check: prevent deletion of protected modules
+      const moduleToDelete = projectData["Current Course"]?.modules?.find(m => m.id === deleteConfirmation.id);
+      if (moduleToDelete && isProtectedModule(moduleToDelete)) {
+        alert('⚠️ Course Materials and Assessments are core modules and cannot be deleted.');
+        setDeleteConfirmation(null);
+        return;
+      }
+      
       let items = projectData["Current Course"]?.modules || [];
       items = items.filter(m => m.id !== deleteConfirmation.id);
       setProjectData({
@@ -6459,9 +6425,10 @@ Questions.filter((_, i) => i !== index);
                         <ChevronDown size={12} />
                       </button>
                       <button
-                        onClick={() => setDeleteConfirmation({ id: mod.id, type: 'module' })}
-                        className="p-0.5 hover:text-rose-400"
-                        title="Delete"
+                        onClick={() => deleteModule(mod)}
+                        disabled={isProtectedModule(mod)}
+                        className={`p-0.5 ${isProtectedModule(mod) ? 'opacity-30 cursor-not-allowed' : 'hover:text-rose-400'}`}
+                        title={isProtectedModule(mod) ? 'Core module (cannot be deleted)' : 'Delete'}
                       >
                         <X size={12} />
                       </button>
