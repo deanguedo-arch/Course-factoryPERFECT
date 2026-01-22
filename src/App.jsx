@@ -3704,7 +3704,7 @@ ${aiDescription}
   );
 };
 
-const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, onDelete }) => {
+const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, onDelete, onToggleHidden, deleteMaterial, deleteAssessment, toggleMaterialHidden, toggleAssessmentHidden }) => {
   const [sourceType, setSourceType] = useState('MODULE'); // 'MODULE', 'ASSESSMENT', 'MATERIAL', or 'FEATURE'
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
@@ -3712,6 +3712,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
   const [materialEdit, setMaterialEdit] = useState(null);
   const [assessmentPreview, setAssessmentPreview] = useState(null);
   const [assessmentEdit, setAssessmentEdit] = useState(null);
+  const [selectedItems, setSelectedItems] = useState([]); // Array of item IDs for bulk operations
   
   const currentCourse = projectData["Current Course"]?.modules || [];
   const globalToolkit = projectData["Global Toolkit"] || [];
@@ -3854,6 +3855,251 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
             />
         </div>
 
+        {/* BULK ACTIONS TOOLBAR */}
+        {selectedItems.length > 0 && (
+            <div className="mb-4 p-3 bg-amber-900/20 border border-amber-700/50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-amber-400">
+                        {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected
+                    </span>
+                    <button
+                        onClick={() => setSelectedItems([])}
+                        className="text-xs text-slate-400 hover:text-white"
+                    >
+                        Clear Selection
+                    </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    {(sourceType === 'MODULE' || sourceType === 'MATERIAL' || sourceType === 'ASSESSMENT') && (
+                        <>
+                            <button
+                                onClick={() => {
+                                    if (sourceType === 'MODULE') {
+                                        // Batch update all modules at once
+                                        setProjectData(prev => {
+                                            const modules = prev["Current Course"]?.modules || [];
+                                            const updated = modules.map(m => {
+                                                if (selectedItems.includes(m.id) && !isProtectedModule(m) && !m.hidden) {
+                                                    return { ...m, hidden: true };
+                                                }
+                                                return m;
+                                            });
+                                            return {
+                                                ...prev,
+                                                "Current Course": {
+                                                    ...prev["Current Course"],
+                                                    modules: updated
+                                                }
+                                            };
+                                        });
+                                    } else if (sourceType === 'MATERIAL') {
+                                        // Batch update materials
+                                        setProjectData(prev => {
+                                            const materials = prev["Current Course"]?.materials || [];
+                                            const updated = materials.map(m => {
+                                                if (selectedItems.includes(m.id) && !m.hidden) {
+                                                    return { ...m, hidden: true };
+                                                }
+                                                return m;
+                                            });
+                                            return {
+                                                ...prev,
+                                                "Current Course": {
+                                                    ...prev["Current Course"],
+                                                    materials: updated
+                                                }
+                                            };
+                                        });
+                                    } else if (sourceType === 'ASSESSMENT') {
+                                        // Batch update assessments
+                                        const assessmentsModule = projectData["Current Course"]?.modules?.find(m => 
+                                            m.id === 'item-assessments' || m.title === 'Assessments'
+                                        );
+                                        if (assessmentsModule) {
+                                            const assessments = assessmentsModule.assessments || [];
+                                            const updated = assessments.map(a => {
+                                                if (selectedItems.includes(a.id) && !a.hidden) {
+                                                    return { ...a, hidden: true };
+                                                }
+                                                return a;
+                                            });
+                                            setProjectData(prev => {
+                                                const modules = prev["Current Course"]?.modules || [];
+                                                const updatedModules = modules.map(m => 
+                                                    (m.id === 'item-assessments' || m.title === 'Assessments')
+                                                        ? { ...m, assessments: updated }
+                                                        : m
+                                                );
+                                                return {
+                                                    ...prev,
+                                                    "Current Course": {
+                                                        ...prev["Current Course"],
+                                                        modules: updatedModules
+                                                    }
+                                                };
+                                            });
+                                        }
+                                    }
+                                    setSelectedItems([]);
+                                }}
+                                className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded transition-colors flex items-center gap-1"
+                            >
+                                <EyeOff size={12} /> Hide Selected
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (sourceType === 'MODULE') {
+                                        // Batch update all modules at once
+                                        setProjectData(prev => {
+                                            const modules = prev["Current Course"]?.modules || [];
+                                            const updated = modules.map(m => {
+                                                if (selectedItems.includes(m.id) && m.hidden) {
+                                                    return { ...m, hidden: false };
+                                                }
+                                                return m;
+                                            });
+                                            return {
+                                                ...prev,
+                                                "Current Course": {
+                                                    ...prev["Current Course"],
+                                                    modules: updated
+                                                }
+                                            };
+                                        });
+                                    } else if (sourceType === 'MATERIAL') {
+                                        // Batch update materials
+                                        setProjectData(prev => {
+                                            const materials = prev["Current Course"]?.materials || [];
+                                            const updated = materials.map(m => {
+                                                if (selectedItems.includes(m.id) && m.hidden) {
+                                                    return { ...m, hidden: false };
+                                                }
+                                                return m;
+                                            });
+                                            return {
+                                                ...prev,
+                                                "Current Course": {
+                                                    ...prev["Current Course"],
+                                                    materials: updated
+                                                }
+                                            };
+                                        });
+                                    } else if (sourceType === 'ASSESSMENT') {
+                                        // Batch update assessments
+                                        const assessmentsModule = projectData["Current Course"]?.modules?.find(m => 
+                                            m.id === 'item-assessments' || m.title === 'Assessments'
+                                        );
+                                        if (assessmentsModule) {
+                                            const assessments = assessmentsModule.assessments || [];
+                                            const updated = assessments.map(a => {
+                                                if (selectedItems.includes(a.id) && a.hidden) {
+                                                    return { ...a, hidden: false };
+                                                }
+                                                return a;
+                                            });
+                                            setProjectData(prev => {
+                                                const modules = prev["Current Course"]?.modules || [];
+                                                const updatedModules = modules.map(m => 
+                                                    (m.id === 'item-assessments' || m.title === 'Assessments')
+                                                        ? { ...m, assessments: updated }
+                                                        : m
+                                                );
+                                                return {
+                                                    ...prev,
+                                                    "Current Course": {
+                                                        ...prev["Current Course"],
+                                                        modules: updatedModules
+                                                    }
+                                                };
+                                            });
+                                        }
+                                    }
+                                    setSelectedItems([]);
+                                }}
+                                className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded transition-colors flex items-center gap-1"
+                            >
+                                <Eye size={12} /> Show Selected
+                            </button>
+                        </>
+                    )}
+                    <button
+                        onClick={() => {
+                            if (confirm(`Delete ${selectedItems.length} item${selectedItems.length !== 1 ? 's' : ''}? This cannot be undone.`)) {
+                                if (sourceType === 'MODULE') {
+                                    // Batch delete modules directly
+                                    setProjectData(prev => {
+                                        const modules = prev["Current Course"]?.modules || [];
+                                        const updated = modules.filter(m => 
+                                            !selectedItems.includes(m.id) || isProtectedModule(m)
+                                        );
+                                        return {
+                                            ...prev,
+                                            "Current Course": {
+                                                ...prev["Current Course"],
+                                                modules: updated
+                                            }
+                                        };
+                                    });
+                                } else if (sourceType === 'MATERIAL' && deleteMaterial) {
+                                    // Batch delete materials
+                                    setProjectData(prev => {
+                                        const materials = prev["Current Course"]?.materials || [];
+                                        const updated = materials.filter(m => !selectedItems.includes(m.id));
+                                        return {
+                                            ...prev,
+                                            "Current Course": {
+                                                ...prev["Current Course"],
+                                                materials: updated
+                                            }
+                                        };
+                                    });
+                                } else if (sourceType === 'ASSESSMENT' && deleteAssessment) {
+                                    // Batch delete assessments
+                                    const assessmentsModule = projectData["Current Course"]?.modules?.find(m => 
+                                        m.id === 'item-assessments' || m.title === 'Assessments'
+                                    );
+                                    if (assessmentsModule) {
+                                        const assessments = assessmentsModule.assessments || [];
+                                        const updated = assessments.filter(a => !selectedItems.includes(a.id));
+                                        setProjectData(prev => {
+                                            const modules = prev["Current Course"]?.modules || [];
+                                            const updatedModules = modules.map(m => 
+                                                (m.id === 'item-assessments' || m.title === 'Assessments')
+                                                    ? { ...m, assessments: updated }
+                                                    : m
+                                            );
+                                            return {
+                                                ...prev,
+                                                "Current Course": {
+                                                    ...prev["Current Course"],
+                                                    modules: updatedModules
+                                                }
+                                            };
+                                        });
+                                    }
+                                } else if (sourceType === 'FEATURE' && onDelete) {
+                                    // Batch delete toolkit items
+                                    setProjectData(prev => {
+                                        const tools = prev["Global Toolkit"] || [];
+                                        const updated = tools.filter(t => !selectedItems.includes(t.id));
+                                        return {
+                                            ...prev,
+                                            "Global Toolkit": updated
+                                        };
+                                    });
+                                }
+                                
+                                setSelectedItems([]);
+                            }
+                        }}
+                        className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded transition-colors flex items-center gap-1"
+                    >
+                        <Trash2 size={12} /> Delete Selected
+                    </button>
+                </div>
+            </div>
+        )}
+
         {/* MODULE/FEATURE GRID */}
         {filteredItems.length === 0 ? (
             <div className="p-12 text-center bg-slate-900/50 border border-slate-700 rounded-xl">
@@ -3874,12 +4120,30 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                     return (
                         <div 
                             key={item.id} 
-                            className="bg-slate-900 border border-slate-700 rounded-lg p-4 hover:border-purple-500/50 transition-all group"
+                            className={`bg-slate-900 border rounded-lg p-4 hover:border-purple-500/50 transition-all group ${
+                                selectedItems.includes(item.id) 
+                                    ? 'border-amber-500 bg-amber-900/10' 
+                                    : 'border-slate-700'
+                            }`}
                         >
                             <div className="flex items-start justify-between mb-3">
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="text-white font-bold text-sm truncate mb-1">{item.title}</h3>
-                                    <p className="text-xs text-slate-500 font-mono truncate">{item.id}</p>
+                                <div className="flex items-start gap-2 flex-1 min-w-0">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedItems.includes(item.id)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedItems([...selectedItems, item.id]);
+                                            } else {
+                                                setSelectedItems(selectedItems.filter(id => id !== item.id));
+                                            }
+                                        }}
+                                        className="mt-1 w-4 h-4 text-amber-600 bg-slate-800 border-slate-600 rounded focus:ring-amber-500 focus:ring-2"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-white font-bold text-sm truncate mb-1">{item.title}</h3>
+                                        <p className="text-xs text-slate-500 font-mono truncate">{item.id}</p>
+                                    </div>
                                 </div>
                                 <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${sourceType === 'MODULE' ? 'bg-purple-900/30 text-purple-400' : 'bg-orange-900/30 text-orange-400'}`}>
                                     {sourceType === 'MODULE' ? 'Module' : 'Feature'}
@@ -4407,7 +4671,7 @@ const PROJECT_DATA = {
   );
 };
 
-const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onError }) => {
+const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onToggleHidden, onError }) => {
   const [fullSiteCode, setFullSiteCode] = useState("");
   const [isGenerated, setIsGenerated] = useState(false);
 
@@ -4879,7 +5143,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onErro
     
     // 5. FILTER MODULES & TOOLKIT BASED ON COMPILATION DEFAULTS
     // Course Materials and Assessments are core modules - always included unless explicitly excluded
-    let activeModules = modules.filter(m => !excludedIds.includes(m.id));
+    let activeModules = modules.filter(m => !excludedIds.includes(m.id) && !m.hidden);
     
     // Respect compilation defaults (only exclude if explicitly set to false)
     if (compDefaults.includeMaterials === false) {
@@ -5603,7 +5867,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onErro
                              <div className="p-4 text-xs text-slate-500 italic text-center">No modules found. Go to Phase 1.</div>
                         )}
                         {modules.map((mod) => {
-                            const isExcluded = excludedIds.includes(mod.id);
+                            const isExcluded = excludedIds.includes(mod.id) || mod.hidden;
                             return (
                                 <div key={mod.id} className="p-3 flex items-center justify-between hover:bg-slate-800/50 transition-colors">
                                     <div className="flex items-center gap-3">
@@ -5611,7 +5875,15 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onErro
                                         <span className={`text-sm ${isExcluded ? 'text-slate-500' : 'text-slate-200 font-medium'}`}>{mod.title}</span>
                                     </div>
                                     <button 
-                                        onClick={() => toggleModule(mod.id)}
+                                        onClick={() => {
+                                            if (mod.hidden && onToggleHidden) {
+                                                // If hidden, show it first (which will also remove from excludedIds)
+                                                onToggleHidden(mod.id);
+                                            } else {
+                                                // Otherwise toggle exclusion
+                                                toggleModule(mod.id);
+                                            }
+                                        }}
                                         className={`relative w-10 h-5 rounded-full transition-colors ${!isExcluded ? 'bg-emerald-600' : 'bg-slate-700'}`}
                                     >
                                         <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${!isExcluded ? 'translate-x-5' : 'translate-x-0'}`}></div>
@@ -6490,6 +6762,32 @@ export default function App() {
     );
   };
 
+  // Toggle module hidden state
+  const toggleModuleHidden = (moduleId) => {
+    const modules = projectData["Current Course"]?.modules || [];
+    const module = modules.find(m => m.id === moduleId);
+    const newHiddenState = !(module?.hidden || false);
+    
+    const updated = modules.map(m => 
+      m.id === moduleId ? { ...m, hidden: newHiddenState } : m
+    );
+    
+    setProjectData({
+      ...projectData,
+      "Current Course": {
+        ...projectData["Current Course"],
+        modules: updated
+      }
+    });
+    
+    // Sync with Phase 4 excludedIds
+    if (newHiddenState) {
+      setExcludedIds(prev => prev.includes(moduleId) ? prev : [...prev, moduleId]);
+    } else {
+      setExcludedIds(prev => prev.filter(id => id !== moduleId));
+    }
+  };
+
   const openEditModule = (item) => {
     // Handle external link modules
     if (item.type === 'external') {
@@ -7155,7 +7453,13 @@ Questions.filter((_, i) => i !== index);
               <div className="space-y-1">
                 {currentCourse.modules.map((mod, idx) => (
                   <div key={mod.id} className="flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-slate-800 transition-colors group">
-                    <Eye size={12} className="text-emerald-500" />
+                    <button
+                      onClick={() => toggleModuleHidden(mod.id)}
+                      className="p-0.5 hover:text-emerald-400 transition-colors"
+                      title={mod.hidden ? "Show module" : "Hide module"}
+                    >
+                      {mod.hidden ? <EyeOff size={12} className="text-slate-600" /> : <Eye size={12} className="text-emerald-500" />}
+                    </button>
                     <span className="text-slate-300 truncate flex-1">{mod.title}</span>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button 
@@ -7227,9 +7531,9 @@ Questions.filter((_, i) => i !== index);
         <main className="flex-grow min-h-[600px]">
           {activePhase === 0 && <Phase0 />}
           {activePhase === 1 && <Phase1 projectData={projectData} setProjectData={setProjectData} scannerNotes={scannerNotes} setScannerNotes={setScannerNotes} addMaterial={addMaterial} editMaterial={editMaterial} deleteMaterial={deleteMaterial} moveMaterial={moveMaterial} toggleMaterialHidden={toggleMaterialHidden} addAssessment={addAssessment} editAssessment={editAssessment} deleteAssessment={deleteAssessment} moveAssessment={moveAssessment} toggleAssessmentHidden={toggleAssessmentHidden} addQuestionToMaster={addQuestionToMaster} moveQuestion={moveQuestion} deleteQuestion={deleteQuestion} updateQuestion={updateQuestion} clearMasterAssessment={clearMasterAssessment} masterQuestions={masterQuestions} setMasterQuestions={setMasterQuestions} masterAssessmentTitle={masterAssessmentTitle} setMasterAssessmentTitle={setMasterAssessmentTitle} currentQuestionType={currentQuestionType} setCurrentQuestionType={setCurrentQuestionType} currentQuestion={currentQuestion} setCurrentQuestion={setCurrentQuestion} editingQuestion={editingQuestion} setEditingQuestion={setEditingQuestion} generateMixedAssessment={generateMixedAssessment} generatedAssessment={generatedAssessment} setGeneratedAssessment={setGeneratedAssessment} assessmentType={assessmentType} setAssessmentType={setAssessmentType} assessmentTitle={assessmentTitle} setAssessmentTitle={setAssessmentTitle} quizQuestions={quizQuestions} setQuizQuestions={setQuizQuestions} printInstructions={printInstructions} setPrintInstructions={setPrintInstructions} editingAssessment={editingAssessment} setEditingAssessment={setEditingAssessment} migrateCode={migrateCode} setMigrateCode={setMigrateCode} migratePrompt={migratePrompt} setMigratePrompt={setMigratePrompt} migrateOutput={migrateOutput} setMigrateOutput={setMigrateOutput} />}
-          {activePhase === 2 && <Phase2 projectData={projectData} setProjectData={setProjectData} editMaterial={editMaterial} onEdit={openEditModule} onPreview={openPreview} onDelete={deleteModule} />}
+          {activePhase === 2 && <Phase2 projectData={projectData} setProjectData={setProjectData} editMaterial={editMaterial} onEdit={openEditModule} onPreview={openPreview} onDelete={deleteModule} onToggleHidden={toggleModuleHidden} deleteMaterial={deleteMaterial} deleteAssessment={deleteAssessment} toggleMaterialHidden={toggleMaterialHidden} toggleAssessmentHidden={toggleAssessmentHidden} />}
           {activePhase === 3 && <Phase3 onGoToMaster={() => setActivePhase(0)} projectData={projectData} setProjectData={setProjectData} />}
-          {activePhase === 4 && <Phase4 projectData={projectData} setProjectData={setProjectData} excludedIds={excludedIds} toggleModule={toggleModuleExclusion} onError={handleError} />}
+          {activePhase === 4 && <Phase4 projectData={projectData} setProjectData={setProjectData} excludedIds={excludedIds} toggleModule={toggleModuleExclusion} onToggleHidden={toggleModuleHidden} onError={handleError} />}
           {activePhase === 5 && <Phase5Settings projectData={projectData} setProjectData={setProjectData} />}
         </main>
       </div>
