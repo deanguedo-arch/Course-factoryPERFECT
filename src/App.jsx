@@ -869,8 +869,27 @@ const BatchHarvester = ({ onImport }) => {
 };
 
 const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, assessmentType, setAssessmentType, assessmentTitle, setAssessmentTitle, quizQuestions, setQuizQuestions, printInstructions, setPrintInstructions, editingAssessment, setEditingAssessment, migrateCode, setMigrateCode, migratePrompt, setMigratePrompt, migrateOutput, setMigrateOutput }) => {
-  const [harvestType, setHarvestType] = useState('MODULE'); // 'MODULE', 'FEATURE', 'ASSET', 'ASSESSMENT', 'AI_MODULE'
-  const [mode, setMode] = useState('B'); 
+  const [harvestType, setHarvestType] = useState('MODULE'); // 'MODULE', 'FEATURE', 'ASSET', 'ASSESSMENT', 'AI_MODULE', 'CONVERTER', 'WRAPPER'
+  const [mode, setMode] = useState('B');
+  
+  // MODULE CONVERTER STATE
+  const [converterModuleId, setConverterModuleId] = useState('');
+  const [converterModuleTitle, setConverterModuleTitle] = useState('');
+  const [converterHTMLInput, setConverterHTMLInput] = useState('');
+  const [convertedModuleJSON, setConvertedModuleJSON] = useState(null);
+  const [converterStatus, setConverterStatus] = useState(null); // 'success', 'error'
+  const [converterMessage, setConverterMessage] = useState('');
+  
+  // FEATURE WRAPPER STATE
+  const [wrapperFeatureJSON, setWrapperFeatureJSON] = useState('');
+  const [wrapperFeatureTitle, setWrapperFeatureTitle] = useState('');
+  const [wrapperEnabled, setWrapperEnabled] = useState(true);
+  const [wrapperToggleable, setWrapperToggleable] = useState(true);
+  const [wrapperHidden, setWrapperHidden] = useState(false);
+  const [wrapperIncludeUI, setWrapperIncludeUI] = useState(true);
+  const [wrappedFeatureJSON, setWrappedFeatureJSON] = useState(null);
+  const [wrapperStatus, setWrapperStatus] = useState(null);
+  const [wrapperMessage, setWrapperMessage] = useState(''); 
   const [divId, setDivId] = useState("");
   const [jsPrefix, setJsPrefix] = useState("");
   const [stagingJson, setStagingJson] = useState("");
@@ -1358,6 +1377,225 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       setTimeout(() => setSaveStatus(null), 3000);
   };
 
+  // MODULE CONVERTER FUNCTION
+  const convertStandaloneToModule = () => {
+    try {
+      if (!converterModuleId.trim()) {
+        setConverterStatus('error');
+        setConverterMessage('Please provide a Module ID (e.g., view-biology-ch1)');
+        return;
+      }
+      
+      if (!converterHTMLInput.trim()) {
+        setConverterStatus('error');
+        setConverterMessage('Please paste your standalone HTML file');
+        return;
+      }
+      
+      // Check for duplicate module ID
+      const existingModule = projectData["Current Course"].modules?.find(m => m.id === converterModuleId);
+      if (existingModule) {
+        setConverterStatus('error');
+        setConverterMessage(`Module ID "${converterModuleId}" already exists! Use a different ID like "${converterModuleId}-v2"`);
+        return;
+      }
+      
+      // Parse the HTML
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(converterHTMLInput, 'text/html');
+      
+      // Extract body content
+      let bodyContent = doc.body ? doc.body.innerHTML : '';
+      
+      if (!bodyContent.trim()) {
+        setConverterStatus('error');
+        setConverterMessage('No HTML content found in <body> tag');
+        return;
+      }
+      
+      // Wrap in module container with correct ID and classes
+      const wrappedHTML = `<div id="${converterModuleId}" class="w-full h-full custom-scroll hidden p-4 md:p-8">\n${bodyContent}\n</div>`;
+      
+      // Extract scripts (exclude CDN scripts like Tailwind)
+      const scripts = Array.from(doc.querySelectorAll('script'))
+        .filter(s => !s.src || !s.src.includes('cdn')) // Remove external CDN scripts
+        .map(s => s.textContent)
+        .join('\n\n');
+      
+      if (!scripts.trim()) {
+        setConverterStatus('error');
+        setConverterMessage('No JavaScript found in the HTML. Make sure your file includes <script> tags with the module logic.');
+        return;
+      }
+      
+      // Convert const/let to var for Google Sites compatibility
+      let convertedScript = scripts;
+      const constMatches = scripts.match(/\bconst\s+\w+/g) || [];
+      const letMatches = scripts.match(/\blet\s+\w+/g) || [];
+      
+      convertedScript = convertedScript.replace(/\bconst\s+/g, 'var ');
+      convertedScript = convertedScript.replace(/\blet\s+/g, 'var ');
+      
+      // Extract function names to attach to window
+      const functionMatches = convertedScript.match(/function\s+(\w+)\s*\(/g) || [];
+      const functionNames = functionMatches.map(match => match.match(/function\s+(\w+)/)[1]);
+      
+      // Add window attachments at the end
+      if (functionNames.length > 0) {
+        const windowAttachments = functionNames.map(name => `window.${name} = ${name};`).join('\n');
+        convertedScript += '\n\n// Attach functions to window for Google Sites compatibility\n' + windowAttachments;
+      }
+      
+      // Create module JSON
+      const moduleJSON = {
+        id: converterModuleId,
+        html: wrappedHTML,
+        script: convertedScript
+      };
+      
+      setConvertedModuleJSON(moduleJSON);
+      setConverterStatus('success');
+      setConverterMessage(`✅ Conversion successful! Found ${functionNames.length} functions, ${constMatches.length + letMatches.length} variables converted to var. Ready to add to project.`);
+      
+    } catch (err) {
+      setConverterStatus('error');
+      setConverterMessage('Conversion error: ' + err.message);
+      console.error('Conversion error:', err);
+    }
+  };
+  
+  const addConvertedModuleToProject = () => {
+    if (!convertedModuleJSON) {
+      alert('Please convert your HTML first');
+      return;
+    }
+    
+    const newModule = {
+      id: converterModuleId,
+      title: converterModuleTitle || converterModuleId,
+      code: convertedModuleJSON
+    };
+    
+    setProjectData(prev => {
+      const newData = { ...prev };
+      const currentModules = newData["Current Course"].modules || [];
+      newData["Current Course"] = {
+        ...newData["Current Course"],
+        modules: [...currentModules, newModule]
+      };
+      return newData;
+    });
+    
+    // Clear converter state
+    setConverterModuleId('');
+    setConverterModuleTitle('');
+    setConverterHTMLInput('');
+    setConvertedModuleJSON(null);
+    setConverterStatus(null);
+    setConverterMessage('');
+    
+    alert(`✅ Module "${newModule.title}" added to project!`);
+  };
+
+  // FEATURE WRAPPER FUNCTIONS
+  const wrapSimpleFeature = () => {
+    try {
+      if (!wrapperFeatureJSON.trim()) {
+        setWrapperStatus('error');
+        setWrapperMessage('Please paste your simple feature JSON');
+        return;
+      }
+      
+      if (!wrapperFeatureTitle.trim()) {
+        setWrapperStatus('error');
+        setWrapperMessage('Please provide a feature title');
+        return;
+      }
+      
+      // Parse the simple JSON
+      let simpleCode;
+      try {
+        simpleCode = JSON.parse(wrapperFeatureJSON);
+      } catch (parseErr) {
+        setWrapperStatus('error');
+        setWrapperMessage('Invalid JSON format. Make sure your JSON is properly formatted.');
+        return;
+      }
+      
+      // Validate required properties
+      if (!simpleCode.id) {
+        setWrapperStatus('error');
+        setWrapperMessage('JSON must have an "id" property');
+        return;
+      }
+      
+      if (!simpleCode.html && !simpleCode.script) {
+        setWrapperStatus('error');
+        setWrapperMessage('JSON must have at least "html" or "script" property');
+        return;
+      }
+      
+      // Generate feat- ID from the tool ID
+      const toolId = simpleCode.id.replace(/^tool-/, '').replace(/^feat-/, '');
+      const featId = `feat-${toolId}`;
+      
+      // Check for duplicate
+      const existingFeature = projectData["Global Toolkit"]?.find(f => f.id === featId);
+      if (existingFeature) {
+        setWrapperStatus('error');
+        setWrapperMessage(`Feature ID "${featId}" already exists! Change the ID in your simple JSON or delete the existing feature first.`);
+        return;
+      }
+      
+      // Create wrapped feature
+      const wrappedFeature = {
+        id: featId,
+        title: wrapperFeatureTitle,
+        enabled: wrapperEnabled,
+        userToggleable: wrapperToggleable,
+        hiddenFromUser: wrapperHidden,
+        includeUi: wrapperIncludeUI,
+        code: simpleCode
+      };
+      
+      setWrappedFeatureJSON(wrappedFeature);
+      setWrapperStatus('success');
+      setWrapperMessage(`✅ Feature wrapped successfully! Generated ID: ${featId}`);
+      
+    } catch (err) {
+      setWrapperStatus('error');
+      setWrapperMessage('Wrapping error: ' + err.message);
+      console.error('Wrapper error:', err);
+    }
+  };
+  
+  const addWrappedFeatureToProject = () => {
+    if (!wrappedFeatureJSON) {
+      alert('Please wrap your feature first');
+      return;
+    }
+    
+    setProjectData(prev => {
+      const newData = { ...prev };
+      const currentTools = newData["Global Toolkit"] || [];
+      newData["Global Toolkit"] = [...currentTools, wrappedFeatureJSON];
+      return newData;
+    });
+    
+    // Clear wrapper state
+    setWrapperFeatureJSON('');
+    setWrapperFeatureTitle('');
+    setWrapperEnabled(true);
+    setWrapperToggleable(true);
+    setWrapperHidden(false);
+    setWrapperIncludeUI(true);
+    setWrappedFeatureJSON(null);
+    setWrapperStatus(null);
+    setWrapperMessage('');
+    
+    alert(`✅ Feature "${wrappedFeatureJSON.title}" added to Global Toolkit!`);
+  };
+
   // Prompts for the standard harvester
   const analysisPrompt = `I have a large HTML file I am pasting below. I am not a coder.
 Please scan the file and list out every "${harvestType === 'MODULE' ? 'Module View' : 'Functional Feature'}" inside it.
@@ -1445,10 +1683,16 @@ Please add the following data to the \`PROJECT_DATA\` object.
                     <CheckCircle size={14} /> Assessment
                 </button>
                 <button onClick={() => { setIsBatchMode(false); setHarvestType('MATERIALS'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'MATERIALS' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
-                    <FolderOpen size={14} /> Materials
+                   <FolderOpen size={14} /> Materials
                 </button>
                  <button onClick={() => { setIsBatchMode(false); setHarvestType('AI_MODULE'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'AI_MODULE' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
                      <Sparkles size={14} /> AI Studio
+                 </button>
+                 <button onClick={() => { setIsBatchMode(false); setHarvestType('CONVERTER'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'CONVERTER' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                     <Zap size={14} /> Converter
+                 </button>
+                 <button onClick={() => { setIsBatchMode(false); setHarvestType('WRAPPER'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'WRAPPER' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                     <Package size={14} /> Wrapper
                  </button>
              </div>
              <button 
@@ -2583,6 +2827,281 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                         )}
                      </div>
                  </div>
+            )}
+
+            {harvestType === 'CONVERTER' && (
+                <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
+                    <div className="p-6 bg-purple-900/20 border border-purple-700/50 rounded-xl">
+                        <h3 className="text-lg font-bold text-purple-400 mb-2 flex items-center gap-2">
+                            <Zap size={20} /> Standalone HTML → Module Converter
+                        </h3>
+                        <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+                            Paste your complete standalone HTML file from AI Studio (or any source), and it will be automatically converted to Course Factory module format. The converter extracts the HTML body, scripts, converts variables to Google Sites-compatible format, and generates proper JSON.
+                        </p>
+                        
+                        <div className="space-y-4">
+                            {/* Module ID */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
+                                    Module ID <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={converterModuleId}
+                                    onChange={(e) => setConverterModuleId(e.target.value)}
+                                    placeholder="view-biology-ch1 (must start with 'view-')"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm font-mono focus:border-purple-500 outline-none"
+                                />
+                                <p className="text-[10px] text-slate-500 mt-1 italic">
+                                    Unique identifier for this module (e.g., view-blueprint4, view-physics-ch2)
+                                </p>
+                            </div>
+                            
+                            {/* Module Title */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
+                                    Module Title
+                                </label>
+                                <input
+                                    type="text"
+                                    value={converterModuleTitle}
+                                    onChange={(e) => setConverterModuleTitle(e.target.value)}
+                                    placeholder="User Blueprint Phase 4"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:border-purple-500 outline-none"
+                                />
+                                <p className="text-[10px] text-slate-500 mt-1 italic">
+                                    Display name for the module in the sidebar
+                                </p>
+                            </div>
+                            
+                            {/* HTML Input */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
+                                    Paste Complete HTML File <span className="text-rose-500">*</span>
+                                </label>
+                                <textarea
+                                    value={converterHTMLInput}
+                                    onChange={(e) => setConverterHTMLInput(e.target.value)}
+                                    placeholder="<!DOCTYPE html>&#10;<html>&#10;<head>...</head>&#10;<body>...</body>&#10;</html>"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-purple-100 text-xs font-mono h-48 resize-y focus:border-purple-500 outline-none"
+                                />
+                                <p className="text-[10px] text-slate-500 mt-1 italic">
+                                    Paste your entire standalone HTML file including DOCTYPE, head, body, and scripts
+                                </p>
+                            </div>
+                            
+                            {/* Convert Button */}
+                            <button
+                                onClick={convertStandaloneToModule}
+                                className="w-full bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                            >
+                                <Zap size={16} /> Convert to Module JSON
+                            </button>
+                            
+                            {/* Status Messages */}
+                            {converterStatus && (
+                                <div className={`p-4 rounded-lg border ${converterStatus === 'success' ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-rose-900/20 border-rose-500/30'}`}>
+                                    <p className={`text-sm ${converterStatus === 'success' ? 'text-emerald-300' : 'text-rose-300'}`}>
+                                        {converterMessage}
+                                    </p>
+                                </div>
+                            )}
+                            
+                            {/* Preview & Add Button */}
+                            {convertedModuleJSON && (
+                                <div className="space-y-3 p-4 bg-slate-950 border border-emerald-500/30 rounded-lg">
+                                    <h4 className="text-xs font-bold text-emerald-400 uppercase flex items-center gap-2">
+                                        <CheckCircle size={14} /> Conversion Preview
+                                    </h4>
+                                    <div className="p-3 bg-slate-900 rounded border border-slate-800 overflow-x-auto">
+                                        <pre className="text-[10px] text-slate-300 font-mono whitespace-pre-wrap">
+                                            {JSON.stringify({
+                                                id: convertedModuleJSON.id,
+                                                htmlLength: convertedModuleJSON.html.length + ' characters',
+                                                scriptLength: convertedModuleJSON.script.length + ' characters',
+                                                preview: convertedModuleJSON.html.substring(0, 150) + '...'
+                                            }, null, 2)}
+                                        </pre>
+                                    </div>
+                                    
+                                    <button
+                                        onClick={addConvertedModuleToProject}
+                                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all"
+                                    >
+                                        <Plus size={16} /> Add This Module to Project
+                                    </button>
+                                </div>
+                            )}
+                            
+                            {/* Help Section */}
+                            <div className="p-4 bg-indigo-900/10 border border-indigo-500/20 rounded-lg">
+                                <h4 className="text-xs font-bold text-indigo-400 uppercase mb-2">💡 How It Works</h4>
+                                <ul className="text-[10px] text-slate-400 space-y-1 leading-relaxed">
+                                    <li>✅ Extracts HTML from &lt;body&gt; tag and wraps it in module container</li>
+                                    <li>✅ Extracts all JavaScript (removes CDN scripts like Tailwind)</li>
+                                    <li>✅ Converts <code className="text-indigo-300">const</code>/<code className="text-indigo-300">let</code> → <code className="text-indigo-300">var</code> for Google Sites compatibility</li>
+                                    <li>✅ Attaches all functions to <code className="text-indigo-300">window</code> object</li>
+                                    <li>✅ Validates module ID uniqueness</li>
+                                    <li>✅ Generates proper JSON format ready for Course Factory</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {harvestType === 'WRAPPER' && (
+                <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
+                    <div className="p-6 bg-indigo-900/20 border border-indigo-700/50 rounded-xl">
+                        <h3 className="text-lg font-bold text-indigo-400 mb-2 flex items-center gap-2">
+                            <Package size={20} /> Feature Wrapper
+                        </h3>
+                        <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+                            Convert simple feature JSON (<code className="text-indigo-300">id, html, script</code>) to full Course Factory toolkit format with metadata (<code className="text-indigo-300">enabled, userToggleable, etc.</code>).
+                        </p>
+                        
+                        <div className="space-y-4">
+                            {/* Feature Title */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
+                                    Feature Title <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={wrapperFeatureTitle}
+                                    onChange={(e) => setWrapperFeatureTitle(e.target.value)}
+                                    placeholder="Confidence Bank"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:border-indigo-500 outline-none"
+                                />
+                                <p className="text-[10px] text-slate-500 mt-1 italic">
+                                    Display name for the feature in the toolkit menu
+                                </p>
+                            </div>
+                            
+                            {/* Simple JSON Input */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
+                                    Paste Simple Feature JSON <span className="text-rose-500">*</span>
+                                </label>
+                                <textarea
+                                    value={wrapperFeatureJSON}
+                                    onChange={(e) => setWrapperFeatureJSON(e.target.value)}
+                                    placeholder='{"id": "tool-confidence-unit", "html": "...", "script": "..."}'
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-indigo-100 text-xs font-mono h-48 resize-y focus:border-indigo-500 outline-none"
+                                />
+                                <p className="text-[10px] text-slate-500 mt-1 italic">
+                                    Simple JSON with just id, html, and script properties
+                                </p>
+                            </div>
+                            
+                            {/* Settings Checkboxes */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <label className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500 transition">
+                                    <input
+                                        type="checkbox"
+                                        checked={wrapperEnabled}
+                                        onChange={(e) => setWrapperEnabled(e.target.checked)}
+                                        className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600"
+                                    />
+                                    <span className="text-xs text-slate-300">Enabled by default</span>
+                                </label>
+                                
+                                <label className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500 transition">
+                                    <input
+                                        type="checkbox"
+                                        checked={wrapperToggleable}
+                                        onChange={(e) => setWrapperToggleable(e.target.checked)}
+                                        className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600"
+                                    />
+                                    <span className="text-xs text-slate-300">User can toggle</span>
+                                </label>
+                                
+                                <label className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500 transition">
+                                    <input
+                                        type="checkbox"
+                                        checked={wrapperIncludeUI}
+                                        onChange={(e) => setWrapperIncludeUI(e.target.checked)}
+                                        className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600"
+                                    />
+                                    <span className="text-xs text-slate-300">Include UI (has HTML)</span>
+                                </label>
+                                
+                                <label className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500 transition">
+                                    <input
+                                        type="checkbox"
+                                        checked={wrapperHidden}
+                                        onChange={(e) => setWrapperHidden(e.target.checked)}
+                                        className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600"
+                                    />
+                                    <span className="text-xs text-slate-300">Hidden from menu</span>
+                                </label>
+                            </div>
+                            
+                            {/* Wrap Button */}
+                            <button
+                                onClick={wrapSimpleFeature}
+                                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                            >
+                                <Package size={16} /> Wrap Feature with Metadata
+                            </button>
+                            
+                            {/* Status Messages */}
+                            {wrapperStatus && (
+                                <div className={`p-4 rounded-lg border ${wrapperStatus === 'success' ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-rose-900/20 border-rose-500/30'}`}>
+                                    <p className={`text-sm ${wrapperStatus === 'success' ? 'text-emerald-300' : 'text-rose-300'}`}>
+                                        {wrapperMessage}
+                                    </p>
+                                </div>
+                            )}
+                            
+                            {/* Preview & Add Button */}
+                            {wrappedFeatureJSON && (
+                                <div className="space-y-3 p-4 bg-slate-950 border border-emerald-500/30 rounded-lg">
+                                    <h4 className="text-xs font-bold text-emerald-400 uppercase flex items-center gap-2">
+                                        <CheckCircle size={14} /> Wrapped Feature Preview
+                                    </h4>
+                                    <div className="p-3 bg-slate-900 rounded border border-slate-800 overflow-x-auto">
+                                        <pre className="text-[10px] text-slate-300 font-mono whitespace-pre-wrap">
+                                            {JSON.stringify({
+                                                id: wrappedFeatureJSON.id,
+                                                title: wrappedFeatureJSON.title,
+                                                enabled: wrappedFeatureJSON.enabled,
+                                                userToggleable: wrappedFeatureJSON.userToggleable,
+                                                hiddenFromUser: wrappedFeatureJSON.hiddenFromUser,
+                                                includeUi: wrappedFeatureJSON.includeUi,
+                                                code: {
+                                                    id: wrappedFeatureJSON.code.id,
+                                                    htmlLength: wrappedFeatureJSON.code.html?.length || 0,
+                                                    scriptLength: wrappedFeatureJSON.code.script?.length || 0
+                                                }
+                                            }, null, 2)}
+                                        </pre>
+                                    </div>
+                                    
+                                    <button
+                                        onClick={addWrappedFeatureToProject}
+                                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all"
+                                    >
+                                        <Plus size={16} /> Add Feature to Global Toolkit
+                                    </button>
+                                </div>
+                            )}
+                            
+                            {/* Help Section */}
+                            <div className="p-4 bg-sky-900/10 border border-sky-500/20 rounded-lg">
+                                <h4 className="text-xs font-bold text-sky-400 uppercase mb-2">💡 What This Does</h4>
+                                <ul className="text-[10px] text-slate-400 space-y-1 leading-relaxed">
+                                    <li>✅ Takes simple <code className="text-sky-300">{'{ id, html, script }'}</code> JSON</li>
+                                    <li>✅ Wraps it in Course Factory toolkit structure</li>
+                                    <li>✅ Adds metadata: enabled, userToggleable, hiddenFromUser, includeUi</li>
+                                    <li>✅ Generates proper <code className="text-sky-300">feat-*</code> ID</li>
+                                    <li>✅ Validates against duplicate IDs</li>
+                                    <li>✅ Ready to add to Global Toolkit</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {harvestType === 'AI_MODULE' && (
@@ -3980,27 +4499,97 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
   const generateFullSite = () => {
     let finalCode = MASTER_SHELL;
     
-    // Get the course name from settings or fall back to currentCourse.name
-    const courseName = projectData["Course Settings"]?.courseName || currentCourse.name || "Course Factory";
+    // ========================================
+    // PHASE 5 SETTINGS APPLICATION
+    // ========================================
+    const courseSettings = projectData["Course Settings"] || {};
+    const courseName = courseSettings.courseName || currentCourse.name || "Course Factory";
     const courseNameUpper = courseName.toUpperCase();
+    const courseCode = courseSettings.courseCode || "";
+    const instructor = courseSettings.instructor || "";
+    const academicYear = courseSettings.academicYear || "";
+    const accentColor = courseSettings.accentColor || "sky";
+    const customCSS = courseSettings.customCSS || "";
+    const compDefaults = courseSettings.compilationDefaults || {};
     
-    // Replace hardcoded course name in page title (browser tab)
+    // 1. APPLY ACCENT COLOR (replace all sky-* colors with chosen accent)
+    const colorMap = {
+      sky: { hex: '#0ea5e9', dark: '#0284c7' },
+      rose: { hex: '#f43f5e', dark: '#e11d48' },
+      emerald: { hex: '#10b981', dark: '#059669' },
+      amber: { hex: '#f59e0b', dark: '#d97706' },
+      purple: { hex: '#a855f7', dark: '#9333ea' },
+      indigo: { hex: '#6366f1', dark: '#4f46e5' },
+      pink: { hex: '#ec4899', dark: '#db2777' },
+      teal: { hex: '#14b8a6', dark: '#0d9488' }
+    };
+    
+    if (accentColor !== 'sky') {
+      const newColor = colorMap[accentColor] || colorMap.sky;
+      // Replace Tailwind classes
+      finalCode = finalCode.replace(/text-sky-500/g, `text-${accentColor}-500`);
+      finalCode = finalCode.replace(/text-sky-400/g, `text-${accentColor}-400`);
+      finalCode = finalCode.replace(/bg-sky-500/g, `bg-${accentColor}-500`);
+      finalCode = finalCode.replace(/border-sky-500/g, `border-${accentColor}-500`);
+      finalCode = finalCode.replace(/from-sky-500/g, `from-${accentColor}-500`);
+      // Replace hex colors
+      finalCode = finalCode.replace(/#0ea5e9/g, newColor.hex);
+      finalCode = finalCode.replace(/#0284c7/g, newColor.dark);
+      finalCode = finalCode.replace(/#38bdf8/g, newColor.hex);
+    }
+    
+    // 2. INJECT CUSTOM CSS (if provided)
+    if (customCSS.trim()) {
+      finalCode = finalCode.replace('</style>', `\n        /* Custom CSS from Settings */\n        ${customCSS}\n    </style>`);
+    }
+    
+    // 3. REPLACE COURSE NAME IN TITLE & HEADER
     finalCode = finalCode.replace(
       '<title>MENTAL FITNESS | MASTER CONSOLE</title>',
       `<title>${courseNameUpper} | MASTER CONSOLE</title>`
     );
     
-    // Replace hardcoded course name in sidebar header (top-left corner)
     finalCode = finalCode.replace(
       '<h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none">Mental<br><span class="text-sky-500">Fitness</span></h1>',
-      `<h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none"><span class="text-sky-500">${courseName}</span></h1>`
+      `<h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none"><span class="text-${accentColor}-500">${courseName}</span></h1>`
     );
     
-    // Filter active modules
-    const activeModules = modules.filter(m => !excludedIds.includes(m.id));
+    // 4. ADD COURSE INFO TO SIDEBAR (course code, instructor, year)
+    const courseInfoParts = [];
+    if (courseCode) courseInfoParts.push(courseCode);
+    if (instructor) courseInfoParts.push(instructor);
+    if (academicYear) courseInfoParts.push(academicYear);
+    
+    if (courseInfoParts.length > 0) {
+      const courseInfoHTML = `<p class="text-[9px] text-slate-600 uppercase tracking-widest mono mt-1">${courseInfoParts.join(' • ')}</p>`;
+      finalCode = finalCode.replace(
+        '<p class="text-[10px] text-slate-500 mt-2 mono uppercase tracking-widest">Master Console v2.0</p>',
+        `<p class="text-[10px] text-slate-500 mt-2 mono uppercase tracking-widest">Master Console v2.0</p>\n            ${courseInfoHTML}`
+      );
+    }
+    
+    // 5. FILTER MODULES & TOOLKIT BASED ON COMPILATION DEFAULTS
+    let activeModules = modules.filter(m => !excludedIds.includes(m.id));
+    
+    // Respect compilation defaults
+    if (compDefaults.includeMaterials === false) {
+      activeModules = activeModules.filter(m => 
+        m.id !== 'item-1768749223001' && m.title !== 'Course Materials'
+      );
+    }
+    
+    if (compDefaults.includeAssessments === false) {
+      activeModules = activeModules.filter(m => 
+        m.id !== 'item-assessments' && m.title !== 'Assessments'
+      );
+    }
     
     // Filter enabled toolkit items
-    const enabledTools = toolkit.filter(t => t.enabled);
+    let enabledTools = toolkit.filter(t => t.enabled);
+    if (compDefaults.includeToolkit === false) {
+      enabledTools = [];
+    }
+    
     const hiddenTools = enabledTools.filter(t => t.hiddenFromUser);
     const visibleTools = enabledTools.filter(t => !t.hiddenFromUser);
 
@@ -4485,6 +5074,69 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
         finalCode = finalCode.replace('</script>\n</body>', scriptInjection + '\n    </script>\n</body>');
     }
 
+    // 6. INJECT PROGRESS TRACKING (if enabled in settings)
+    if (compDefaults.enableProgressTracking === true) {
+      const progressTrackingScript = `
+        
+        // ========================================
+        // PROGRESS TRACKING SYSTEM
+        // ========================================
+        let moduleProgress = JSON.parse(localStorage.getItem('courseProgress_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}') || '{}');
+        
+        // Track when a module is viewed
+        function trackModuleView(moduleId) {
+          if (!moduleProgress[moduleId]) {
+            moduleProgress[moduleId] = {
+              viewed: true,
+              viewedAt: new Date().toISOString(),
+              completed: false
+            };
+            localStorage.setItem('courseProgress_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}', JSON.stringify(moduleProgress));
+            updateProgressIndicators();
+          }
+        }
+        
+        // Mark module as completed
+        function markModuleComplete(moduleId) {
+          if (!moduleProgress[moduleId]) {
+            moduleProgress[moduleId] = { viewed: true, viewedAt: new Date().toISOString() };
+          }
+          moduleProgress[moduleId].completed = true;
+          moduleProgress[moduleId].completedAt = new Date().toISOString();
+          localStorage.setItem('courseProgress_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}', JSON.stringify(moduleProgress));
+          updateProgressIndicators();
+        }
+        
+        // Update visual progress indicators
+        function updateProgressIndicators() {
+          const allModules = document.querySelectorAll('nav button[onclick^="switchView"]');
+          allModules.forEach(btn => {
+            const moduleId = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
+            if (moduleProgress[moduleId]) {
+              // Add checkmark indicator
+              if (moduleProgress[moduleId].completed && !btn.querySelector('.progress-check')) {
+                btn.insertAdjacentHTML('beforeend', '<span class="progress-check ml-2 text-emerald-400">✓</span>');
+              } else if (moduleProgress[moduleId].viewed && !moduleProgress[moduleId].completed && !btn.querySelector('.progress-dot')) {
+                btn.insertAdjacentHTML('beforeend', '<span class="progress-dot ml-2 text-amber-400">●</span>');
+              }
+            }
+          });
+        }
+        
+        // Hook into module switching to track views
+        const originalSwitchView = window.switchView;
+        window.switchView = function(viewId) {
+          trackModuleView(viewId);
+          return originalSwitchView(viewId);
+        };
+        
+        // Initialize on load
+        updateProgressIndicators();
+      `;
+      
+      finalCode = finalCode.replace('</script>\n</body>', progressTrackingScript + '\n    </script>\n</body>');
+    }
+
     setFullSiteCode(finalCode);
     setIsGenerated(true);
   };
@@ -4494,7 +5146,22 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "index.html";
+    
+    // Apply export settings from Phase 5
+    const exportSettings = projectData["Course Settings"]?.exportSettings || {};
+    const courseName = projectData["Course Settings"]?.courseName || "course";
+    let filename = exportSettings.filenamePattern || "{courseName}_compiled";
+    
+    // Replace placeholders
+    filename = filename.replace(/{courseName}/g, courseName.replace(/[^a-zA-Z0-9]/g, '_'));
+    
+    // Add timestamp if enabled
+    if (exportSettings.includeTimestamp) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      filename += `_${timestamp}`;
+    }
+    
+    a.download = `${filename}.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -5355,7 +6022,12 @@ export default function App() {
   };
 
   const deleteModule = (item) => {
-    setDeleteConfirmation({ id: item.id, type: 'module' });
+    // Determine if this is a module or a toolkit feature
+    const isToolkitItem = projectData["Global Toolkit"]?.some(t => t.id === item.id);
+    setDeleteConfirmation({ 
+      id: item.id, 
+      type: isToolkitItem ? 'tool' : 'module' 
+    });
   };
 
   const confirmDelete = () => {
