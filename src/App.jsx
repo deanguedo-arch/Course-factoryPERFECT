@@ -1127,7 +1127,9 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   const [moduleManagerTitle, setModuleManagerTitle] = useState('');
   const [moduleManagerLinkType, setModuleManagerLinkType] = useState('iframe'); // 'iframe' | 'newtab'
   const [moduleManagerStatus, setModuleManagerStatus] = useState(null);
-  const [moduleManagerMessage, setModuleManagerMessage] = useState(''); 
+  const [moduleManagerMessage, setModuleManagerMessage] = useState('');
+  const [testingLink, setTestingLink] = useState(false);
+  const [linkTestResult, setLinkTestResult] = useState(null); 
   const [divId, setDivId] = useState("");
   const [jsPrefix, setJsPrefix] = useState("");
   const [stagingJson, setStagingJson] = useState("");
@@ -1855,6 +1857,72 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       setModuleManagerStatus('error');
       setModuleManagerMessage('Error: ' + err.message);
       console.error('Module manager error:', err);
+    }
+  };
+  
+  const testExternalLink = async (url) => {
+    if (!url || !url.trim()) {
+      setLinkTestResult({
+        success: false,
+        message: 'Please enter a URL first'
+      });
+      return;
+    }
+    
+    setTestingLink(true);
+    setLinkTestResult(null);
+    
+    try {
+      // Validate URL format first
+      let testUrl = url.trim();
+      if (!testUrl.startsWith('http://') && !testUrl.startsWith('https://')) {
+        testUrl = 'https://' + testUrl;
+      }
+      
+      new URL(testUrl); // Validate format
+      
+      // Try to fetch (with CORS check)
+      // Note: This will fail for CORS-protected sites, but that's okay - we're just checking format
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      try {
+        const response = await fetch(testUrl, { 
+          method: 'HEAD', 
+          mode: 'no-cors', // This will always "succeed" but we can check if URL is valid
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // Since we're using no-cors, we can't check the actual response
+        // But if we got here, the URL format is valid
+        setLinkTestResult({
+          success: true,
+          message: 'URL format is valid. Note: Cannot verify accessibility due to browser security (CORS).'
+        });
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          setLinkTestResult({
+            success: false,
+            message: 'Request timed out. URL may be unreachable or slow.'
+          });
+        } else {
+          // URL format is valid, but we can't verify accessibility
+          setLinkTestResult({
+            success: true,
+            message: 'URL format is valid. Cannot verify accessibility due to browser security.'
+          });
+        }
+      }
+    } catch (err) {
+      setLinkTestResult({
+        success: false,
+        message: 'Invalid URL format: ' + err.message
+      });
+    } finally {
+      setTestingLink(false);
     }
   };
 
@@ -3098,13 +3166,19 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                         {/* Type Selector */}
                         <div className="flex gap-2 mb-6 bg-slate-900 p-1 rounded-lg border border-slate-700">
                             <button
-                                onClick={() => setModuleManagerType('standalone')}
+                                onClick={() => {
+                                    setModuleManagerType('standalone');
+                                    setLinkTestResult(null);
+                                }}
                                 className={`flex-1 py-2 px-4 rounded text-xs font-bold transition-all ${moduleManagerType === 'standalone' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
                             >
                                 Standalone HTML
                             </button>
                             <button
-                                onClick={() => setModuleManagerType('external')}
+                                onClick={() => {
+                                    setModuleManagerType('external');
+                                    setLinkTestResult(null);
+                                }}
                                 className={`flex-1 py-2 px-4 rounded text-xs font-bold transition-all ${moduleManagerType === 'external' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
                             >
                                 External Link
@@ -3180,15 +3254,48 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
                                             External URL <span className="text-rose-500">*</span>
                                         </label>
-                                        <input
-                                            type="url"
-                                            value={moduleManagerURL}
-                                            onChange={(e) => setModuleManagerURL(e.target.value)}
-                                            placeholder="https://myhostedmodule.com"
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm font-mono focus:border-indigo-500 outline-none"
-                                        />
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="url"
+                                                value={moduleManagerURL}
+                                                onChange={(e) => {
+                                                    setModuleManagerURL(e.target.value);
+                                                    setLinkTestResult(null); // Clear test result when URL changes
+                                                }}
+                                                placeholder="https://myhostedmodule.com"
+                                                className="flex-1 bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm font-mono focus:border-indigo-500 outline-none"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && !testingLink) {
+                                                        testExternalLink(moduleManagerURL);
+                                                    }
+                                                }}
+                                            />
+                                            <button
+                                                onClick={() => testExternalLink(moduleManagerURL)}
+                                                disabled={!moduleManagerURL || testingLink}
+                                                className="px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                title="Test if URL is accessible"
+                                            >
+                                                {testingLink ? 'Testing...' : 'Test'}
+                                            </button>
+                                        </div>
+                                        
+                                        {/* Test Result */}
+                                        {linkTestResult && (
+                                            <div className={`mt-2 p-3 rounded-lg text-xs border ${
+                                                linkTestResult.success 
+                                                    ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30' 
+                                                    : 'bg-rose-900/30 text-rose-400 border-rose-500/30'
+                                            }`}>
+                                                <div className="flex items-start gap-2">
+                                                    <span className="font-bold">{linkTestResult.success ? '✓' : '✗'}</span>
+                                                    <span>{linkTestResult.message}</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        
                                         <p className="text-[10px] text-slate-500 mt-1 italic">
-                                            Full URL to the hosted module page
+                                            Full URL to the hosted module page. Press Enter or click Test to verify.
                                         </p>
                                     </div>
                                     
