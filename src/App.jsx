@@ -3897,7 +3897,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                                         setProjectData(prev => {
                                             const materials = prev["Current Course"]?.materials || [];
                                             const updated = materials.map(m => {
-                                                if (selectedItems.includes(m.id) && !m.hidden) {
+                                                if (selectedItems.includes(m.id) && !(m.hidden === true)) {
                                                     return { ...m, hidden: true };
                                                 }
                                                 return m;
@@ -3912,19 +3912,19 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                                         });
                                     } else if (sourceType === 'ASSESSMENT') {
                                         // Batch update assessments
-                                        const assessmentsModule = projectData["Current Course"]?.modules?.find(m => 
-                                            m.id === 'item-assessments' || m.title === 'Assessments'
-                                        );
-                                        if (assessmentsModule) {
-                                            const assessments = assessmentsModule.assessments || [];
-                                            const updated = assessments.map(a => {
-                                                if (selectedItems.includes(a.id) && !a.hidden) {
-                                                    return { ...a, hidden: true };
-                                                }
-                                                return a;
-                                            });
-                                            setProjectData(prev => {
-                                                const modules = prev["Current Course"]?.modules || [];
+                                        setProjectData(prev => {
+                                            const modules = prev["Current Course"]?.modules || [];
+                                            const assessmentsModule = modules.find(m => 
+                                                m.id === 'item-assessments' || m.title === 'Assessments'
+                                            );
+                                            if (assessmentsModule) {
+                                                const assessments = assessmentsModule.assessments || [];
+                                                const updated = assessments.map(a => {
+                                                    if (selectedItems.includes(a.id) && !(a.hidden === true)) {
+                                                        return { ...a, hidden: true };
+                                                    }
+                                                    return a;
+                                                });
                                                 const updatedModules = modules.map(m => 
                                                     (m.id === 'item-assessments' || m.title === 'Assessments')
                                                         ? { ...m, assessments: updated }
@@ -3937,8 +3937,9 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                                                         modules: updatedModules
                                                     }
                                                 };
-                                            });
-                                        }
+                                            }
+                                            return prev;
+                                        });
                                     }
                                     setSelectedItems([]);
                                 }}
@@ -3971,7 +3972,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                                         setProjectData(prev => {
                                             const materials = prev["Current Course"]?.materials || [];
                                             const updated = materials.map(m => {
-                                                if (selectedItems.includes(m.id) && m.hidden) {
+                                                if (selectedItems.includes(m.id) && m.hidden === true) {
                                                     return { ...m, hidden: false };
                                                 }
                                                 return m;
@@ -3986,19 +3987,19 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                                         });
                                     } else if (sourceType === 'ASSESSMENT') {
                                         // Batch update assessments
-                                        const assessmentsModule = projectData["Current Course"]?.modules?.find(m => 
-                                            m.id === 'item-assessments' || m.title === 'Assessments'
-                                        );
-                                        if (assessmentsModule) {
-                                            const assessments = assessmentsModule.assessments || [];
-                                            const updated = assessments.map(a => {
-                                                if (selectedItems.includes(a.id) && a.hidden) {
-                                                    return { ...a, hidden: false };
-                                                }
-                                                return a;
-                                            });
-                                            setProjectData(prev => {
-                                                const modules = prev["Current Course"]?.modules || [];
+                                        setProjectData(prev => {
+                                            const modules = prev["Current Course"]?.modules || [];
+                                            const assessmentsModule = modules.find(m => 
+                                                m.id === 'item-assessments' || m.title === 'Assessments'
+                                            );
+                                            if (assessmentsModule) {
+                                                const assessments = assessmentsModule.assessments || [];
+                                                const updated = assessments.map(a => {
+                                                    if (selectedItems.includes(a.id) && a.hidden === true) {
+                                                        return { ...a, hidden: false };
+                                                    }
+                                                    return a;
+                                                });
                                                 const updatedModules = modules.map(m => 
                                                     (m.id === 'item-assessments' || m.title === 'Assessments')
                                                         ? { ...m, assessments: updated }
@@ -4011,8 +4012,9 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                                                         modules: updatedModules
                                                     }
                                                 };
-                                            });
-                                        }
+                                            }
+                                            return prev;
+                                        });
                                     }
                                     setSelectedItems([]);
                                 }}
