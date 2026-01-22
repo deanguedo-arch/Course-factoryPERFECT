@@ -630,6 +630,148 @@ const Toggle = ({ active, labelA, labelB, labelC, onToggle, iconA: IconA, iconB:
     </div>
 );
 
+// ==========================================
+// 🔧 MODULE UTILITY FUNCTIONS (Unified)
+// ==========================================
+
+/**
+ * Get module type: 'standalone', 'external', or 'legacy'
+ */
+function getModuleType(module) {
+  if (module.type === 'standalone' || module.type === 'external') {
+    return module.type;
+  }
+  // Check if it has direct html/css/script (standalone without type)
+  if (module.html && !module.code?.html) {
+    return 'standalone';
+  }
+  // Check if it has code property (legacy)
+  if (module.code) {
+    return 'legacy';
+  }
+  // Default to legacy for backwards compatibility
+  return 'legacy';
+}
+
+/**
+ * Extract module content (HTML, CSS, Script) from any module type
+ * Returns: { html, css, script, type }
+ */
+function extractModuleContent(module) {
+  const type = getModuleType(module);
+  
+  if (type === 'standalone') {
+    return {
+      html: module.html || '',
+      css: module.css || '',
+      script: module.script || '',
+      type: 'standalone'
+    };
+  }
+  
+  if (type === 'external') {
+    // Generate HTML based on linkType
+    let html = '';
+    if (module.linkType === 'iframe') {
+      html = `<div id="${module.id}" class="w-full h-full" style="min-height: 600px;">
+        <iframe src="${module.url}" width="100%" height="100%" style="border:none;" frameborder="0"></iframe>
+      </div>`;
+    } else {
+      html = `<div id="${module.id}" class="w-full h-full p-8 text-center">
+        <h2 class="text-2xl font-bold text-white mb-4">${module.title || 'External Module'}</h2>
+        <p class="text-slate-400 mb-6">This module opens in a new tab.</p>
+        <a href="${module.url}" target="_blank" rel="noopener noreferrer" 
+           class="inline-block bg-sky-600 hover:bg-sky-500 text-white px-8 py-4 rounded-lg text-sm font-bold uppercase transition-all">
+          Open ${module.title || 'Module'}
+        </a>
+      </div>`;
+    }
+    return {
+      html: html,
+      css: '',
+      script: '',
+      type: 'external'
+    };
+  }
+  
+  // Legacy format
+  let code = module.code || {};
+  if (typeof code === 'string') {
+    try {
+      code = JSON.parse(code);
+    } catch (e) {
+      console.error('Failed to parse module code:', e);
+      code = {};
+    }
+  }
+  
+  // Fallback: check if html/script are directly on module
+  return {
+    html: code.html || module.html || '',
+    css: code.css || module.css || '',
+    script: code.script || module.script || '',
+    type: 'legacy'
+  };
+}
+
+/**
+ * Clean module HTML: remove hidden classes, fix sizing, remove comments
+ */
+function cleanModuleHTML(html) {
+  if (!html) return '';
+  
+  let cleaned = html;
+  
+  // Remove HTML comments that break init checks
+  cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
+  
+  // Remove 'hidden' class
+  cleaned = cleaned.replace(/class="([^"]*)\bhidden\b([^"]*)"/g, 'class="$1$2"');
+  
+  // Remove 'custom-scroll' class (not needed without navigation container)
+  cleaned = cleaned.replace(/class="([^"]*)\bcustom-scroll\b([^"]*)"/g, 'class="$1$2"');
+  
+  // Remove 'h-full' and 'w-full' classes that cause overlap issues
+  cleaned = cleaned.replace(/class="([^"]*)\bh-full\b([^"]*)"/g, 'class="$1$2"');
+  cleaned = cleaned.replace(/class="([^"]*)\bw-full\b([^"]*)"/g, 'class="$1 w-auto max-w-full$2"');
+  
+  // Clean up any double spaces in class attributes
+  cleaned = cleaned.replace(/class="([^"]*)"/g, (match) => {
+    const cleanedClass = match.replace(/\s+/g, ' ').trim();
+    return cleanedClass;
+  });
+  
+  return cleaned;
+}
+
+/**
+ * Clean module script: convert const/let to var, fix initialization checks
+ */
+function cleanModuleScript(script) {
+  if (!script) return '';
+  
+  let cleaned = script;
+  
+  // Replace const/let declarations that might conflict (convert to var for compatibility)
+  // This prevents "Identifier already declared" errors when scripts run multiple times
+  cleaned = cleaned.replace(/\bconst\s+(\w+)\s*=/g, 'var $1 =');
+  cleaned = cleaned.replace(/\blet\s+(\w+)\s*=/g, 'var $1 =');
+  
+  // Replace innerHTML.trim() === "" with a forced clear + check
+  cleaned = cleaned.replace(
+    /if\s*\(\s*sc\s*&&\s*sc\.innerHTML\.trim\(\)\s*===\s*['"]['""]\s*\)\s*{/g,
+    'if (sc) { sc.innerHTML = "";'
+  );
+  
+  // Replace sc.children.length === 0 with a forced clear
+  cleaned = cleaned.replace(
+    /if\s*\(\s*sc\s*&&\s*sc\.children\.length\s*===\s*0\s*\)\s*{/g,
+    'if (sc) { sc.innerHTML = "";'
+  );
+  
+  return cleaned;
+}
+
 // --- Phases ---
 
 const Phase0 = () => {
@@ -4009,11 +4151,6 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
   const generateModulePageHTML = () => {
     const selectedMod = modules.find(m => m.id === exportModuleId);
     if (!selectedMod) return;
-    
-    let modCode = selectedMod.code || {};
-    if (typeof modCode === 'string') {
-        try { modCode = JSON.parse(modCode); } catch(e) {}
-    }
 
     const allAssessments = modules.flatMap(m => m.assessments || []);
     const selectedAssessments = allAssessments.filter(a => exportAssessments.includes(a.id));
@@ -4061,66 +4198,15 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
         '  };\n' +
         '})();\n\n';
 
-    // Module Content - Support both legacy and standalone formats
-    let moduleHTML = '';
-    let moduleCSS = '';
-    let moduleScript = '';
-
-    // Check for standalone module format (new Module Manager)
-    if (selectedMod.type === 'standalone') {
-        moduleHTML = selectedMod.html || '';
-        moduleCSS = selectedMod.css || '';
-        moduleScript = selectedMod.script || '';
-    }
-    // Check for external link module format
-    else if (selectedMod.type === 'external') {
-        // For external links, create appropriate HTML based on linkType
-        if (selectedMod.linkType === 'iframe') {
-            moduleHTML = `<div id="${selectedMod.id}" class="w-full h-full" style="min-height: 600px;">
-                <iframe src="${selectedMod.url}" width="100%" height="100%" style="border:none;" frameborder="0"></iframe>
-            </div>`;
-        } else {
-            // For new tab links, create a redirect/instruction page
-            moduleHTML = `<div id="${selectedMod.id}" class="w-full h-full p-8 text-center">
-                <h2 class="text-2xl font-bold text-white mb-4">${selectedMod.title}</h2>
-                <p class="text-slate-400 mb-6">This module opens in a new tab.</p>
-                <a href="${selectedMod.url}" target="_blank" rel="noopener noreferrer" 
-                   class="inline-block bg-sky-600 hover:bg-sky-500 text-white px-8 py-4 rounded-lg text-sm font-bold uppercase transition-all">
-                    Open ${selectedMod.title}
-                </a>
-            </div>`;
-        }
-    }
-    // Check for legacy format (old code structure)
-    else {
-        // Try to get from code property
-        if (modCode && modCode.html) {
-            moduleHTML = modCode.html;
-            moduleScript = modCode.script || '';
-        }
-        // Also check if html/script are directly on the module (fallback)
-        else if (selectedMod.html) {
-            moduleHTML = selectedMod.html;
-            moduleScript = selectedMod.script || '';
-        }
-    }
+    // Module Content - Use unified extraction function
+    const moduleContent = extractModuleContent(selectedMod);
+    let moduleHTML = moduleContent.html;
+    let moduleCSS = moduleContent.css;
+    let moduleScript = moduleContent.script;
 
     // Process HTML if found
     if (moduleHTML) {
-        // Remove HTML comments that break init checks (e.g., <!-- Rubric injection point -->)
-        let cleanHTML = moduleHTML.replace(/<!--[\s\S]*?-->/g, '');
-        // Remove 'hidden' class for standalone display
-        cleanHTML = cleanHTML.replace(/class="([^"]*)\bhidden\b([^"]*)"/g, 'class="$1$2"');
-        // Remove 'custom-scroll' class (not needed without navigation container)
-        cleanHTML = cleanHTML.replace(/class="([^"]*)\bcustom-scroll\b([^"]*)"/g, 'class="$1$2"');
-        // Remove 'h-full' and 'w-full' classes that cause overlap issues
-        cleanHTML = cleanHTML.replace(/class="([^"]*)\bh-full\b([^"]*)"/g, 'class="$1$2"');
-        cleanHTML = cleanHTML.replace(/class="([^"]*)\bw-full\b([^"]*)"/g, 'class="$1 w-auto max-w-full$2"');
-        // Clean up any double spaces in class
-        cleanHTML = cleanHTML.replace(/class="([^"]*)"/g, (match) => {
-            const cleanedClass = match.replace(/\s+/g, ' ').trim();
-            return cleanedClass;
-        });
+        const cleanHTML = cleanModuleHTML(moduleHTML);
         sectionsHTML += '<section id="module-content" class="mb-12">' + cleanHTML + '</section>';
     }
 
@@ -4131,26 +4217,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
 
     // Process script if found
     if (moduleScript) {
-        // Fix initialization checks - force clearing and rebuilding
-        let cleanScript = moduleScript;
-        
-        // Replace const/let declarations that might conflict (convert to var for compatibility)
-        // This prevents "Identifier already declared" errors when scripts run multiple times
-        cleanScript = cleanScript.replace(/\bconst\s+(\w+)\s*=/g, 'var $1 =');
-        cleanScript = cleanScript.replace(/\blet\s+(\w+)\s*=/g, 'var $1 =');
-        
-        // Replace innerHTML.trim() === "" with a forced clear + check
-        cleanScript = cleanScript.replace(
-            /if\s*\(\s*sc\s*&&\s*sc\.innerHTML\.trim\(\)\s*===\s*['"]['""]\s*\)\s*{/g,
-            'if (sc) { sc.innerHTML = "";'
-        );
-        
-        // Replace sc.children.length === 0 with a forced clear
-        cleanScript = cleanScript.replace(
-            /if\s*\(\s*sc\s*&&\s*sc\.children\.length\s*===\s*0\s*\)\s*{/g,
-            'if (sc) { sc.innerHTML = "";'
-        );
-        
+        const cleanScript = cleanModuleScript(moduleScript);
         combinedScripts += '// --- MODULE SCRIPT ---\n' + cleanScript + '\n\n';
     }
 
@@ -4858,69 +4925,19 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
           }
         }
         
-        // Standalone HTML Module
-        if (item.type === 'standalone') {
-          // Inject scoped CSS if provided
-          if (item.css) {
-            contentInjection += `\n        <style id="style-${moduleId}">\n${item.css}\n        </style>`;
-          }
-          
-          // Inject HTML
-          if (item.html) {
-            let cleanScript = item.script || '';
-            if (cleanScript) {
-              // Apply initialization fixes
-              cleanScript = cleanScript.replace(
-                /if\s*\(\s*sc\s*&&\s*sc\.innerHTML\.trim\(\)\s*===\s*['"]['""]\s*\)\s*{/g,
-                'if (sc) { sc.innerHTML = "";'
-              );
-              cleanScript = cleanScript.replace(
-                /if\s*\(\s*sc\s*&&\s*sc\.children\.length\s*===\s*0\s*\)\s*{/g,
-                'if (sc) { sc.innerHTML = "";'
-              );
-            }
-            const htmlWithScript = item.html + (cleanScript ? '\n<script>\n' + cleanScript + '\n</script>' : '');
-            contentInjection += '\n        ' + htmlWithScript + '\n';
-          }
+        // Use unified module extraction
+        const moduleContent = extractModuleContent(item);
+        
+        // Inject scoped CSS if provided (standalone modules)
+        if (moduleContent.css) {
+          contentInjection += `\n        <style id="style-${moduleId}">\n${moduleContent.css}\n        </style>`;
         }
-        // External Link Module
-        else if (item.type === 'external') {
-          if (item.linkType === 'iframe') {
-            // Create iframe container
-            contentInjection += `\n        <div id="${moduleId}" class="w-full h-full custom-scroll hidden">
-            <iframe src="${item.url}" width="100%" height="100%" style="border:none;" frameborder="0"></iframe>
-        </div>`;
-          } else {
-            // Create link that opens in new tab
-            contentInjection += `\n        <div id="${moduleId}" class="w-full h-full custom-scroll hidden p-8">
-            <div class="max-w-4xl mx-auto text-center space-y-6">
-                <h2 class="text-2xl font-bold text-white uppercase">${item.title}</h2>
-                <p class="text-slate-400">This module opens in a new tab.</p>
-                <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="inline-block bg-sky-600 hover:bg-sky-500 text-white px-8 py-4 rounded-lg text-sm font-bold uppercase transition-all">
-                    Open ${item.title}
-                </a>
-            </div>
-        </div>`;
-          }
-        }
-        // Legacy module format (old code structure)
-        else if (itemCode.html) {
-          // Clean and fix module script for Google Sites compatibility
-          let cleanScript = itemCode.script || '';
-          if (cleanScript) {
-            // Apply initialization fixes - force clearing and rebuilding
-            cleanScript = cleanScript.replace(
-              /if\s*\(\s*sc\s*&&\s*sc\.innerHTML\.trim\(\)\s*===\s*['"]['""]\s*\)\s*{/g,
-              'if (sc) { sc.innerHTML = "";'
-            );
-            cleanScript = cleanScript.replace(
-              /if\s*\(\s*sc\s*&&\s*sc\.children\.length\s*===\s*0\s*\)\s*{/g,
-              'if (sc) { sc.innerHTML = "";'
-            );
-          }
-          // Embed script INLINE with HTML for Google Sites compatibility
-          const htmlWithInlineScript = itemCode.html + (cleanScript ? '\n<script>\n' + cleanScript + '\n</script>' : '');
-          contentInjection += '\n        ' + htmlWithInlineScript + '\n';
+        
+        // Inject HTML with script
+        if (moduleContent.html) {
+          const cleanScript = cleanModuleScript(moduleContent.script);
+          const htmlWithScript = moduleContent.html + (cleanScript ? '\n<script>\n' + cleanScript + '\n</script>' : '');
+          contentInjection += '\n        ' + htmlWithScript + '\n';
         }
       }
     });
@@ -6681,94 +6698,21 @@ Questions.filter((_, i) => i !== index);
             <div className="p-0 overflow-hidden max-h-[calc(90vh-80px)]">
               <iframe 
                 srcDoc={(() => {
-                  // Debug: Log module structure first
-                  console.log('🔍 Preview Module Structure:', {
-                    type: previewModule.type,
-                    hasHTML: !!previewModule.html,
-                    hasCSS: !!previewModule.css,
-                    hasScript: !!previewModule.script,
-                    hasCode: !!previewModule.code,
-                    codeHasHTML: !!previewModule.code?.html,
-                    allKeys: Object.keys(previewModule),
-                    title: previewModule.title
+                  // Use unified module extraction
+                  const moduleContent = extractModuleContent(previewModule);
+                  const moduleType = moduleContent.type;
+                  
+                  // Debug logging
+                  console.log('🔍 Preview Module:', {
+                    type: moduleType,
+                    hasHTML: !!moduleContent.html,
+                    hasCSS: !!moduleContent.css,
+                    hasScript: !!moduleContent.script,
+                    htmlLength: moduleContent.html?.length || 0
                   });
                   
-                  // Handle different module types
-                  // Check for standalone module: has html/css/script directly (not nested in code) OR type === 'standalone'
-                  const hasDirectHTML = previewModule.html && !previewModule.code?.html;
-                  const isStandaloneType = previewModule.type === 'standalone';
-                  
-                  if (isStandaloneType || hasDirectHTML) {
-                    // Standalone HTML module - combine html, css, and script
-                    // Try direct properties first, then fall back to code if needed
-                    let moduleHTML = previewModule.html || '';
-                    let moduleCSS = previewModule.css || '';
-                    let moduleScript = previewModule.script || '';
-                    
-                    // Fallback: if no direct html but has code.html, use that (for backwards compatibility)
-                    if (!moduleHTML && previewModule.code?.html) {
-                      moduleHTML = previewModule.code.html;
-                      moduleScript = previewModule.code.script || moduleScript;
-                    }
-                    
-                    // Debug logging
-                    console.log('Previewing standalone module:', {
-                      type: previewModule.type,
-                      hasDirectHTML: hasDirectHTML,
-                      isStandaloneType: isStandaloneType,
-                      hasHTML: !!moduleHTML,
-                      hasCSS: !!moduleCSS,
-                      hasScript: !!moduleScript,
-                      htmlLength: moduleHTML.length,
-                      moduleKeys: Object.keys(previewModule)
-                    });
-                    
-                    return `
-                      <!DOCTYPE html>
-                      <html>
-                      <head>
-                        <script src="https://cdn.tailwindcss.com"><\/script>
-                        <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-                        <script>
-                          tailwind.config = {
-                            darkMode: "class",
-                            theme: {
-                              extend: {
-                                fontFamily: {
-                                  sans: ["Inter", "sans-serif"],
-                                  mono: ["JetBrains Mono", "monospace"]
-                                }
-                              }
-                            }
-                          }
-                        <\/script>
-                        ${moduleCSS ? `<style>${moduleCSS}</style>` : ''}
-                        <style>
-                          body { background: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 20px; min-height: 100vh; }
-                          .mono { font-family: 'JetBrains Mono', monospace; }
-                          .score-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; }
-                          .score-btn:hover { border-color: #0ea5e9; color: white; }
-                          .score-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; }
-                          .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
-                          .rubric-cell:hover { background: rgba(255,255,255,0.05); }
-                          .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
-                          .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
-                          .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; }
-                          .custom-scroll::-webkit-scrollbar { width: 8px; }
-                          .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
-                          .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-                          .custom-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
-                          .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
-                        </style>
-                      </head>
-                      <body>
-                        ${moduleHTML || '<p class="p-8 text-slate-500">No HTML content</p>'}
-                        ${moduleScript ? `<script>${moduleScript}<\/script>` : ''}
-                      </body>
-                      </html>
-                    `;
-                  } else if (previewModule.type === 'external') {
-                    // External link module - show iframe or redirect message
+                  // Handle external modules separately (they need special iframe handling)
+                  if (moduleType === 'external') {
                     if (previewModule.linkType === 'iframe') {
                       return `
                         <!DOCTYPE html>
@@ -6832,139 +6776,101 @@ Questions.filter((_, i) => i !== index);
                         </html>
                       `;
                     }
-                  } else {
-                    // Legacy module format
-                    console.log('📦 Using legacy module format');
-                    let itemCode = previewModule.code || {};
-                    if (typeof itemCode === 'string') {
-                      try { itemCode = JSON.parse(itemCode); } catch(e) {
-                        console.error('Failed to parse code:', e);
-                      }
-                    }
-                    console.log('📦 Legacy code structure:', {
-                      hasCodeHTML: !!itemCode.html,
-                      hasCodeScript: !!itemCode.script,
-                      htmlLength: itemCode.html?.length || 0,
-                      scriptLength: itemCode.script?.length || 0,
-                      codeKeys: Object.keys(itemCode)
-                    });
-                    
-                    // Clean up HTML - remove hidden classes and ensure visibility
-                    let cleanHTML = itemCode.html || '';
-                    if (cleanHTML) {
-                      // Remove hidden class from any elements
-                      cleanHTML = cleanHTML.replace(/class="([^"]*)\bhidden\b([^"]*)"/g, 'class="$1$2"');
-                      // Remove display: none inline styles
-                      cleanHTML = cleanHTML.replace(/style="([^"]*)\bdisplay\s*:\s*none([^"]*)"/gi, 'style="$1$2"');
-                      // Ensure main container is visible
-                      cleanHTML = cleanHTML.replace(/<div\s+id="[^"]*"\s+class="[^"]*hidden/g, '<div id="$1" class="');
-                    }
-                    
-                    // Clean up script - convert const/let to var to prevent redeclaration errors
-                    let cleanScript = itemCode.script || '';
-                    if (cleanScript) {
-                      cleanScript = cleanScript.replace(/\bconst\s+(\w+)\s*=/g, 'var $1 =');
-                      cleanScript = cleanScript.replace(/\blet\s+(\w+)\s*=/g, 'var $1 =');
-                      // Fix initialization checks that might prevent content from showing
-                      cleanScript = cleanScript.replace(
-                        /if\s*\(\s*sc\s*&&\s*sc\.innerHTML\.trim\(\)\s*===\s*['"]['""]\s*\)\s*{/g,
-                        'if (sc) { sc.innerHTML = "";'
-                      );
-                      cleanScript = cleanScript.replace(
-                        /if\s*\(\s*sc\s*&&\s*sc\.children\.length\s*===\s*0\s*\)\s*{/g,
-                        'if (sc) { sc.innerHTML = "";'
-                      );
-                    }
-                    
-                    return `
-                      <!DOCTYPE html>
-                      <html>
-                      <head>
-                        <meta charset="UTF-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <script src="https://cdn.tailwindcss.com"><\/script>
-                        <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-                        <script>
-                          tailwind.config = {
-                            darkMode: "class",
-                            theme: {
-                              extend: {
-                                fontFamily: {
-                                  sans: ["Inter", "sans-serif"],
-                                  mono: ["JetBrains Mono", "monospace"]
-                                }
+                  }
+                  
+                  // For standalone and legacy modules, build full HTML document
+                  const cleanHTML = cleanModuleHTML(moduleContent.html);
+                  const cleanScript = cleanModuleScript(moduleContent.script);
+                  
+                  return `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                      <meta charset="UTF-8">
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                      <script src="https://cdn.tailwindcss.com"><\/script>
+                      <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+                      <script>
+                        tailwind.config = {
+                          darkMode: "class",
+                          theme: {
+                            extend: {
+                              fontFamily: {
+                                sans: ["Inter", "sans-serif"],
+                                mono: ["JetBrains Mono", "monospace"]
                               }
                             }
                           }
-                        <\/script>
-                        <style>
-                          body { background: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 20px; min-height: 100vh; }
-                          .mono { font-family: 'JetBrains Mono', monospace; }
-                          .score-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; }
-                          .score-btn:hover { border-color: #0ea5e9; color: white; }
-                          .score-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; }
-                          .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
-                          .rubric-cell:hover { background: rgba(255,255,255,0.05); }
-                          .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
-                          .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
-                          .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; }
-                          .custom-scroll::-webkit-scrollbar { width: 8px; }
-                          .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
-                          .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-                          .custom-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
-                          .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
-                          /* Force visibility for preview */
-                          [id^="view-"] { display: block !important; visibility: visible !important; opacity: 1 !important; }
-                          .hidden { display: block !important; visibility: visible !important; }
-                          body > div { display: block !important; }
-                          /* Ensure main content containers are visible */
-                          #sc-container, [id*="container"], [id*="content"] { display: block !important; visibility: visible !important; }
-                        </style>
-                      </head>
-                      <body>
-                        ${cleanHTML || '<p class="p-8 text-slate-500">No HTML content</p>'}
-                        <script>
-                          (function() {
-                            try {
-                              ${cleanScript}
-                            } catch(e) {
-                              console.error('Module script error:', e);
-                            }
-                            
-                            // Force initialization after DOM is ready
-                            function forceShow() {
-                              // Force show any hidden elements
-                              document.querySelectorAll('.hidden, [style*="display: none"], [style*="display:none"]').forEach(function(el) {
-                                el.classList.remove('hidden');
-                                el.style.display = '';
-                                el.style.visibility = 'visible';
-                                el.style.opacity = '1';
-                              });
-                              // Trigger any initialization functions
-                              var initFunctions = ['init', 'initialize', 'setup', 'load'];
-                              initFunctions.forEach(function(fnName) {
-                                if (typeof window[fnName] === 'function') {
-                                  try { window[fnName](); } catch(e) { console.error('Init error:', e); }
-                                }
-                              });
-                              console.log('Preview: Forced visibility, body children:', document.body.children.length);
-                            }
-                            
-                            if (document.readyState === 'loading') {
-                              document.addEventListener('DOMContentLoaded', forceShow);
-                            } else {
-                              forceShow();
-                            }
-                            
-                            // Fallback timeout to ensure content shows
-                            setTimeout(forceShow, 100);
-                            setTimeout(forceShow, 500);
-                          })();
-                        <\/script>
-                      </body>
-                      </html>
-                    `;
-                  }
+                        }
+                      <\/script>
+                      ${moduleContent.css ? `<style>${moduleContent.css}</style>` : ''}
+                      <style>
+                        body { background: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 20px; min-height: 100vh; }
+                        .mono { font-family: 'JetBrains Mono', monospace; }
+                        .score-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; }
+                        .score-btn:hover { border-color: #0ea5e9; color: white; }
+                        .score-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; }
+                        .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+                        .rubric-cell:hover { background: rgba(255,255,255,0.05); }
+                        .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
+                        .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
+                        .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; }
+                        .custom-scroll::-webkit-scrollbar { width: 8px; }
+                        .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
+                        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+                        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
+                        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
+                        /* Force visibility for preview */
+                        [id^="view-"] { display: block !important; visibility: visible !important; opacity: 1 !important; }
+                        .hidden { display: block !important; visibility: visible !important; }
+                        body > div { display: block !important; }
+                        /* Ensure main content containers are visible */
+                        #sc-container, [id*="container"], [id*="content"] { display: block !important; visibility: visible !important; }
+                      </style>
+                    </head>
+                    <body>
+                      ${cleanHTML || '<p class="p-8 text-slate-500">No HTML content</p>'}
+                      <script>
+                        (function() {
+                          try {
+                            ${cleanScript}
+                          } catch(e) {
+                            console.error('Module script error:', e);
+                          }
+                          
+                          // Force initialization after DOM is ready
+                          function forceShow() {
+                            // Force show any hidden elements
+                            document.querySelectorAll('.hidden, [style*="display: none"], [style*="display:none"]').forEach(function(el) {
+                              el.classList.remove('hidden');
+                              el.style.display = '';
+                              el.style.visibility = 'visible';
+                              el.style.opacity = '1';
+                            });
+                            // Trigger any initialization functions
+                            var initFunctions = ['init', 'initialize', 'setup', 'load'];
+                            initFunctions.forEach(function(fnName) {
+                              if (typeof window[fnName] === 'function') {
+                                try { window[fnName](); } catch(e) { console.error('Init error:', e); }
+                              }
+                            });
+                            console.log('Preview: Forced visibility, body children:', document.body.children.length);
+                          }
+                          
+                          if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', forceShow);
+                          } else {
+                            forceShow();
+                          }
+                          
+                          // Fallback timeout to ensure content shows
+                          setTimeout(forceShow, 100);
+                          setTimeout(forceShow, 500);
+                        })();
+                      <\/script>
+                    </body>
+                    </html>
+                  `;
                 })()}
                 key={previewModule.id || previewModule.title}
                 className="w-full h-full border-0"
