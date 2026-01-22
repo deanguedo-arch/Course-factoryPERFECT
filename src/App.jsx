@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Wrench, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X } from 'lucide-react';
+import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Wrench, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X, Edit } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
@@ -869,7 +869,7 @@ const BatchHarvester = ({ onImport }) => {
 };
 
 const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, assessmentType, setAssessmentType, assessmentTitle, setAssessmentTitle, quizQuestions, setQuizQuestions, printInstructions, setPrintInstructions, editingAssessment, setEditingAssessment, migrateCode, setMigrateCode, migratePrompt, setMigratePrompt, migrateOutput, setMigrateOutput }) => {
-  const [harvestType, setHarvestType] = useState('MODULE'); // 'MODULE', 'FEATURE', 'ASSET', 'ASSESSMENT', 'AI_MODULE', 'MODULE_MANAGER'
+  const [harvestType, setHarvestType] = useState('MODULE_MANAGER'); // 'FEATURE', 'ASSET', 'ASSESSMENT', 'AI_MODULE', 'MODULE_MANAGER'
   const [mode, setMode] = useState('B');
   
   // MODULE MANAGER STATE
@@ -1640,9 +1640,6 @@ Please add the following data to the \`PROJECT_DATA\` object.
         {/* HARVEST TYPE TOGGLE */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
              <div className="flex gap-2 bg-slate-900 p-1 rounded-lg border border-slate-700 w-full md:w-auto overflow-x-auto">
-                 <button onClick={() => { setIsBatchMode(false); setHarvestType('MODULE'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'MODULE' ? 'bg-yellow-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
-                     <Box size={14} /> Module
-                 </button>
                  <button onClick={() => { setIsBatchMode(false); setHarvestType('FEATURE'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'FEATURE' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
                      <Wrench size={14} /> Feature
                  </button>
@@ -4026,44 +4023,43 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
     let combinedScripts = '';
 
     // Add navigation/viewer functions FIRST (before module scripts) to ensure they're available immediately
-    // Assessment Navigation Functions (will be used if assessments are included)
-    combinedScripts += '// --- ASSESSMENT NAVIGATION (Pre-declared) ---\n' +
-        'window.showAssessment = window.showAssessment || function(index) {\n' +
-        '  var listEl = document.getElementById("assessment-list");\n' +
-        '  if (listEl) listEl.classList.add("hidden");\n' +
-        '  document.querySelectorAll(".assessment-container").forEach(function(c) { c.classList.add("hidden"); });\n' +
-        '  var targetEl = document.getElementById("assessment-" + index);\n' +
-        '  if (targetEl) targetEl.classList.remove("hidden");\n' +
-        '  window.scrollTo(0, 0);\n' +
-        '};\n' +
-        'window.backToAssessmentList = window.backToAssessmentList || function() {\n' +
-        '  document.querySelectorAll(".assessment-container").forEach(function(c) { c.classList.add("hidden"); });\n' +
-        '  var listEl = document.getElementById("assessment-list");\n' +
-        '  if (listEl) listEl.classList.remove("hidden");\n' +
-        '  window.scrollTo(0, 0);\n' +
-        '};\n\n';
-
-    // Material Viewer Functions (will be used if materials are included)
-    combinedScripts += '// --- MATERIAL VIEWER (Pre-declared) ---\n' +
-        'window.openMaterialViewer = window.openMaterialViewer || function(url, title) {\n' +
-        '  var viewer = document.getElementById("material-viewer");\n' +
-        '  var frame = document.getElementById("material-frame");\n' +
-        '  var titleEl = document.getElementById("material-viewer-title");\n' +
-        '  if (viewer && frame && titleEl) {\n' +
-        '    frame.src = url;\n' +
-        '    titleEl.textContent = title;\n' +
-        '    viewer.classList.remove("hidden");\n' +
-        '    viewer.scrollIntoView({ behavior: "smooth", block: "start" });\n' +
-        '  }\n' +
-        '};\n' +
-        'window.closeMaterialViewer = window.closeMaterialViewer || function() {\n' +
-        '  var viewer = document.getElementById("material-viewer");\n' +
-        '  var frame = document.getElementById("material-frame");\n' +
-        '  if (viewer && frame) {\n' +
-        '    viewer.classList.add("hidden");\n' +
-        '    frame.src = "";\n' +
-        '  }\n' +
-        '};\n\n';
+    // Wrap in IIFE to ensure they're always defined, not conditionally
+    combinedScripts += '// --- NAVIGATION FUNCTIONS (Always Defined) ---\n' +
+        '(function() {\n' +
+        '  window.showAssessment = function(index) {\n' +
+        '    var listEl = document.getElementById("assessment-list");\n' +
+        '    if (listEl) listEl.classList.add("hidden");\n' +
+        '    document.querySelectorAll(".assessment-container").forEach(function(c) { c.classList.add("hidden"); });\n' +
+        '    var targetEl = document.getElementById("assessment-" + index);\n' +
+        '    if (targetEl) targetEl.classList.remove("hidden");\n' +
+        '    window.scrollTo(0, 0);\n' +
+        '  };\n' +
+        '  window.backToAssessmentList = function() {\n' +
+        '    document.querySelectorAll(".assessment-container").forEach(function(c) { c.classList.add("hidden"); });\n' +
+        '    var listEl = document.getElementById("assessment-list");\n' +
+        '    if (listEl) listEl.classList.remove("hidden");\n' +
+        '    window.scrollTo(0, 0);\n' +
+        '  };\n' +
+        '  window.openMaterialViewer = function(url, title) {\n' +
+        '    var viewer = document.getElementById("material-viewer");\n' +
+        '    var frame = document.getElementById("material-frame");\n' +
+        '    var titleEl = document.getElementById("material-viewer-title");\n' +
+        '    if (viewer && frame && titleEl) {\n' +
+        '      frame.src = url;\n' +
+        '      titleEl.textContent = title;\n' +
+        '      viewer.classList.remove("hidden");\n' +
+        '      viewer.scrollIntoView({ behavior: "smooth", block: "start" });\n' +
+        '    }\n' +
+        '  };\n' +
+        '  window.closeMaterialViewer = function() {\n' +
+        '    var viewer = document.getElementById("material-viewer");\n' +
+        '    var frame = document.getElementById("material-frame");\n' +
+        '    if (viewer && frame) {\n' +
+        '      viewer.classList.add("hidden");\n' +
+        '      frame.src = "";\n' +
+        '    }\n' +
+        '  };\n' +
+        '})();\n\n';
 
     // Module Content - Support both legacy and standalone formats
     let moduleHTML = '';
@@ -5175,86 +5171,6 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule }) => {
           <Package className="text-purple-400" /> Phase 4: Compile & Export
         </h2>
 
-        {/* --- HUB PAGE GENERATOR UI --- */}
-        <div className="mb-8 bg-slate-900/50 p-6 rounded-xl border border-purple-500/30">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Zap size={20} className="text-purple-400" /> Generate Course Hub Page
-            </h3>
-            
-            <p className="text-xs text-slate-400 mb-4">
-                Create a beautiful landing page that links to all your modules, materials, and assessments.
-            </p>
-            
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Course Title</label>
-                    <input 
-                        type="text"
-                        value={hubCourseTitle}
-                        onChange={(e) => setHubCourseTitle(e.target.value)}
-                        placeholder="e.g., Mental Fitness Course"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm"
-                    />
-                </div>
-                
-                <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Course Description</label>
-                    <input 
-                        type="text"
-                        value={hubCourseDescription}
-                        onChange={(e) => setHubCourseDescription(e.target.value)}
-                        placeholder="e.g., Master your mental game and unlock peak performance"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm"
-                    />
-                </div>
-                
-                <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
-                    <h4 className="text-xs font-bold text-purple-400 uppercase mb-3">Hub Page Will Include:</h4>
-                    <div className="space-y-2 text-xs text-slate-300">
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                            <span>Hero section with course title and description</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-sky-500"></div>
-                            <span>{modules.filter(m => m.id !== 'item-1768749223001' && m.title !== 'Assessments').length} module cards with gradient designs</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-cyan-500"></div>
-                            <span>Links to materials ({materials.length} items)</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                            <span>Statistics bar showing course overview</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                            <span>Progress tracking (localStorage based)</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <button 
-                    onClick={generateHubPage}
-                    className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2"
-                >
-                    <Zap size={16} /> Generate Hub Page
-                </button>
-                
-                {hubPageHTML && (
-                    <div className="animate-in fade-in slide-in-from-top-2">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs font-bold text-purple-400">✨ Hub Page Generated!</span>
-                            <button onClick={() => navigator.clipboard.writeText(hubPageHTML)} className="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded flex items-center gap-1"><Copy size={12}/> Copy Code</button>
-                        </div>
-                        <textarea readOnly value={hubPageHTML} className="w-full h-32 bg-black border border-purple-900/50 rounded-lg p-3 text-[10px] font-mono text-purple-400/80 focus:outline-none resize-y" />
-                        <p className="text-xs text-slate-500 mt-2">
-                            💡 Note: Replace MODULE_*_URL placeholders with actual URLs to your module pages
-                        </p>
-                    </div>
-                )}
-            </div>
-        </div>
 
         {/* --- EXPORT MODULE PAGE UI --- */}
         <div className="mb-8 bg-slate-900/50 p-6 rounded-xl border border-blue-500/30">
@@ -5913,7 +5829,7 @@ export default function App() {
 
   const [excludedIds, setExcludedIds] = useState([]);
   const [editingModule, setEditingModule] = useState(null); 
-  const [editForm, setEditForm] = useState({ title: '', html: '', script: '', id: '', section: '' });
+  const [editForm, setEditForm] = useState({ title: '', html: '', script: '', id: '', section: '', moduleType: '', url: '', linkType: 'iframe', fullDocument: '' });
   const [previewModule, setPreviewModule] = useState(null); 
   
   // Custom Confirmation State to replace window.confirm
@@ -5978,6 +5894,56 @@ export default function App() {
   };
 
   const openEditModule = (item) => {
+    // Handle external link modules
+    if (item.type === 'external') {
+      setEditForm({
+        title: item.title,
+        url: item.url || '',
+        linkType: item.linkType || 'iframe',
+        id: item.id,
+        section: 'Current Course',
+        moduleType: 'external'
+      });
+      setEditingModule(item.id);
+      return;
+    }
+    
+    // Handle standalone HTML modules - reconstruct full document
+    if (item.type === 'standalone') {
+      // Reconstruct full HTML document with embedded CSS and script
+      let fullDocument = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>' + (item.title || 'Module') + '</title>\n';
+      
+      // Add CSS if it exists
+      if (item.css) {
+        fullDocument += '<style>\n' + item.css + '\n</style>\n';
+      }
+      
+      fullDocument += '</head>\n<body>\n';
+      
+      // Add HTML content
+      if (item.html) {
+        fullDocument += item.html + '\n';
+      }
+      
+      // Add script if it exists
+      if (item.script) {
+        fullDocument += '<script>\n' + item.script + '\n</script>\n';
+      }
+      
+      fullDocument += '</body>\n</html>';
+      
+      setEditForm({
+        title: item.title,
+        fullDocument: fullDocument,
+        id: item.id,
+        section: 'Current Course',
+        moduleType: 'standalone'
+      });
+      setEditingModule(item.id);
+      return;
+    }
+    
+    // Legacy module format (old code structure)
     let itemCode = item.code || {};
     if (typeof itemCode === 'string') {
       try { itemCode = JSON.parse(itemCode); } catch(e) {}
@@ -5987,7 +5953,8 @@ export default function App() {
       html: itemCode.html || '',
       script: itemCode.script || '',
       id: item.id,
-      section: 'Current Course'
+      section: 'Current Course',
+      moduleType: 'legacy'
     });
     setEditingModule(item.id);
   };
@@ -5998,15 +5965,63 @@ export default function App() {
     const idx = items.findIndex(m => m.id === editingModule);
     if (idx === -1) return;
 
-    items[idx] = {
-      ...items[idx],
-      title: editForm.title,
-      code: {
-        id: items[idx].code?.id || editForm.id,
-        html: editForm.html,
-        script: editForm.script
-      }
-    };
+    // Handle external link modules
+    if (editForm.moduleType === 'external') {
+      items[idx] = {
+        ...items[idx],
+        title: editForm.title,
+        url: editForm.url,
+        linkType: editForm.linkType || 'iframe',
+        type: 'external'
+      };
+    }
+    // Handle standalone HTML modules - parse full document
+    else if (editForm.moduleType === 'standalone') {
+      // Parse the full document to extract HTML, CSS, and script
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(editForm.fullDocument, 'text/html');
+      
+      // Extract CSS from <style> tags
+      const styleTags = Array.from(doc.querySelectorAll('style'));
+      let extractedCSS = '';
+      styleTags.forEach(style => {
+        extractedCSS += (style.textContent || style.innerHTML) + '\n';
+      });
+      
+      // Extract scripts (exclude CDN scripts)
+      const scripts = Array.from(doc.querySelectorAll('script'))
+        .filter(s => !s.src || (!s.src.includes('cdn') && !s.src.includes('tailwind')))
+        .map(s => s.textContent || s.innerHTML)
+        .join('\n\n');
+      
+      // Extract body content
+      let bodyContent = doc.body ? doc.body.innerHTML : '';
+      
+      // Scope the CSS with module ID
+      const moduleId = items[idx].id || editForm.id;
+      const scopedCSS = scopeCSS(extractedCSS.trim(), moduleId);
+      
+      items[idx] = {
+        ...items[idx],
+        title: editForm.title,
+        html: bodyContent.trim(),
+        css: scopedCSS,
+        script: scripts.trim(),
+        type: 'standalone'
+      };
+    }
+    // Legacy module format
+    else {
+      items[idx] = {
+        ...items[idx],
+        title: editForm.title,
+        code: {
+          id: items[idx].code?.id || editForm.id,
+          html: editForm.html,
+          script: editForm.script
+        }
+      };
+    }
 
     setProjectData({
       ...projectData,
@@ -6536,44 +6551,109 @@ Questions.filter((_, i) => i !== index);
       {/* EDIT MODAL */}
       {editingModule && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-blue-900 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+          <div className="bg-slate-900 border border-blue-900 rounded-xl w-full max-w-6xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
             <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white">Edit Module</h3>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Edit size={20} className="text-blue-400" />
+                Edit Module: {editForm.title || 'Untitled'}
+              </h3>
               <button onClick={() => setEditingModule(null)} className="text-slate-400 hover:text-white">
                 <X size={24} />
               </button>
             </div>
             
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-2">Title</label>
-                  <input 
-                    type="text" 
-                    value={editForm.title} 
-                    onChange={(e) => setEditForm({...editForm, title: e.target.value})}
-                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-2">HTML</label>
-                  <textarea 
-                    value={editForm.html} 
-                    onChange={(e) => setEditForm({...editForm, html: e.target.value})}
-                    className="w-full h-64 bg-slate-950 border border-slate-700 rounded p-3 text-white font-mono text-sm"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-2">Script</label>
-                  <textarea 
-                    value={editForm.script} 
-                    onChange={(e) => setEditForm({...editForm, script: e.target.value})}
-                    className="w-full h-64 bg-slate-950 border border-slate-700 rounded p-3 text-white font-mono text-sm"
-                  />
-                </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-slate-300 mb-2">Module Title</label>
+                <input 
+                  type="text"
+                  value={editForm.title || ''} 
+                  onChange={(e) => setEditForm({...editForm, title: e.target.value})}
+                  className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                  placeholder="Module title"
+                />
               </div>
+
+              {/* External Link Module Form */}
+              {editForm.moduleType === 'external' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-300 mb-2">URL</label>
+                    <input 
+                      type="text"
+                      value={editForm.url || ''} 
+                      onChange={(e) => setEditForm({...editForm, url: e.target.value})}
+                      className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white font-mono text-sm"
+                      placeholder="https://example.com/module"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-slate-300 mb-2">Link Type</label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="radio"
+                          name="linkType"
+                          value="iframe"
+                          checked={editForm.linkType === 'iframe'}
+                          onChange={(e) => setEditForm({...editForm, linkType: e.target.value})}
+                          className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="text-sm text-slate-300">Embed in iframe</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="radio"
+                          name="linkType"
+                          value="newtab"
+                          checked={editForm.linkType === 'newtab'}
+                          onChange={(e) => setEditForm({...editForm, linkType: e.target.value})}
+                          className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="text-sm text-slate-300">Open in new tab</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Standalone HTML Module Form - Full Document View */}
+              {editForm.moduleType === 'standalone' && (
+                <div>
+                  <label className="block text-sm font-bold text-slate-300 mb-2">Full HTML Document</label>
+                  <p className="text-xs text-slate-400 mb-2">Edit the complete HTML document (includes CSS and JavaScript)</p>
+                  <textarea 
+                    value={editForm.fullDocument || ''} 
+                    onChange={(e) => setEditForm({...editForm, fullDocument: e.target.value})}
+                    className="w-full h-96 bg-slate-950 border border-slate-700 rounded p-3 text-white font-mono text-xs"
+                    placeholder="<!DOCTYPE html>..."
+                  />
+                </div>
+              )}
+
+              {/* Legacy Module Form */}
+              {editForm.moduleType === 'legacy' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-300 mb-2">HTML</label>
+                    <textarea 
+                      value={editForm.html || ''} 
+                      onChange={(e) => setEditForm({...editForm, html: e.target.value})}
+                      className="w-full h-64 bg-slate-950 border border-slate-700 rounded p-3 text-white font-mono text-sm"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-slate-300 mb-2">Script</label>
+                    <textarea 
+                      value={editForm.script || ''} 
+                      onChange={(e) => setEditForm({...editForm, script: e.target.value})}
+                      className="w-full h-64 bg-slate-950 border border-slate-700 rounded p-3 text-white font-mono text-sm"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="bg-slate-800 border-t border-slate-700 p-4 flex gap-3">
