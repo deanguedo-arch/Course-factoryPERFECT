@@ -435,6 +435,151 @@ const PROJECT_DATA = {
 // Canvas Instructions: To update the default template, replace the string below.
 // ==========================================
 
+// Helper function to get accent color values
+const getAccentColor = (accentColor) => {
+  const colorMap = {
+    sky: { hex: '#0ea5e9', dark: '#0284c7', light: '#38bdf8' },
+    rose: { hex: '#f43f5e', dark: '#e11d48', light: '#fb7185' },
+    emerald: { hex: '#10b981', dark: '#059669', light: '#34d399' },
+    amber: { hex: '#f59e0b', dark: '#d97706', light: '#fbbf24' },
+    purple: { hex: '#a855f7', dark: '#9333ea', light: '#c084fc' },
+    indigo: { hex: '#6366f1', dark: '#4f46e5', light: '#818cf8' },
+    pink: { hex: '#ec4899', dark: '#db2777', light: '#f472b6' },
+    teal: { hex: '#14b8a6', dark: '#0d9488', light: '#2dd4bf' }
+  };
+  return colorMap[accentColor] || colorMap.sky;
+};
+
+// Template function to generate master shell HTML
+const generateMasterShell = (data) => {
+  const {
+    courseName = "Course Factory",
+    courseNameUpper = "COURSE FACTORY",
+    accentColor = "sky",
+    customCSS = "",
+    courseInfo = "",
+    navItems = "",
+    content = "",
+    scripts = "",
+    progressTracking = ""
+  } = data;
+  
+  const colors = getAccentColor(accentColor);
+  
+  // Build styles with accent color applied
+  const baseStyles = `        /* --- GLOBAL & SHARED STYLES --- */
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; margin: 0; height: 100vh; overflow: hidden; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .glass-panel { background: rgba(15, 23, 42, 0.95); border-right: 1px solid rgba(51, 65, 85, 0.5); }
+        .custom-scroll { overflow-y: auto; }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
+        input, textarea, select { background: #0f172a !important; border: 1px solid #1e293b !important; transition: all 0.2s; color: #e2e8f0; }
+        input:focus, textarea:focus, select:focus { border-color: ${colors.hex} !important; outline: none; box-shadow: 0 0 0 1px ${colors.hex}; }
+        
+        /* Navigation */
+        .nav-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; transition: all 0.2s; border-left: 2px solid transparent; }
+        .nav-item:hover { background: rgba(30, 41, 59, 0.5); color: #e2e8f0; }
+        .nav-item.active { background: rgba(14, 165, 233, 0.1); color: ${colors.light}; border-left: 2px solid ${colors.light}; }
+
+        /* Module Buttons & Tabs */
+        .score-btn, .mod-nav-btn, .nav-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; }
+        .score-btn:hover, .mod-nav-btn:hover, .nav-btn:hover { border-color: ${colors.hex}; color: white; }
+        .score-btn.active, .mod-nav-btn.active, .nav-btn.active { background: ${colors.hex}; color: #000; font-weight: 900; border-color: ${colors.hex}; }
+        
+        /* Layout Helpers */
+        .phase-header { border-left: 4px solid #334155; padding-left: 1rem; margin-bottom: 1rem; }
+        .phase-header.active { border-color: ${colors.hex}; }
+        .step-content { display: none; }
+        .step-content.active { display: block; }
+        .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+        .rubric-cell:hover { background: rgba(255,255,255,0.05); }
+        .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
+        .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
+        .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; }
+        .helper-text { font-size: 8px; color: #64748b; font-style: italic; margin-top: 4px; line-height: 1.2; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+        .info-card { background: rgba(30, 41, 59, 0.4); border-left: 3px solid ${colors.hex}; padding: 1.5rem; border-radius: 0.75rem; }
+        .top-ten-input { font-size: 0.75rem; padding: 0.5rem !important; border-radius: 0.375rem !important; }
+        
+        /* Animations */
+        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+        .status-saved { animation: pulse-green 2s infinite; }
+        .scan-line { height: 2px; width: 100%; background: rgba(0, 255, 65, 0.2); position: absolute; animation: scan 3s linear infinite; pointer-events: none; }
+        @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }`;
+  
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${courseNameUpper} | MASTER CONSOLE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css?family=Inter:ital,wght@0,400;0,700;1,400;1,900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <style>
+        ${baseStyles}${customCSS ? `\n        /* Custom CSS from Settings */\n        ${customCSS}` : ''}
+    </style>
+</head>
+<body class="flex">
+
+    <div class="w-64 glass-panel flex-shrink-0 flex flex-col h-full z-50">
+        <div class="p-8 border-b border-slate-800">
+            <h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none"><span class="text-${accentColor}-500">${courseName}</span></h1>
+            <p class="text-[10px] text-slate-500 mt-2 mono uppercase tracking-widest">Master Console v2.0</p>${courseInfo}
+        </div>
+        <nav class="flex-1 overflow-y-auto py-4 space-y-1" id="main-nav">
+            <div class="px-4 py-2 mt-4 text-[9px] font-bold text-slate-600 uppercase tracking-widest mono">System Modules</div>
+            ${navItems}
+        </nav>
+        <div class="p-6 border-t border-slate-800 text-center"><p class="text-[9px] text-slate-600 italic">"Recognition is the trigger for regulation."</p></div>
+    </div>
+
+    <div class="flex-1 relative bg-slate-900 h-full overflow-hidden" id="content-container">
+        ${content}
+        <iframe id="view-external" class="w-full h-full hidden" src=""></iframe>
+    </div>
+
+    <!-- MODULE SCRIPTS CONTAINER -->
+    <script id="module-scripts">
+        ${scripts}${progressTracking ? '\n        ' + progressTracking : ''}
+    </script>
+
+    <script>
+        // --- CORE NAVIGATION LOGIC ---
+        function switchView(view) {
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            
+            // Hide all views generically
+            const allViews = document.querySelectorAll('[id^="view-"]');
+            allViews.forEach(v => v.classList.add('hidden'));
+
+            // Show specific view
+            const target = document.getElementById('view-' + view);
+            if(target) target.classList.remove('hidden');
+            
+            // Activate button
+            const navBtn = document.getElementById('nav-' + view);
+            if(navBtn) navBtn.classList.add('active');
+        }
+
+        function openPDF(url, title) {
+            const container = document.getElementById('pdf-viewer-container');
+            // Convert /view to /preview for iframe embedding
+            const previewUrl = url.replace('/view', '/preview');
+            document.getElementById('pdf-frame').src = previewUrl;
+            document.getElementById('viewer-title').innerText = "VIEWING: " + title;
+            container.classList.remove('hidden');
+            container.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function closeViewer() {
+            document.getElementById('pdf-viewer-container').classList.add('hidden');
+            document.getElementById('pdf-frame').src = "";
+        }
+    </script>
+</body>
+</html>`;
+};
+
+// Keep MASTER_SHELL for backward compatibility (Phase 0 display)
 const MASTER_SHELL = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5072,8 +5217,6 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
 
   const generateFullSite = () => {
     try {
-      let finalCode = MASTER_SHELL;
-    
     // ========================================
     // PHASE 5 SETTINGS APPLICATION
     // ========================================
@@ -5087,61 +5230,14 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     const customCSS = courseSettings.customCSS || "";
     const compDefaults = courseSettings.compilationDefaults || {};
     
-    // 1. APPLY ACCENT COLOR (replace all sky-* colors with chosen accent)
-    const colorMap = {
-      sky: { hex: '#0ea5e9', dark: '#0284c7' },
-      rose: { hex: '#f43f5e', dark: '#e11d48' },
-      emerald: { hex: '#10b981', dark: '#059669' },
-      amber: { hex: '#f59e0b', dark: '#d97706' },
-      purple: { hex: '#a855f7', dark: '#9333ea' },
-      indigo: { hex: '#6366f1', dark: '#4f46e5' },
-      pink: { hex: '#ec4899', dark: '#db2777' },
-      teal: { hex: '#14b8a6', dark: '#0d9488' }
-    };
-    
-    if (accentColor !== 'sky') {
-      const newColor = colorMap[accentColor] || colorMap.sky;
-      // Replace Tailwind classes
-      finalCode = finalCode.replace(/text-sky-500/g, `text-${accentColor}-500`);
-      finalCode = finalCode.replace(/text-sky-400/g, `text-${accentColor}-400`);
-      finalCode = finalCode.replace(/bg-sky-500/g, `bg-${accentColor}-500`);
-      finalCode = finalCode.replace(/border-sky-500/g, `border-${accentColor}-500`);
-      finalCode = finalCode.replace(/from-sky-500/g, `from-${accentColor}-500`);
-      // Replace hex colors
-      finalCode = finalCode.replace(/#0ea5e9/g, newColor.hex);
-      finalCode = finalCode.replace(/#0284c7/g, newColor.dark);
-      finalCode = finalCode.replace(/#38bdf8/g, newColor.hex);
-    }
-    
-    // 2. INJECT CUSTOM CSS (if provided)
-    if (customCSS.trim()) {
-      finalCode = finalCode.replace('</style>', `\n        /* Custom CSS from Settings */\n        ${customCSS}\n    </style>`);
-    }
-    
-    // 3. REPLACE COURSE NAME IN TITLE & HEADER
-    finalCode = finalCode.replace(
-      '<title>MENTAL FITNESS | MASTER CONSOLE</title>',
-      `<title>${courseNameUpper} | MASTER CONSOLE</title>`
-    );
-    
-    finalCode = finalCode.replace(
-      '<h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none">Mental<br><span class="text-sky-500">Fitness</span></h1>',
-      `<h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none"><span class="text-${accentColor}-500">${courseName}</span></h1>`
-    );
-    
-    // 4. ADD COURSE INFO TO SIDEBAR (course code, instructor, year)
+    // Build course info HTML
     const courseInfoParts = [];
     if (courseCode) courseInfoParts.push(courseCode);
     if (instructor) courseInfoParts.push(instructor);
     if (academicYear) courseInfoParts.push(academicYear);
-    
-    if (courseInfoParts.length > 0) {
-      const courseInfoHTML = `<p class="text-[9px] text-slate-600 uppercase tracking-widest mono mt-1">${courseInfoParts.join(' • ')}</p>`;
-      finalCode = finalCode.replace(
-        '<p class="text-[10px] text-slate-500 mt-2 mono uppercase tracking-widest">Master Console v2.0</p>',
-        `<p class="text-[10px] text-slate-500 mt-2 mono uppercase tracking-widest">Master Console v2.0</p>\n            ${courseInfoHTML}`
-      );
-    }
+    const courseInfoHTML = courseInfoParts.length > 0 
+      ? `\n            <p class="text-[9px] text-slate-600 uppercase tracking-widest mono mt-1">${courseInfoParts.join(' • ')}</p>`
+      : "";
     
     // 5. FILTER MODULES & TOOLKIT BASED ON COMPILATION DEFAULTS
     // Course Materials and Assessments are core modules - always included unless explicitly excluded
@@ -5614,51 +5710,8 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       `;
     }
 
-    // 2. CLEANUP: Remove any existing hardcoded "view-" divs from MASTER_SHELL
-    // This prevents the "Split Screen" bug where both the hardcoded and injected views exist.
-    // We use a regex to strip out divs starting with id="view-" from the template
-    finalCode = finalCode.replace(/<div id="view-.*?"[\s\S]*?<\/div>\s*<\/div>/g, (match) => {
-        // Only remove if it looks like a module container (optional safety check)
-        return ''; 
-    });
-    // Fallback: Specifically remove view-materials if regex misses
-    if(finalCode.includes('id="view-materials"')) {
-        finalCode = finalCode.replace(/<div id="view-materials"[\s\S]*?<\/div>/, '');
-    }
-
-    // 3. Inject Nav
-    if (finalCode.includes('<!-- Dynamic Modules will be injected here -->')) {
-        finalCode = finalCode.replace(
-            '<!-- Dynamic Modules will be injected here -->', 
-            '<!-- Dynamic Modules will be injected here -->' + navInjection
-        );
-    } else {
-        finalCode = finalCode.replace('</nav>', navInjection + '\n        </nav>');
-    }
-
-    // 4. Inject Content
-    if (finalCode.includes('<iframe id="view-external"')) {
-        finalCode = finalCode.replace(
-            '<iframe id="view-external"', 
-            contentInjection + '\n        <iframe id="view-external"'
-        );
-    } else {
-        finalCode = finalCode.replace('</div>\n\n    <!-- MODULE SCRIPTS CONTAINER -->', contentInjection + '\n        </div>\n\n    <!-- MODULE SCRIPTS CONTAINER -->');
-    }
-
-    // 5. Inject Script
-    if (finalCode.includes('// New module logic will be appended here')) {
-        finalCode = finalCode.replace(
-            '// New module logic will be appended here', 
-            '// New module logic will be appended here' + scriptInjection
-        );
-    } else {
-        finalCode = finalCode.replace('</script>\n</body>', scriptInjection + '\n    </script>\n</body>');
-    }
-
-    // 6. INJECT PROGRESS TRACKING (if enabled in settings)
-    if (compDefaults.enableProgressTracking === true) {
-      const progressTrackingScript = `
+    // Build progress tracking script if enabled
+    const progressTrackingScript = compDefaults.enableProgressTracking === true ? `
         
         // ========================================
         // PROGRESS TRACKING SYSTEM
@@ -5714,10 +5767,20 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         
         // Initialize on load
         updateProgressIndicators();
-      `;
-      
-      finalCode = finalCode.replace('</script>\n</body>', progressTrackingScript + '\n    </script>\n</body>');
-    }
+      ` : '';
+
+    // Generate final HTML using template function
+    const finalCode = generateMasterShell({
+      courseName,
+      courseNameUpper,
+      accentColor,
+      customCSS,
+      courseInfo: courseInfoHTML,
+      navItems: navInjection,
+      content: contentInjection,
+      scripts: scriptInjection,
+      progressTracking: progressTrackingScript
+    });
 
     setFullSiteCode(finalCode);
     setIsGenerated(true);
