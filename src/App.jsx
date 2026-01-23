@@ -7,6 +7,73 @@ import { getFirestore, doc, setDoc, onSnapshot, collection } from 'firebase/fire
 const { useState, useEffect, useRef } = React;
 
 // ==========================================
+// 🟢 TOAST NOTIFICATION SYSTEM
+// ==========================================
+const useToast = () => {
+  const [toasts, setToasts] = useState([]);
+
+  const showToast = (message, type = 'info', duration = 4000) => {
+    const id = Date.now() + Math.random();
+    const toast = { id, message, type, duration };
+    setToasts(prev => [...prev, toast]);
+    
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, duration);
+    
+    return id;
+  };
+
+  const removeToast = (id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  return { toasts, showToast, removeToast };
+};
+
+const ToastContainer = ({ toasts, removeToast }) => {
+  if (toasts.length === 0) return null;
+
+  return (
+    <div className="fixed top-4 right-4 z-[9999] space-y-2 max-w-md">
+      {toasts.map(toast => {
+        const colors = {
+          success: 'bg-emerald-600 border-emerald-500 text-white',
+          error: 'bg-rose-600 border-rose-500 text-white',
+          warning: 'bg-amber-600 border-amber-500 text-white',
+          info: 'bg-sky-600 border-sky-500 text-white'
+        };
+        const icons = {
+          success: CheckCircle,
+          error: AlertOctagon,
+          warning: AlertTriangle,
+          info: ShieldCheck
+        };
+        const Icon = icons[toast.type] || ShieldCheck;
+
+        return (
+          <div
+            key={toast.id}
+            className={`${colors[toast.type] || colors.info} border-2 rounded-lg p-4 shadow-2xl flex items-start gap-3 animate-in slide-in-from-right fade-in duration-300`}
+          >
+            <Icon size={20} className="flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold">{toast.message}</p>
+            </div>
+            <button
+              onClick={() => removeToast(toast.id)}
+              className="flex-shrink-0 hover:opacity-70 transition-opacity"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// ==========================================
 // 🔴 FIREBASE CONFIG & INIT (DISABLED LOCALLY)
 // ==========================================
 // const firebaseConfig = JSON.parse(__firebase_config);
@@ -6870,6 +6937,9 @@ export default function App() {
   const [isAutoLoaded, setIsAutoLoaded] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   
+  // --- TOAST NOTIFICATIONS ---
+  const { toasts, showToast, removeToast } = useToast();
+  
   // --- UNIFIED ERROR HANDLING STATE ---
   const [appError, setAppError] = useState(null); // { type: 'compile' | 'preview' | 'module' | 'general', message: string, details?: string }
   
@@ -6893,11 +6963,12 @@ export default function App() {
         // Safety check: ensure it has the correct structure
         if (parsed && parsed["Current Course"]) {
           setProjectData(parsed);
-          console.log("✅ Project restored from storage");
+          showToast('Project restored from storage', 'success');
         }
       }
       setIsAutoLoaded(true); // Allow saving to start
     } catch (error) {
+      showToast('Failed to load project data. Starting fresh.', 'error');
       console.error("❌ Load failed:", error);
       setIsAutoLoaded(true);
     }
@@ -6909,16 +6980,28 @@ export default function App() {
 
     const timer = setTimeout(() => {
       try {
+        const dataSize = JSON.stringify(projectData).length;
+        const sizeMB = (dataSize / 1024 / 1024).toFixed(2);
+        
+        // Warn if approaching storage limit (4MB warning threshold)
+        if (dataSize > 4 * 1024 * 1024) {
+          showToast(`Warning: Project is ${sizeMB}MB. Approaching storage limit.`, 'warning', 6000);
+        }
+        
         localStorage.setItem(STORAGE_KEY, JSON.stringify(projectData));
         setLastSaved(new Date());
-        console.log("💾 Auto-saved project");
       } catch (error) {
+        if (error.name === 'QuotaExceededError') {
+          showToast('Storage full! Project too large. Please export backup immediately.', 'error', 10000);
+        } else {
+          showToast('Failed to save project. Check console for details.', 'error');
+        }
         console.error("❌ Save failed:", error);
       }
     }, 1000); // 1-second debounce
 
     return () => clearTimeout(timer);
-  }, [projectData, isAutoLoaded]);
+  }, [projectData, isAutoLoaded, showToast]);
 
   const [excludedIds, setExcludedIds] = useState([]);
   const [editingModule, setEditingModule] = useState(null); 
@@ -8202,6 +8285,9 @@ Questions.filter((_, i) => i !== index);
           </div>
         </div>
       )}
+      
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }
