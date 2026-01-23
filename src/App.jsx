@@ -1709,36 +1709,90 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         </header>
         <form id="${quizId}-form" class="space-y-6">
           ${questionsHtml}
-          <div class="flex gap-4">
-              <button type="button" onclick="${quizId}_submit()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-8 rounded-lg">Submit Quiz</button>
-            <button type="button" onclick="${quizId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-8 rounded-lg">Reset</button>
-          </div>
         </form>
-        <div id="${quizId}-result" class="hidden mt-6 p-6 rounded-xl"></div>
+        
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap gap-3 mt-8 no-print">
+          <button type="button" onclick="${quizId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+            🔄 Reset
+          </button>
+          <button type="button" onclick="${quizId}_generateReport()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+            🖨️ Print & Submit
+          </button>
+        </div>
+        
+        <!-- Reset Confirmation Modal -->
+        <div id="${quizId}-reset-modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden">
+          <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-md mx-4">
+            <h3 class="text-lg font-bold text-white mb-4">Reset Assessment?</h3>
+            <p class="text-slate-300 mb-6">Are you sure you want to reset all your answers? This cannot be undone.</p>
+            <div class="flex gap-3">
+              <button onclick="document.getElementById('${quizId}-reset-modal').classList.add('hidden')" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded">Cancel</button>
+              <button onclick="${quizId}_confirmReset()" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded">Reset</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>`;
 
     const script = `
-    const ${quizId}_answers = ${JSON.stringify(answers)};
-    function ${quizId}_submit() {
-      const form = document.getElementById('${quizId}-form');
-      let score = 0;
-      let total = ${quizId}_answers.length;
-      ${quizId}_answers.forEach((correctAnswer, idx) => {
-        const selected = form.querySelector('input[name="q' + idx + '"]:checked');
-        if (selected && parseInt(selected.value) === correctAnswer) {
-          score++;
+    // Reset function - shows confirmation modal
+    function ${quizId}_reset() {
+      var modal = document.getElementById('${quizId}-reset-modal');
+      if (modal) modal.classList.remove('hidden');
+    }
+    
+    // Confirm Reset
+    function ${quizId}_confirmReset() {
+      document.getElementById('${quizId}-reset-modal').classList.add('hidden');
+      var form = document.getElementById('${quizId}-form');
+      if (form) form.reset();
+    }
+    
+    // Generate Report - creates a clean printable page
+    function ${quizId}_generateReport() {
+      var container = document.getElementById('${quizId}');
+      if (!container) { alert('Assessment not found'); return; }
+      
+      // Build questions HTML with selected answers
+      var questionsHTML = '';
+      var questions = container.querySelectorAll('[class*="mb-8 p-6"]');
+      var qNum = 1;
+      
+      questions.forEach(function(q) {
+        var questionText = q.querySelector('h3')?.textContent || 'Question ' + qNum;
+        var selectedRadio = q.querySelector('input[type="radio"]:checked');
+        var answer = '';
+        
+        if (selectedRadio) {
+          var label = selectedRadio.closest('label');
+          answer = label ? label.textContent.trim() : 'Selected Option';
+        }
+        
+        if (questionText.trim()) {
+          questionsHTML += '<div style="margin-bottom:25px; border-left:4px solid #333; padding-left:15px;">' +
+            '<h3 style="font-size:14px; font-weight:bold; margin-bottom:10px; color:#333;">' + questionText + '</h3>' +
+            '<div style="background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #ddd; min-height:40px; font-size:13px;">' + 
+            (answer || '<em style="color:#999;">No answer selected</em>') + 
+            '</div></div>';
+          qNum++;
         }
       });
-      const percentage = Math.round((score / total) * 100);
-      const resultDiv = document.getElementById('${quizId}-result');
-      resultDiv.className = percentage >= 70 ? 'mt-6 p-6 rounded-xl bg-emerald-900/20 border border-emerald-500' : 'mt-6 p-6 rounded-xl bg-rose-900/20 border border-rose-500';
-      resultDiv.innerHTML = '<h3 class="text-2xl font-bold mb-2">' + (percentage >= 70 ? '✅ Passed!' : '❌ Keep Trying') + '</h3><p class="text-lg">Score: ' + score + '/' + total + ' (' + percentage + '%)</p>';
-      resultDiv.classList.remove('hidden');
-    }
-    function ${quizId}_reset() {
-      document.getElementById('${quizId}-form').reset();
-      document.getElementById('${quizId}-result').classList.add('hidden');
+      
+      var printHTML = '<!DOCTYPE html><html><head><title>${assessmentTitle} - Submission</title>' +
+        '<style>body { font-family: Arial, sans-serif; padding: 40px; color: #333; background: white; line-height: 1.5; max-width: 800px; margin: 0 auto; }' +
+        '.header { border-bottom: 4px solid #333; padding-bottom: 15px; margin-bottom: 25px; }' +
+        '.header h1 { font-size: 24px; font-weight: 900; text-transform: uppercase; font-style: italic; margin: 0; }' +
+        '</style></head><body>' +
+        '<div class="header"><h1>${assessmentTitle}</h1><p style="font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#666; margin-top:5px;">Multiple Choice Assessment</p></div>' +
+        '<div class="questions">' + questionsHTML + '</div>' +
+        '<div style="margin-top:40px; border-top:2px solid #333; padding-top:20px; text-align:center;">' +
+        '<p style="font-size:10px; text-transform:uppercase; letter-spacing:2px; color:#999;">End of Submission</p></div>' +
+        '<script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }<\\/script></body></html>';
+      
+      var pw = window.open('', '_blank');
+      if (pw) { pw.document.open(); pw.document.write(printHTML); pw.document.close(); }
+      else { alert('Please allow popups to print.'); }
     }
     `;
 
@@ -1794,8 +1848,8 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
 
           <!-- Action Buttons -->
           <div class="flex flex-wrap gap-3 mt-8 no-print">
-            <button type="button" onclick="${quizId}_save()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              💾 Save Progress
+            <button type="button" onclick="${quizId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+              🔄 Reset
             </button>
             <button type="button" onclick="${quizId}_download()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
               📥 Download Backup
@@ -1803,60 +1857,69 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
             <button type="button" onclick="document.getElementById('${quizId}-upload').click()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
               📤 Upload Backup
             </button>
-            <button type="button" onclick="${quizId}_print()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+            <button type="button" onclick="${quizId}_generateReport()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
               🖨️ Print & Submit
-            </button>
-            <button type="button" onclick="${quizId}_clear()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              🗑️ Clear All
             </button>
           </div>
           <input type="file" id="${quizId}-upload" accept=".json" style="display: none;" onchange="${quizId}_loadBackup(this)" />
 
           <!-- Status Messages -->
-          <div id="${quizId}-saved" class="hidden mt-6 p-4 rounded-xl bg-emerald-900/20 border border-emerald-500">
-            <p class="text-emerald-400 font-bold">✅ Responses saved successfully!</p>
-          </div>
           <div id="${quizId}-loaded" class="hidden mt-6 p-4 rounded-xl bg-blue-900/20 border border-blue-500">
             <p class="text-blue-400 font-bold">✅ Backup loaded successfully!</p>
+          </div>
+
+          <!-- Reset Confirmation Modal -->
+          <div id="${quizId}-reset-modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden">
+            <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-md mx-4">
+              <h3 class="text-lg font-bold text-white mb-4">Reset Assessment?</h3>
+              <p class="text-slate-300 mb-6">Are you sure you want to reset all your answers? This cannot be undone.</p>
+              <div class="flex gap-3">
+                <button onclick="document.getElementById('${quizId}-reset-modal').classList.add('hidden')" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded">Cancel</button>
+                <button onclick="${quizId}_confirmReset()" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded">Reset</button>
+              </div>
+            </div>
           </div>
 
           <!-- Print Instructions -->
           <div class="mt-8 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg no-print">
             <p class="text-amber-300 text-sm">
-              📋 <strong>Instructions:</strong> Complete all questions, then click "Print & Submit" to create a PDF or print for your instructor.
+              📋 <strong>Instructions:</strong> Complete all questions, then click "Print & Submit" to generate a clean printable report.
             </p>
           </div>
         </div>
-
-        <!-- Print Styles -->
-        <style>
-          @media print {
-            body { background: white !important; }
-            .no-print { display: none !important; }
-            .print-title { color: black !important; font-size: 24pt; text-align: center; border-bottom: 3px solid black; padding-bottom: 10px; margin-bottom: 20px; }
-            .print-header { background: white !important; border: 2px solid black !important; margin-bottom: 20px; }
-            .print-header label { color: black !important; }
-            .print-header input { border: none !important; border-bottom: 1px solid black !important; background: white !important; color: black !important; }
-            .print-section { page-break-inside: avoid; background: white !important; border: 1px solid #ccc !important; margin-bottom: 20px; }
-            .print-question { color: black !important; border-bottom: 2px solid #666; padding-bottom: 5px; }
-            .print-response { background: white !important; color: black !important; border: 1px solid #999 !important; min-height: 200px; font-family: Arial, sans-serif; }
-          }
-        </style>
       </div>`;
 
       const script = `
-      const ${quizId}_count = ${quizQuestions.length};
+      var ${quizId}_count = ${quizQuestions.length};
       
       // Initialize: Load saved data on page load
       window.addEventListener('load', function() {
         ${quizId}_loadFromLocalStorage();
       });
       
+      // Reset function - shows confirmation modal
+      function ${quizId}_reset() {
+        var modal = document.getElementById('${quizId}-reset-modal');
+        if (modal) modal.classList.remove('hidden');
+      }
+      
+      // Confirm Reset
+      function ${quizId}_confirmReset() {
+        document.getElementById('${quizId}-reset-modal').classList.add('hidden');
+        var nameField = document.getElementById('${quizId}-student-name');
+        var dateField = document.getElementById('${quizId}-student-date');
+        if (nameField) { nameField.value = ''; localStorage.removeItem('${quizId}-student-name'); }
+        if (dateField) { dateField.value = ''; localStorage.removeItem('${quizId}-student-date'); }
+        for (var i = 0; i < ${quizId}_count; i++) {
+          var textarea = document.getElementById('${quizId}-answer-' + i);
+          if (textarea) { textarea.value = ''; localStorage.removeItem('${quizId}-answer-' + i); }
+        }
+      }
+      
       // Auto-save on input for all fields
       function ${quizId}_setupAutoSave() {
-        // Student info auto-save
-        const nameField = document.getElementById('${quizId}-student-name');
-        const dateField = document.getElementById('${quizId}-student-date');
+        var nameField = document.getElementById('${quizId}-student-name');
+        var dateField = document.getElementById('${quizId}-student-date');
         if (nameField) {
           nameField.addEventListener('input', function() {
             localStorage.setItem('${quizId}-student-name', this.value);
@@ -1868,35 +1931,36 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
           });
         }
         
-        // Answer auto-save
-        for (let i = 0; i < ${quizId}_count; i++) {
-          const textarea = document.getElementById('${quizId}-answer-' + i);
-          if (textarea) {
-            textarea.addEventListener('input', function() {
-              localStorage.setItem('${quizId}-answer-' + i, this.value);
-            });
-          }
+        for (var i = 0; i < ${quizId}_count; i++) {
+          (function(idx) {
+            var textarea = document.getElementById('${quizId}-answer-' + idx);
+            if (textarea) {
+              textarea.addEventListener('input', function() {
+                localStorage.setItem('${quizId}-answer-' + idx, this.value);
+              });
+            }
+          })(i);
         }
       }
       
       // Load from localStorage
       function ${quizId}_loadFromLocalStorage() {
-        const nameField = document.getElementById('${quizId}-student-name');
-        const dateField = document.getElementById('${quizId}-student-date');
+        var nameField = document.getElementById('${quizId}-student-name');
+        var dateField = document.getElementById('${quizId}-student-date');
         
         if (nameField) {
-          const savedName = localStorage.getItem('${quizId}-student-name');
+          var savedName = localStorage.getItem('${quizId}-student-name');
           if (savedName) nameField.value = savedName;
         }
         if (dateField) {
-          const savedDate = localStorage.getItem('${quizId}-student-date');
+          var savedDate = localStorage.getItem('${quizId}-student-date');
           if (savedDate) dateField.value = savedDate;
         }
         
-        for (let i = 0; i < ${quizId}_count; i++) {
-          const textarea = document.getElementById('${quizId}-answer-' + i);
+        for (var i = 0; i < ${quizId}_count; i++) {
+          var textarea = document.getElementById('${quizId}-answer-' + i);
           if (textarea) {
-            const saved = localStorage.getItem('${quizId}-answer-' + i);
+            var saved = localStorage.getItem('${quizId}-answer-' + i);
             if (saved) textarea.value = saved;
           }
         }
@@ -1904,29 +1968,22 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         ${quizId}_setupAutoSave();
       }
       
-      // Manual Save
-      function ${quizId}_save() {
-        const savedDiv = document.getElementById('${quizId}-saved');
-        savedDiv.classList.remove('hidden');
-        setTimeout(function() { savedDiv.classList.add('hidden'); }, 3000);
-      }
-      
       // Download Backup
       function ${quizId}_download() {
-        const data = {
+        var data = {
           studentName: document.getElementById('${quizId}-student-name')?.value || '',
           studentDate: document.getElementById('${quizId}-student-date')?.value || '',
           answers: []
         };
         
-        for (let i = 0; i < ${quizId}_count; i++) {
-          const textarea = document.getElementById('${quizId}-answer-' + i);
+        for (var i = 0; i < ${quizId}_count; i++) {
+          var textarea = document.getElementById('${quizId}-answer-' + i);
           data.answers.push(textarea ? textarea.value : '');
         }
         
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
         a.href = url;
         a.download = '${assessmentTitle.replace(/[^a-z0-9]/gi, '_')}_backup.json';
         a.click();
@@ -1935,16 +1992,16 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       
       // Load Backup
       function ${quizId}_loadBackup(input) {
-        const file = input.files[0];
+        var file = input.files[0];
         if (!file) return;
         
-        const reader = new FileReader();
+        var reader = new FileReader();
         reader.onload = function(e) {
           try {
-            const data = JSON.parse(e.target.result);
+            var data = JSON.parse(e.target.result);
             
-            const nameField = document.getElementById('${quizId}-student-name');
-            const dateField = document.getElementById('${quizId}-student-date');
+            var nameField = document.getElementById('${quizId}-student-name');
+            var dateField = document.getElementById('${quizId}-student-date');
             
             if (nameField && data.studentName) {
               nameField.value = data.studentName;
@@ -1955,50 +2012,66 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
               localStorage.setItem('${quizId}-student-date', data.studentDate);
             }
             
-            data.answers.forEach((answer, i) => {
-              const textarea = document.getElementById('${quizId}-answer-' + i);
+            data.answers.forEach(function(answer, i) {
+              var textarea = document.getElementById('${quizId}-answer-' + i);
               if (textarea) {
                 textarea.value = answer;
                 localStorage.setItem('${quizId}-answer-' + i, answer);
               }
             });
             
-            const loadedDiv = document.getElementById('${quizId}-loaded');
-            loadedDiv.classList.remove('hidden');
-            setTimeout(function() { loadedDiv.classList.add('hidden'); }, 3000);
+            var loadedDiv = document.getElementById('${quizId}-loaded');
+            if (loadedDiv) {
+              loadedDiv.classList.remove('hidden');
+              setTimeout(function() { loadedDiv.classList.add('hidden'); }, 3000);
+            }
           } catch(err) {
-            alert('Error loading backup file. Please check the file and try again.');
+            alert('Error loading backup file.');
           }
         };
         reader.readAsText(file);
       }
       
-      // Print
-      function ${quizId}_print() {
-        window.print();
-      }
-      
-      // Clear All
-      function ${quizId}_clear() {
-        if (!confirm('⚠️ Clear all responses? This cannot be undone.')) return;
+      // Generate Report - creates a clean printable page in new window
+      function ${quizId}_generateReport() {
+        var container = document.getElementById('${quizId}');
+        if (!container) { alert('Assessment not found'); return; }
         
-        const nameField = document.getElementById('${quizId}-student-name');
-        const dateField = document.getElementById('${quizId}-student-date');
+        var studentName = document.getElementById('${quizId}-student-name')?.value || 'Not Provided';
+        var studentDate = document.getElementById('${quizId}-student-date')?.value || new Date().toLocaleDateString();
         
-        if (nameField) {
-          nameField.value = '';
-          localStorage.removeItem('${quizId}-student-name');
-        }
-        if (dateField) {
-          dateField.value = '';
-          localStorage.removeItem('${quizId}-student-date');
-        }
+        var questionsHTML = '';
+        var questions = container.querySelectorAll('.print-section');
         
-        for (let i = 0; i < ${quizId}_count; i++) {
-          const textarea = document.getElementById('${quizId}-answer-' + i);
-          if (textarea) textarea.value = '';
-          localStorage.removeItem('${quizId}-answer-' + i);
-        }
+        questions.forEach(function(q, idx) {
+          var questionText = q.querySelector('.print-question')?.textContent || 'Question ' + (idx+1);
+          var textarea = q.querySelector('textarea');
+          var answer = textarea ? textarea.value : '';
+          
+          questionsHTML += '<div style="margin-bottom:25px; border-left:4px solid #333; padding-left:15px;">' +
+            '<h3 style="font-size:14px; font-weight:bold; margin-bottom:10px; color:#333;">' + questionText + '</h3>' +
+            '<div style="background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #ddd; min-height:80px; white-space:pre-wrap; font-size:13px;">' + 
+            (answer || '<em style="color:#999;">No answer provided</em>') + 
+            '</div></div>';
+        });
+        
+        var printHTML = '<!DOCTYPE html><html><head><title>${assessmentTitle} - Submission</title>' +
+          '<style>body { font-family: Arial, sans-serif; padding: 40px; color: #333; background: white; line-height: 1.5; max-width: 800px; margin: 0 auto; }' +
+          '.header { border-bottom: 4px solid #333; padding-bottom: 15px; margin-bottom: 25px; }' +
+          '.header h1 { font-size: 24px; font-weight: 900; text-transform: uppercase; font-style: italic; margin: 0; }' +
+          '.student-info { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; padding: 20px; background: #f5f5f5; border-radius: 8px; }' +
+          '.student-info div { font-size: 14px; }' +
+          '.student-info strong { display: block; font-size: 11px; text-transform: uppercase; color: #666; margin-bottom: 4px; }</style></head><body>' +
+          '<div class="header"><h1>${assessmentTitle}</h1><p style="font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#666; margin-top:5px;">Long Answer Assessment</p></div>' +
+          '<div class="student-info"><div><strong>Student Name</strong>' + studentName + '</div><div><strong>Date</strong>' + studentDate + '</div></div>' +
+          '<div class="questions">' + questionsHTML + '</div>' +
+          '<div style="margin-top:40px; border-top:2px solid #333; padding-top:20px; text-align:center;">' +
+          '<p style="font-size:10px; text-transform:uppercase; letter-spacing:2px; color:#999;">End of Submission</p></div>' +
+          '<script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }<\\/script></body></html>';
+        
+        var pw = window.open('', '_blank');
+        if (pw) { pw.document.open(); pw.document.write(printHTML); pw.document.close(); }
+        else { alert('Please allow popups to print.'); }
       }
       `;
 
@@ -8079,51 +8152,49 @@ Questions.filter((_, i) => i !== index);
           ${questionsHtml}
         </form>
 
-        ${mcQuestions.length > 0 ? `
-          <!-- Quiz Submit Button (only for MC questions) -->
-          <div class="flex gap-4 mt-8 no-print">
-            <button type="button" onclick="${assessmentId}_submit()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-8 rounded-lg">Submit Quiz</button>
-            <button type="button" onclick="${assessmentId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-8 rounded-lg">Reset</button>
-          </div>
-          <div id="${assessmentId}-result" class="hidden mt-6 p-6 rounded-xl"></div>
-        ` : ''}
-
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap gap-3 mt-8 no-print">
+          <button type="button" onclick="${assessmentId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+            🔄 Reset
+          </button>
+          ${laQuestions.length > 0 ? `
+          <button type="button" onclick="${assessmentId}_download()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+            📥 Download Backup
+          </button>
+          <button type="button" onclick="document.getElementById('${assessmentId}-upload').click()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+            📤 Upload Backup
+          </button>
+          ` : ''}
+          <button type="button" onclick="${assessmentId}_generateReport()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+            🖨️ Print & Submit
+          </button>
+        </div>
+        
         ${laQuestions.length > 0 ? `
-          <!-- Long Answer Action Buttons -->
-          <div class="flex flex-wrap gap-3 mt-8 no-print">
-            <button type="button" onclick="${assessmentId}_save()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              💾 Save Progress
-            </button>
-            <button type="button" onclick="${assessmentId}_download()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              📥 Download Backup
-            </button>
-            <button type="button" onclick="document.getElementById('${assessmentId}-upload').click()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              📤 Upload Backup
-            </button>
-            <button type="button" onclick="${assessmentId}_print()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              🖨️ Print & Submit
-            </button>
-            <button type="button" onclick="${assessmentId}_clear()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              🗑️ Clear All
-            </button>
-          </div>
-          <input type="file" id="${assessmentId}-upload" accept=".json" style="display: none;" onchange="${assessmentId}_loadBackup(this)" />
-
-          <!-- Status Messages -->
-          <div id="${assessmentId}-saved" class="hidden mt-6 p-4 rounded-xl bg-emerald-900/20 border border-emerald-500">
-            <p class="text-emerald-400 font-bold">✅ Responses saved successfully!</p>
-          </div>
-          <div id="${assessmentId}-loaded" class="hidden mt-6 p-4 rounded-xl bg-blue-900/20 border border-blue-500">
-            <p class="text-blue-400 font-bold">✅ Backup loaded successfully!</p>
-          </div>
-
-          <!-- Print Instructions -->
-          <div class="mt-8 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg no-print">
-            <p class="text-amber-300 text-sm">
-              📋 <strong>Instructions:</strong> Complete all questions, then click "Print & Submit" to create a PDF or print for your instructor.
-            </p>
-          </div>
+        <input type="file" id="${assessmentId}-upload" accept=".json" style="display: none;" onchange="${assessmentId}_loadBackup(this)" />
+        <div id="${assessmentId}-loaded" class="hidden mt-6 p-4 rounded-xl bg-blue-900/20 border border-blue-500">
+          <p class="text-blue-400 font-bold">✅ Backup loaded successfully!</p>
+        </div>
         ` : ''}
+
+        <!-- Reset Confirmation Modal -->
+        <div id="${assessmentId}-reset-modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden">
+          <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-md mx-4">
+            <h3 class="text-lg font-bold text-white mb-4">Reset Assessment?</h3>
+            <p class="text-slate-300 mb-6">Are you sure you want to reset all your answers? This cannot be undone.</p>
+            <div class="flex gap-3">
+              <button onclick="document.getElementById('${assessmentId}-reset-modal').classList.add('hidden')" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded">Cancel</button>
+              <button onclick="${assessmentId}_confirmReset()" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded">Reset</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Print Instructions -->
+        <div class="mt-8 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg no-print">
+          <p class="text-amber-300 text-sm">
+            📋 <strong>Instructions:</strong> Complete all questions, then click "Print & Submit" to generate a clean printable report.
+          </p>
+        </div>
 
         <!-- Print Styles -->
         <style>
@@ -8145,44 +8216,108 @@ Questions.filter((_, i) => i !== index);
     // Build script
     let script = '';
     
-    // Multiple Choice Scoring
-    if (mcQuestions.length > 0) {
-      const mcAnswers = masterQuestions
-        .map((q, idx) => {
-          const isMC = (q.type || (q.options?.length > 0 ? 'multiple-choice' : 'long-answer')) === 'multiple-choice';
-          return isMC ? { index: idx, correct: q.correct || 0 } : null;
-        })
-        .filter(a => a !== null);
-
-      script += `
-      const ${assessmentId}_answers = ${JSON.stringify(mcAnswers)};
-      function ${assessmentId}_submit() {
-        const form = document.getElementById('${assessmentId}-form');
-        let score = 0;
-        let total = ${assessmentId}_answers.length;
-        ${assessmentId}_answers.forEach((answerData) => {
-          const selected = form.querySelector('input[name="q' + answerData.index + '"]:checked');
-          if (selected && parseInt(selected.value) === answerData.correct) {
-            score++;
+    // Core Assessment Functions
+    script += `
+      // Reset function - shows confirmation modal
+      function ${assessmentId}_reset() {
+        var modal = document.getElementById('${assessmentId}-reset-modal');
+        if (modal) modal.classList.remove('hidden');
+      }
+      
+      // Confirm Reset - actually performs the reset
+      function ${assessmentId}_confirmReset() {
+        document.getElementById('${assessmentId}-reset-modal').classList.add('hidden');
+        var form = document.getElementById('${assessmentId}-form');
+        if (form) form.reset();
+        
+        // Clear localStorage for this assessment
+        try {
+          localStorage.removeItem('${assessmentId}-student-name');
+          localStorage.removeItem('${assessmentId}-student-date');
+          var container = document.getElementById('${assessmentId}');
+          if (container) {
+            container.querySelectorAll('textarea, input').forEach(function(el) {
+              if (el.id) localStorage.removeItem(el.id);
+            });
+          }
+        } catch(e) {}
+      }
+      
+      // Generate Report - creates a clean printable page in new window
+      function ${assessmentId}_generateReport() {
+        var container = document.getElementById('${assessmentId}');
+        if (!container) { alert('Assessment not found'); return; }
+        
+        // Gather all data
+        var studentName = document.getElementById('${assessmentId}-student-name')?.value || 'Not Provided';
+        var studentDate = document.getElementById('${assessmentId}-student-date')?.value || new Date().toLocaleDateString();
+        
+        // Build questions HTML
+        var questionsHTML = '';
+        var questions = container.querySelectorAll('[class*="print-section"], [class*="mb-8 p-6"]');
+        var qNum = 1;
+        
+        questions.forEach(function(q) {
+          var questionText = q.querySelector('h3')?.textContent || 'Question ' + qNum;
+          var textarea = q.querySelector('textarea');
+          var answer = textarea ? textarea.value : '';
+          
+          // Check for radio buttons (MC questions)
+          var selectedRadio = q.querySelector('input[type="radio"]:checked');
+          if (selectedRadio) {
+            var label = selectedRadio.closest('label');
+            answer = label ? label.textContent.trim() : 'Selected: Option ' + (parseInt(selectedRadio.value) + 1);
+          }
+          
+          if (questionText.trim()) {
+            questionsHTML += '<div style="margin-bottom:25px; border-left:4px solid #333; padding-left:15px;">' +
+              '<h3 style="font-size:14px; font-weight:bold; margin-bottom:10px; color:#333;">' + questionText + '</h3>' +
+              '<div style="background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #ddd; min-height:60px; white-space:pre-wrap; font-size:13px;">' + 
+              (answer || '<em style="color:#999;">No answer provided</em>') + 
+              '</div></div>';
+            qNum++;
           }
         });
-        const percentage = Math.round((score / total) * 100);
-        const resultDiv = document.getElementById('${assessmentId}-result');
-        resultDiv.className = percentage >= 70 ? 'mt-6 p-6 rounded-xl bg-emerald-900/20 border border-emerald-500' : 'mt-6 p-6 rounded-xl bg-rose-900/20 border border-rose-500';
-        resultDiv.innerHTML = '<h3 class="text-2xl font-bold mb-2">' + (percentage >= 70 ? '✅ Passed!' : '❌ Keep Trying') + '</h3><p class="text-lg">Score: ' + score + '/' + total + ' (' + percentage + '%)</p>';
-        resultDiv.classList.remove('hidden');
+        
+        // Build the print HTML
+        var printHTML = '<!DOCTYPE html><html><head><title>${masterAssessmentTitle} - Submission</title>' +
+          '<style>' +
+          'body { font-family: Arial, sans-serif; padding: 40px; color: #333; background: white; line-height: 1.5; max-width: 800px; margin: 0 auto; }' +
+          '.header { border-bottom: 4px solid #333; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end; }' +
+          '.header h1 { font-size: 24px; font-weight: 900; text-transform: uppercase; font-style: italic; margin: 0; }' +
+          '.student-info { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; padding: 20px; background: #f5f5f5; border-radius: 8px; }' +
+          '.student-info div { font-size: 14px; }' +
+          '.student-info strong { display: block; font-size: 11px; text-transform: uppercase; color: #666; margin-bottom: 4px; }' +
+          '</style></head><body>' +
+          '<div class="header">' +
+          '<div><h1>${masterAssessmentTitle}</h1><p style="font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#666; margin-top:5px;">Assessment Submission</p></div>' +
+          '</div>' +
+          '<div class="student-info">' +
+          '<div><strong>Student Name</strong>' + studentName + '</div>' +
+          '<div><strong>Date</strong>' + studentDate + '</div>' +
+          '</div>' +
+          '<div class="questions">' + questionsHTML + '</div>' +
+          '<div style="margin-top:40px; border-top:2px solid #333; padding-top:20px; text-align:center;">' +
+          '<p style="font-size:10px; text-transform:uppercase; letter-spacing:2px; color:#999;">End of Submission</p>' +
+          '</div>' +
+          '<script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }<\\/script>' +
+          '</body></html>';
+        
+        var pw = window.open('', '_blank');
+        if (pw) {
+          pw.document.open();
+          pw.document.write(printHTML);
+          pw.document.close();
+        } else {
+          alert('Please allow popups to print.');
+        }
       }
-      function ${assessmentId}_reset() {
-        document.getElementById('${assessmentId}-form').reset();
-        document.getElementById('${assessmentId}-result').classList.add('hidden');
-      }
-      `;
-    }
+    `;
 
-    // Long Answer Auto-Save
+    // Long Answer Auto-Save (if applicable)
     if (laQuestions.length > 0) {
       script += `
-      const ${assessmentId}_laCount = ${laQuestions.length};
+      var ${assessmentId}_laCount = ${laQuestions.length};
       
       // Initialize: Load saved data on page load
       window.addEventListener('load', function() {
@@ -8191,9 +8326,8 @@ Questions.filter((_, i) => i !== index);
       
       // Auto-save on input for all fields
       function ${assessmentId}_setupAutoSave() {
-        // Student info auto-save
-        const nameField = document.getElementById('${assessmentId}-student-name');
-        const dateField = document.getElementById('${assessmentId}-student-date');
+        var nameField = document.getElementById('${assessmentId}-student-name');
+        var dateField = document.getElementById('${assessmentId}-student-date');
         if (nameField) {
           nameField.addEventListener('input', function() {
             localStorage.setItem('${assessmentId}-student-name', this.value);
@@ -8205,35 +8339,36 @@ Questions.filter((_, i) => i !== index);
           });
         }
         
-        // Answer auto-save
-        for (let i = 0; i < ${assessmentId}_laCount; i++) {
-          const textarea = document.getElementById('${assessmentId}-answer-' + i);
+        for (var i = 0; i < ${assessmentId}_laCount; i++) {
+          var textarea = document.getElementById('${assessmentId}-answer-' + i);
           if (textarea) {
-            textarea.addEventListener('input', function() {
-              localStorage.setItem('${assessmentId}-answer-' + i, this.value);
-            });
+            (function(idx) {
+              textarea.addEventListener('input', function() {
+                localStorage.setItem('${assessmentId}-answer-' + idx, this.value);
+              });
+            })(i);
           }
         }
       }
       
       // Load from localStorage
       function ${assessmentId}_loadFromLocalStorage() {
-        const nameField = document.getElementById('${assessmentId}-student-name');
-        const dateField = document.getElementById('${assessmentId}-student-date');
+        var nameField = document.getElementById('${assessmentId}-student-name');
+        var dateField = document.getElementById('${assessmentId}-student-date');
         
         if (nameField) {
-          const savedName = localStorage.getItem('${assessmentId}-student-name');
+          var savedName = localStorage.getItem('${assessmentId}-student-name');
           if (savedName) nameField.value = savedName;
         }
         if (dateField) {
-          const savedDate = localStorage.getItem('${assessmentId}-student-date');
+          var savedDate = localStorage.getItem('${assessmentId}-student-date');
           if (savedDate) dateField.value = savedDate;
         }
         
-        for (let i = 0; i < ${assessmentId}_laCount; i++) {
-          const textarea = document.getElementById('${assessmentId}-answer-' + i);
+        for (var i = 0; i < ${assessmentId}_laCount; i++) {
+          var textarea = document.getElementById('${assessmentId}-answer-' + i);
           if (textarea) {
-            const saved = localStorage.getItem('${assessmentId}-answer-' + i);
+            var saved = localStorage.getItem('${assessmentId}-answer-' + i);
             if (saved) textarea.value = saved;
           }
         }
@@ -8241,31 +8376,22 @@ Questions.filter((_, i) => i !== index);
         ${assessmentId}_setupAutoSave();
       }
       
-      // Manual Save
-      function ${assessmentId}_save() {
-        const savedDiv = document.getElementById('${assessmentId}-saved');
-        if (savedDiv) {
-          savedDiv.classList.remove('hidden');
-          setTimeout(function() { savedDiv.classList.add('hidden'); }, 3000);
-        }
-      }
-      
       // Download Backup
       function ${assessmentId}_download() {
-        const data = {
+        var data = {
           studentName: document.getElementById('${assessmentId}-student-name')?.value || '',
           studentDate: document.getElementById('${assessmentId}-student-date')?.value || '',
           answers: []
         };
         
-        for (let i = 0; i < ${assessmentId}_laCount; i++) {
-          const textarea = document.getElementById('${assessmentId}-answer-' + i);
+        for (var i = 0; i < ${assessmentId}_laCount; i++) {
+          var textarea = document.getElementById('${assessmentId}-answer-' + i);
           data.answers.push(textarea ? textarea.value : '');
         }
         
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
         a.href = url;
         a.download = '${masterAssessmentTitle.replace(/[^a-z0-9]/gi, '_')}_backup.json';
         a.click();
@@ -8274,16 +8400,16 @@ Questions.filter((_, i) => i !== index);
       
       // Load Backup
       function ${assessmentId}_loadBackup(input) {
-        const file = input.files[0];
+        var file = input.files[0];
         if (!file) return;
         
-        const reader = new FileReader();
+        var reader = new FileReader();
         reader.onload = function(e) {
           try {
-            const data = JSON.parse(e.target.result);
+            var data = JSON.parse(e.target.result);
             
-            const nameField = document.getElementById('${assessmentId}-student-name');
-            const dateField = document.getElementById('${assessmentId}-student-date');
+            var nameField = document.getElementById('${assessmentId}-student-name');
+            var dateField = document.getElementById('${assessmentId}-student-date');
             
             if (nameField && data.studentName) {
               nameField.value = data.studentName;
@@ -8294,52 +8420,24 @@ Questions.filter((_, i) => i !== index);
               localStorage.setItem('${assessmentId}-student-date', data.studentDate);
             }
             
-            data.answers.forEach((answer, i) => {
-              const textarea = document.getElementById('${assessmentId}-answer-' + i);
+            data.answers.forEach(function(answer, i) {
+              var textarea = document.getElementById('${assessmentId}-answer-' + i);
               if (textarea) {
                 textarea.value = answer;
                 localStorage.setItem('${assessmentId}-answer-' + i, answer);
               }
             });
             
-            const loadedDiv = document.getElementById('${assessmentId}-loaded');
+            var loadedDiv = document.getElementById('${assessmentId}-loaded');
             if (loadedDiv) {
               loadedDiv.classList.remove('hidden');
               setTimeout(function() { loadedDiv.classList.add('hidden'); }, 3000);
             }
           } catch(err) {
-            alert('Error loading backup file. Please check the file and try again.');
+            alert('Error loading backup file.');
           }
         };
         reader.readAsText(file);
-      }
-      
-      // Print
-      function ${assessmentId}_print() {
-        window.print();
-      }
-      
-      // Clear All
-      function ${assessmentId}_clear() {
-        if (confirm('Are you sure you want to clear all responses? This cannot be undone.')) {
-          const nameField = document.getElementById('${assessmentId}-student-name');
-          const dateField = document.getElementById('${assessmentId}-student-date');
-          if (nameField) {
-            nameField.value = '';
-            localStorage.removeItem('${assessmentId}-student-name');
-          }
-          if (dateField) {
-            dateField.value = '';
-            localStorage.removeItem('${assessmentId}-student-date');
-          }
-          for (let i = 0; i < ${assessmentId}_laCount; i++) {
-            const textarea = document.getElementById('${assessmentId}-answer-' + i);
-            if (textarea) {
-              textarea.value = '';
-              localStorage.removeItem('${assessmentId}-answer-' + i);
-            }
-          }
-        }
       }
       `;
     }
