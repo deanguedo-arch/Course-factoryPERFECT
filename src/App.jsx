@@ -8008,16 +8008,19 @@ export default function App() {
   };
 
   // MASTER ASSESSMENT FUNCTIONS
-  const addQuestionToMaster = () => {
+  const addQuestionToMaster = (questionData = null) => {
+    // Use passed questionData if provided, otherwise use currentQuestion from state
+    const questionToAdd = questionData || { ...currentQuestion };
+    
     if (editingQuestion !== null) {
       // Update existing question
       const updated = [...masterQuestions];
-      updated[editingQuestion] = { ...currentQuestion };
+      updated[editingQuestion] = questionToAdd;
       setMasterQuestions(updated);
       setEditingQuestion(null);
     } else {
       // Add new question
-      setMasterQuestions([...masterQuestions, { ...currentQuestion }]);
+      setMasterQuestions([...masterQuestions, questionToAdd]);
     }
     
     // Reset form
@@ -8063,8 +8066,18 @@ Questions.filter((_, i) => i !== index);
     }
 
     const assessmentId = `mixed_${Date.now()}`;
-    const mcQuestions = masterQuestions.filter(q => (q.type || 'multiple-choice') === 'multiple-choice');
-    const laQuestions = masterQuestions.filter(q => (q.type || 'long-answer') === 'long-answer');
+    
+    // Helper function to determine question type consistently
+    const getQuestionType = (q) => {
+      if (q.type) return q.type;
+      // Fallback: if options array has content, it's multiple-choice
+      return (q.options && q.options.length > 0 && q.options.some(opt => opt && opt.trim())) 
+        ? 'multiple-choice' 
+        : 'long-answer';
+    };
+    
+    const mcQuestions = masterQuestions.filter(q => getQuestionType(q) === 'multiple-choice');
+    const laQuestions = masterQuestions.filter(q => getQuestionType(q) === 'long-answer');
     
     // Build HTML for all questions
     let questionsHtml = '';
@@ -8073,7 +8086,7 @@ Questions.filter((_, i) => i !== index);
     let laIndex = 0;
 
     masterQuestions.forEach((q, idx) => {
-      const isMC = (q.type || (q.options?.length > 0 ? 'multiple-choice' : 'long-answer')) === 'multiple-choice';
+      const isMC = getQuestionType(q) === 'multiple-choice';
       const qNum = idx + 1;
 
       if (isMC && q.options && q.options.length > 0) {
