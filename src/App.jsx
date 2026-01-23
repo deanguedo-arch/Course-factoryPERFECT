@@ -604,26 +604,6 @@ const generateMasterShell = (data) => {
             }
             #content-container {
                 width: 100%;
-                position: relative;
-                z-index: 70;
-            }
-            /* Ensure module content (including iframes and internal navigation) is always above overlay */
-            #content-container > *,
-            #content-container [id^="view-"] {
-                position: relative;
-                z-index: 70;
-            }
-            /* When sidebar is open, overlay blocks content; when closed, content is accessible */
-            #content-container:not(.sidebar-open) {
-                z-index: 70;
-            }
-            /* Ensure internal module navigation buttons work */
-            #content-container button,
-            #content-container .nav-btn,
-            #content-container .btn {
-                position: relative;
-                z-index: 71;
-                pointer-events: auto;
             }
         }`;
   
@@ -671,58 +651,20 @@ const generateMasterShell = (data) => {
         function toggleMobileNav() {
             const sidebar = document.getElementById('sidebar-nav');
             const overlay = document.getElementById('mobile-overlay');
-            const contentContainer = document.getElementById('content-container');
             if (sidebar && overlay) {
-                const isOpening = !sidebar.classList.contains('mobile-open');
                 sidebar.classList.toggle('mobile-open');
                 overlay.classList.toggle('active');
-                
-                // Add/remove class to content container to track sidebar state
-                if (contentContainer) {
-                    if (isOpening) {
-                        contentContainer.classList.add('sidebar-open');
-                    } else {
-                        contentContainer.classList.remove('sidebar-open');
-                    }
-                }
             }
         }
         
-        // Prevent overlay clicks from propagating to sidebar and module content
+        // Prevent overlay clicks from propagating to sidebar
         document.addEventListener('DOMContentLoaded', function() {
             const sidebar = document.getElementById('sidebar-nav');
             const overlay = document.getElementById('mobile-overlay');
-            const contentContainer = document.getElementById('content-container');
-            
             if (sidebar && overlay) {
                 // Stop clicks on sidebar from bubbling to overlay
                 sidebar.addEventListener('click', function(e) {
                     e.stopPropagation();
-                });
-                
-                // Make overlay only block clicks when sidebar is open
-                // Allow clicks to pass through to content when sidebar is closed
-                overlay.addEventListener('click', function(e) {
-                    // Only close if clicking the overlay itself (not child elements)
-                    if (e.target === overlay) {
-                        toggleMobileNav();
-                    }
-                });
-            }
-            
-            // Ensure module content is always clickable when sidebar is closed
-            if (contentContainer) {
-                contentContainer.addEventListener('click', function(e) {
-                    // If sidebar is open, clicking content should close it
-                    if (window.innerWidth <= 768) {
-                        const sidebar = document.getElementById('sidebar-nav');
-                        if (sidebar && sidebar.classList.contains('mobile-open')) {
-                            // Only close if clicking directly on content (not inside iframes/modules)
-                            if (e.target === contentContainer || e.target.closest('#content-container > *:not(iframe)')) {
-                                toggleMobileNav();
-                            }
-                        }
-                    }
                 });
             }
         });
@@ -867,58 +809,20 @@ const MASTER_SHELL = `<!DOCTYPE html>
         function toggleMobileNav() {
             const sidebar = document.getElementById('sidebar-nav');
             const overlay = document.getElementById('mobile-overlay');
-            const contentContainer = document.getElementById('content-container');
             if (sidebar && overlay) {
-                const isOpening = !sidebar.classList.contains('mobile-open');
                 sidebar.classList.toggle('mobile-open');
                 overlay.classList.toggle('active');
-                
-                // Add/remove class to content container to track sidebar state
-                if (contentContainer) {
-                    if (isOpening) {
-                        contentContainer.classList.add('sidebar-open');
-                    } else {
-                        contentContainer.classList.remove('sidebar-open');
-                    }
-                }
             }
         }
         
-        // Prevent overlay clicks from propagating to sidebar and module content
+        // Prevent overlay clicks from propagating to sidebar
         document.addEventListener('DOMContentLoaded', function() {
             const sidebar = document.getElementById('sidebar-nav');
             const overlay = document.getElementById('mobile-overlay');
-            const contentContainer = document.getElementById('content-container');
-            
             if (sidebar && overlay) {
                 // Stop clicks on sidebar from bubbling to overlay
                 sidebar.addEventListener('click', function(e) {
                     e.stopPropagation();
-                });
-                
-                // Make overlay only block clicks when sidebar is open
-                // Allow clicks to pass through to content when sidebar is closed
-                overlay.addEventListener('click', function(e) {
-                    // Only close if clicking the overlay itself (not child elements)
-                    if (e.target === overlay) {
-                        toggleMobileNav();
-                    }
-                });
-            }
-            
-            // Ensure module content is always clickable when sidebar is closed
-            if (contentContainer) {
-                contentContainer.addEventListener('click', function(e) {
-                    // If sidebar is open, clicking content should close it
-                    if (window.innerWidth <= 768) {
-                        const sidebar = document.getElementById('sidebar-nav');
-                        if (sidebar && sidebar.classList.contains('mobile-open')) {
-                            // Only close if clicking directly on content (not inside iframes/modules)
-                            if (e.target === contentContainer || e.target.closest('#content-container > *:not(iframe)')) {
-                                toggleMobileNav();
-                            }
-                        }
-                    }
                 });
             }
         });
