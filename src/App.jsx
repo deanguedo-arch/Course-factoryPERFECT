@@ -571,7 +571,41 @@ const generateMasterShell = (data) => {
         @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
         .status-saved { animation: pulse-green 2s infinite; }
         .scan-line { height: 2px; width: 100%; background: rgba(0, 255, 65, 0.2); position: absolute; animation: scan 3s linear infinite; pointer-events: none; }
-        @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }`;
+        @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
+        
+        /* Mobile Navigation */
+        .mobile-toggle { display: none; position: fixed; top: 1rem; left: 1rem; z-index: 100; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(51, 65, 85, 0.5); color: #e2e8f0; padding: 0.75rem; border-radius: 0.5rem; cursor: pointer; font-size: 1.5rem; transition: all 0.3s; }
+        .mobile-toggle:hover { background: rgba(30, 41, 59, 0.95); }
+        .mobile-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); z-index: 60; backdrop-filter: blur(4px); pointer-events: none; }
+        .mobile-overlay.active { display: block; pointer-events: auto; }
+        
+        @media (max-width: 768px) {
+            .glass-panel { 
+                position: fixed; 
+                left: -100%; 
+                top: 0; 
+                bottom: 0; 
+                z-index: 80; 
+                transition: left 0.3s ease; 
+                width: 80%; 
+                max-width: 280px;
+                pointer-events: auto;
+            }
+            .glass-panel.mobile-open { 
+                left: 0; 
+            }
+            #sidebar-nav.mobile-open {
+                left: 0 !important;
+                pointer-events: auto !important;
+                z-index: 80 !important;
+            }
+            .mobile-toggle { 
+                display: block !important; 
+            }
+            #content-container {
+                width: 100%;
+            }
+        }`;
   
   return `<!DOCTYPE html>
 <html lang="en">
@@ -586,8 +620,11 @@ const generateMasterShell = (data) => {
     </style>
 </head>
 <body class="flex">
+    <!-- Mobile Navigation Toggle -->
+    <button class="mobile-toggle" onclick="toggleMobileNav()" aria-label="Toggle navigation">☰</button>
+    <div class="mobile-overlay" id="mobile-overlay" onclick="toggleMobileNav()"></div>
 
-    <div class="w-64 glass-panel flex-shrink-0 flex flex-col h-full z-50">
+    <div id="sidebar-nav" class="w-64 glass-panel flex-shrink-0 flex flex-col h-full z-50">
         <div class="p-8 border-b border-slate-800">
             <h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none"><span class="text-${accentColor}-500">${courseName}</span></h1>
             <p class="text-[10px] text-slate-500 mt-2 mono uppercase tracking-widest">Master Console v2.0</p>${courseInfo}
@@ -610,8 +647,40 @@ const generateMasterShell = (data) => {
     </script>
 
     <script>
+        // --- MOBILE NAVIGATION ---
+        function toggleMobileNav() {
+            const sidebar = document.getElementById('sidebar-nav');
+            const overlay = document.getElementById('mobile-overlay');
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('mobile-open');
+                overlay.classList.toggle('active');
+            }
+        }
+        
+        // Prevent overlay clicks from propagating to sidebar
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar-nav');
+            const overlay = document.getElementById('mobile-overlay');
+            if (sidebar && overlay) {
+                // Stop clicks on sidebar from bubbling to overlay
+                sidebar.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+            }
+        });
+        
         // --- CORE NAVIGATION LOGIC ---
         function switchView(view) {
+            // Close mobile nav if open (on mobile devices)
+            if (window.innerWidth <= 768) {
+                const sidebar = document.getElementById('sidebar-nav');
+                const overlay = document.getElementById('mobile-overlay');
+                if (sidebar && overlay) {
+                    sidebar.classList.remove('mobile-open');
+                    overlay.classList.remove('active');
+                }
+            }
+            
             document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
             
             // Hide all views generically
@@ -736,8 +805,40 @@ const MASTER_SHELL = `<!DOCTYPE html>
     </script>
 
     <script>
+        // --- MOBILE NAVIGATION ---
+        function toggleMobileNav() {
+            const sidebar = document.getElementById('sidebar-nav');
+            const overlay = document.getElementById('mobile-overlay');
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('mobile-open');
+                overlay.classList.toggle('active');
+            }
+        }
+        
+        // Prevent overlay clicks from propagating to sidebar
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar-nav');
+            const overlay = document.getElementById('mobile-overlay');
+            if (sidebar && overlay) {
+                // Stop clicks on sidebar from bubbling to overlay
+                sidebar.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+            }
+        });
+        
         // --- CORE NAVIGATION LOGIC ---
         function switchView(view) {
+            // Close mobile nav if open (on mobile devices)
+            if (window.innerWidth <= 768) {
+                const sidebar = document.getElementById('sidebar-nav');
+                const overlay = document.getElementById('mobile-overlay');
+                if (sidebar && overlay) {
+                    sidebar.classList.remove('mobile-open');
+                    overlay.classList.remove('active');
+                }
+            }
+            
             document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
             
             // Hide all views generically
