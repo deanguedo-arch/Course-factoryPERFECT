@@ -1617,9 +1617,79 @@ const BatchHarvester = ({ onImport }) => {
   );
 };
 
+// 🛡️ THE BULLETPROOF VEST: Cleans up messy AI output or raw text input
+const sanitizeImportData = (input) => {
+  let cleanData = [];
+  try {
+    // 1. Try to parse as JSON first (AI Path)
+    let jsonString = input.trim().replace(/^```json/, '').replace(/^```/, '').replace(/```$/, '');
+    const parsed = JSON.parse(jsonString);
+    const rawArray = Array.isArray(parsed) ? parsed : (parsed.questions || parsed.data || []);
+
+    cleanData = rawArray.map(q => {
+      const questionText = String(q.question || q.q || "Untitled Question");
+      const optionsArray = Array.isArray(q.options) ? q.options.map(opt => String(opt || '')) : [];
+      const hasOptions = optionsArray.length > 0;
+      
+      return {
+        type: hasOptions ? 'multiple-choice' : 'long-answer',
+        question: questionText,
+        options: optionsArray,
+        // Fix Answer Index: Convert "A" to 0 (only for multiple-choice)
+        correct: hasOptions 
+          ? ((typeof q.correct === 'string') 
+              ? (isNaN(q.correct) ? q.correct.toUpperCase().charCodeAt(0) - 65 : parseInt(q.correct)) 
+              : (q.correct || 0))
+          : 0
+      };
+    });
+    return { data: cleanData, success: true };
+  } catch (e) {
+    // 2. Fall back to "Smart Text Parser" (Regex Path)
+    const lines = input.split('\n').filter(l => l.trim());
+    const questions = [];
+    let current = null;
+
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      // Match "1. " or "Q1."
+      if (/^(Q?\d+[\.)]|Question\s+\d+)/i.test(trimmed)) {
+        if(current) questions.push(current);
+        current = { 
+          type: 'long-answer', // Default to long-answer, will change if options found
+          question: trimmed.replace(/^(Q?\d+[\.)]|Question\s+\d+)\s*/, ''), 
+          options: [], 
+          correct: 0 
+        };
+      } 
+      // Match "a. " or "- " (multiple choice options)
+      else if (/^[a-d][\.)\)]\s/i.test(trimmed) || trimmed.startsWith('- ')) {
+        if(current) {
+          if(current.options.length === 0) current.type = 'multiple-choice';
+          current.options.push(trimmed.replace(/^[a-d][\.)\)]\s/i, '').replace(/^- \s/, ''));
+        }
+      }
+      // Match "Answer: A"
+      else if (/^(ans|answer|correct):\s*([a-d])/i.test(trimmed) && current) {
+        current.correct = trimmed.match(/([a-d])/i)[1].toUpperCase().charCodeAt(0) - 65;
+      }
+      // Append loose text to question (if no options yet, it's part of the question)
+      else if (current) {
+        if (current.options.length === 0) {
+          current.question += " " + trimmed;
+        }
+      }
+    });
+    if(current) questions.push(current);
+    return { data: questions, success: questions.length > 0 };
+  }
+};
+
 const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, assessmentType, setAssessmentType, assessmentTitle, setAssessmentTitle, quizQuestions, setQuizQuestions, printInstructions, setPrintInstructions, editingAssessment, setEditingAssessment, migrateCode, setMigrateCode, migratePrompt, setMigratePrompt, migrateOutput, setMigrateOutput }) => {
   const [harvestType, setHarvestType] = useState('MODULE_MANAGER'); // 'FEATURE', 'ASSET', 'ASSESSMENT', 'AI_MODULE', 'MODULE_MANAGER'
-  const [mode, setMode] = useState('B'); 
+  const [mode, setMode] = useState('B');
+  const [importInput, setImportInput] = useState("");
+  const [importPreview, setImportPreview] = useState([]); 
   
   // MODULE MANAGER STATE
   const [moduleManagerType, setModuleManagerType] = useState('standalone'); // 'standalone' | 'external'
@@ -2595,6 +2665,12 @@ Please add the following data to the \`PROJECT_DATA\` object.
                             >
                                 🔄 Migrate
                             </button>
+                            <button 
+                                onClick={() => setMode('IMPORT')} 
+                                className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'IMPORT' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
+                            >
+                                📄 Smart Import
+                            </button>
                         </div>
 
                         {/* ADD QUESTIONS MODE */}
@@ -3396,6 +3472,174 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             </div>
                                         </div>
                                     )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* IMPORT MODE - Smart Import */}
+                        {mode === 'IMPORT' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in">
+                                {/* LEFT COLUMN: Input & AI Instructions */}
+                                <div className="space-y-4">
+                                    <div className="bg-slate-900 border border-purple-500/30 p-4 rounded-xl space-y-3">
+                                        <h3 className="text-sm font-bold text-purple-400 mb-2 flex items-center gap-2">
+                                            <Sparkles size={16}/> Option A: AI Super-Import
+                                        </h3>
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-300 mb-1">For Multiple-Choice Questions:</p>
+                                            <div className="bg-black p-2 rounded border border-slate-700 relative group mb-2">
+                                                <code className="text-[10px] text-emerald-400 font-mono block break-words">
+                                                    Convert this quiz text into JSON. For multiple-choice: [{"{"} "question": "...", "options": ["A","B","C","D"], "correct": 0 {"}"}]. For long-answer: [{"{"} "question": "...", "options": [] {"}"}]. (Correct index: A=0, B=1, C=2, D=3). Output JSON ONLY.
+                                                </code>
+                                                <button 
+                                                    className="absolute top-1 right-1 text-slate-500 hover:text-white"
+                                                    onClick={() => navigator.clipboard.writeText('Convert this quiz text into JSON. For multiple-choice: [{ "question": "...", "options": ["A","B","C","D"], "correct": 0 }]. For long-answer/short-answer: [{ "question": "...", "options": [] }]. (Correct index: A=0, B=1, C=2, D=3). Output JSON ONLY.')}
+                                                >
+                                                    <Copy size={12}/>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-300 mb-1">For Long-Answer/Short-Answer Questions:</p>
+                                            <div className="bg-black p-2 rounded border border-slate-700 relative group mb-2">
+                                                <code className="text-[10px] text-cyan-400 font-mono block break-words">
+                                                    Convert these open-ended questions into JSON: [{"{"} "question": "What is...?", "options": [] {"}"}]. Include ALL questions, even if they have no answer choices. Output JSON ONLY.
+                                                </code>
+                                                <button 
+                                                    className="absolute top-1 right-1 text-slate-500 hover:text-white"
+                                                    onClick={() => navigator.clipboard.writeText('Convert these open-ended questions into JSON: [{ "question": "What is...?", "options": [] }]. Include ALL questions, even if they have no answer choices. Output JSON ONLY.')}
+                                                >
+                                                    <Copy size={12}/>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-amber-300 mb-1">⭐ For Mixed Types (Recommended):</p>
+                                            <div className="bg-black p-2 rounded border border-amber-700 relative group">
+                                                <code className="text-[10px] text-amber-400 font-mono block break-words">
+                                                    Convert this mixed assessment into JSON. Multiple-choice: [{"{"} "question": "...", "options": ["A","B","C","D"], "correct": 0 {"}"}]. Long-answer: [{"{"} "question": "...", "options": [] {"}"}]. Include ALL questions in order. Output JSON ONLY.
+                                                </code>
+                                                <button 
+                                                    className="absolute top-1 right-1 text-slate-500 hover:text-white"
+                                                    onClick={() => navigator.clipboard.writeText('Convert this mixed assessment into JSON. For multiple-choice questions: [{ "question": "...", "options": ["A","B","C","D"], "correct": 0 }]. For long-answer/short-answer questions: [{ "question": "...", "options": [] }]. Include ALL questions in the order they appear. (Correct index: A=0, B=1, C=2, D=3). Output JSON ONLY.')}
+                                                >
+                                                    <Copy size={12}/>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                                        <h3 className="text-sm font-bold text-slate-300 mb-2">Paste Data (JSON or Text)</h3>
+                                        <textarea
+                                            value={importInput}
+                                            onChange={(e) => {
+                                                setImportInput(e.target.value);
+                                                const result = sanitizeImportData(e.target.value);
+                                                setImportPreview(result.data);
+                                            }}
+                                            className="w-full h-64 bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs font-mono text-white focus:border-purple-500 outline-none resize-none"
+                                            placeholder="Paste JSON here... OR Paste raw text like:&#10;Multiple-choice:&#10;1. Question?&#10;a. Yes&#10;b. No&#10;Answer: A&#10;&#10;Long-answer:&#10;2. Explain your answer."
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* RIGHT COLUMN: Live Preview & Commit */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col h-full">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-sm font-bold text-white">Preview ({importPreview.length} Qs)</h3>
+                                        {importPreview.length > 0 && (
+                                            <div className="flex items-center gap-2">
+                                                {(() => {
+                                                    const mcCount = importPreview.filter(q => (q.type || (q.options?.length > 0 ? 'multiple-choice' : 'long-answer')) === 'multiple-choice').length;
+                                                    const laCount = importPreview.filter(q => (q.type || (q.options?.length > 0 ? 'multiple-choice' : 'long-answer')) === 'long-answer').length;
+                                                    return (
+                                                        <>
+                                                            {mcCount > 0 && <span className="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-400 font-bold">{mcCount} MC</span>}
+                                                            {laCount > 0 && <span className="text-xs px-2 py-1 rounded bg-cyan-500/20 text-cyan-400 font-bold">{laCount} LA</span>}
+                                                            <span className="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 font-bold">Valid</span>
+                                                        </>
+                                                    );
+                                                })()}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto space-y-3 custom-scroll pr-2 mb-4 bg-slate-950/50 rounded-lg p-2 border border-slate-800 h-64">
+                                        {importPreview.length === 0 ? (
+                                            <div className="h-full flex items-center justify-center text-slate-500 text-xs italic">Paste content to preview...</div>
+                                        ) : (
+                                            importPreview.map((q, idx) => {
+                                                const questionText = typeof q.question === 'string' ? q.question : (q.question || 'Untitled Question');
+                                                const optionsArray = Array.isArray(q.options) ? q.options : [];
+                                                const questionType = q.type || (optionsArray.length > 0 ? 'multiple-choice' : 'long-answer');
+                                                const isLongAnswer = questionType === 'long-answer';
+                                                
+                                                return (
+                                                    <div key={idx} className="p-3 bg-slate-900 border border-slate-700 rounded-lg text-xs">
+                                                        <div className="flex items-start justify-between mb-2">
+                                                            <div className="font-bold text-slate-200 flex gap-2 flex-1">
+                                                                <span className="text-purple-400">{idx + 1}.</span> 
+                                                                <span>{questionText}</span>
+                                                            </div>
+                                                            <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                                                                isLongAnswer 
+                                                                    ? 'bg-cyan-500/20 text-cyan-400' 
+                                                                    : 'bg-purple-500/20 text-purple-400'
+                                                            }`}>
+                                                                {isLongAnswer ? 'Long Answer' : 'Multiple Choice'}
+                                                            </span>
+                                                        </div>
+                                                        {isLongAnswer ? (
+                                                            <div className="text-slate-500 italic text-[10px] pl-4">
+                                                                Open-ended response
+                                                            </div>
+                                                        ) : (
+                                                            <div className="space-y-1 pl-4">
+                                                                {optionsArray.length > 0 ? (
+                                                                    optionsArray.map((opt, oIdx) => {
+                                                                        const optionText = typeof opt === 'string' ? opt : String(opt || '');
+                                                                        return (
+                                                                            <div key={oIdx} className={`flex items-center gap-2 ${q.correct === oIdx ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                                                                                <span>{String.fromCharCode(65+oIdx)}.</span> <span>{optionText}</span>
+                                                                                {q.correct === oIdx && <span className="text-[10px] text-emerald-400">✓</span>}
+                                                                            </div>
+                                                                        );
+                                                                    })
+                                                                ) : (
+                                                                    <div className="text-slate-500 italic text-[10px]">No options provided</div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+
+                                    <button
+                                        onClick={() => {
+                                            if (importPreview.length === 0) return;
+                                            // Convert to format expected by masterQuestions
+                                            const formattedQuestions = importPreview.map(q => ({
+                                                type: q.type || (q.options.length > 0 ? 'multiple-choice' : 'long-answer'),
+                                                question: q.question,
+                                                options: q.options || [],
+                                                correct: q.correct || 0
+                                            }));
+                                            setMasterQuestions(prev => [...prev, ...formattedQuestions]);
+                                            const mcCount = formattedQuestions.filter(q => q.type === 'multiple-choice').length;
+                                            const laCount = formattedQuestions.filter(q => q.type === 'long-answer').length;
+                                            alert(`✅ Imported ${formattedQuestions.length} questions! (${mcCount} multiple-choice, ${laCount} long-answer)`);
+                                            setImportInput("");
+                                            setImportPreview([]);
+                                            setMode('MASTER');
+                                        }}
+                                        disabled={importPreview.length === 0}
+                                        className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg shadow-lg disabled:opacity-50 transition-all"
+                                    >
+                                        Import to Master Assessment
+                                    </button>
                                 </div>
                             </div>
                         )}
@@ -7836,15 +8080,377 @@ Questions.filter((_, i) => i !== index);
   };
 
   const generateMixedAssessment = () => {
-    // Assessment generation logic would go here
-    // This is a placeholder - you'd implement the actual generation
+    if (!masterAssessmentTitle || masterQuestions.length === 0) {
+      alert('Please add a title and at least one question to the Master Assessment.');
+      return;
+    }
+
+    const assessmentId = `mixed_${Date.now()}`;
+    const mcQuestions = masterQuestions.filter(q => (q.type || 'multiple-choice') === 'multiple-choice');
+    const laQuestions = masterQuestions.filter(q => (q.type || 'long-answer') === 'long-answer');
+    
+    // Build HTML for all questions
+    let questionsHtml = '';
+    let questionIndex = 0;
+    let mcIndex = 0;
+    let laIndex = 0;
+
+    masterQuestions.forEach((q, idx) => {
+      const isMC = (q.type || (q.options?.length > 0 ? 'multiple-choice' : 'long-answer')) === 'multiple-choice';
+      const qNum = idx + 1;
+
+      if (isMC && q.options && q.options.length > 0) {
+        // Multiple Choice Question
+        questionsHtml += `
+          <div class="mb-8 p-6 bg-slate-900 rounded-xl border border-slate-700">
+            <h3 class="text-lg font-bold text-white mb-4">${qNum}. ${q.question || 'Untitled Question'}</h3>
+            <div class="space-y-2">
+              ${q.options.map((opt, optIdx) => `
+                <label class="flex items-center gap-3 p-3 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-750 transition-colors">
+                  <input type="radio" name="q${idx}" value="${optIdx}" class="w-4 h-4" />
+                  <span class="text-slate-300">${opt || ''}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+        `;
+        mcIndex++;
+      } else {
+        // Long Answer Question
+        questionsHtml += `
+          <div class="mb-8 p-6 bg-slate-900 rounded-xl border border-slate-700 print-section">
+            <h3 class="text-lg font-bold text-white mb-4 print-question">${qNum}. ${q.question || 'Untitled Question'}</h3>
+            <textarea 
+              id="${assessmentId}-answer-${laIndex}" 
+              placeholder="Type your answer here..."
+              class="w-full h-48 bg-slate-950 border border-slate-700 rounded-lg p-4 text-white resize-none focus:border-purple-500 focus:outline-none print-response"
+            ></textarea>
+            <p class="text-xs text-slate-500 italic mt-2 no-print">Auto-saved to browser ✓</p>
+          </div>
+        `;
+        laIndex++;
+      }
+      questionIndex++;
+    });
+
+    const html = `<div id="${assessmentId}" class="w-full h-full custom-scroll p-8">
+      <div class="max-w-4xl mx-auto">
+        <header class="mb-8">
+          <h1 class="text-3xl font-black text-white italic mb-2 print-title">${masterAssessmentTitle}</h1>
+          <p class="text-sm text-slate-400 no-print">
+            ${mcQuestions.length > 0 && laQuestions.length > 0 
+              ? `Complete ${mcQuestions.length} multiple-choice and ${laQuestions.length} long-answer questions.`
+              : mcQuestions.length > 0 
+                ? `Select the best answer for each of ${mcQuestions.length} questions.`
+                : `Complete all ${laQuestions.length} questions. Your responses are auto-saved.`
+            }
+          </p>
+        </header>
+        
+        ${laQuestions.length > 0 ? `
+          <!-- Student Info (only for long-answer assessments) -->
+          <div class="grid grid-cols-2 gap-4 mb-8 p-6 bg-slate-900 rounded-xl border border-slate-700 print-header no-print">
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Student Name</label>
+              <input 
+                type="text" 
+                id="${assessmentId}-student-name"
+                placeholder="Enter your name..."
+                class="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm focus:border-purple-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Date</label>
+              <input 
+                type="date" 
+                id="${assessmentId}-student-date"
+                class="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm focus:border-purple-500 focus:outline-none"
+              />
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Questions -->
+        <form id="${assessmentId}-form" class="space-y-6">
+          ${questionsHtml}
+        </form>
+
+        ${mcQuestions.length > 0 ? `
+          <!-- Quiz Submit Button (only for MC questions) -->
+          <div class="flex gap-4 mt-8 no-print">
+            <button type="button" onclick="${assessmentId}_submit()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-8 rounded-lg">Submit Quiz</button>
+            <button type="button" onclick="${assessmentId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-8 rounded-lg">Reset</button>
+          </div>
+          <div id="${assessmentId}-result" class="hidden mt-6 p-6 rounded-xl"></div>
+        ` : ''}
+
+        ${laQuestions.length > 0 ? `
+          <!-- Long Answer Action Buttons -->
+          <div class="flex flex-wrap gap-3 mt-8 no-print">
+            <button type="button" onclick="${assessmentId}_save()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+              💾 Save Progress
+            </button>
+            <button type="button" onclick="${assessmentId}_download()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+              📥 Download Backup
+            </button>
+            <button type="button" onclick="document.getElementById('${assessmentId}-upload').click()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+              📤 Upload Backup
+            </button>
+            <button type="button" onclick="${assessmentId}_print()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+              🖨️ Print & Submit
+            </button>
+            <button type="button" onclick="${assessmentId}_clear()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+              🗑️ Clear All
+            </button>
+          </div>
+          <input type="file" id="${assessmentId}-upload" accept=".json" style="display: none;" onchange="${assessmentId}_loadBackup(this)" />
+
+          <!-- Status Messages -->
+          <div id="${assessmentId}-saved" class="hidden mt-6 p-4 rounded-xl bg-emerald-900/20 border border-emerald-500">
+            <p class="text-emerald-400 font-bold">✅ Responses saved successfully!</p>
+          </div>
+          <div id="${assessmentId}-loaded" class="hidden mt-6 p-4 rounded-xl bg-blue-900/20 border border-blue-500">
+            <p class="text-blue-400 font-bold">✅ Backup loaded successfully!</p>
+          </div>
+
+          <!-- Print Instructions -->
+          <div class="mt-8 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg no-print">
+            <p class="text-amber-300 text-sm">
+              📋 <strong>Instructions:</strong> Complete all questions, then click "Print & Submit" to create a PDF or print for your instructor.
+            </p>
+          </div>
+        ` : ''}
+
+        <!-- Print Styles -->
+        <style>
+          @media print {
+            body { background: white !important; }
+            .no-print { display: none !important; }
+            .print-title { color: black !important; font-size: 24pt; text-align: center; border-bottom: 3px solid black; padding-bottom: 10px; margin-bottom: 20px; }
+            .print-header { background: white !important; border: 2px solid black !important; margin-bottom: 20px; }
+            .print-header label { color: black !important; }
+            .print-header input { border: none !important; border-bottom: 1px solid black !important; background: white !important; color: black !important; }
+            .print-section { page-break-inside: avoid; background: white !important; border: 1px solid #ccc !important; margin-bottom: 20px; }
+            .print-question { color: black !important; border-bottom: 2px solid #666; padding-bottom: 5px; }
+            .print-response { background: white !important; color: black !important; border: 1px solid #999 !important; min-height: 200px; font-family: Arial, sans-serif; }
+          }
+        </style>
+      </div>
+    </div>`;
+
+    // Build script
+    let script = '';
+    
+    // Multiple Choice Scoring
+    if (mcQuestions.length > 0) {
+      const mcAnswers = masterQuestions
+        .map((q, idx) => {
+          const isMC = (q.type || (q.options?.length > 0 ? 'multiple-choice' : 'long-answer')) === 'multiple-choice';
+          return isMC ? { index: idx, correct: q.correct || 0 } : null;
+        })
+        .filter(a => a !== null);
+
+      script += `
+      const ${assessmentId}_answers = ${JSON.stringify(mcAnswers)};
+      function ${assessmentId}_submit() {
+        const form = document.getElementById('${assessmentId}-form');
+        let score = 0;
+        let total = ${assessmentId}_answers.length;
+        ${assessmentId}_answers.forEach((answerData) => {
+          const selected = form.querySelector('input[name="q' + answerData.index + '"]:checked');
+          if (selected && parseInt(selected.value) === answerData.correct) {
+            score++;
+          }
+        });
+        const percentage = Math.round((score / total) * 100);
+        const resultDiv = document.getElementById('${assessmentId}-result');
+        resultDiv.className = percentage >= 70 ? 'mt-6 p-6 rounded-xl bg-emerald-900/20 border border-emerald-500' : 'mt-6 p-6 rounded-xl bg-rose-900/20 border border-rose-500';
+        resultDiv.innerHTML = '<h3 class="text-2xl font-bold mb-2">' + (percentage >= 70 ? '✅ Passed!' : '❌ Keep Trying') + '</h3><p class="text-lg">Score: ' + score + '/' + total + ' (' + percentage + '%)</p>';
+        resultDiv.classList.remove('hidden');
+      }
+      function ${assessmentId}_reset() {
+        document.getElementById('${assessmentId}-form').reset();
+        document.getElementById('${assessmentId}-result').classList.add('hidden');
+      }
+      `;
+    }
+
+    // Long Answer Auto-Save
+    if (laQuestions.length > 0) {
+      script += `
+      const ${assessmentId}_laCount = ${laQuestions.length};
+      
+      // Initialize: Load saved data on page load
+      window.addEventListener('load', function() {
+        ${assessmentId}_loadFromLocalStorage();
+      });
+      
+      // Auto-save on input for all fields
+      function ${assessmentId}_setupAutoSave() {
+        // Student info auto-save
+        const nameField = document.getElementById('${assessmentId}-student-name');
+        const dateField = document.getElementById('${assessmentId}-student-date');
+        if (nameField) {
+          nameField.addEventListener('input', function() {
+            localStorage.setItem('${assessmentId}-student-name', this.value);
+          });
+        }
+        if (dateField) {
+          dateField.addEventListener('input', function() {
+            localStorage.setItem('${assessmentId}-student-date', this.value);
+          });
+        }
+        
+        // Answer auto-save
+        for (let i = 0; i < ${assessmentId}_laCount; i++) {
+          const textarea = document.getElementById('${assessmentId}-answer-' + i);
+          if (textarea) {
+            textarea.addEventListener('input', function() {
+              localStorage.setItem('${assessmentId}-answer-' + i, this.value);
+            });
+          }
+        }
+      }
+      
+      // Load from localStorage
+      function ${assessmentId}_loadFromLocalStorage() {
+        const nameField = document.getElementById('${assessmentId}-student-name');
+        const dateField = document.getElementById('${assessmentId}-student-date');
+        
+        if (nameField) {
+          const savedName = localStorage.getItem('${assessmentId}-student-name');
+          if (savedName) nameField.value = savedName;
+        }
+        if (dateField) {
+          const savedDate = localStorage.getItem('${assessmentId}-student-date');
+          if (savedDate) dateField.value = savedDate;
+        }
+        
+        for (let i = 0; i < ${assessmentId}_laCount; i++) {
+          const textarea = document.getElementById('${assessmentId}-answer-' + i);
+          if (textarea) {
+            const saved = localStorage.getItem('${assessmentId}-answer-' + i);
+            if (saved) textarea.value = saved;
+          }
+        }
+        
+        ${assessmentId}_setupAutoSave();
+      }
+      
+      // Manual Save
+      function ${assessmentId}_save() {
+        const savedDiv = document.getElementById('${assessmentId}-saved');
+        if (savedDiv) {
+          savedDiv.classList.remove('hidden');
+          setTimeout(function() { savedDiv.classList.add('hidden'); }, 3000);
+        }
+      }
+      
+      // Download Backup
+      function ${assessmentId}_download() {
+        const data = {
+          studentName: document.getElementById('${assessmentId}-student-name')?.value || '',
+          studentDate: document.getElementById('${assessmentId}-student-date')?.value || '',
+          answers: []
+        };
+        
+        for (let i = 0; i < ${assessmentId}_laCount; i++) {
+          const textarea = document.getElementById('${assessmentId}-answer-' + i);
+          data.answers.push(textarea ? textarea.value : '');
+        }
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '${masterAssessmentTitle.replace(/[^a-z0-9]/gi, '_')}_backup.json';
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      
+      // Load Backup
+      function ${assessmentId}_loadBackup(input) {
+        const file = input.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const data = JSON.parse(e.target.result);
+            
+            const nameField = document.getElementById('${assessmentId}-student-name');
+            const dateField = document.getElementById('${assessmentId}-student-date');
+            
+            if (nameField && data.studentName) {
+              nameField.value = data.studentName;
+              localStorage.setItem('${assessmentId}-student-name', data.studentName);
+            }
+            if (dateField && data.studentDate) {
+              dateField.value = data.studentDate;
+              localStorage.setItem('${assessmentId}-student-date', data.studentDate);
+            }
+            
+            data.answers.forEach((answer, i) => {
+              const textarea = document.getElementById('${assessmentId}-answer-' + i);
+              if (textarea) {
+                textarea.value = answer;
+                localStorage.setItem('${assessmentId}-answer-' + i, answer);
+              }
+            });
+            
+            const loadedDiv = document.getElementById('${assessmentId}-loaded');
+            if (loadedDiv) {
+              loadedDiv.classList.remove('hidden');
+              setTimeout(function() { loadedDiv.classList.add('hidden'); }, 3000);
+            }
+          } catch(err) {
+            alert('Error loading backup file. Please check the file and try again.');
+          }
+        };
+        reader.readAsText(file);
+      }
+      
+      // Print
+      function ${assessmentId}_print() {
+        window.print();
+      }
+      
+      // Clear All
+      function ${assessmentId}_clear() {
+        if (confirm('Are you sure you want to clear all responses? This cannot be undone.')) {
+          const nameField = document.getElementById('${assessmentId}-student-name');
+          const dateField = document.getElementById('${assessmentId}-student-date');
+          if (nameField) {
+            nameField.value = '';
+            localStorage.removeItem('${assessmentId}-student-name');
+          }
+          if (dateField) {
+            dateField.value = '';
+            localStorage.removeItem('${assessmentId}-student-date');
+          }
+          for (let i = 0; i < ${assessmentId}_laCount; i++) {
+            const textarea = document.getElementById('${assessmentId}-answer-' + i);
+            if (textarea) {
+              textarea.value = '';
+              localStorage.removeItem('${assessmentId}-answer-' + i);
+            }
+          }
+        }
+      }
+      `;
+    }
+
     const assessment = {
+      id: assessmentId,
       title: masterAssessmentTitle,
       type: 'mixed',
       questionCount: masterQuestions.length,
-      html: '<div>Generated assessment HTML</div>',
-      script: '// Generated assessment script'
+      mcCount: mcQuestions.length,
+      laCount: laQuestions.length,
+      html: html,
+      script: script
     };
+    
     setGeneratedAssessment(JSON.stringify(assessment, null, 2));
   };
 
