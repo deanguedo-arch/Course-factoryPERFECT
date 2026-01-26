@@ -574,37 +574,92 @@ const generateMasterShell = (data) => {
         .scan-line { height: 2px; width: 100%; background: rgba(0, 255, 65, 0.2); position: absolute; animation: scan 3s linear infinite; pointer-events: none; }
         @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
         
-        /* Mobile Navigation */
-        .mobile-toggle { display: none; position: fixed; top: 1rem; left: 1rem; z-index: 100; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(51, 65, 85, 0.5); color: #e2e8f0; padding: 0.75rem; border-radius: 0.5rem; cursor: pointer; font-size: 1.5rem; transition: all 0.3s; }
-        .mobile-toggle:hover { background: rgba(30, 41, 59, 0.95); }
-        .mobile-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); z-index: 60; backdrop-filter: blur(4px); pointer-events: none; }
-        .mobile-overlay.active { display: block; pointer-events: auto; }
+        /* Sidebar Toggle - Works on ALL screen sizes */
+        .sidebar-toggle { 
+            position: fixed; 
+            top: 1rem; 
+            left: 1rem; 
+            z-index: 100; 
+            background: rgba(15, 23, 42, 0.95); 
+            border: 1px solid rgba(51, 65, 85, 0.5); 
+            color: #e2e8f0; 
+            padding: 0.75rem; 
+            border-radius: 0.5rem; 
+            cursor: pointer; 
+            font-size: 1.25rem; 
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+        }
+        .sidebar-toggle:hover { background: rgba(30, 41, 59, 0.95); border-color: ${colors.hex}; }
+        
+        /* Overlay for mobile */
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); z-index: 60; backdrop-filter: blur(4px); pointer-events: none; }
+        .sidebar-overlay.active { display: block; pointer-events: auto; }
+        
+        /* Sidebar - Collapsible on all sizes */
+        #sidebar-nav {
+            transition: width 0.3s ease, min-width 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+            min-width: 16rem;
+            overflow: hidden;
+        }
+        #sidebar-nav.collapsed {
+            width: 0 !important;
+            min-width: 0 !important;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(-100%);
+        }
+        
+        /* Content fills available space */
+        #content-container {
+            flex: 1;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        /* Toggle button position */
+        .sidebar-toggle {
+            transition: left 0.3s ease;
+        }
+        body:not(.sidebar-collapsed) .sidebar-toggle {
+            left: calc(16rem + 1rem); /* 16rem = w-64 sidebar width + margin */
+        }
+        body.sidebar-collapsed .sidebar-toggle {
+            left: 1rem;
+        }
         
         @media (max-width: 768px) {
-            .glass-panel { 
+            /* On mobile, sidebar overlays content */
+            #sidebar-nav { 
                 position: fixed; 
-                left: -100%; 
+                left: 0;
                 top: 0; 
                 bottom: 0; 
                 z-index: 80; 
-                transition: left 0.3s ease; 
-                width: 80%; 
+                width: 80% !important;
                 max-width: 280px;
-                pointer-events: auto;
+                min-width: 0;
             }
-            .glass-panel.mobile-open { 
-                left: 0; 
+            #sidebar-nav:not(.collapsed) {
+                opacity: 1;
+                transform: translateX(0);
             }
-            #sidebar-nav.mobile-open {
-                left: 0 !important;
-                pointer-events: auto !important;
-                z-index: 80 !important;
+            #sidebar-nav.collapsed {
+                transform: translateX(-100%);
+                width: 80% !important;
             }
-            .mobile-toggle { 
-                display: block !important; 
+            /* Toggle always on left on mobile */
+            .sidebar-toggle,
+            body:not(.sidebar-collapsed) .sidebar-toggle,
+            body.sidebar-collapsed .sidebar-toggle {
+                left: 1rem !important;
             }
             #content-container {
-                width: 100%;
+                width: 100% !important;
             }
         }`;
   
@@ -621,11 +676,11 @@ const generateMasterShell = (data) => {
     </style>
 </head>
 <body class="flex">
-    <!-- Mobile Navigation Toggle -->
-    <button class="mobile-toggle" onclick="toggleMobileNav()" aria-label="Toggle navigation">☰</button>
-    <div class="mobile-overlay" id="mobile-overlay" onclick="toggleMobileNav()"></div>
+    <!-- Sidebar Toggle Button (Works on ALL screen sizes) -->
+    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation" title="Toggle Menu">☰</button>
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-    <div id="sidebar-nav" class="w-64 glass-panel flex-shrink-0 flex flex-col h-full z-50">
+    <div id="sidebar-nav" class="w-64 glass-panel flex flex-col h-full z-50">
         <div class="p-8 border-b border-slate-800">
             <h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none"><span class="text-${accentColor}-500">${courseName}</span></h1>
             <p class="text-[10px] text-slate-500 mt-2 mono uppercase tracking-widest">Master Console v2.0</p>${courseInfo}
@@ -648,22 +703,47 @@ const generateMasterShell = (data) => {
     </script>
 
     <script>
-        // --- MOBILE NAVIGATION ---
-        function toggleMobileNav() {
+        // --- SIDEBAR TOGGLE (Works on ALL screen sizes) ---
+        function toggleSidebar() {
             const sidebar = document.getElementById('sidebar-nav');
-            const overlay = document.getElementById('mobile-overlay');
-            if (sidebar && overlay) {
-                sidebar.classList.toggle('mobile-open');
-                overlay.classList.toggle('active');
+            const overlay = document.getElementById('sidebar-overlay');
+            const body = document.body;
+            
+            if (sidebar) {
+                const isCollapsed = sidebar.classList.toggle('collapsed');
+                body.classList.toggle('sidebar-collapsed', isCollapsed);
+                
+                // Show overlay on mobile when sidebar is open
+                if (overlay && window.innerWidth <= 768) {
+                    overlay.classList.toggle('active', !isCollapsed);
+                }
+                
+                // Save preference
+                try {
+                    localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
+                } catch(e) {}
             }
         }
         
-        // Prevent overlay clicks from propagating to sidebar
+        // Initialize sidebar state from localStorage
         document.addEventListener('DOMContentLoaded', function() {
             const sidebar = document.getElementById('sidebar-nav');
-            const overlay = document.getElementById('mobile-overlay');
-            if (sidebar && overlay) {
-                // Stop clicks on sidebar from bubbling to overlay
+            const body = document.body;
+            
+            try {
+                const savedState = localStorage.getItem('sidebarCollapsed');
+                // On mobile, default to collapsed. On desktop, respect saved preference
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.add('collapsed');
+                    body.classList.add('sidebar-collapsed');
+                } else if (savedState === 'true') {
+                    sidebar.classList.add('collapsed');
+                    body.classList.add('sidebar-collapsed');
+                }
+            } catch(e) {}
+            
+            // Prevent overlay clicks from propagating to sidebar
+            if (sidebar) {
                 sidebar.addEventListener('click', function(e) {
                     e.stopPropagation();
                 });
@@ -674,13 +754,14 @@ const generateMasterShell = (data) => {
         function switchView(view) {
             console.log('🔄 [switchView] Switching to view:', view);
             
-            // 1. Handle Mobile Nav
+            // 1. Close sidebar on mobile after selecting a view
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar-nav');
-                const overlay = document.getElementById('mobile-overlay');
-                if (sidebar && overlay) {
-                    sidebar.classList.remove('mobile-open');
-                    overlay.classList.remove('active');
+                const overlay = document.getElementById('sidebar-overlay');
+                if (sidebar && !sidebar.classList.contains('collapsed')) {
+                    sidebar.classList.add('collapsed');
+                    document.body.classList.add('sidebar-collapsed');
+                    if (overlay) overlay.classList.remove('active');
                 }
             }
             
@@ -6141,27 +6222,46 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         '  };\n' +
         '})();\n\n';
 
-    // Module Content - Use unified extraction function
-    const moduleContent = extractModuleContent(selectedMod);
-    let moduleHTML = moduleContent.html;
-    let moduleCSS = moduleContent.css;
-    let moduleScript = moduleContent.script;
+    // Module Content - Check for rawHtml first (new format), then legacy format
+    if (selectedMod.rawHtml) {
+      // NEW FORMAT: rawHtml - embed in iframe for isolation
+      // Escape for srcdoc attribute
+      const escapedRawHtml = selectedMod.rawHtml
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+      
+      sectionsHTML += '<section id="module-content" class="mb-12">' +
+        '<div class="w-full rounded-xl overflow-hidden border border-slate-700 shadow-2xl">' +
+        '<iframe srcdoc="' + escapedRawHtml + '" ' +
+        'class="w-full border-0" ' +
+        'style="min-height: 80vh; height: 100%;" ' +
+        'sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads">' +
+        '</iframe>' +
+        '</div>' +
+        '</section>';
+    } else {
+      // LEGACY FORMAT: separate html/css/script
+      const moduleContent = extractModuleContent(selectedMod);
+      let moduleHTML = moduleContent.html;
+      let moduleCSS = moduleContent.css;
+      let moduleScript = moduleContent.script;
 
-    // Process HTML if found
-    if (moduleHTML) {
-        const cleanHTML = cleanModuleHTML(moduleHTML);
-        sectionsHTML += '<section id="module-content" class="mb-12">' + cleanHTML + '</section>';
-    }
+      // Process HTML if found
+      if (moduleHTML) {
+          const cleanHTML = cleanModuleHTML(moduleHTML);
+          sectionsHTML += '<section id="module-content" class="mb-12">' + cleanHTML + '</section>';
+      }
 
-    // Inject CSS if found (standalone modules only)
-    if (moduleCSS) {
-        sectionsHTML = '<style id="module-styles">' + moduleCSS + '</style>' + sectionsHTML;
-    }
+      // Inject CSS if found (standalone modules only)
+      if (moduleCSS) {
+          sectionsHTML = '<style id="module-styles">' + moduleCSS + '</style>' + sectionsHTML;
+      }
 
-    // Process script if found
-    if (moduleScript) {
-        const cleanScript = cleanModuleScript(moduleScript);
-        combinedScripts += '// --- MODULE SCRIPT ---\n' + cleanScript + '\n\n';
+      // Process script if found
+      if (moduleScript) {
+          const cleanScript = cleanModuleScript(moduleScript);
+          combinedScripts += '// --- MODULE SCRIPT ---\n' + cleanScript + '\n\n';
+      }
     }
 
     // Assessments with Selection UI
