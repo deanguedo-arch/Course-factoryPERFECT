@@ -198,7 +198,7 @@ const PROJECT_DATA = {
                             '</div>' +
                         '</div>' +
                         '<div class="flex gap-3 w-full md:w-auto">' +
-                            '<button onclick="openPDF(\'' + mat.viewUrl.replace(/'/g, "\\'") + '\', \'' + mat.title.replace(/'/g, "\\'") + '\')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>' +
+                            '<button data-pdf-url="' + (mat.viewUrl || '').replace(/"/g, '&quot;') + '" data-pdf-title="' + (mat.title || '').replace(/"/g, '&quot;') + '" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>' +
                             '<a href="' + mat.downloadUrl + '" target="_blank" class="flex-1 ' + buttonColorClass + ' text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>' +
                         '</div>' +
                     '</div>';
@@ -1017,7 +1017,7 @@ const MASTER_SHELL = `<!DOCTYPE html>
                 <div class="mb-12">
                     <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Course <span class="text-sky-500">Materials</span></h2>
                 </div>
-                 <div id="pdf-viewer-container" class="hidden mb-12 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl"><div class="flex justify-between items-center p-3 bg-slate-800 border-b border-slate-700"><span id="viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Document Viewer</span><button onclick="closeViewer()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button></div><iframe id="pdf-frame" src="" width="100%" height="600" style="border:none;"></iframe></div>
+                 <div id="pdf-viewer-container" class="hidden mb-12 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl"><div class="flex justify-between items-center p-3 bg-slate-800 border-b border-slate-700"><span id="viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Document Viewer</span><button data-close-pdf-viewer class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button></div><iframe id="pdf-frame" src="" width="100%" height="600" style="border:none;"></iframe></div>
                  <!-- Initial Materials Placeholder -->
                  <p class="text-slate-500 text-sm">Select a module to begin.</p>
             </div>
@@ -5870,15 +5870,16 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
         const matId = mat.id || `mat-${Date.now()}`;
         
         // Build buttons based on available content
+        // Using data attributes for better compatibility with sandboxed environments (Google Sites)
         let buttonsHTML = '';
         if (mat.viewUrl) {
-          buttonsHTML += `<button onclick="openPDF('${escapedViewUrl}', '${escapedTitle}')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>`;
+          buttonsHTML += `<button data-pdf-url="${escapedViewUrl}" data-pdf-title="${escapedTitle}" class="pdf-viewer-btn flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>`;
         }
         if (mat.downloadUrl) {
           buttonsHTML += `<a href="${escapedDownloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`;
         }
         if (mat.digitalContent) {
-          buttonsHTML += `<button onclick="openDigitalReader('${matId}')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">📖 Read</button>`;
+          buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">📖 Read</button>`;
         }
         
         return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 ${borderClass}">
@@ -5900,7 +5901,11 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       digitalMaterials.forEach(dm => {
         digitalContentData[dm.id] = dm.digitalContent;
       });
-      const digitalContentJSON = JSON.stringify(digitalContentData).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      const digitalContentJSON = JSON.stringify(digitalContentData)
+        .replace(/`/g, '\\`')             // Escape backticks for template literals
+        .replace(/\$\{/g, '\\${')         // Escape template expressions
+        .replace(/</g, '\\u003c')         // Escape < for HTML safety
+        .replace(/>/g, '\\u003e');        // Escape > for HTML safety
       
       // Generate the full materials view HTML
       const materialsHTML = `<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
@@ -5912,16 +5917,16 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                 <div id="pdf-viewer-container" class="hidden mb-12 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl">
                     <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-slate-700">
                         <span id="viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Document Viewer</span>
-                        <button onclick="closeViewer()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
+                        <button data-close-pdf-viewer class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
                     </div>
                     <iframe id="pdf-frame" src="" width="100%" height="600" style="border:none;"></iframe>
                 </div>
                 <div id="digital-reader-container" class="hidden mb-12 bg-slate-900 rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">
                     <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-emerald-500/30">
                         <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">📖 Digital Resource</span>
-                        <button onclick="closeDigitalReader()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
+                        <button data-close-digital-reader class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
                     </div>
-                    <div class="flex h-[600px]">
+                    <div class="flex" style="height: 600px;">
                         <div id="reader-toc" class="w-64 bg-slate-950 border-r border-slate-700 p-4 overflow-y-auto hidden md:block">
                             <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Contents</h4>
                             <div id="reader-toc-items" class="space-y-1"></div>
@@ -5929,9 +5934,9 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                         <div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">
                             <div id="reader-body" class="prose prose-invert max-w-none"></div>
                             <div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-700">
-                                <button onclick="prevChapter()" id="prev-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">← Previous</button>
+                                <button data-prev-chapter id="prev-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">← Previous</button>
                                 <span id="reader-progress" class="text-xs text-slate-500"></span>
-                                <button onclick="nextChapter()" id="next-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next →</button>
+                                <button data-next-chapter id="next-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next →</button>
                             </div>
                         </div>
                     </div>
@@ -5952,14 +5957,58 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       const materialsScript = item.script || itemCode.script || '';
       if (materialsScript) scriptInjection += '\n        ' + materialsScript + '\n';
       
+      // Add event delegation for PDF viewer buttons (always needed for materials)
+      const pdfViewerEventScript = `
+        // PDF Viewer Event Delegation
+        document.addEventListener('click', function(e) {
+            // PDF Viewer button
+            var pdfBtn = e.target.closest('[data-pdf-url]');
+            if (pdfBtn) {
+                e.preventDefault();
+                var url = pdfBtn.getAttribute('data-pdf-url');
+                var title = pdfBtn.getAttribute('data-pdf-title');
+                if (typeof openPDF === 'function') {
+                    openPDF(url, title);
+                } else {
+                    // Fallback
+                    var container = document.getElementById('pdf-viewer-container');
+                    if (container) {
+                        document.getElementById('pdf-frame').src = url.replace('/view', '/preview');
+                        document.getElementById('viewer-title').innerText = 'VIEWING: ' + title;
+                        container.classList.remove('hidden');
+                        container.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
+                return;
+            }
+            
+            // Close PDF Viewer button
+            var closePdfBtn = e.target.closest('[data-close-pdf-viewer]');
+            if (closePdfBtn) {
+                if (typeof closeViewer === 'function') {
+                    closeViewer();
+                } else {
+                    // Fallback
+                    var container = document.getElementById('pdf-viewer-container');
+                    if (container) {
+                        container.classList.add('hidden');
+                        document.getElementById('pdf-frame').src = '';
+                    }
+                }
+                return;
+            }
+        });
+      `;
+      scriptInjection += '\n        ' + pdfViewerEventScript + '\n';
+      
       // Add digital reader script
       if (digitalMaterials.length > 0) {
         const digitalReaderScript = `
-        // Digital Reader System
+        // Digital Reader System - Using Event Delegation for Google Sites compatibility
         var DIGITAL_CONTENT = ${digitalContentJSON};
         var currentReader = { matId: null, chapterIdx: 0, data: null };
         
-        function openDigitalReader(matId) {
+        function openDigitalReaderFn(matId) {
             var content = DIGITAL_CONTENT[matId];
             if (!content) { console.error('No digital content for', matId); return; }
             
@@ -5968,17 +6017,17 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             // Update title
             document.getElementById('reader-title').innerHTML = '📖 ' + (content.title || 'Digital Resource');
             
-            // Build table of contents
+            // Build table of contents (using data attributes, not onclick)
             var tocHTML = '';
             (content.chapters || []).forEach(function(ch, idx) {
-                tocHTML += '<button onclick="goToChapter(' + idx + ')" class="toc-item w-full text-left px-3 py-2 rounded text-xs hover:bg-slate-800 transition-colors ' + (idx === 0 ? 'bg-emerald-900/50 text-emerald-400' : 'text-slate-400') + '" data-chapter="' + idx + '">' +
+                tocHTML += '<button data-toc-chapter="' + idx + '" class="toc-item w-full text-left px-3 py-2 rounded text-xs hover:bg-slate-800 transition-colors ' + (idx === 0 ? 'bg-emerald-900/50 text-emerald-400' : 'text-slate-400') + '" data-chapter="' + idx + '">' +
                     '<span class="font-bold">' + (ch.number || (idx + 1)) + '.</span> ' + ch.title +
                 '</button>';
             });
             document.getElementById('reader-toc-items').innerHTML = tocHTML;
             
             // Show first chapter
-            renderChapter(0);
+            renderChapterFn(0);
             
             // Show reader, hide materials list
             document.getElementById('digital-reader-container').classList.remove('hidden');
@@ -5986,13 +6035,13 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             document.getElementById('pdf-viewer-container').classList.add('hidden');
         }
         
-        function closeDigitalReader() {
+        function closeDigitalReaderFn() {
             document.getElementById('digital-reader-container').classList.add('hidden');
             document.getElementById('materials-list').classList.remove('hidden');
             currentReader = { matId: null, chapterIdx: 0, data: null };
         }
         
-        function renderChapter(idx) {
+        function renderChapterFn(idx) {
             if (!currentReader.data || !currentReader.data.chapters) return;
             var chapters = currentReader.data.chapters;
             if (idx < 0 || idx >= chapters.length) return;
@@ -6037,9 +6086,42 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             document.getElementById('reader-content').scrollTop = 0;
         }
         
-        function goToChapter(idx) { renderChapter(idx); }
-        function prevChapter() { renderChapter(currentReader.chapterIdx - 1); }
-        function nextChapter() { renderChapter(currentReader.chapterIdx + 1); }
+        // EVENT DELEGATION for Digital Reader - More reliable in sandboxed environments like Google Sites
+        document.addEventListener('click', function(e) {
+            // Digital Reader button
+            var readerBtn = e.target.closest('[data-digital-reader]');
+            if (readerBtn) {
+                e.preventDefault();
+                openDigitalReaderFn(readerBtn.getAttribute('data-digital-reader'));
+                return;
+            }
+            
+            // Close Digital Reader button
+            var closeReaderBtn = e.target.closest('[data-close-digital-reader]');
+            if (closeReaderBtn) {
+                closeDigitalReaderFn();
+                return;
+            }
+            
+            // TOC chapter buttons
+            var tocBtn = e.target.closest('[data-toc-chapter]');
+            if (tocBtn) {
+                renderChapterFn(parseInt(tocBtn.getAttribute('data-toc-chapter')));
+                return;
+            }
+            
+            // Prev/Next buttons
+            if (e.target.closest('#prev-btn') || e.target.closest('[data-prev-chapter]')) {
+                renderChapterFn(currentReader.chapterIdx - 1);
+                return;
+            }
+            if (e.target.closest('#next-btn') || e.target.closest('[data-next-chapter]')) {
+                renderChapterFn(currentReader.chapterIdx + 1);
+                return;
+            }
+        });
+        
+        console.log('📖 Digital Reader initialized with event delegation');
         `;
         scriptInjection += '\n        ' + digitalReaderScript + '\n';
       }
@@ -6760,7 +6842,11 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         const digitalMats = selectedMaterials.filter(m => m.digitalContent);
         const digitalContentData = {};
         digitalMats.forEach(dm => { digitalContentData[dm.id] = dm.digitalContent; });
-        const digitalContentJSON = JSON.stringify(digitalContentData).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+        const digitalContentJSON = JSON.stringify(digitalContentData)
+            .replace(/`/g, '\\`')             // Escape backticks for template literals
+            .replace(/\$\{/g, '\\${')         // Escape template expressions
+            .replace(/</g, '\\u003c')         // Escape < for HTML safety
+            .replace(/>/g, '\\u003e');        // Escape > for HTML safety
         
         sectionsHTML += '<section id="materials" class="mb-12"><h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-2">📚 Materials</h2>';
         
@@ -6768,7 +6854,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         sectionsHTML += '<div id="material-viewer" class="hidden mb-8 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl">' +
             '<div class="flex justify-between items-center p-3 bg-slate-800 border-b border-slate-700">' +
             '<span id="material-viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Material Viewer</span>' +
-            '<button onclick="closeMaterialViewer()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>' +
+            '<button data-close-material-viewer class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>' +
             '</div>' +
             '<iframe id="material-frame" src="" width="100%" height="600" style="border:none;"></iframe>' +
             '</div>';
@@ -6778,7 +6864,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
             sectionsHTML += '<div id="digital-reader-container" class="hidden mb-8 bg-slate-900 rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">' +
                 '<div class="flex justify-between items-center p-3 bg-slate-800 border-b border-emerald-500/30">' +
                 '<span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">📖 Digital Resource</span>' +
-                '<button onclick="closeDigitalReader()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>' +
+                '<button data-close-digital-reader class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>' +
                 '</div>' +
                 '<div class="flex" style="height: 600px;">' +
                 '<div id="reader-toc" class="w-64 bg-slate-950 border-r border-slate-700 p-4 overflow-y-auto hidden md:block">' +
@@ -6788,9 +6874,9 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                 '<div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">' +
                 '<div id="reader-body" class="prose prose-invert max-w-none"></div>' +
                 '<div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-700">' +
-                '<button onclick="prevChapter()" id="prev-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">← Previous</button>' +
+                '<button data-prev-chapter id="prev-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">← Previous</button>' +
                 '<span id="reader-progress" class="text-xs text-slate-500"></span>' +
-                '<button onclick="nextChapter()" id="next-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next →</button>' +
+                '<button data-next-chapter id="next-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next →</button>' +
                 '</div></div></div></div>';
         }
         
@@ -6805,16 +6891,18 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
             // Convert /view to /preview for iframe embedding
             const previewUrl = mat.viewUrl ? mat.viewUrl.replace('/view', '/preview') : '';
             
-            // Build buttons
+            // Build buttons (using data attributes for event delegation)
             let buttonsHTML = '';
             if (mat.viewUrl) {
-                buttonsHTML += '<button onclick="openMaterialViewer(\'' + previewUrl.replace(/'/g, "\\'") + '\', \'' + mat.title.replace(/'/g, "\\'") + '\')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase px-6 py-3 rounded-lg border border-slate-600 transition-all text-center">View Inline</button>';
+                const escapedPreviewUrl = previewUrl.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                const escapedTitle = mat.title.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                buttonsHTML += '<button data-material-viewer-url="' + escapedPreviewUrl + '" data-material-viewer-title="' + escapedTitle + '" class="material-viewer-btn flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase px-6 py-3 rounded-lg border border-slate-600 transition-all text-center">View Inline</button>';
             }
             if (mat.downloadUrl) {
                 buttonsHTML += '<a href="' + mat.downloadUrl + '" target="_blank" class="flex-1 ' + buttonColorClass + ' text-white text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center">Download</a>';
             }
             if (mat.digitalContent) {
-                buttonsHTML += '<button onclick="openDigitalReader(\'' + mat.id + '\')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center flex items-center justify-center gap-2">📖 Read</button>';
+                buttonsHTML += '<button data-digital-reader="' + mat.id + '" class="digital-reader-btn flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center flex items-center justify-center gap-2">📖 Read</button>';
             }
             
             sectionsHTML += '<div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-xl border border-slate-700 ' + bgClass + ' ' + borderClass + '">' +
@@ -6828,14 +6916,57 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         });
         sectionsHTML += '</div></section>';
         
+        // Add event delegation for Material Viewer buttons (always needed for materials)
+        combinedScripts += `
+// Material Viewer Event Delegation
+document.addEventListener('click', function(e) {
+    // Material Viewer button
+    var materialBtn = e.target.closest('[data-material-viewer-url]');
+    if (materialBtn) {
+        e.preventDefault();
+        var url = materialBtn.getAttribute('data-material-viewer-url');
+        var title = materialBtn.getAttribute('data-material-viewer-title');
+        if (typeof window.openMaterialViewer === 'function') {
+            window.openMaterialViewer(url, title);
+        } else {
+            // Fallback
+            var viewer = document.getElementById('material-viewer');
+            var frame = document.getElementById('material-frame');
+            var titleEl = document.getElementById('material-viewer-title');
+            if (viewer && frame && titleEl) {
+                frame.src = url;
+                titleEl.textContent = title;
+                viewer.classList.remove('hidden');
+                viewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+    }
+    
+    // Close Material Viewer button
+    if (e.target.closest('#material-viewer') && e.target.hasAttribute('data-close-material-viewer')) {
+        if (typeof window.closeMaterialViewer === 'function') {
+            window.closeMaterialViewer();
+        } else {
+            // Fallback
+            var viewer = document.getElementById('material-viewer');
+            var frame = document.getElementById('material-frame');
+            if (viewer && frame) {
+                viewer.classList.add('hidden');
+                frame.src = '';
+            }
+        }
+    }
+});
+`;
+        
         // Add digital reader scripts if needed
         if (digitalMats.length > 0) {
             combinedScripts += `
-// Digital Reader System
+// Digital Reader System - Using Event Delegation for Google Sites compatibility
 var DIGITAL_CONTENT = ${digitalContentJSON};
 var currentReader = { matId: null, chapterIdx: 0, data: null };
 
-window.openDigitalReader = function(matId) {
+function openDigitalReaderFn(matId) {
     var content = DIGITAL_CONTENT[matId];
     if (!content) { console.error('No digital content for', matId); return; }
     
@@ -6843,28 +6974,29 @@ window.openDigitalReader = function(matId) {
     
     document.getElementById('reader-title').innerHTML = '📖 ' + (content.title || 'Digital Resource');
     
+    // Build table of contents (using data attributes, not onclick)
     var tocHTML = '';
     (content.chapters || []).forEach(function(ch, idx) {
-        tocHTML += '<button onclick="goToChapter(' + idx + ')" class="toc-item w-full text-left px-3 py-2 rounded text-xs hover:bg-slate-800 transition-colors ' + (idx === 0 ? 'bg-emerald-900/50 text-emerald-400' : 'text-slate-400') + '" data-chapter="' + idx + '">' +
+        tocHTML += '<button data-toc-chapter="' + idx + '" class="toc-item w-full text-left px-3 py-2 rounded text-xs hover:bg-slate-800 transition-colors ' + (idx === 0 ? 'bg-emerald-900/50 text-emerald-400' : 'text-slate-400') + '" data-chapter="' + idx + '">' +
             '<span class="font-bold">' + (ch.number || (idx + 1)) + '.</span> ' + ch.title +
         '</button>';
     });
     document.getElementById('reader-toc-items').innerHTML = tocHTML;
     
-    renderChapter(0);
+    renderChapterFn(0);
     
     document.getElementById('digital-reader-container').classList.remove('hidden');
     document.getElementById('materials-list').classList.add('hidden');
     document.getElementById('material-viewer').classList.add('hidden');
-};
+}
 
-window.closeDigitalReader = function() {
+function closeDigitalReaderFn() {
     document.getElementById('digital-reader-container').classList.add('hidden');
     document.getElementById('materials-list').classList.remove('hidden');
     currentReader = { matId: null, chapterIdx: 0, data: null };
-};
+}
 
-function renderChapter(idx) {
+function renderChapterFn(idx) {
     if (!currentReader.data || !currentReader.data.chapters) return;
     var chapters = currentReader.data.chapters;
     if (idx < 0 || idx >= chapters.length) return;
@@ -6904,9 +7036,41 @@ function renderChapter(idx) {
     document.getElementById('reader-content').scrollTop = 0;
 }
 
-window.goToChapter = function(idx) { renderChapter(idx); };
-window.prevChapter = function() { renderChapter(currentReader.chapterIdx - 1); };
-window.nextChapter = function() { renderChapter(currentReader.chapterIdx + 1); };
+// EVENT DELEGATION for Digital Reader - More reliable in sandboxed environments like Google Sites
+document.addEventListener('click', function(e) {
+    // Digital Reader button
+    var readerBtn = e.target.closest('[data-digital-reader]');
+    if (readerBtn) {
+        e.preventDefault();
+        openDigitalReaderFn(readerBtn.getAttribute('data-digital-reader'));
+        return;
+    }
+    
+    // Close Digital Reader button
+    if (e.target.closest('#digital-reader-container') && e.target.hasAttribute('data-close-digital-reader')) {
+        closeDigitalReaderFn();
+        return;
+    }
+    
+    // TOC chapter buttons
+    var tocBtn = e.target.closest('[data-toc-chapter]');
+    if (tocBtn) {
+        renderChapterFn(parseInt(tocBtn.getAttribute('data-toc-chapter')));
+        return;
+    }
+    
+    // Prev/Next buttons
+    if (e.target.closest('#prev-btn') || e.target.closest('[data-prev-chapter]')) {
+        renderChapterFn(currentReader.chapterIdx - 1);
+        return;
+    }
+    if (e.target.closest('#next-btn') || e.target.closest('[data-next-chapter]')) {
+        renderChapterFn(currentReader.chapterIdx + 1);
+        return;
+    }
+});
+
+console.log('📖 Digital Reader initialized with event delegation (Single Module)');
 `;
         }
     }
