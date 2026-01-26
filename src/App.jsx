@@ -672,7 +672,9 @@ const generateMasterShell = (data) => {
         
         // --- CORE NAVIGATION LOGIC ---
         function switchView(view) {
-            // Close mobile nav if open (on mobile devices)
+            console.log('🔄 [switchView] Switching to view:', view);
+            
+            // 1. Handle Mobile Nav
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar-nav');
                 const overlay = document.getElementById('mobile-overlay');
@@ -682,19 +684,24 @@ const generateMasterShell = (data) => {
                 }
             }
             
+            // 2. Update Nav Buttons
             document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-            
-            // Hide all views generically
-            const allViews = document.querySelectorAll('[id^="view-"]');
-            allViews.forEach(v => v.classList.add('hidden'));
-
-            // Show specific view
-            const target = document.getElementById('view-' + view);
-            if(target) target.classList.remove('hidden');
-            
-            // Activate button
             const navBtn = document.getElementById('nav-' + view);
             if(navBtn) navBtn.classList.add('active');
+            
+            // 3. Hide All Views (both native divs and iframe containers)
+            const allViews = document.querySelectorAll('[id^="view-"]');
+            console.log('🔄 [switchView] Hiding', allViews.length, 'views');
+            allViews.forEach(v => v.classList.add('hidden'));
+
+            // 4. Show Target View
+            const target = document.getElementById('view-' + view);
+            if(target) {
+                target.classList.remove('hidden');
+                console.log('✅ [switchView] Showing view:', 'view-' + view);
+            } else {
+                console.error('❌ [switchView] View not found:', 'view-' + view);
+            }
             
             // Backward compatibility: Call module init if available
             if (window.COURSE_FACTORY_MODULES && window.COURSE_FACTORY_MODULES[view] && window.COURSE_FACTORY_MODULES[view].init) {
@@ -839,7 +846,9 @@ const MASTER_SHELL = `<!DOCTYPE html>
         
         // --- CORE NAVIGATION LOGIC ---
         function switchView(view) {
-            // Close mobile nav if open (on mobile devices)
+            console.log('🔄 [switchView] Switching to view:', view);
+            
+            // 1. Handle Mobile Nav
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar-nav');
                 const overlay = document.getElementById('mobile-overlay');
@@ -849,19 +858,24 @@ const MASTER_SHELL = `<!DOCTYPE html>
                 }
             }
             
+            // 2. Update Nav Buttons
             document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-            
-            // Hide all views generically
-            const allViews = document.querySelectorAll('[id^="view-"]');
-            allViews.forEach(v => v.classList.add('hidden'));
-
-            // Show specific view
-            const target = document.getElementById('view-' + view);
-            if(target) target.classList.remove('hidden');
-            
-            // Activate button
             const navBtn = document.getElementById('nav-' + view);
             if(navBtn) navBtn.classList.add('active');
+            
+            // 3. Hide All Views (both native divs and iframe containers)
+            const allViews = document.querySelectorAll('[id^="view-"]');
+            console.log('🔄 [switchView] Hiding', allViews.length, 'views');
+            allViews.forEach(v => v.classList.add('hidden'));
+
+            // 4. Show Target View
+            const target = document.getElementById('view-' + view);
+            if(target) {
+                target.classList.remove('hidden');
+                console.log('✅ [switchView] Showing view:', 'view-' + view);
+            } else {
+                console.error('❌ [switchView] View not found:', 'view-' + view);
+            }
         }
 
         function openPDF(url, title) {
@@ -1112,36 +1126,11 @@ function cleanModuleHTML(html) {
 }
 
 /**
- * Clean module script: convert const/let to var, fix initialization checks
+ * Clean module script: minimal processing since iframes handle scoping
+ * With Iframe Isolation strategy, we no longer need to rewrite variables or IDs
  */
 function cleanModuleScript(script) {
-  if (!script) return '';
-  
-  let cleaned = script;
-  
-  // Replace const/let declarations that might conflict (convert to var for compatibility)
-  // This prevents "Identifier already declared" errors when scripts run multiple times
-  
-  // 1. Convert 'const x =' or 'let x =' to 'var x ='
-  cleaned = cleaned.replace(/\b(const|let)\s+(\w+)\s*=/g, 'var $2 =');
-  
-  // 2. Convert 'let x;' or 'const x;' (declarations without assignment) to 'var x;'
-  // This prevents the "Identifier already declared" crash when multiple modules use the same variable name
-  cleaned = cleaned.replace(/\b(const|let)\s+(\w+)\s*([;,\n])/g, 'var $2$3');
-  
-  // Replace innerHTML.trim() === "" with a forced clear + check
-  cleaned = cleaned.replace(
-    /if\s*\(\s*sc\s*&&\s*sc\.innerHTML\.trim\(\)\s*===\s*['"]['""]\s*\)\s*{/g,
-    'if (sc) { sc.innerHTML = "";'
-  );
-  
-  // Replace sc.children.length === 0 with a forced clear
-  cleaned = cleaned.replace(
-    /if\s*\(\s*sc\s*&&\s*sc\.children\.length\s*===\s*0\s*\)\s*{/g,
-    'if (sc) { sc.innerHTML = "";'
-  );
-  
-  return cleaned;
+  return script ? script.trim() : '';
 }
 
 /**
@@ -1173,21 +1162,12 @@ function validateModule(module, isNew = false) {
 
   // Type-specific validation
   if (module.type === 'standalone') {
-    if (!module.html || !module.html.trim()) {
+    // Check for rawHtml (new format) OR html (legacy format)
+    const hasContent = (module.rawHtml && module.rawHtml.trim()) || (module.html && module.html.trim());
+    if (!hasContent) {
       errors.push('Standalone modules must have HTML content');
-    } else {
-      // Check if HTML has a root container with matching ID
-      try {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(module.html, 'text/html');
-        const rootElement = doc.querySelector(`#${module.id}`);
-        if (!rootElement) {
-          warnings.push(`HTML should contain a root element with id="${module.id}"`);
-        }
-      } catch (e) {
-        warnings.push('Could not parse HTML to check for root element');
-      }
     }
+    // Note: We no longer require a root element with matching ID since modules run in iframes
   } else if (module.type === 'external') {
     if (!module.url || !module.url.trim()) {
       errors.push('External modules must have a URL');
@@ -2242,17 +2222,21 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   };
 
   // MODULE MANAGER FUNCTIONS
+  // ========================================
+  // SIMPLIFIED HARVESTING: Store raw HTML as-is
+  // The module runs in an iframe so no parsing/transformation needed
+  // ========================================
   const addStandaloneModule = () => {
     try {
       if (!moduleManagerID.trim()) {
         setModuleManagerStatus('error');
-        setModuleManagerMessage('Please provide a Module ID (e.g., view-hss3020)');
+        setModuleManagerMessage('Please provide a Module ID (e.g., view-focus-phase3)');
         return;
       }
       
       if (!moduleManagerHTML.trim()) {
         setModuleManagerStatus('error');
-        setModuleManagerMessage('Please paste your complete standalone HTML file');
+        setModuleManagerMessage('Please paste your complete HTML file');
         return;
       }
       
@@ -2267,70 +2251,45 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         return;
       }
       
-      // Parse the HTML
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(moduleManagerHTML, 'text/html');
-      
-      // Extract body content
-      let bodyContent = doc.body ? doc.body.innerHTML : '';
-      
-      if (!bodyContent.trim()) {
+      // Basic validation: Check if it looks like HTML
+      const rawHtml = moduleManagerHTML.trim();
+      if (!rawHtml.includes('<') || !rawHtml.includes('>')) {
         setModuleManagerStatus('error');
-        setModuleManagerMessage('No HTML content found in <body> tag');
+        setModuleManagerMessage('This does not appear to be valid HTML');
         return;
       }
       
-      // Extract and scope CSS
-      let scopedCSS = '';
-      const styleTags = Array.from(doc.querySelectorAll('style'));
-      styleTags.forEach(style => {
-        const originalCSS = style.textContent || style.innerHTML;
-        scopedCSS += scopeCSS(originalCSS, moduleId) + '\n';
-      });
+      // Extract title from HTML if not provided
+      let title = moduleManagerTitle.trim();
+      if (!title) {
+        const titleMatch = rawHtml.match(/<title>([^<]+)<\/title>/i);
+        if (titleMatch) {
+          title = titleMatch[1].trim();
+        } else {
+          title = moduleId.replace('view-', '').replace(/-/g, ' ');
+        }
+      }
       
-      // Extract scripts (exclude CDN scripts)
-      const scripts = Array.from(doc.querySelectorAll('script'))
-        .filter(s => !s.src || (!s.src.includes('cdn') && !s.src.includes('tailwind')))
-        .map(s => s.textContent)
-        .join('\n\n');
-      
-      // Wrap body content in module container
-      const wrappedHTML = `<div id="${moduleId}" class="w-full h-full custom-scroll hidden p-4 md:p-8">\n${bodyContent}\n</div>`;
-      
-      // Create module object
+      // Create module object with RAW HTML stored as-is
+      // No parsing, no CSS extraction, no script extraction
+      // The iframe will handle everything
       const newModule = {
         id: moduleId,
-        title: moduleManagerTitle || moduleId.replace('view-', '').replace(/-/g, ' '),
+        title: title,
         type: 'standalone',
-        html: wrappedHTML,
-        css: scopedCSS,
-        script: scripts || '',
-        // Initialize history with version 1 (original state)
+        // Store the COMPLETE raw HTML document - this is the key change
+        rawHtml: rawHtml,
+        // Keep these for backward compatibility (empty for new modules)
+        html: '',
+        css: '',
+        script: '',
+        // History for version tracking
         history: [{
           timestamp: new Date().toISOString(),
-          title: moduleManagerTitle || moduleId.replace('view-', '').replace(/-/g, ' '),
-          html: wrappedHTML,
-          css: scopedCSS,
-          script: scripts || ''
+          title: title,
+          rawHtml: rawHtml
         }]
       };
-      
-      // Validate module before saving
-      const validation = validateModule(newModule, true);
-      if (!validation.isValid) {
-        setModuleManagerStatus('error');
-        setModuleManagerMessage('Validation failed: ' + validation.errors.join(', '));
-        if (validation.warnings.length > 0) {
-          console.warn('Module warnings:', validation.warnings);
-        }
-        return;
-      }
-      
-      // Show warnings but allow save
-      if (validation.warnings.length > 0) {
-        console.warn('Module warnings:', validation.warnings);
-        // Don't change status to warning, just log it - success message is more important
-      }
       
       // Add to project
       setProjectData(prev => {
@@ -2348,7 +2307,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       setModuleManagerID('');
       setModuleManagerTitle('');
       setModuleManagerStatus('success');
-      setModuleManagerMessage(`✅ Module "${newModule.title}" added successfully!`);
+      setModuleManagerMessage(`✅ Module "${title}" added successfully! It will run in an isolated iframe.`);
       
       setTimeout(() => {
         setModuleManagerStatus(null);
@@ -3932,7 +3891,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                             <Box size={20} /> Module Manager
                         </h3>
                         <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-                            Add standalone HTML modules (like HSS3020) or external link modules to your course. Modules appear as sidebar buttons and can be shown/hidden.
+                            Add complete HTML pages as modules. Each module runs in its own <span className="text-emerald-400 font-bold">isolated iframe</span> - your code works exactly as you created it with no modifications.
                         </p>
                         
                         {/* Type Selector */}
@@ -4005,8 +3964,8 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             placeholder="<!DOCTYPE html>&#10;<html>&#10;<head>...</head>&#10;<body>...</body>&#10;</html>"
                                             className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-indigo-100 text-xs font-mono h-64 resize-y focus:border-indigo-500 outline-none"
                                         />
-                                        <p className="text-[10px] text-slate-500 mt-1 italic">
-                                            Paste your entire standalone HTML file. CSS will be auto-scoped to prevent conflicts.
+                                        <p className="text-[10px] text-emerald-400 mt-1 font-bold">
+                                            ✓ Your code runs AS-IS in an isolated iframe - no modifications needed!
                                         </p>
                                     </div>
                                     
@@ -5784,13 +5743,18 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       scriptInjection += `\n        ${navScripts}\n        ${assessmentScripts}\n`;
       
     } else {
-      // Handle different module types
+      // ========================================
+      // CUSTOM MODULES (Iframe Isolation Strategy)
+      // ========================================
+      // Each custom module runs in its own iframe - completely isolated
+      // This prevents ID collisions, JS conflicts, and CSS pollution
+      
       const moduleId = item.id || itemCode.id || '';
       const shortId = moduleId.replace('view-', '');
       
-      // Add navigation button
+      // Add Navigation Button
       if (moduleId) {
-        // External link modules with newtab open in new window
+        // External link modules with newtab open in new window - No iframe needed
         if (item.type === 'external' && item.linkType === 'newtab') {
           navInjection += `\n            <button onclick="window.open('${item.url}', '_blank', 'noopener,noreferrer')" id="nav-${shortId}" class="nav-item">\n                <span class="w-2 h-2 rounded-full bg-slate-600"></span>${item.title}\n            </button>`;
         } else {
@@ -5798,47 +5762,81 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
         }
       }
       
-      // Use unified module extraction
-      const moduleContent = extractModuleContent(item);
-      
-      // Inject scoped CSS if provided (standalone modules)
-      if (moduleContent.css) {
-        contentInjection += `\n        <style id="style-${moduleId}">\n${moduleContent.css}\n        </style>`;
-      }
-      
-      // Inject HTML with script
-      if (moduleContent.html) {
-        let cleanHTML = cleanModuleHTML(moduleContent.html);
-        let moduleScript = moduleContent.script || '';
+      // Skip content injection for external links that open in new tab
+      if (item.type === 'external' && item.linkType === 'newtab') {
+        // No content injection needed - handled by nav button onclick
+      } else {
+        // Determine the iframe content
+        let iframeDoc = '';
         
-        // 1. Capture the OLD root ID from the source HTML (e.g., view-phase1)
-        const oldIdMatch = cleanHTML.match(/id="(view-[^"]+)"/);
-        const oldId = oldIdMatch ? oldIdMatch[1] : null;
-        
-        // 2. Calculate the correct view ID that switchView will look for
-        // switchView expects 'view-' + shortId, so we use viewId instead of moduleId
-        const viewId = 'view-' + shortId;
-        
-        // 3. Inject the NEW unique system viewId into the HTML
-        if (oldId) {
-          cleanHTML = cleanHTML.replace(`id="${oldId}"`, `id="${viewId}"`);
-        } else if (cleanHTML.includes('<div')) {
-          cleanHTML = cleanHTML.replace('<div', `<div id="${viewId}"`);
+        // PRIORITY 1: Use rawHtml if available (new simplified format)
+        // This is the complete HTML document as pasted by the user - no transformation
+        if (item.rawHtml) {
+          iframeDoc = item.rawHtml;
+        } 
+        // PRIORITY 2: Fallback for legacy modules (parsed html/css/script)
+        else {
+          const moduleContent = extractModuleContent(item);
+          if (!moduleContent.html) {
+            // No content to render
+            return;
+          }
+          
+          let rawHTML = moduleContent.html || '';
+          let rawScript = moduleContent.script || '';
+          let rawCSS = moduleContent.css || '';
+          
+          // Build a complete HTML document for legacy modules
+          iframeDoc = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,700;1,400;1,900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background-color: #0f172a; 
+            color: #e2e8f0; 
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
         }
-
-        // 4. SCRIPT SYNC: Clean the script and replace references to the old ID with the new one
-        // This ensures buttons inside the module (like step selectors) target the NEW ID, not the old one
-        let finalScript = cleanModuleScript(moduleScript);
-        if (oldId && finalScript && oldId !== viewId) {
-          // Replace all occurrences of the old ID with the new unique viewId
-          // This handles CSS selectors (#view-phase1), string references ('view-phase1'), etc.
-          finalScript = finalScript.split(`#${oldId}`).join(`#${viewId}`);
-          finalScript = finalScript.split(`'${oldId}'`).join(`'${viewId}'`);
-          finalScript = finalScript.split(`"${oldId}"`).join(`"${viewId}"`);
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        ${rawCSS}
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+    ${rawHTML}
+    <script>
+        (function() {
+            ${rawScript}
+        })();
+    <\/script>
+</body>
+</html>`;
         }
-
-        const htmlWithScript = cleanHTML + (finalScript ? '\n<script>\n' + finalScript + '\n</script>' : '');
-        contentInjection += '\n        ' + htmlWithScript + '\n';
+        
+        // Escape the HTML for use in srcdoc attribute
+        const escapedDoc = iframeDoc
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+        
+        // Create the Container DIV with iframe
+        const containerHTML = `
+        <div id="view-${shortId}" class="w-full h-full hidden module-container">
+            <iframe 
+                srcdoc="${escapedDoc}" 
+                class="w-full h-full border-0" 
+                style="min-height: 100vh;"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+            ></iframe>
+        </div>`;
+        
+        contentInjection += '\n' + containerHTML + '\n';
       }
     }
   });
@@ -7256,8 +7254,8 @@ const checkModuleDependencies = (moduleId, projectData) => {
   allModules.forEach(mod => {
     if (mod.id === moduleId) return; // Skip self
     
-    // Check HTML content
-    const moduleContent = mod.html || mod.code?.html || '';
+    // Check HTML content (including rawHtml for new format)
+    const moduleContent = mod.rawHtml || mod.html || mod.code?.html || '';
     if (moduleContent.includes(moduleId) || moduleContent.includes(shortId)) {
       dependencies.modules.push({
         id: mod.id,
@@ -7632,24 +7630,36 @@ export default function App() {
       return;
     }
     
-    // Handle standalone HTML modules - reconstruct full document
+    // Handle standalone HTML modules
     if (item.type === 'standalone') {
-      // Reconstruct full HTML document with embedded CSS and script
-      let fullDocument = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>' + (item.title || 'Module') + '</title>\n';
+      // PRIORITY 1: Use rawHtml if available (new simplified format)
+      if (item.rawHtml) {
+        setEditForm({
+          title: item.title,
+          fullDocument: item.rawHtml,
+          id: item.id,
+          section: 'Current Course',
+          moduleType: 'standalone',
+          hasRawHtml: true  // Flag to indicate this uses rawHtml format
+        });
+        setEditingModule(item.id);
+        return;
+      }
       
-      // Add CSS if it exists
+      // FALLBACK: Reconstruct full document from parsed parts (legacy standalone)
+      let fullDocument = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>' + (item.title || 'Module') + '</title>\n';
+      fullDocument += '<script src="https://cdn.tailwindcss.com"><\/script>\n';
+      
       if (item.css) {
         fullDocument += '<style>\n' + item.css + '\n</style>\n';
       }
       
       fullDocument += '</head>\n<body>\n';
       
-      // Add HTML content
       if (item.html) {
         fullDocument += item.html + '\n';
       }
       
-      // Add script if it exists
       if (item.script) {
         fullDocument += '<script>\n' + item.script + '\n</script>\n';
       }
@@ -7661,7 +7671,8 @@ export default function App() {
         fullDocument: fullDocument,
         id: item.id,
         section: 'Current Course',
-        moduleType: 'standalone'
+        moduleType: 'standalone',
+        hasRawHtml: false
       });
       setEditingModule(item.id);
       return;
@@ -7697,11 +7708,14 @@ export default function App() {
     const newSnapshot = {
       timestamp: new Date().toISOString(),
       title: currentModule.title,
-      ...(currentModule.type === 'standalone' ? {
-        html: currentModule.html,
-        css: currentModule.css,
-        script: currentModule.script
-      } : currentModule.type === 'external' ? {
+      ...(currentModule.type === 'standalone' ? (
+        // Use rawHtml if available (new format), otherwise use legacy fields
+        currentModule.rawHtml ? { rawHtml: currentModule.rawHtml } : {
+          html: currentModule.html,
+          css: currentModule.css,
+          script: currentModule.script
+        }
+      ) : currentModule.type === 'external' ? {
         url: currentModule.url,
         linkType: currentModule.linkType
       } : {
@@ -7732,38 +7746,18 @@ export default function App() {
         history: updatedHistory
       };
     }
-    // Handle standalone HTML modules - parse full document
+    // Handle standalone HTML modules - SIMPLIFIED: store rawHtml directly
     else if (editForm.moduleType === 'standalone') {
-      // Parse the full document to extract HTML, CSS, and script
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(editForm.fullDocument, 'text/html');
-      
-      // Extract CSS from <style> tags
-      const styleTags = Array.from(doc.querySelectorAll('style'));
-      let extractedCSS = '';
-      styleTags.forEach(style => {
-        extractedCSS += (style.textContent || style.innerHTML) + '\n';
-      });
-      
-      // Extract scripts (exclude CDN scripts)
-      const scripts = Array.from(doc.querySelectorAll('script'))
-        .filter(s => !s.src || (!s.src.includes('cdn') && !s.src.includes('tailwind')))
-        .map(s => s.textContent || s.innerHTML)
-        .join('\n\n');
-      
-      // Extract body content
-      let bodyContent = doc.body ? doc.body.innerHTML : '';
-      
-      // Scope the CSS with module ID
-      const moduleId = items[idx].id || editForm.id;
-      const scopedCSS = scopeCSS(extractedCSS.trim(), moduleId);
-      
+      // Store the complete HTML document as-is - NO PARSING
+      // The iframe will handle everything
       items[idx] = {
         ...items[idx],
         title: editForm.title,
-        html: bodyContent.trim(),
-        css: scopedCSS,
-        script: scripts.trim(),
+        rawHtml: editForm.fullDocument.trim(),  // Store complete document
+        // Clear legacy fields (not needed with rawHtml)
+        html: '',
+        css: '',
+        script: '',
         type: 'standalone',
         history: updatedHistory
       };
@@ -7807,13 +7801,26 @@ export default function App() {
     
     // Restore the version based on module type
     if (module.type === 'standalone') {
-      items[idx] = {
-        ...items[idx],
-        title: version.title,
-        html: version.html || '',
-        css: version.css || '',
-        script: version.script || ''
-      };
+      // Check if version has rawHtml (new format) or legacy fields
+      if (version.rawHtml) {
+        items[idx] = {
+          ...items[idx],
+          title: version.title,
+          rawHtml: version.rawHtml,
+          html: '',
+          css: '',
+          script: ''
+        };
+      } else {
+        items[idx] = {
+          ...items[idx],
+          title: version.title,
+          rawHtml: '',  // Clear rawHtml if reverting to legacy format
+          html: version.html || '',
+          css: version.css || '',
+          script: version.script || ''
+        };
+      }
     } else if (module.type === 'external') {
       items[idx] = {
         ...items[idx],
@@ -8868,7 +8875,7 @@ Questions.filter((_, i) => i !== index);
               {editForm.moduleType === 'standalone' && (
               <div>
                   <label className="block text-sm font-bold text-slate-300 mb-2">Full HTML Document</label>
-                  <p className="text-xs text-slate-400 mb-2">Edit the complete HTML document (includes CSS and JavaScript)</p>
+                  <p className="text-xs text-emerald-400 mb-2 font-medium">Edit the complete HTML document - your code runs as-is in an iframe</p>
                 <textarea 
                     value={editForm.fullDocument || ''} 
                     onChange={(e) => setEditForm({...editForm, fullDocument: e.target.value})}
@@ -9034,130 +9041,86 @@ Questions.filter((_, i) => i !== index);
             <div className="p-0 overflow-hidden max-h-[calc(90vh-80px)]">
               <iframe 
                 srcDoc={(() => {
-                  // Use unified module extraction to determine type
-                  const moduleContent = extractModuleContent(previewModule);
-                  const moduleType = moduleContent.type;
+                  // ========================================
+                  // SIMPLIFIED PREVIEW: Use rawHtml directly when available
+                  // ========================================
                   
-                  // Handle external modules separately (they need special iframe handling)
-                  if (moduleType === 'external') {
-                    // Validate and sanitize URL
+                  // PRIORITY 1: If module has rawHtml, use it directly (new simplified format)
+                  // This shows the module EXACTLY as the user pasted it
+                  if (previewModule.rawHtml) {
+                    return previewModule.rawHtml;
+                  }
+                  
+                  // PRIORITY 2: Handle external modules (links to other sites)
+                  if (previewModule.type === 'external') {
                     const urlValidation = validateUrl(previewModule.url || '');
                     const safeUrl = urlValidation.safeUrl;
                     const safeTitle = escapeHtml(previewModule.title || 'External Module');
                     
                     if (previewModule.linkType === 'iframe') {
-                      return `
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                          <style>
-                            body { 
-                              margin: 0; 
-                              padding: 0; 
-                              background: #020617; 
-                              display: flex; 
-                              align-items: center; 
-                              justify-content: center; 
-                              min-height: 100vh; 
-                              font-family: 'Inter', sans-serif; 
-                              color: #e2e8f0; 
-                            }
-                            iframe { 
-                              width: 100%; 
-                              height: 100vh; 
-                              border: none; 
-                            }
-                          </style>
-                        </head>
-                        <body>
-                          <iframe src="${safeUrl}" width="100%" height="100%" style="border:none;"></iframe>
-                        </body>
-                        </html>
-                      `;
+                      return `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { margin: 0; padding: 0; background: #020617; }
+    iframe { width: 100%; height: 100vh; border: none; }
+  </style>
+</head>
+<body>
+  <iframe src="${safeUrl}" width="100%" height="100%" style="border:none;"></iframe>
+</body>
+</html>`;
                     } else {
-                      return `
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                          <style>
-                            body { 
-                              background: #020617; 
-                              color: #e2e8f0; 
-                              font-family: 'Inter', sans-serif; 
-                              padding: 40px; 
-                              text-align: center; 
-                              min-height: 100vh; 
-                              display: flex; 
-                              flex-direction: column; 
-                              align-items: center; 
-                              justify-content: center; 
-                            }
-                            a { 
-                              color: #0ea5e9; 
-                              text-decoration: underline; 
-                            }
-                          </style>
-                        </head>
-                        <body>
-                          <h2 class="text-2xl font-bold mb-4">${safeTitle}</h2>
-                          <p class="mb-6 text-slate-400">This module opens in a new tab.</p>
-                          <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-lg">
-                            Open ${safeTitle} →
-                          </a>
-                        </body>
-                        </html>
-                      `;
+                      return `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { background: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 40px; text-align: center; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    a { color: #0ea5e9; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">${safeTitle}</h2>
+  <p style="margin-bottom: 1.5rem; color: #94a3b8;">This module opens in a new tab.</p>
+  <a href="${safeUrl}" target="_blank" rel="noopener noreferrer">Open ${safeTitle} →</a>
+</body>
+</html>`;
                     }
                   }
                   
-                  // For all other modules, use buildSiteHtml with only this module
-                  // Extract view key from module
-                  let itemCode = previewModule.code || {};
-                  if (typeof itemCode === 'string') {
-                    try { itemCode = JSON.parse(itemCode); } catch(e) {}
-                  }
-                  // Use code.id if available (preferred), otherwise extract from module.id
-                  const moduleId = itemCode.id || previewModule.id || '';
-                  let shortId = moduleId.replace('view-', '');
-                  // Handle materials module detection
-                  if (itemCode.id === 'view-materials') {
-                    shortId = 'materials';
-                  } else if (!shortId && moduleId) {
-                    // Fallback: try to extract from HTML if module has view-* id in HTML
-                    const htmlMatch = (moduleContent.html || '').match(/id=["']view-([^"']+)["']/);
-                    if (htmlMatch) {
-                      shortId = htmlMatch[1];
-                    }
+                  // PRIORITY 3: Fallback for legacy modules (parsed html/css/script)
+                  // Build a complete HTML document for preview
+                  const moduleContent = extractModuleContent(previewModule);
+                  if (moduleContent.html) {
+                    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,700;1,400;1,900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+  <style>
+    body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+    ${moduleContent.css || ''}
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+  ${moduleContent.html}
+  <script>
+    (function() {
+      ${moduleContent.script || ''}
+    })();
+  <\/script>
+</body>
+</html>`;
                   }
                   
-                  // Build preview using same pipeline as compile
-                  try {
-                    return buildSiteHtml({
-                      modules: [previewModule],
-                      toolkit: toolkit,
-                      excludedIds: [],
-                      initialViewKey: shortId,
-                      projectData
-                    });
-                  } catch (error) {
-                    console.error('Preview build error:', error);
-                    return `
-                      <!DOCTYPE html>
-                      <html>
-                      <head>
-                        <meta charset="UTF-8">
-                        <title>Preview Error</title>
-                        <style>
-                          body { background: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 40px; }
-                        </style>
-                      </head>
-                      <body>
-                        <h2 class="text-2xl font-bold text-red-400">Preview Error</h2>
-                        <p class="mt-4 text-slate-400">${escapeHtml(error.message)}</p>
-                      </body>
-                      </html>
-                    `;
-                  }
+                  // No content available
+                  return `<!DOCTYPE html>
+<html>
+<head><style>body { background: #020617; color: #e2e8f0; font-family: sans-serif; padding: 40px; text-align: center; }</style></head>
+<body><h2>No Preview Available</h2><p>This module has no content to preview.</p></body>
+</html>`;
                 })()}
                 key={previewModule.id || previewModule.title}
                 className="w-full h-full border-0"
