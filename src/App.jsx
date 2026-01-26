@@ -3644,6 +3644,44 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         </div>
                                     )}
                                 </div>
+
+                                {/* DANGER ZONE - Clear All Data */}
+                                <div className="mt-8 pt-6 border-t border-rose-900/50">
+                                    <h4 className="text-xs font-bold text-rose-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                        <AlertTriangle size={14} /> Danger Zone
+                                    </h4>
+                                    <div className="p-4 bg-rose-950/30 border border-rose-900/50 rounded-lg space-y-3">
+                                        <p className="text-xs text-rose-300">
+                                            Clear all saved data to start fresh. This will delete your current course, all modules, assessments, and settings. <strong>This cannot be undone.</strong>
+                                        </p>
+                                        <button 
+                                            onClick={() => {
+                                                if (window.confirm('⚠️ WARNING: This will permanently delete ALL your course data including:\n\n• Course settings\n• All modules\n• All assessments\n• All materials\n\nAre you sure you want to continue?')) {
+                                                    if (window.confirm('🚨 FINAL CONFIRMATION: Type "DELETE" in the next prompt to confirm.\n\nClick OK to proceed with deletion.')) {
+                                                        const userInput = window.prompt('Type DELETE to confirm:');
+                                                        if (userInput === 'DELETE') {
+                                                            localStorage.removeItem('course_factory_v2_data');
+                                                            localStorage.removeItem('course_factory_backup');
+                                                            // Clear any other related keys
+                                                            Object.keys(localStorage).forEach(key => {
+                                                                if (key.startsWith('courseProgress_') || key.startsWith('course_factory')) {
+                                                                    localStorage.removeItem(key);
+                                                                }
+                                                            });
+                                                            alert('✅ All data cleared! The page will now reload.');
+                                                            window.location.reload();
+                                                        } else {
+                                                            alert('Deletion cancelled. Your data is safe.');
+                                                        }
+                                                    }
+                                                }
+                                            }}
+                                            className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 rounded text-sm flex items-center justify-center gap-2 transition-colors"
+                                        >
+                                            <Trash2 size={16} /> Clear All Data & Start Fresh
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -8077,6 +8115,163 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
             >
               <Trash2 size={16} /> Clear Cache
             </button>
+
+            <button
+              onClick={async () => {
+                if (window.confirm('🔄 Force Refresh?\n\nThis will:\n• Clear browser cache for this site\n• Clear any service workers\n• Reload with fresh code\n\nYour project data will be preserved.')) {
+                  try {
+                    // Clear service worker caches
+                    if ('caches' in window) {
+                      const cacheNames = await caches.keys();
+                      await Promise.all(cacheNames.map(name => caches.delete(name)));
+                    }
+                    
+                    // Unregister service workers
+                    if ('serviceWorker' in navigator) {
+                      const registrations = await navigator.serviceWorker.getRegistrations();
+                      await Promise.all(registrations.map(reg => reg.unregister()));
+                    }
+                    
+                    // Force hard reload bypassing cache
+                    window.location.reload(true);
+                  } catch (e) {
+                    // Fallback: just do a hard reload
+                    window.location.reload(true);
+                  }
+                }
+              }}
+              className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all"
+            >
+              <RefreshCw size={16} /> Force Refresh (Get Latest Code)
+            </button>
+
+            <div className="border-t border-rose-900/50 pt-4 mt-4">
+              <p className="text-[10px] text-rose-400 uppercase font-bold mb-2 flex items-center gap-1">
+                <AlertTriangle size={12} /> Danger Zone
+              </p>
+              <button
+                onClick={() => {
+                  if (window.confirm('⚠️ FULL RESET WARNING!\n\nThis will permanently delete:\n• All your materials (but keep Materials module)\n• All your assessments (but keep Assessments module)\n• All other custom modules\n• All toolkit items\n\nThe Course Materials and Assessments containers will remain empty.\n\nContinue?')) {
+                    const userInput = window.prompt('Type RESET to confirm full data wipe:');
+                    if (userInput === 'RESET') {
+                      // Get the current Course Materials and Assessments modules from PROJECT_DATA defaults
+                      // Keep their structure but clear their content arrays
+                      const cleanProject = {
+                        "Current Course": {
+                          name: "New Course",
+                          modules: [
+                            // Course Materials module - KEEP but empty materials
+                            {
+                              id: "item-1768749223001",
+                              title: "Course Materials",
+                              type: "standalone",
+                              code: { id: "view-materials" },
+                              materials: [], // EMPTY
+                              html: `<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
+                                <div class="max-w-5xl mx-auto space-y-8">
+                                  <div class="mb-12">
+                                    <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Course <span class="text-sky-500">Materials</span></h2>
+                                    <p class="text-xs text-slate-400 font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
+                                  </div>
+                                  <div id="pdf-viewer-container" class="hidden mb-12 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl">
+                                    <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-slate-700">
+                                      <span id="viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Document Viewer</span>
+                                      <button onclick="closeViewer()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
+                                    </div>
+                                    <iframe id="pdf-frame" src="" width="100%" height="600" style="border:none;"></iframe>
+                                  </div>
+                                  <div class="grid grid-cols-1 gap-4" id="materials-container">
+                                    <p class="text-center text-slate-500 italic py-8">No materials yet. Add materials in the builder.</p>
+                                  </div>
+                                </div>
+                              </div>`,
+                              css: "",
+                              script: `function renderMaterials() {
+                                const container = document.getElementById('materials-container');
+                                if (!container) return;
+                                if (window.courseMaterials && window.courseMaterials.length > 0) {
+                                  container.innerHTML = window.courseMaterials.map(mat => \`<div class="material-card">\${mat.title}</div>\`).join('');
+                                }
+                              }
+                              if (document.readyState === 'loading') {
+                                document.addEventListener('DOMContentLoaded', renderMaterials);
+                              } else {
+                                renderMaterials();
+                              }`
+                            },
+                            // Assessments module - KEEP but empty assessments
+                            {
+                              id: "item-assessments",
+                              title: "Assessments",
+                              type: "standalone",
+                              assessments: [], // EMPTY
+                              html: `<div id="view-assessments" class="w-full h-full custom-scroll p-8 md:p-12">
+                                <div class="max-w-5xl mx-auto space-y-8">
+                                  <div class="mb-12">
+                                    <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Assessment <span class="text-purple-500">Center</span></h2>
+                                    <p class="text-xs text-slate-400 font-mono uppercase tracking-widest mt-2">Quizzes, tests, and reflection exercises.</p>
+                                  </div>
+                                  <div id="assessments-container" class="space-y-6">
+                                    <p class="text-center text-slate-500 italic py-8">No assessments yet. Create assessments in the builder.</p>
+                                  </div>
+                                </div>
+                              </div>`,
+                              css: "",
+                              script: `function renderAssessments() {
+                                const container = document.getElementById('assessments-container');
+                                if (!container) return;
+                                if (window.courseAssessments && window.courseAssessments.length > 0) {
+                                  container.innerHTML = window.courseAssessments.map(assessment => '<div class="assessment-wrapper mb-8">' + assessment.html + '</div>').join('');
+                                  window.courseAssessments.forEach((assessment) => {
+                                    if (assessment.script) {
+                                      try { eval(assessment.script); } catch(e) { console.error('Assessment script error:', e); }
+                                    }
+                                  });
+                                }
+                              }
+                              if (document.readyState === 'loading') {
+                                document.addEventListener('DOMContentLoaded', renderAssessments);
+                              } else {
+                                renderAssessments();
+                              }`
+                            }
+                          ]
+                        },
+                        "Global Toolkit": []
+                      };
+                      
+                      // IMMEDIATELY update React state (clears UI now)
+                      setProjectData(cleanProject);
+                      
+                      // Save to localStorage (persists after reload)
+                      localStorage.setItem('course_factory_v2_data', JSON.stringify(cleanProject));
+                      
+                      // Clear any other related keys
+                      localStorage.removeItem('course_factory_backup');
+                      Object.keys(localStorage).forEach(key => {
+                        if (key.startsWith('courseProgress_')) {
+                          localStorage.removeItem(key);
+                        }
+                      });
+                      
+                      // Clear browser caches too
+                      if ('caches' in window) {
+                        caches.keys().then(names => {
+                          names.forEach(name => caches.delete(name));
+                        });
+                      }
+                      
+                      alert('✅ Reset complete! Course Materials and Assessments modules preserved (but emptied). All other content cleared.');
+                    } else {
+                      alert('Reset cancelled. Your data is safe.');
+                    }
+                  }
+                }}
+                className="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all"
+              >
+                <Trash2 size={16} /> Full Reset (Delete Everything)
+              </button>
+            </div>
           </div>
         </div>
       </div>
