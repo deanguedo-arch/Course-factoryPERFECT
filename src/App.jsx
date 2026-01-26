@@ -94,6 +94,7 @@ const PROJECT_DATA = {
         id: "item-1768749223001",
         title: "Course Materials",
         type: "standalone",
+        code: { id: "view-materials" },
         materials: [
           {
             id: "mat-00",
@@ -694,6 +695,15 @@ const generateMasterShell = (data) => {
             // Activate button
             const navBtn = document.getElementById('nav-' + view);
             if(navBtn) navBtn.classList.add('active');
+            
+            // Backward compatibility: Call module init if available
+            if (window.COURSE_FACTORY_MODULES && window.COURSE_FACTORY_MODULES[view] && window.COURSE_FACTORY_MODULES[view].init) {
+                try {
+                    window.COURSE_FACTORY_MODULES[view].init();
+                } catch(e) {
+                    console.error('Module init error:', e);
+                }
+            }
         }
 
         function openPDF(url, title) {
@@ -1111,8 +1121,13 @@ function cleanModuleScript(script) {
   
   // Replace const/let declarations that might conflict (convert to var for compatibility)
   // This prevents "Identifier already declared" errors when scripts run multiple times
-  cleaned = cleaned.replace(/\bconst\s+(\w+)\s*=/g, 'var $1 =');
-  cleaned = cleaned.replace(/\blet\s+(\w+)\s*=/g, 'var $1 =');
+  
+  // 1. Convert 'const x =' or 'let x =' to 'var x ='
+  cleaned = cleaned.replace(/\b(const|let)\s+(\w+)\s*=/g, 'var $2 =');
+  
+  // 2. Convert 'let x;' or 'const x;' (declarations without assignment) to 'var x;'
+  // This prevents the "Identifier already declared" crash when multiple modules use the same variable name
+  cleaned = cleaned.replace(/\b(const|let)\s+(\w+)\s*([;,\n])/g, 'var $2$3');
   
   // Replace innerHTML.trim() === "" with a forced clear + check
   cleaned = cleaned.replace(
@@ -1210,8 +1225,12 @@ function validateModule(module, isNew = false) {
   // Script validation (warnings only - scripts might be optional)
   if (module.script) {
     // Check for common issues
-    if (module.script.includes('document.write')) {
-      warnings.push('Using document.write() can cause issues in iframes');
+    // Allow document.write() when used on popup windows (pw.document.write, win.document.write)
+    // This is safe and commonly used for print functionality
+    if (module.script.includes('document.write') && 
+        !module.script.includes('pw.document.write') && 
+        !module.script.includes('win.document.write')) {
+      warnings.push('Using document.write() in the main window can cause issues. Ensure this is used on a popup window only.');
     }
     if (module.script.includes('window.location') && !module.script.includes('preventDefault')) {
       warnings.push('Direct window.location changes may break navigation');
@@ -4493,9 +4512,12 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
 
   // Check if module is protected (Course Materials or Assessments)
   const isProtectedModule = (item) => {
-    return item.id === 'item-1768749223001' || 
+    let itemCode = item.code || {};
+    if (typeof itemCode === 'string') {
+      try { itemCode = JSON.parse(itemCode); } catch(e) {}
+    }
+    return itemCode.id === 'view-materials' || 
            item.id === 'item-assessments' || 
-           item.title === 'Course Materials' || 
            item.title === 'Assessments';
   };
 
@@ -5399,6 +5421,642 @@ const PROJECT_DATA = {
   );
 };
 
+// Pure function to build site HTML - used by both Phase 2 preview and Phase 4 compile
+const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = null, projectData }) => {
+  // ========================================
+  // PHASE 5 SETTINGS APPLICATION
+  // ========================================
+  const courseSettings = projectData["Course Settings"] || {};
+  const courseName = courseSettings.courseName || projectData["Current Course"]?.name || "Course Factory";
+  const courseNameUpper = courseName.toUpperCase();
+  const courseCode = courseSettings.courseCode || "";
+  const instructor = courseSettings.instructor || "";
+  const academicYear = courseSettings.academicYear || "";
+  const accentColor = courseSettings.accentColor || "sky";
+  const customCSS = courseSettings.customCSS || "";
+  const compDefaults = courseSettings.compilationDefaults || {};
+  
+  // Build course info HTML
+  const courseInfoParts = [];
+  if (courseCode) courseInfoParts.push(courseCode);
+  if (instructor) courseInfoParts.push(instructor);
+  if (academicYear) courseInfoParts.push(academicYear);
+  const courseInfoHTML = courseInfoParts.length > 0 
+    ? `\n            <p class="text-[9px] text-slate-600 uppercase tracking-widest mono mt-1">${courseInfoParts.join(' • ')}</p>`
+    : "";
+  
+  // FILTER MODULES & TOOLKIT BASED ON COMPILATION DEFAULTS
+  let activeModules = modules.filter(m => !excludedIds.includes(m.id) && !m.hidden);
+  
+  // Respect compilation defaults (only exclude if explicitly set to false)
+  if (compDefaults.includeMaterials === false) {
+    activeModules = activeModules.filter(m => {
+      let itemCode = m.code || {};
+      if (typeof itemCode === 'string') {
+        try { itemCode = JSON.parse(itemCode); } catch(e) {}
+      }
+      return itemCode.id !== "view-materials";
+    });
+  }
+  
+  if (compDefaults.includeAssessments === false) {
+    activeModules = activeModules.filter(m => 
+      m.id !== 'item-assessments' && m.title !== 'Assessments'
+    );
+  }
+  
+  // Filter enabled toolkit items
+  let enabledTools = toolkit.filter(t => t.enabled);
+  if (compDefaults.includeToolkit === false) {
+    enabledTools = [];
+  }
+  
+  const hiddenTools = enabledTools.filter(t => t.hiddenFromUser);
+  const visibleTools = enabledTools.filter(t => !t.hiddenFromUser);
+
+  let navInjection = "";
+  let contentInjection = "";
+  let scriptInjection = "";
+
+  // Build Injections for Modules
+  activeModules.forEach(item => {
+    let itemCode = item.code || {};
+    if (typeof itemCode === 'string') {
+        try { itemCode = JSON.parse(itemCode); } catch(e) {}
+    }
+    
+    // Special handling for Course Materials module - detect by code.id
+    if (itemCode.id === "view-materials") {
+      // Use course-level materials instead of module-specific materials
+      const courseMaterials = projectData["Current Course"]?.materials || [];
+      const materials = courseMaterials.filter(m => !m.hidden).sort((a, b) => a.order - b.order);
+      
+      // Generate material cards dynamically
+      const materialCards = materials.map(mat => {
+        const colorClass = mat.color || 'slate';
+        const borderClass = colorClass !== 'slate' ? `border-l-4 border-l-${colorClass}-500` : '';
+        const bgClass = colorClass !== 'slate' ? `bg-${colorClass}-500/10` : 'bg-slate-800';
+        const borderColorClass = colorClass !== 'slate' ? `border-${colorClass}-500/20` : 'border-slate-700';
+        const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : 'text-slate-500';
+        const buttonColorClass = colorClass !== 'slate' ? `bg-${colorClass}-600 hover:bg-${colorClass}-500` : 'bg-sky-600 hover:bg-sky-500';
+        
+        // Properly escape quotes in the onclick handlers
+        const escapedViewUrl = mat.viewUrl.replace(/'/g, "\\'");
+        const escapedTitle = (mat.title || '').replace(/'/g, "\\'");
+        const escapedDownloadUrl = mat.downloadUrl.replace(/'/g, "\\'");
+        
+        return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 ${borderClass}">
+    <div class="flex items-center gap-6">
+        <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center ${textColorClass} font-black italic text-xl border ${borderColorClass}">${mat.number}</div>
+        <div>
+            <h3 class="text-lg font-bold text-white uppercase italic">${mat.title}</h3>
+            <p class="text-xs text-slate-400 font-mono">${mat.description}</p>
+        </div>
+    </div>
+    <div class="flex gap-3 w-full md:w-auto">
+        <button onclick="openPDF('${escapedViewUrl}', '${escapedTitle}')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>
+        <a href="${escapedDownloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>
+    </div>
+</div>`;
+      }).join('\n                    ');
+      
+      // Generate the full materials view HTML
+      const materialsHTML = `<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
+            <div class="max-w-5xl mx-auto space-y-8">
+                <div class="mb-12">
+                    <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Course <span class="text-sky-500">Materials</span></h2>
+                    <p class="text-xs text-slate-400 font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
+                </div>
+                <div id="pdf-viewer-container" class="hidden mb-12 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl">
+                    <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-slate-700">
+                        <span id="viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Document Viewer</span>
+                        <button onclick="closeViewer()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
+                    </div>
+                    <iframe id="pdf-frame" src="" width="100%" height="600" style="border:none;"></iframe>
+                </div>
+                <div class="grid grid-cols-1 gap-4">
+                    ${materialCards}
+                </div>
+            </div>
+        </div>`;
+      
+      // Add nav button
+      navInjection += `\n            <button onclick="switchView('materials')" id="nav-materials" class="nav-item">\n                <span class="w-2 h-2 rounded-full bg-slate-600"></span>${item.title}\n            </button>`;
+      
+      // Inject the dynamically generated HTML
+      contentInjection += '\n        ' + materialsHTML + '\n';
+      
+      // Inject the scripts (use standalone format if available, fallback to legacy)
+      const materialsScript = item.script || itemCode.script || '';
+      if (materialsScript) scriptInjection += '\n        ' + materialsScript + '\n';
+      
+    }
+    // Special handling for Assessments module
+    else if (item.id === "item-assessments" || item.title === "Assessments") {
+      const assessments = (item.assessments || []).filter(a => !a.hidden).sort((a, b) => a.order - b.order);
+      
+      // Generate assessment cards for selection page
+      const assessmentCards = assessments.map((assess, idx) => {
+        const typeLabel = assess.type === 'quiz' ? 'Multiple Choice' : assess.type === 'longanswer' ? 'Long Answer' : assess.type === 'print' ? 'Print & Submit' : 'Mixed Assessment';
+        const typeIcon = assess.type === 'quiz' ? '📝' : assess.type === 'longanswer' ? '✍️' : assess.type === 'print' ? '🖨️' : '📋';
+        const questionCount = assess.questionCount || (assess.type === 'mixed' ? 'Multiple' : 'Unknown');
+        
+        return `
+          <div class="p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="text-3xl">${typeIcon}</span>
+                  <div>
+                    <h3 class="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">${assess.title}</h3>
+                    <p class="text-xs text-slate-400 uppercase tracking-wider">${typeLabel}${assess.questionCount ? ' • ' + questionCount + ' Questions' : ''}</p>
+                  </div>
+                </div>
+              </div>
+              <div class="text-purple-400 group-hover:translate-x-1 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </div>
+            </div>
+          </div>`;
+      }).join('\n          ');
+      
+      // Generate individual assessment containers (hidden by default) WITH INLINE SCRIPTS
+      const assessmentContainers = assessments.map((assess, idx) => {
+        return '\n        <div id="assessment-' + idx + '" class="assessment-container hidden">\n' +
+        '          <button onclick="backToAssessmentList()" class="mb-6 flex items-center gap-2 text-purple-400 hover:text-purple-300 font-bold text-sm transition-colors">\n' +
+        '            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">\n' +
+        '              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>\n' +
+        '            </svg>\n' +
+        '            Back to Assessments\n' +
+        '          </button>\n' +
+        '          ' + assess.html + '\n' +
+        '          \n' +
+        '          <!-- INLINE ASSESSMENT SCRIPT -->\n' +
+        '          <script>\n' +
+        '          ' + (assess.script || '') + '\n' +
+        '          </script>\n' +
+        '        </div>';
+      }).join('\n        ');
+      
+      // Generate the full assessments view HTML with selection page (WITH INLINE SCRIPTS)
+      const assessmentViewHTML = `<div id="view-assessments" class="w-full h-full custom-scroll p-8 md:p-12">
+            <div class="max-w-5xl mx-auto">
+                <!-- Assessment Selection Page -->
+                <div id="assessment-list">
+                    <div class="mb-12">
+                        <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Assessment <span class="text-purple-500">Center</span></h2>
+                        <p class="text-xs text-slate-400 font-mono uppercase tracking-widest mt-2">Select an assessment to begin</p>
+                    </div>
+                    ${assessments.length > 0 ? `
+                    <div class="grid grid-cols-1 gap-4">
+                        ${assessmentCards}
+                    </div>` : '<p class="text-center text-slate-500 italic py-12">No assessments available.</p>'}
+                </div>
+                
+                <!-- Individual Assessments (hidden by default) -->
+                ${assessmentContainers}
+            </div>
+            
+            <!-- INLINE ASSESSMENT NAVIGATION SCRIPTS -->
+            <script>
+            (function() {
+              console.log('🔧 [INLINE] Initializing assessment navigation functions...');
+              
+              window.showAssessment = function(index) {
+                console.log('📋 [INLINE] Showing assessment:', index);
+                var listEl = document.getElementById('assessment-list');
+                var targetEl = document.getElementById('assessment-' + index);
+                
+                if (listEl) listEl.classList.add('hidden');
+                document.querySelectorAll('.assessment-container').forEach(function(c) {
+                  c.classList.add('hidden');
+                });
+                if (targetEl) {
+                  targetEl.classList.remove('hidden');
+                } else {
+                  console.error('❌ Assessment container not found:', 'assessment-' + index);
+                }
+                window.scrollTo(0, 0);
+              };
+              
+              window.backToAssessmentList = function() {
+                console.log('⬅️ [INLINE] Returning to assessment list');
+                document.querySelectorAll('.assessment-container').forEach(function(c) {
+                  c.classList.add('hidden');
+                });
+                var listEl = document.getElementById('assessment-list');
+                if (listEl) listEl.classList.remove('hidden');
+                window.scrollTo(0, 0);
+              };
+              
+              // Global Toolkit Menu Toggle
+              window.toggleToolkitMenu = function() {
+                console.log('🔧 [INLINE] Toggling toolkit menu');
+                var dropdown = document.getElementById('toolkit-dropdown');
+                if (dropdown) {
+                  dropdown.classList.toggle('hidden');
+                }
+              };
+              
+              // Global Toolkit Tool Toggle
+              var toolkitState = JSON.parse(localStorage.getItem('mf_toolkit') || '{}');
+              
+              window.toggleTool = function(toolId) {
+                console.log('🔧 [INLINE] Toggling tool:', toolId);
+                console.log('🔧 [DEBUG] Looking for element ID:', 'feat-' + toolId);
+                
+                toolkitState[toolId] = !toolkitState[toolId];
+                localStorage.setItem('mf_toolkit', JSON.stringify(toolkitState));
+                
+                var toolElement = document.getElementById('feat-' + toolId);
+                var toggleButton = document.getElementById('toggle-' + toolId);
+                
+                console.log('🔧 [DEBUG] Tool element found:', !!toolElement);
+                console.log('🔧 [DEBUG] Toggle button found:', !!toggleButton);
+                console.log('🔧 [DEBUG] New state:', toolkitState[toolId]);
+                
+                if (toolElement) {
+                  if (toolkitState[toolId]) {
+                    toolElement.classList.remove('hidden');
+                    console.log('🔧 [DEBUG] Showing tool');
+                  } else {
+                    toolElement.classList.add('hidden');
+                    console.log('🔧 [DEBUG] Hiding tool');
+                  }
+                }
+                
+                if (toggleButton) {
+                  if (toolkitState[toolId]) {
+                    toggleButton.classList.remove('bg-slate-600');
+                    toggleButton.classList.add('bg-emerald-600');
+                    var dot = toggleButton.querySelector('div');
+                    if (dot) dot.classList.add('translate-x-4');
+                    console.log('🔧 [DEBUG] Toggle ON visual');
+                  } else {
+                    toggleButton.classList.remove('bg-emerald-600');
+                    toggleButton.classList.add('bg-slate-600');
+                    var dot = toggleButton.querySelector('div');
+                    if (dot) dot.classList.remove('translate-x-4');
+                    console.log('🔧 [DEBUG] Toggle OFF visual');
+                  }
+                }
+              };
+              
+              // Initialize toolkit state on load
+              window.initializeToolkit = function() {
+                console.log('🔧 [INLINE] Initializing toolkit state');
+                Object.keys(toolkitState).forEach(function(toolId) {
+                  if (toolkitState[toolId]) {
+                    var toolElement = document.getElementById('feat-' + toolId);
+                    var toggleButton = document.getElementById('toggle-' + toolId);
+                    if (toolElement) toolElement.classList.remove('hidden');
+                    if (toggleButton) {
+                      toggleButton.classList.remove('bg-slate-600');
+                      toggleButton.classList.add('bg-emerald-600');
+                      var dot = toggleButton.querySelector('div');
+                      if (dot) dot.classList.add('translate-x-4');
+                    }
+                  }
+                });
+              };
+              
+              // Initialize on load
+              if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', window.initializeToolkit);
+              } else {
+                window.initializeToolkit();
+              }
+              
+              console.log('✅ [INLINE] Assessment navigation + toolkit functions ready!');
+            })();
+            </script>
+        </div>`;
+      
+      // Generate combined assessment scripts
+      const assessmentScripts = assessments.map(assess => assess.script || '').join('\n        ');
+      
+      // Add navigation functions (attached to window for onclick access)
+      const navScripts = `
+        (function() {
+          console.log('🔧 Initializing assessment navigation functions...');
+          
+          window.showAssessment = function(index) {
+            console.log('📋 Showing assessment:', index);
+            var listEl = document.getElementById('assessment-list');
+            var targetEl = document.getElementById('assessment-' + index);
+            
+            if (listEl) listEl.classList.add('hidden');
+            document.querySelectorAll('.assessment-container').forEach(function(c) {
+              c.classList.add('hidden');
+            });
+            if (targetEl) {
+              targetEl.classList.remove('hidden');
+            } else {
+              console.error('Assessment container not found:', 'assessment-' + index);
+            }
+            window.scrollTo(0, 0);
+          };
+          
+          window.backToAssessmentList = function() {
+            console.log('⬅️ Returning to assessment list');
+            document.querySelectorAll('.assessment-container').forEach(function(c) {
+              c.classList.add('hidden');
+            });
+            var listEl = document.getElementById('assessment-list');
+            if (listEl) listEl.classList.remove('hidden');
+            window.scrollTo(0, 0);
+          };
+          
+          console.log('✅ Assessment navigation functions ready!');
+        })();
+        `;
+      
+      // Add to navigation
+      navInjection += `\n            <button onclick="switchView('assessments')" id="nav-assessments" class="nav-item">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Assessments
+            </button>`;
+      
+      // Add HTML and scripts
+      contentInjection += `\n        ${assessmentViewHTML}\n`;
+      scriptInjection += `\n        ${navScripts}\n        ${assessmentScripts}\n`;
+      
+    } else {
+      // Handle different module types
+      const moduleId = item.id || itemCode.id || '';
+      const shortId = moduleId.replace('view-', '');
+      
+      // Add navigation button
+      if (moduleId) {
+        // External link modules with newtab open in new window
+        if (item.type === 'external' && item.linkType === 'newtab') {
+          navInjection += `\n            <button onclick="window.open('${item.url}', '_blank', 'noopener,noreferrer')" id="nav-${shortId}" class="nav-item">\n                <span class="w-2 h-2 rounded-full bg-slate-600"></span>${item.title}\n            </button>`;
+        } else {
+          navInjection += `\n            <button onclick="switchView('${shortId}')" id="nav-${shortId}" class="nav-item">\n                <span class="w-2 h-2 rounded-full bg-slate-600"></span>${item.title}\n            </button>`;
+        }
+      }
+      
+      // Use unified module extraction
+      const moduleContent = extractModuleContent(item);
+      
+      // Inject scoped CSS if provided (standalone modules)
+      if (moduleContent.css) {
+        contentInjection += `\n        <style id="style-${moduleId}">\n${moduleContent.css}\n        </style>`;
+      }
+      
+      // Inject HTML with script
+      if (moduleContent.html) {
+        let cleanHTML = cleanModuleHTML(moduleContent.html);
+        let moduleScript = moduleContent.script || '';
+        
+        // 1. Capture the OLD root ID from the source HTML (e.g., view-phase1)
+        const oldIdMatch = cleanHTML.match(/id="(view-[^"]+)"/);
+        const oldId = oldIdMatch ? oldIdMatch[1] : null;
+        
+        // 2. Calculate the correct view ID that switchView will look for
+        // switchView expects 'view-' + shortId, so we use viewId instead of moduleId
+        const viewId = 'view-' + shortId;
+        
+        // 3. Inject the NEW unique system viewId into the HTML
+        if (oldId) {
+          cleanHTML = cleanHTML.replace(`id="${oldId}"`, `id="${viewId}"`);
+        } else if (cleanHTML.includes('<div')) {
+          cleanHTML = cleanHTML.replace('<div', `<div id="${viewId}"`);
+        }
+
+        // 4. SCRIPT SYNC: Clean the script and replace references to the old ID with the new one
+        // This ensures buttons inside the module (like step selectors) target the NEW ID, not the old one
+        let finalScript = cleanModuleScript(moduleScript);
+        if (oldId && finalScript && oldId !== viewId) {
+          // Replace all occurrences of the old ID with the new unique viewId
+          // This handles CSS selectors (#view-phase1), string references ('view-phase1'), etc.
+          finalScript = finalScript.split(`#${oldId}`).join(`#${viewId}`);
+          finalScript = finalScript.split(`'${oldId}'`).join(`'${viewId}'`);
+          finalScript = finalScript.split(`"${oldId}"`).join(`"${viewId}"`);
+        }
+
+        const htmlWithScript = cleanHTML + (finalScript ? '\n<script>\n' + finalScript + '\n</script>' : '');
+        contentInjection += '\n        ' + htmlWithScript + '\n';
+      }
+    }
+  });
+
+  // Inject Hidden Tools (apply silently) WITH INLINE SCRIPTS
+  hiddenTools.forEach(tool => {
+    const toolCode = typeof tool.code === 'string' ? JSON.parse(tool.code) : tool.code;
+    if (tool.includeUi && toolCode.html) {
+      const htmlWithScript = toolCode.html + (toolCode.script ? '\n<script>\n' + toolCode.script + '\n</script>' : '');
+      contentInjection += '\n        ' + htmlWithScript + '\n';
+    }
+  });
+
+  // Inject Global Toolkit Dropdown (if there are visible tools)
+  if (visibleTools.length > 0) {
+    // Add Global Toolkit nav button
+    navInjection += `\n            <button onclick="toggleToolkitMenu()" id="nav-toolkit" class="nav-item mt-4 border-t border-slate-800 pt-4">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Global Toolkit
+            </button>`;
+    
+    // Build dropdown HTML
+    let dropdownItems = '';
+    visibleTools.forEach(tool => {
+      const toolCode = typeof tool.code === 'string' ? JSON.parse(tool.code) : tool.code;
+      const toolId = tool.id.replace('feat-', '');
+      
+      if (tool.userToggleable) {
+        dropdownItems += `
+                        <div class="flex items-center justify-between p-2 hover:bg-slate-700 rounded">
+                            <span class="text-xs text-slate-300">${tool.title}</span>
+                            <button onclick="toggleTool('${toolId}')" id="toggle-${toolId}" class="relative w-8 h-4 rounded-full transition-colors bg-slate-600 cursor-pointer">
+                                <div class="absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform pointer-events-none"></div>
+                            </button>
+                        </div>`;
+      } else {
+        dropdownItems += `
+                        <div class="p-2 hover:bg-slate-700 rounded">
+                            <span class="text-xs text-slate-300">${tool.title}</span>
+                        </div>`;
+      }
+      
+      // Inject tool content WITH INLINE SCRIPT wrapped in container
+      if (tool.includeUi && toolCode.html) {
+        const htmlWithScript = toolCode.html + (toolCode.script ? '\n<script>\n' + toolCode.script + '\n</script>' : '');
+        // Wrap in a container div with the correct ID for toggling
+        contentInjection += '\n        <div id="feat-' + toolId + '" class="' + (tool.userToggleable ? 'hidden' : '') + '">\n' + htmlWithScript + '\n        </div>\n';
+      }
+    });
+
+    // Add dropdown container
+    contentInjection += `
+        <div id="toolkit-dropdown" class="hidden fixed top-16 left-4 bg-slate-800 border border-slate-700 rounded-xl p-3 shadow-2xl z-50 w-64">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-bold text-white">Global Toolkit</h3>
+                <button onclick="toggleToolkitMenu()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            <div class="space-y-1">
+                ${dropdownItems}
+            </div>
+        </div>`;
+
+    // Add toolkit toggle scripts
+    const toolIds = visibleTools.filter(t => t.userToggleable).map(t => t.id.replace('feat-', ''));
+    scriptInjection += `
+        // Global Toolkit Menu Logic
+        function toggleToolkitMenu() {
+            const dropdown = document.getElementById('toolkit-dropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Tool Toggle State Management
+        let toolkitState = JSON.parse(localStorage.getItem('mf_toolkit') || '{}');
+        
+        function toggleTool(toolId) {
+            toolkitState[toolId] = !toolkitState[toolId];
+            localStorage.setItem('mf_toolkit', JSON.stringify(toolkitState));
+            applyToolState(toolId);
+        }
+
+        function applyToolState(toolId) {
+            const isActive = toolkitState[toolId];
+            const toolEl = document.getElementById('tool-' + toolId);
+            const toggleBtn = document.getElementById('toggle-' + toolId);
+            
+            if (toolEl) {
+                toolEl.classList.toggle('hidden', !isActive);
+            }
+            
+            if (toggleBtn) {
+                const slider = toggleBtn.querySelector('div');
+                if (isActive) {
+                    toggleBtn.classList.remove('bg-slate-600');
+                    toggleBtn.classList.add('bg-emerald-600');
+                    slider.classList.add('translate-x-4');
+                } else {
+                    toggleBtn.classList.add('bg-slate-600');
+                    toggleBtn.classList.remove('bg-emerald-600');
+                    slider.classList.remove('translate-x-4');
+                }
+            }
+        }
+
+        // Initialize tool states on load
+        ${toolIds.map(id => `applyToolState('${id}');`).join('\n        ')}
+      `;
+  }
+
+  // Build progress tracking script if enabled
+  const progressTrackingScript = compDefaults.enableProgressTracking === true ? `
+        
+        // ========================================
+        // PROGRESS TRACKING SYSTEM
+        // ========================================
+        let moduleProgress = JSON.parse(localStorage.getItem('courseProgress_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}') || '{}');
+        
+        // Track when a module is viewed
+        function trackModuleView(moduleId) {
+          if (!moduleProgress[moduleId]) {
+            moduleProgress[moduleId] = {
+              viewed: true,
+              viewedAt: new Date().toISOString(),
+              completed: false
+            };
+            localStorage.setItem('courseProgress_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}', JSON.stringify(moduleProgress));
+            updateProgressIndicators();
+          }
+        }
+        
+        // Mark module as completed
+        function markModuleComplete(moduleId) {
+          if (!moduleProgress[moduleId]) {
+            moduleProgress[moduleId] = { viewed: true, viewedAt: new Date().toISOString() };
+          }
+          moduleProgress[moduleId].completed = true;
+          moduleProgress[moduleId].completedAt = new Date().toISOString();
+          localStorage.setItem('courseProgress_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}', JSON.stringify(moduleProgress));
+          updateProgressIndicators();
+        }
+        
+        // Update visual progress indicators
+        function updateProgressIndicators() {
+          const allModules = document.querySelectorAll('nav button[onclick^="switchView"]');
+          allModules.forEach(btn => {
+            const moduleId = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
+            if (moduleProgress[moduleId]) {
+              // Add checkmark indicator
+              if (moduleProgress[moduleId].completed && !btn.querySelector('.progress-check')) {
+                btn.insertAdjacentHTML('beforeend', '<span class="progress-check ml-2 text-emerald-400">✓</span>');
+              } else if (moduleProgress[moduleId].viewed && !moduleProgress[moduleId].completed && !btn.querySelector('.progress-dot')) {
+                btn.insertAdjacentHTML('beforeend', '<span class="progress-dot ml-2 text-amber-400">●</span>');
+              }
+            }
+          });
+        }
+        
+        // Hook into module switching to track views
+        const originalSwitchView = window.switchView;
+        window.switchView = function(viewId) {
+          trackModuleView(viewId);
+          return originalSwitchView(viewId);
+        };
+        
+        // Initialize on load
+        updateProgressIndicators();
+      ` : '';
+
+  // Add initialization script for initialViewKey if provided
+  const initScript = initialViewKey ? `
+        // Auto-open to initial view on load
+        (function() {
+          function initView() {
+            const targetView = document.getElementById('view-${initialViewKey}');
+            if (targetView) {
+              // Hide all views first
+              document.querySelectorAll('[id^="view-"]').forEach(v => v.classList.add('hidden'));
+              // Show target view
+              targetView.classList.remove('hidden');
+              // Activate nav button
+              const navBtn = document.getElementById('nav-${initialViewKey}');
+              if (navBtn) {
+                document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+                navBtn.classList.add('active');
+              }
+              // Call module init if available (backward compatibility)
+              if (window.COURSE_FACTORY_MODULES && window.COURSE_FACTORY_MODULES['${initialViewKey}'] && window.COURSE_FACTORY_MODULES['${initialViewKey}'].init) {
+                try {
+                  window.COURSE_FACTORY_MODULES['${initialViewKey}'].init();
+                } catch(e) {
+                  console.error('Module init error:', e);
+                }
+              }
+            }
+          }
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initView);
+          } else {
+            initView();
+          }
+        })();
+      ` : '';
+
+  // Generate final HTML using template function
+  const finalCode = generateMasterShell({
+    courseName,
+    courseNameUpper,
+    accentColor,
+    customCSS,
+    courseInfo: courseInfoHTML,
+    navItems: navInjection,
+    content: contentInjection,
+    scripts: scriptInjection + initScript,
+    progressTracking: progressTrackingScript
+  });
+
+  return finalCode;
+};
+
 const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onToggleHidden, onError }) => {
   const [fullSiteCode, setFullSiteCode] = useState("");
   const [isGenerated, setIsGenerated] = useState(false);
@@ -5618,12 +6276,15 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
 
   const generateHubPage = () => {
     // Filter out special modules
-    const regularModules = modules.filter(m => 
-      m.id !== 'item-1768749223001' && 
-      m.title !== 'Course Materials' &&
-      m.title !== 'Assessments' &&
-      !m.title.includes('Empty')
-    );
+    const regularModules = modules.filter(m => {
+      let itemCode = m.code || {};
+      if (typeof itemCode === 'string') {
+        try { itemCode = JSON.parse(itemCode); } catch(e) {}
+      }
+      return itemCode.id !== 'view-materials' && 
+             m.title !== 'Assessments' &&
+             !m.title.includes('Empty');
+    });
     
     const allAssessments = modules.flatMap(m => m.assessments || []);
     const assessmentCount = allAssessments.length;
@@ -5799,573 +6460,15 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
 
   const generateFullSite = () => {
     try {
-    // ========================================
-    // PHASE 5 SETTINGS APPLICATION
-    // ========================================
-    const courseSettings = projectData["Course Settings"] || {};
-    const courseName = courseSettings.courseName || projectData["Current Course"]?.name || "Course Factory";
-    const courseNameUpper = courseName.toUpperCase();
-    const courseCode = courseSettings.courseCode || "";
-    const instructor = courseSettings.instructor || "";
-    const academicYear = courseSettings.academicYear || "";
-    const accentColor = courseSettings.accentColor || "sky";
-    const customCSS = courseSettings.customCSS || "";
-    const compDefaults = courseSettings.compilationDefaults || {};
-    
-    // Build course info HTML
-    const courseInfoParts = [];
-    if (courseCode) courseInfoParts.push(courseCode);
-    if (instructor) courseInfoParts.push(instructor);
-    if (academicYear) courseInfoParts.push(academicYear);
-    const courseInfoHTML = courseInfoParts.length > 0 
-      ? `\n            <p class="text-[9px] text-slate-600 uppercase tracking-widest mono mt-1">${courseInfoParts.join(' • ')}</p>`
-      : "";
-    
-    // 5. FILTER MODULES & TOOLKIT BASED ON COMPILATION DEFAULTS
-    // Course Materials and Assessments are core modules - always included unless explicitly excluded
-    let activeModules = modules.filter(m => !excludedIds.includes(m.id) && !m.hidden);
-    
-    // Respect compilation defaults (only exclude if explicitly set to false)
-    if (compDefaults.includeMaterials === false) {
-      activeModules = activeModules.filter(m => 
-        m.id !== 'item-1768749223001' && m.title !== 'Course Materials'
-      );
-    }
-    
-    if (compDefaults.includeAssessments === false) {
-      activeModules = activeModules.filter(m => 
-        m.id !== 'item-assessments' && m.title !== 'Assessments'
-      );
-    }
-    
-    // Filter enabled toolkit items
-    let enabledTools = toolkit.filter(t => t.enabled);
-    if (compDefaults.includeToolkit === false) {
-      enabledTools = [];
-    }
-    
-    const hiddenTools = enabledTools.filter(t => t.hiddenFromUser);
-    const visibleTools = enabledTools.filter(t => !t.hiddenFromUser);
-
-    let navInjection = "";
-    let contentInjection = "";
-    let scriptInjection = "";
-
-    // 1. Build Injections for Modules
-    activeModules.forEach(item => {
-      let itemCode = item.code || {};
-      if (typeof itemCode === 'string') {
-          try { itemCode = JSON.parse(itemCode); } catch(e) {}
-      }
-      
-      // Special handling for Course Materials module
-      if (item.id === "item-1768749223001" || item.title === "Course Materials") {
-        // Use course-level materials instead of module-specific materials
-        const courseMaterials = projectData["Current Course"]?.materials || [];
-        const materials = courseMaterials.filter(m => !m.hidden).sort((a, b) => a.order - b.order);
-        
-        // Generate material cards dynamically
-        const materialCards = materials.map(mat => {
-          const colorClass = mat.color || 'slate';
-          const borderClass = colorClass !== 'slate' ? `border-l-4 border-l-${colorClass}-500` : '';
-          const bgClass = colorClass !== 'slate' ? `bg-${colorClass}-500/10` : 'bg-slate-800';
-          const borderColorClass = colorClass !== 'slate' ? `border-${colorClass}-500/20` : 'border-slate-700';
-          const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : 'text-slate-500';
-          const buttonColorClass = colorClass !== 'slate' ? `bg-${colorClass}-600 hover:bg-${colorClass}-500` : 'bg-sky-600 hover:bg-sky-500';
-          
-          // Properly escape quotes in the onclick handlers
-          const escapedViewUrl = mat.viewUrl.replace(/'/g, "\\'");
-          const escapedTitle = (mat.title || '').replace(/'/g, "\\'");
-          const escapedDownloadUrl = mat.downloadUrl.replace(/'/g, "\\'");
-          
-          return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 ${borderClass}">
-    <div class="flex items-center gap-6">
-        <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center ${textColorClass} font-black italic text-xl border ${borderColorClass}">${mat.number}</div>
-        <div>
-            <h3 class="text-lg font-bold text-white uppercase italic">${mat.title}</h3>
-            <p class="text-xs text-slate-400 font-mono">${mat.description}</p>
-        </div>
-    </div>
-    <div class="flex gap-3 w-full md:w-auto">
-        <button onclick="openPDF('${escapedViewUrl}', '${escapedTitle}')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>
-        <a href="${escapedDownloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>
-    </div>
-</div>`;
-        }).join('\n                    ');
-        
-        // Generate the full materials view HTML
-        const materialsHTML = `<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
-            <div class="max-w-5xl mx-auto space-y-8">
-                <div class="mb-12">
-                    <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Course <span class="text-sky-500">Materials</span></h2>
-                    <p class="text-xs text-slate-400 font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
-                </div>
-                <div id="pdf-viewer-container" class="hidden mb-12 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl">
-                    <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-slate-700">
-                        <span id="viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Document Viewer</span>
-                        <button onclick="closeViewer()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
-                    </div>
-                    <iframe id="pdf-frame" src="" width="100%" height="600" style="border:none;"></iframe>
-                </div>
-                <div class="grid grid-cols-1 gap-4">
-                    ${materialCards}
-                </div>
-            </div>
-        </div>`;
-        
-        // Add nav button
-        navInjection += `\n            <button onclick="switchView('materials')" id="nav-materials" class="nav-item">\n                <span class="w-2 h-2 rounded-full bg-slate-600"></span>${item.title}\n            </button>`;
-        
-        // Inject the dynamically generated HTML
-        contentInjection += '\n        ' + materialsHTML + '\n';
-        
-        // Inject the scripts (use standalone format if available, fallback to legacy)
-        const materialsScript = item.script || itemCode.script || '';
-        if (materialsScript) scriptInjection += '\n        ' + materialsScript + '\n';
-        
-      }
-      // Special handling for Assessments module
-      else if (item.id === "item-assessments" || item.title === "Assessments") {
-        const assessments = (item.assessments || []).filter(a => !a.hidden).sort((a, b) => a.order - b.order);
-        
-        // Generate assessment cards for selection page
-        const assessmentCards = assessments.map((assess, idx) => {
-          const typeLabel = assess.type === 'quiz' ? 'Multiple Choice' : assess.type === 'longanswer' ? 'Long Answer' : assess.type === 'print' ? 'Print & Submit' : 'Mixed Assessment';
-          const typeIcon = assess.type === 'quiz' ? '📝' : assess.type === 'longanswer' ? '✍️' : assess.type === 'print' ? '🖨️' : '📋';
-          const questionCount = assess.questionCount || (assess.type === 'mixed' ? 'Multiple' : 'Unknown');
-          
-          return `
-          <div class="p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
-            <div class="flex items-center justify-between">
-              <div class="flex-1">
-                <div class="flex items-center gap-3 mb-2">
-                  <span class="text-3xl">${typeIcon}</span>
-                  <div>
-                    <h3 class="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">${assess.title}</h3>
-                    <p class="text-xs text-slate-400 uppercase tracking-wider">${typeLabel}${assess.questionCount ? ' • ' + questionCount + ' Questions' : ''}</p>
-                  </div>
-                </div>
-              </div>
-              <div class="text-purple-400 group-hover:translate-x-1 transition-transform">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-              </div>
-            </div>
-          </div>`;
-        }).join('\n          ');
-        
-        // Generate individual assessment containers (hidden by default) WITH INLINE SCRIPTS
-        const assessmentContainers = assessments.map((assess, idx) => {
-          return '\n        <div id="assessment-' + idx + '" class="assessment-container hidden">\n' +
-          '          <button onclick="backToAssessmentList()" class="mb-6 flex items-center gap-2 text-purple-400 hover:text-purple-300 font-bold text-sm transition-colors">\n' +
-          '            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">\n' +
-          '              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>\n' +
-          '            </svg>\n' +
-          '            Back to Assessments\n' +
-          '          </button>\n' +
-          '          ' + assess.html + '\n' +
-          '          \n' +
-          '          <!-- INLINE ASSESSMENT SCRIPT -->\n' +
-          '          <script>\n' +
-          '          ' + (assess.script || '') + '\n' +
-          '          </script>\n' +
-          '        </div>';
-        }).join('\n        ');
-        
-        // Generate the full assessments view HTML with selection page (WITH INLINE SCRIPTS)
-        const assessmentViewHTML = `<div id="view-assessments" class="w-full h-full custom-scroll p-8 md:p-12">
-            <div class="max-w-5xl mx-auto">
-                <!-- Assessment Selection Page -->
-                <div id="assessment-list">
-                    <div class="mb-12">
-                        <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Assessment <span class="text-purple-500">Center</span></h2>
-                        <p class="text-xs text-slate-400 font-mono uppercase tracking-widest mt-2">Select an assessment to begin</p>
-                    </div>
-                    ${assessments.length > 0 ? `
-                    <div class="grid grid-cols-1 gap-4">
-                        ${assessmentCards}
-                    </div>` : '<p class="text-center text-slate-500 italic py-12">No assessments available.</p>'}
-                </div>
-                
-                <!-- Individual Assessments (hidden by default) -->
-                ${assessmentContainers}
-            </div>
-            
-            <!-- INLINE ASSESSMENT NAVIGATION SCRIPTS -->
-            <script>
-            (function() {
-              console.log('🔧 [INLINE] Initializing assessment navigation functions...');
-              
-              window.showAssessment = function(index) {
-                console.log('📋 [INLINE] Showing assessment:', index);
-                var listEl = document.getElementById('assessment-list');
-                var targetEl = document.getElementById('assessment-' + index);
-                
-                if (listEl) listEl.classList.add('hidden');
-                document.querySelectorAll('.assessment-container').forEach(function(c) {
-                  c.classList.add('hidden');
-                });
-                if (targetEl) {
-                  targetEl.classList.remove('hidden');
-                } else {
-                  console.error('❌ Assessment container not found:', 'assessment-' + index);
-                }
-                window.scrollTo(0, 0);
-              };
-              
-              window.backToAssessmentList = function() {
-                console.log('⬅️ [INLINE] Returning to assessment list');
-                document.querySelectorAll('.assessment-container').forEach(function(c) {
-                  c.classList.add('hidden');
-                });
-                var listEl = document.getElementById('assessment-list');
-                if (listEl) listEl.classList.remove('hidden');
-                window.scrollTo(0, 0);
-              };
-              
-              // Global Toolkit Menu Toggle
-              window.toggleToolkitMenu = function() {
-                console.log('🔧 [INLINE] Toggling toolkit menu');
-                var dropdown = document.getElementById('toolkit-dropdown');
-                if (dropdown) {
-                  dropdown.classList.toggle('hidden');
-                }
-              };
-              
-              // Global Toolkit Tool Toggle
-              var toolkitState = JSON.parse(localStorage.getItem('mf_toolkit') || '{}');
-              
-              window.toggleTool = function(toolId) {
-                console.log('🔧 [INLINE] Toggling tool:', toolId);
-                console.log('🔧 [DEBUG] Looking for element ID:', 'feat-' + toolId);
-                
-                toolkitState[toolId] = !toolkitState[toolId];
-                localStorage.setItem('mf_toolkit', JSON.stringify(toolkitState));
-                
-                var toolElement = document.getElementById('feat-' + toolId);
-                var toggleButton = document.getElementById('toggle-' + toolId);
-                
-                console.log('🔧 [DEBUG] Tool element found:', !!toolElement);
-                console.log('🔧 [DEBUG] Toggle button found:', !!toggleButton);
-                console.log('🔧 [DEBUG] New state:', toolkitState[toolId]);
-                
-                if (toolElement) {
-                  if (toolkitState[toolId]) {
-                    toolElement.classList.remove('hidden');
-                    console.log('🔧 [DEBUG] Showing tool');
-                  } else {
-                    toolElement.classList.add('hidden');
-                    console.log('🔧 [DEBUG] Hiding tool');
-                  }
-                }
-                
-                if (toggleButton) {
-                  if (toolkitState[toolId]) {
-                    toggleButton.classList.remove('bg-slate-600');
-                    toggleButton.classList.add('bg-emerald-600');
-                    var dot = toggleButton.querySelector('div');
-                    if (dot) dot.classList.add('translate-x-4');
-                    console.log('🔧 [DEBUG] Toggle ON visual');
-                  } else {
-                    toggleButton.classList.remove('bg-emerald-600');
-                    toggleButton.classList.add('bg-slate-600');
-                    var dot = toggleButton.querySelector('div');
-                    if (dot) dot.classList.remove('translate-x-4');
-                    console.log('🔧 [DEBUG] Toggle OFF visual');
-                  }
-                }
-              };
-              
-              // Initialize toolkit state on load
-              window.initializeToolkit = function() {
-                console.log('🔧 [INLINE] Initializing toolkit state');
-                Object.keys(toolkitState).forEach(function(toolId) {
-                  if (toolkitState[toolId]) {
-                    var toolElement = document.getElementById('feat-' + toolId);
-                    var toggleButton = document.getElementById('toggle-' + toolId);
-                    if (toolElement) toolElement.classList.remove('hidden');
-                    if (toggleButton) {
-                      toggleButton.classList.remove('bg-slate-600');
-                      toggleButton.classList.add('bg-emerald-600');
-                      var dot = toggleButton.querySelector('div');
-                      if (dot) dot.classList.add('translate-x-4');
-                    }
-                  }
-                });
-              };
-              
-              // Initialize on load
-              if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', window.initializeToolkit);
-              } else {
-                window.initializeToolkit();
-              }
-              
-              console.log('✅ [INLINE] Assessment navigation + toolkit functions ready!');
-            })();
-            </script>
-        </div>`;
-        
-        // Generate combined assessment scripts
-        const assessmentScripts = assessments.map(assess => assess.script || '').join('\n        ');
-        
-        // Add navigation functions (attached to window for onclick access)
-        const navScripts = `
-        (function() {
-          console.log('🔧 Initializing assessment navigation functions...');
-          
-          window.showAssessment = function(index) {
-            console.log('📋 Showing assessment:', index);
-            var listEl = document.getElementById('assessment-list');
-            var targetEl = document.getElementById('assessment-' + index);
-            
-            if (listEl) listEl.classList.add('hidden');
-            document.querySelectorAll('.assessment-container').forEach(function(c) {
-              c.classList.add('hidden');
-            });
-            if (targetEl) {
-              targetEl.classList.remove('hidden');
-            } else {
-              console.error('Assessment container not found:', 'assessment-' + index);
-            }
-            window.scrollTo(0, 0);
-          };
-          
-          window.backToAssessmentList = function() {
-            console.log('⬅️ Returning to assessment list');
-            document.querySelectorAll('.assessment-container').forEach(function(c) {
-              c.classList.add('hidden');
-            });
-            var listEl = document.getElementById('assessment-list');
-            if (listEl) listEl.classList.remove('hidden');
-            window.scrollTo(0, 0);
-          };
-          
-          console.log('✅ Assessment navigation functions ready!');
-        })();
-        `;
-        
-        // Add to navigation
-        navInjection += `\n            <button onclick="switchView('assessments')" id="nav-assessments" class="nav-item">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                Assessments
-            </button>`;
-        
-        // Add HTML and scripts
-        contentInjection += `\n        ${assessmentViewHTML}\n`;
-        scriptInjection += `\n        ${navScripts}\n        ${assessmentScripts}\n`;
-        
-      } else {
-        // Handle different module types
-        const moduleId = item.id || itemCode.id || '';
-        const shortId = moduleId.replace('view-', '');
-        
-        // Add navigation button
-        if (moduleId) {
-          // External link modules with newtab open in new window
-          if (item.type === 'external' && item.linkType === 'newtab') {
-            navInjection += `\n            <button onclick="window.open('${item.url}', '_blank', 'noopener,noreferrer')" id="nav-${shortId}" class="nav-item">\n                <span class="w-2 h-2 rounded-full bg-slate-600"></span>${item.title}\n            </button>`;
-          } else {
-            navInjection += `\n            <button onclick="switchView('${shortId}')" id="nav-${shortId}" class="nav-item">\n                <span class="w-2 h-2 rounded-full bg-slate-600"></span>${item.title}\n            </button>`;
-          }
-        }
-        
-        // Use unified module extraction
-        const moduleContent = extractModuleContent(item);
-        
-        // Inject scoped CSS if provided (standalone modules)
-        if (moduleContent.css) {
-          contentInjection += `\n        <style id="style-${moduleId}">\n${moduleContent.css}\n        </style>`;
-        }
-        
-        // Inject HTML with script
-        if (moduleContent.html) {
-          const cleanScript = cleanModuleScript(moduleContent.script);
-          const htmlWithScript = moduleContent.html + (cleanScript ? '\n<script>\n' + cleanScript + '\n</script>' : '');
-          contentInjection += '\n        ' + htmlWithScript + '\n';
-        }
-      }
-    });
-
-    // 2. Inject Hidden Tools (apply silently) WITH INLINE SCRIPTS
-    hiddenTools.forEach(tool => {
-      const toolCode = typeof tool.code === 'string' ? JSON.parse(tool.code) : tool.code;
-      if (tool.includeUi && toolCode.html) {
-        const htmlWithScript = toolCode.html + (toolCode.script ? '\n<script>\n' + toolCode.script + '\n</script>' : '');
-        contentInjection += '\n        ' + htmlWithScript + '\n';
-      }
-    });
-
-    // 3. Inject Global Toolkit Dropdown (if there are visible tools)
-    if (visibleTools.length > 0) {
-      // Add Global Toolkit nav button
-      navInjection += `\n            <button onclick="toggleToolkitMenu()" id="nav-toolkit" class="nav-item mt-4 border-t border-slate-800 pt-4">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                Global Toolkit
-            </button>`;
-      
-      // Build dropdown HTML
-      let dropdownItems = '';
-      visibleTools.forEach(tool => {
-        const toolCode = typeof tool.code === 'string' ? JSON.parse(tool.code) : tool.code;
-        const toolId = tool.id.replace('feat-', '');
-        
-        if (tool.userToggleable) {
-          dropdownItems += `
-                        <div class="flex items-center justify-between p-2 hover:bg-slate-700 rounded">
-                            <span class="text-xs text-slate-300">${tool.title}</span>
-                            <button onclick="toggleTool('${toolId}')" id="toggle-${toolId}" class="relative w-8 h-4 rounded-full transition-colors bg-slate-600 cursor-pointer">
-                                <div class="absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform pointer-events-none"></div>
-                            </button>
-                        </div>`;
-        } else {
-          dropdownItems += `
-                        <div class="p-2 hover:bg-slate-700 rounded">
-                            <span class="text-xs text-slate-300">${tool.title}</span>
-                        </div>`;
-        }
-        
-        // Inject tool content WITH INLINE SCRIPT wrapped in container
-        if (tool.includeUi && toolCode.html) {
-          const htmlWithScript = toolCode.html + (toolCode.script ? '\n<script>\n' + toolCode.script + '\n</script>' : '');
-          // Wrap in a container div with the correct ID for toggling
-          contentInjection += '\n        <div id="feat-' + toolId + '" class="' + (tool.userToggleable ? 'hidden' : '') + '">\n' + htmlWithScript + '\n        </div>\n';
-        }
+      const finalCode = buildSiteHtml({
+        modules,
+        toolkit,
+        excludedIds,
+        initialViewKey: null,
+        projectData
       });
-
-      // Add dropdown container
-      contentInjection += `
-        <div id="toolkit-dropdown" class="hidden fixed top-16 left-4 bg-slate-800 border border-slate-700 rounded-xl p-3 shadow-2xl z-50 w-64">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="text-sm font-bold text-white">Global Toolkit</h3>
-                <button onclick="toggleToolkitMenu()" class="text-slate-400 hover:text-white">✕</button>
-            </div>
-            <div class="space-y-1">
-                ${dropdownItems}
-            </div>
-        </div>`;
-
-      // Add toolkit toggle scripts
-      const toolIds = visibleTools.filter(t => t.userToggleable).map(t => t.id.replace('feat-', ''));
-      scriptInjection += `
-        // Global Toolkit Menu Logic
-        function toggleToolkitMenu() {
-            const dropdown = document.getElementById('toolkit-dropdown');
-            dropdown.classList.toggle('hidden');
-        }
-
-        // Tool Toggle State Management
-        let toolkitState = JSON.parse(localStorage.getItem('mf_toolkit') || '{}');
-        
-        function toggleTool(toolId) {
-            toolkitState[toolId] = !toolkitState[toolId];
-            localStorage.setItem('mf_toolkit', JSON.stringify(toolkitState));
-            applyToolState(toolId);
-        }
-
-        function applyToolState(toolId) {
-            const isActive = toolkitState[toolId];
-            const toolEl = document.getElementById('tool-' + toolId);
-            const toggleBtn = document.getElementById('toggle-' + toolId);
-            
-            if (toolEl) {
-                toolEl.classList.toggle('hidden', !isActive);
-            }
-            
-            if (toggleBtn) {
-                const slider = toggleBtn.querySelector('div');
-                if (isActive) {
-                    toggleBtn.classList.remove('bg-slate-600');
-                    toggleBtn.classList.add('bg-emerald-600');
-                    slider.classList.add('translate-x-4');
-                } else {
-                    toggleBtn.classList.add('bg-slate-600');
-                    toggleBtn.classList.remove('bg-emerald-600');
-                    slider.classList.remove('translate-x-4');
-                }
-            }
-        }
-
-        // Initialize tool states on load
-        ${toolIds.map(id => `applyToolState('${id}');`).join('\n        ')}
-      `;
-    }
-
-    // Build progress tracking script if enabled
-    const progressTrackingScript = compDefaults.enableProgressTracking === true ? `
-        
-        // ========================================
-        // PROGRESS TRACKING SYSTEM
-        // ========================================
-        let moduleProgress = JSON.parse(localStorage.getItem('courseProgress_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}') || '{}');
-        
-        // Track when a module is viewed
-        function trackModuleView(moduleId) {
-          if (!moduleProgress[moduleId]) {
-            moduleProgress[moduleId] = {
-              viewed: true,
-              viewedAt: new Date().toISOString(),
-              completed: false
-            };
-            localStorage.setItem('courseProgress_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}', JSON.stringify(moduleProgress));
-            updateProgressIndicators();
-          }
-        }
-        
-        // Mark module as completed
-        function markModuleComplete(moduleId) {
-          if (!moduleProgress[moduleId]) {
-            moduleProgress[moduleId] = { viewed: true, viewedAt: new Date().toISOString() };
-          }
-          moduleProgress[moduleId].completed = true;
-          moduleProgress[moduleId].completedAt = new Date().toISOString();
-          localStorage.setItem('courseProgress_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}', JSON.stringify(moduleProgress));
-          updateProgressIndicators();
-        }
-        
-        // Update visual progress indicators
-        function updateProgressIndicators() {
-          const allModules = document.querySelectorAll('nav button[onclick^="switchView"]');
-          allModules.forEach(btn => {
-            const moduleId = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
-            if (moduleProgress[moduleId]) {
-              // Add checkmark indicator
-              if (moduleProgress[moduleId].completed && !btn.querySelector('.progress-check')) {
-                btn.insertAdjacentHTML('beforeend', '<span class="progress-check ml-2 text-emerald-400">✓</span>');
-              } else if (moduleProgress[moduleId].viewed && !moduleProgress[moduleId].completed && !btn.querySelector('.progress-dot')) {
-                btn.insertAdjacentHTML('beforeend', '<span class="progress-dot ml-2 text-amber-400">●</span>');
-              }
-            }
-          });
-        }
-        
-        // Hook into module switching to track views
-        const originalSwitchView = window.switchView;
-        window.switchView = function(viewId) {
-          trackModuleView(viewId);
-          return originalSwitchView(viewId);
-        };
-        
-        // Initialize on load
-        updateProgressIndicators();
-      ` : '';
-
-    // Generate final HTML using template function
-    const finalCode = generateMasterShell({
-      courseName,
-      courseNameUpper,
-      accentColor,
-      customCSS,
-      courseInfo: courseInfoHTML,
-      navItems: navInjection,
-      content: contentInjection,
-      scripts: scriptInjection,
-      progressTracking: progressTrackingScript
-    });
-
-    setFullSiteCode(finalCode);
-    setIsGenerated(true);
+      setFullSiteCode(finalCode);
+      setIsGenerated(true);
     } catch (error) {
       if (onError) {
         onError('compile', `Failed to compile full site: ${error.message}`, error.stack);
@@ -7749,9 +7852,12 @@ export default function App() {
 
   // Check if module is protected (Course Materials or Assessments)
   const isProtectedModule = (item) => {
-    return item.id === 'item-1768749223001' || 
+    let itemCode = item.code || {};
+    if (typeof itemCode === 'string') {
+      try { itemCode = JSON.parse(itemCode); } catch(e) {}
+    }
+    return itemCode.id === 'view-materials' || 
            item.id === 'item-assessments' || 
-           item.title === 'Course Materials' || 
            item.title === 'Assessments';
   };
 
@@ -7814,7 +7920,13 @@ export default function App() {
   // MATERIALS MANAGEMENT FUNCTIONS
   const getMaterialsModule = () => {
     const currentCourse = projectData["Current Course"] || { modules: [] };
-    return currentCourse.modules.find(m => m.id === "item-1768749223001" || m.title === "Course Materials");
+    return currentCourse.modules.find(m => {
+      let itemCode = m.code || {};
+      if (typeof itemCode === 'string') {
+        try { itemCode = JSON.parse(itemCode); } catch(e) {}
+      }
+      return itemCode.id === "view-materials";
+    });
   };
 
   // ASSESSMENTS MANAGEMENT FUNCTIONS
@@ -7823,7 +7935,13 @@ export default function App() {
   };
 
   const updateMaterialsModule = (updatedMaterials) => {
-    const moduleIndex = currentCourse.modules.findIndex(m => m.id === "item-1768749223001" || m.title === "Course Materials");
+    const moduleIndex = currentCourse.modules.findIndex(m => {
+      let itemCode = m.code || {};
+      if (typeof itemCode === 'string') {
+        try { itemCode = JSON.parse(itemCode); } catch(e) {}
+      }
+      return itemCode.id === "view-materials";
+    });
     if (moduleIndex === -1) return;
     
     const newModules = [...currentCourse.modules];
@@ -8916,18 +9034,9 @@ Questions.filter((_, i) => i !== index);
             <div className="p-0 overflow-hidden max-h-[calc(90vh-80px)]">
               <iframe 
                 srcDoc={(() => {
-                  // Use unified module extraction
+                  // Use unified module extraction to determine type
                   const moduleContent = extractModuleContent(previewModule);
                   const moduleType = moduleContent.type;
-                  
-                  // Debug logging
-                  console.log('🔍 Preview Module:', {
-                    type: moduleType,
-                    hasHTML: !!moduleContent.html,
-                    hasCSS: !!moduleContent.css,
-                    hasScript: !!moduleContent.script,
-                    htmlLength: moduleContent.html?.length || 0
-                  });
                   
                   // Handle external modules separately (they need special iframe handling)
                   if (moduleType === 'external') {
@@ -9001,99 +9110,54 @@ Questions.filter((_, i) => i !== index);
                     }
                   }
                   
-                  // For standalone and legacy modules, build full HTML document
-                  const cleanHTML = cleanModuleHTML(moduleContent.html);
-                  const cleanScript = cleanModuleScript(moduleContent.script);
+                  // For all other modules, use buildSiteHtml with only this module
+                  // Extract view key from module
+                  let itemCode = previewModule.code || {};
+                  if (typeof itemCode === 'string') {
+                    try { itemCode = JSON.parse(itemCode); } catch(e) {}
+                  }
+                  // Use code.id if available (preferred), otherwise extract from module.id
+                  const moduleId = itemCode.id || previewModule.id || '';
+                  let shortId = moduleId.replace('view-', '');
+                  // Handle materials module detection
+                  if (itemCode.id === 'view-materials') {
+                    shortId = 'materials';
+                  } else if (!shortId && moduleId) {
+                    // Fallback: try to extract from HTML if module has view-* id in HTML
+                    const htmlMatch = (moduleContent.html || '').match(/id=["']view-([^"']+)["']/);
+                    if (htmlMatch) {
+                      shortId = htmlMatch[1];
+                    }
+                  }
                   
-                  return `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                      <meta charset="UTF-8">
-                      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                      <script src="https://cdn.tailwindcss.com"><\/script>
-                      <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-                      <script>
-                        tailwind.config = {
-                          darkMode: "class",
-                          theme: {
-                            extend: {
-                              fontFamily: {
-                                sans: ["Inter", "sans-serif"],
-                                mono: ["JetBrains Mono", "monospace"]
-                              }
-                            }
-                          }
-                        }
-                      <\/script>
-                      ${moduleContent.css ? `<style>${moduleContent.css}</style>` : ''}
-                      <style>
-                        body { background: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 20px; min-height: 100vh; }
-                        .mono { font-family: 'JetBrains Mono', monospace; }
-                        .score-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; }
-                        .score-btn:hover { border-color: #0ea5e9; color: white; }
-                        .score-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; }
-                        .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
-                        .rubric-cell:hover { background: rgba(255,255,255,0.05); }
-                        .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
-                        .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
-                        .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; }
-                        .custom-scroll::-webkit-scrollbar { width: 8px; }
-                        .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
-                        .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-                        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
-                        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
-                        /* Force visibility for preview */
-                        [id^="view-"] { display: block !important; visibility: visible !important; opacity: 1 !important; }
-                        .hidden { display: block !important; visibility: visible !important; }
-                        body > div { display: block !important; }
-                        /* Ensure main content containers are visible */
-                        #sc-container, [id*="container"], [id*="content"] { display: block !important; visibility: visible !important; }
-                      </style>
-                    </head>
-                    <body>
-                      ${cleanHTML || '<p class="p-8 text-slate-500">No HTML content</p>'}
-                      <script>
-                        (function() {
-                          try {
-                            ${cleanScript}
-                          } catch(e) {
-                            console.error('Module script error:', e);
-                          }
-                          
-                          // Force initialization after DOM is ready
-                          function forceShow() {
-                            // Force show any hidden elements
-                            document.querySelectorAll('.hidden, [style*="display: none"], [style*="display:none"]').forEach(function(el) {
-                              el.classList.remove('hidden');
-                              el.style.display = '';
-                              el.style.visibility = 'visible';
-                              el.style.opacity = '1';
-                            });
-                            // Trigger any initialization functions
-                            var initFunctions = ['init', 'initialize', 'setup', 'load'];
-                            initFunctions.forEach(function(fnName) {
-                              if (typeof window[fnName] === 'function') {
-                                try { window[fnName](); } catch(e) { console.error('Init error:', e); }
-                              }
-                            });
-                            console.log('Preview: Forced visibility, body children:', document.body.children.length);
-                          }
-                          
-                          if (document.readyState === 'loading') {
-                            document.addEventListener('DOMContentLoaded', forceShow);
-                          } else {
-                            forceShow();
-                          }
-                          
-                          // Fallback timeout to ensure content shows
-                          setTimeout(forceShow, 100);
-                          setTimeout(forceShow, 500);
-                        })();
-                      <\/script>
-                    </body>
-                    </html>
-                  `;
+                  // Build preview using same pipeline as compile
+                  try {
+                    return buildSiteHtml({
+                      modules: [previewModule],
+                      toolkit: toolkit,
+                      excludedIds: [],
+                      initialViewKey: shortId,
+                      projectData
+                    });
+                  } catch (error) {
+                    console.error('Preview build error:', error);
+                    return `
+                      <!DOCTYPE html>
+                      <html>
+                      <head>
+                        <meta charset="UTF-8">
+                        <title>Preview Error</title>
+                        <style>
+                          body { background: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 40px; }
+                        </style>
+                      </head>
+                      <body>
+                        <h2 class="text-2xl font-bold text-red-400">Preview Error</h2>
+                        <p class="mt-4 text-slate-400">${escapeHtml(error.message)}</p>
+                      </body>
+                      </html>
+                    `;
+                  }
                 })()}
                 key={previewModule.id || previewModule.title}
                 className="w-full h-full border-0"
