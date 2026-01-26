@@ -808,6 +808,138 @@ const generateMasterShell = (data) => {
             document.getElementById('pdf-viewer-container').classList.add('hidden');
             document.getElementById('pdf-frame').src = "";
         }
+        
+        // ========================================
+        // GLOBAL AUTOSAVE SYSTEM
+        // ========================================
+        (function() {
+            // Course-specific storage key (prevents collisions between courses)
+            const COURSE_KEY = 'CF_' + '${courseName}'.replace(/[^a-zA-Z0-9]/g, '_') + '_v1';
+            let hasExported = false;
+            let saveTimeout = null;
+            
+            // Get all input state from the parent document (not iframes - they handle themselves)
+            function getAllInputState() {
+                const state = {};
+                // Only target inputs NOT inside iframes
+                document.querySelectorAll('#content-container input, #content-container textarea, #content-container select').forEach((el, i) => {
+                    // Skip if inside an iframe (parent document only)
+                    if (el.closest('iframe')) return;
+                    
+                    const key = el.id || el.name || ('field_' + i + '_' + (el.className || '').slice(0, 20));
+                    if (el.type === 'checkbox' || el.type === 'radio') {
+                        if (el.checked) state[key] = el.type === 'radio' ? el.value : true;
+                    } else {
+                        if (el.value) state[key] = el.value;
+                    }
+                });
+                return state;
+            }
+            
+            // Restore input state
+            function restoreInputState(state) {
+                if (!state || typeof state !== 'object') return;
+                
+                document.querySelectorAll('#content-container input, #content-container textarea, #content-container select').forEach((el, i) => {
+                    if (el.closest('iframe')) return;
+                    
+                    const key = el.id || el.name || ('field_' + i + '_' + (el.className || '').slice(0, 20));
+                    const savedValue = state[key];
+                    
+                    if (savedValue !== undefined) {
+                        if (el.type === 'checkbox') {
+                            el.checked = !!savedValue;
+                        } else if (el.type === 'radio') {
+                            el.checked = (el.value === savedValue);
+                        } else {
+                            el.value = savedValue;
+                        }
+                        // Trigger change event so any listeners update
+                        el.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                });
+            }
+            
+            // Save to localStorage
+            function saveNow() {
+                try {
+                    const state = getAllInputState();
+                    if (Object.keys(state).length > 0) {
+                        localStorage.setItem(COURSE_KEY, JSON.stringify({
+                            timestamp: Date.now(),
+                            course: '${courseName}',
+                            state: state
+                        }));
+                        console.log('💾 [Autosave] Saved', Object.keys(state).length, 'fields');
+                    }
+                } catch(e) {
+                    console.warn('Autosave failed:', e);
+                }
+            }
+            
+            // Debounced save (prevents saving on every keystroke)
+            function debouncedSave() {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(saveNow, 1000); // Save 1 second after last change
+            }
+            
+            // Load saved state
+            function loadSaved() {
+                try {
+                    const raw = localStorage.getItem(COURSE_KEY);
+                    if (raw) {
+                        const { state, timestamp } = JSON.parse(raw);
+                        if (state) {
+                            restoreInputState(state);
+                            const savedDate = new Date(timestamp);
+                            console.log('📂 [Autosave] Restored from', savedDate.toLocaleString());
+                        }
+                    }
+                } catch(e) {
+                    console.warn('Load saved failed:', e);
+                }
+            }
+            
+            // Mark work as exported (disables unsaved warning)
+            window.markWorkSaved = function() {
+                hasExported = true;
+                console.log('✅ [Autosave] Work marked as saved/exported');
+            };
+            
+            // Initialize on DOM ready
+            function init() {
+                // 1. Load saved state
+                setTimeout(loadSaved, 100); // Small delay to let DOM settle
+                
+                // 2. Autosave on any input change
+                document.addEventListener('input', debouncedSave);
+                document.addEventListener('change', debouncedSave);
+                
+                // 3. Save before page unload
+                window.addEventListener('pagehide', saveNow);
+                window.addEventListener('beforeunload', function(e) {
+                    saveNow(); // Always save
+                    
+                    // Warn if not exported and has content
+                    if (!hasExported) {
+                        const state = getAllInputState();
+                        if (Object.keys(state).length > 0) {
+                            e.preventDefault();
+                            e.returnValue = 'You have unsaved work. Are you sure you want to leave?';
+                            return e.returnValue;
+                        }
+                    }
+                });
+                
+                console.log('🔧 [Autosave] Initialized for course: ${courseName}');
+            }
+            
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
     </script>
 </body>
 </html>`;
@@ -1710,7 +1842,10 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     viewUrl: '',
     downloadUrl: '',
     color: 'slate',
-    assignedModules: []
+    assignedModules: [],
+    hasDigitalContent: false,
+    digitalContent: null,
+    digitalContentJson: '' // Raw JSON string for editing
   });
   const [generatedPrompt, setGeneratedPrompt] = useState("");
   const [aiOutput, setAiOutput] = useState("");
@@ -3741,6 +3876,62 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs mb-3"
                             />
                             
+                            {/* Digital Content Import */}
+                            <div className="mb-3 p-3 bg-slate-900 rounded border border-slate-700">
+                                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                                    <input 
+                                        type="checkbox"
+                                        checked={materialForm.hasDigitalContent}
+                                        onChange={(e) => setMaterialForm({...materialForm, hasDigitalContent: e.target.checked})}
+                                        className="rounded border-slate-700 bg-slate-900 text-emerald-600"
+                                    />
+                                    <span className="text-xs font-bold text-emerald-400 uppercase">Enable Digital Resource</span>
+                                </label>
+                                {materialForm.hasDigitalContent && (
+                                    <div className="mt-2">
+                                        <p className="text-[10px] text-slate-500 mb-2">Paste JSON content for a themed, readable digital version (chapters, sections, etc.)</p>
+                                        <textarea
+                                            value={materialForm.digitalContentJson}
+                                            onChange={(e) => {
+                                                const json = e.target.value;
+                                                setMaterialForm({...materialForm, digitalContentJson: json});
+                                                // Try to parse and validate
+                                                try {
+                                                    if (json.trim()) {
+                                                        const parsed = JSON.parse(json);
+                                                        if (parsed.chapters || parsed.title) {
+                                                            setMaterialForm(prev => ({...prev, digitalContent: parsed, digitalContentJson: json}));
+                                                        }
+                                                    }
+                                                } catch(e) {
+                                                    // Invalid JSON, keep raw text
+                                                }
+                                            }}
+                                            placeholder='{"title": "My Resource", "chapters": [{"number": 1, "title": "Chapter 1", "sections": [{"heading": "Section 1", "content": "Content here..."}]}]}'
+                                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs font-mono h-24 resize-none"
+                                        />
+                                        {materialForm.digitalContentJson && (
+                                            <div className="mt-2">
+                                                {(() => {
+                                                    try {
+                                                        const parsed = JSON.parse(materialForm.digitalContentJson);
+                                                        const chapterCount = parsed.chapters?.length || 0;
+                                                        const sectionCount = parsed.chapters?.reduce((acc, ch) => acc + (ch.sections?.length || 0), 0) || 0;
+                                                        return (
+                                                            <p className="text-[10px] text-emerald-400">
+                                                                Valid JSON: {chapterCount} chapter{chapterCount !== 1 ? 's' : ''}, {sectionCount} section{sectionCount !== 1 ? 's' : ''}
+                                                            </p>
+                                                        );
+                                                    } catch(e) {
+                                                        return <p className="text-[10px] text-rose-400">Invalid JSON: {e.message}</p>;
+                                                    }
+                                                })()}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            
                             {/* Module Assignment */}
                             <div className="mb-3 p-3 bg-slate-900 rounded border border-slate-700">
                                 <label className="block text-xs font-bold text-cyan-400 uppercase mb-2">Assign to Modules (Optional)</label>
@@ -3769,12 +3960,17 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                             
                             <button 
                                 onClick={() => {
-                                    if (!materialForm.title || !materialForm.viewUrl) {
-                                        alert("Title and View URL are required");
+                                    if (!materialForm.title) {
+                                        alert("Title is required");
+                                        return;
+                                    }
+                                    // Must have either viewUrl or digitalContent
+                                    if (!materialForm.viewUrl && !materialForm.digitalContent) {
+                                        alert("Please provide either a View URL or Digital Content");
                                         return;
                                     }
                                     addMaterial(materialForm);
-                                    setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', assignedModules: [] });
+                                    setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
                                 }}
                                 className="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-2 rounded text-xs flex items-center justify-center gap-2"
                             >
@@ -3802,6 +3998,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 <div className="flex-1">
                                                     <div className={`text-sm font-medium ${mat.hidden ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
                                                         {mat.title} {mat.hidden && <span className="text-[9px] text-slate-600">(HIDDEN)</span>}
+                                                        {mat.digitalContent && <span className="ml-2 px-1.5 py-0.5 text-[9px] bg-emerald-900 text-emerald-400 rounded uppercase font-bold">Digital</span>}
                                                     </div>
                                                     <div className="text-[10px] text-slate-500">{mat.description}</div>
                                                 </div>
@@ -3817,7 +4014,11 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 <button 
                                                     onClick={() => {
                                                         setEditingMaterial(mat.id);
-                                                        setMaterialForm(mat);
+                                                        setMaterialForm({
+                                                            ...mat,
+                                                            hasDigitalContent: !!mat.digitalContent,
+                                                            digitalContentJson: mat.digitalContent ? JSON.stringify(mat.digitalContent, null, 2) : ''
+                                                        });
                                                     }}
                                                     className="p-1.5 hover:bg-blue-900 hover:text-blue-400 rounded"
                                                     title="Edit"
@@ -3936,12 +4137,63 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 })()}
                                             </div>
                                         </div>
+                                        
+                                        {/* Digital Content */}
+                                        <div className="p-3 bg-black/50 rounded border border-slate-700">
+                                            <label className="flex items-center gap-2 cursor-pointer mb-2">
+                                                <input 
+                                                    type="checkbox"
+                                                    checked={materialForm.hasDigitalContent}
+                                                    onChange={(e) => setMaterialForm({...materialForm, hasDigitalContent: e.target.checked})}
+                                                    className="rounded border-slate-700 bg-slate-900 text-emerald-600"
+                                                />
+                                                <span className="text-xs font-bold text-emerald-400 uppercase">Enable Digital Resource</span>
+                                            </label>
+                                            {materialForm.hasDigitalContent && (
+                                                <div className="mt-2">
+                                                    <p className="text-[10px] text-slate-500 mb-2">Paste JSON content for a themed, readable digital version</p>
+                                                    <textarea
+                                                        value={materialForm.digitalContentJson || ''}
+                                                        onChange={(e) => {
+                                                            const json = e.target.value;
+                                                            setMaterialForm({...materialForm, digitalContentJson: json});
+                                                            try {
+                                                                if (json.trim()) {
+                                                                    const parsed = JSON.parse(json);
+                                                                    if (parsed.chapters || parsed.title) {
+                                                                        setMaterialForm(prev => ({...prev, digitalContent: parsed, digitalContentJson: json}));
+                                                                    }
+                                                                }
+                                                            } catch(e) {
+                                                                // Invalid JSON
+                                                            }
+                                                        }}
+                                                        placeholder='{"title": "My Resource", "chapters": [...]}'
+                                                        className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs font-mono h-32 resize-none"
+                                                    />
+                                                    {materialForm.digitalContentJson && (
+                                                        <div className="mt-2">
+                                                            {(() => {
+                                                                try {
+                                                                    const parsed = JSON.parse(materialForm.digitalContentJson);
+                                                                    const chapterCount = parsed.chapters?.length || 0;
+                                                                    const sectionCount = parsed.chapters?.reduce((acc, ch) => acc + (ch.sections?.length || 0), 0) || 0;
+                                                                    return <p className="text-[10px] text-emerald-400">Valid: {chapterCount} chapters, {sectionCount} sections</p>;
+                                                                } catch(e) {
+                                                                    return <p className="text-[10px] text-rose-400">Invalid JSON: {e.message}</p>;
+                                                                }
+                                                            })()}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="flex gap-3 mt-6">
                                         <button 
                                             onClick={() => {
                                                 setEditingMaterial(null);
-                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', assignedModules: [] });
+                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
                                             }}
                                             className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded font-bold"
                                         >
@@ -3951,7 +4203,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             onClick={() => {
                                                 editMaterial(editingMaterial, materialForm);
                                                 setEditingMaterial(null);
-                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', assignedModules: [] });
+                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
                                             }}
                                             className="flex-1 bg-pink-600 hover:bg-pink-500 text-white py-2 rounded font-bold flex items-center justify-center gap-2"
                                         >
@@ -5045,6 +5297,18 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                   <span className="text-xs font-bold text-slate-500 uppercase">Download URL</span>
                   <p className="text-cyan-400 text-xs break-all">{materialPreview.downloadUrl || 'N/A'}</p>
                 </div>
+                <div className="col-span-2">
+                  <span className="text-xs font-bold text-slate-500 uppercase">Digital Content</span>
+                  {materialPreview.digitalContent ? (
+                    <div className="mt-1">
+                      <span className="inline-flex items-center gap-2 px-2 py-1 bg-emerald-900/50 text-emerald-400 text-xs rounded font-bold">
+                        📖 Enabled - {materialPreview.digitalContent.chapters?.length || 0} Chapters
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 text-xs">Not configured</p>
+                  )}
+                </div>
               </div>
               
               <div className="flex gap-3 mt-6">
@@ -5159,6 +5423,62 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                     placeholder="Google Drive /view link"
                     className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-xs font-mono"
                   />
+                </div>
+                
+                {/* Digital Content */}
+                <div className="p-4 bg-black/30 rounded-lg border border-slate-700">
+                  <label className="flex items-center gap-2 cursor-pointer mb-3">
+                    <input 
+                      type="checkbox"
+                      checked={!!materialEdit.digitalContent}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setMaterialEdit({...materialEdit, digitalContent: materialEdit.digitalContent || {}, digitalContentJson: materialEdit.digitalContentJson || ''});
+                        } else {
+                          setMaterialEdit({...materialEdit, digitalContent: null, digitalContentJson: ''});
+                        }
+                      }}
+                      className="rounded border-slate-700 bg-slate-900 text-emerald-600"
+                    />
+                    <span className="text-xs font-bold text-emerald-400 uppercase">Enable Digital Resource</span>
+                  </label>
+                  {materialEdit.digitalContent && (
+                    <div>
+                      <p className="text-[10px] text-slate-500 mb-2">Paste JSON content for a themed, readable digital version</p>
+                      <textarea
+                        value={materialEdit.digitalContentJson || (materialEdit.digitalContent ? JSON.stringify(materialEdit.digitalContent, null, 2) : '')}
+                        onChange={(e) => {
+                          const json = e.target.value;
+                          try {
+                            if (json.trim()) {
+                              const parsed = JSON.parse(json);
+                              setMaterialEdit({...materialEdit, digitalContent: parsed, digitalContentJson: json});
+                            } else {
+                              setMaterialEdit({...materialEdit, digitalContentJson: json});
+                            }
+                          } catch(err) {
+                            setMaterialEdit({...materialEdit, digitalContentJson: json});
+                          }
+                        }}
+                        placeholder='{"title": "My Resource", "chapters": [...]}'
+                        className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-xs font-mono h-40 resize-none"
+                      />
+                      {materialEdit.digitalContentJson && (
+                        <div className="mt-2">
+                          {(() => {
+                            try {
+                              const parsed = JSON.parse(materialEdit.digitalContentJson);
+                              const chapterCount = parsed.chapters?.length || 0;
+                              const sectionCount = parsed.chapters?.reduce((acc, ch) => acc + (ch.sections?.length || 0), 0) || 0;
+                              return <p className="text-[10px] text-emerald-400">Valid JSON: {chapterCount} chapter{chapterCount !== 1 ? 's' : ''}, {sectionCount} section{sectionCount !== 1 ? 's' : ''}</p>;
+                            } catch(e) {
+                              return <p className="text-[10px] text-rose-400">Invalid JSON: {e.message}</p>;
+                            }
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex gap-3 mt-6">
@@ -5531,6 +5851,9 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       const courseMaterials = projectData["Current Course"]?.materials || [];
       const materials = courseMaterials.filter(m => !m.hidden).sort((a, b) => a.order - b.order);
       
+      // Collect digital content for all materials
+      const digitalMaterials = materials.filter(m => m.digitalContent);
+      
       // Generate material cards dynamically
       const materialCards = materials.map(mat => {
         const colorClass = mat.color || 'slate';
@@ -5541,9 +5864,22 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
         const buttonColorClass = colorClass !== 'slate' ? `bg-${colorClass}-600 hover:bg-${colorClass}-500` : 'bg-sky-600 hover:bg-sky-500';
         
         // Properly escape quotes in the onclick handlers
-        const escapedViewUrl = mat.viewUrl.replace(/'/g, "\\'");
+        const escapedViewUrl = (mat.viewUrl || '').replace(/'/g, "\\'");
         const escapedTitle = (mat.title || '').replace(/'/g, "\\'");
-        const escapedDownloadUrl = mat.downloadUrl.replace(/'/g, "\\'");
+        const escapedDownloadUrl = (mat.downloadUrl || '').replace(/'/g, "\\'");
+        const matId = mat.id || `mat-${Date.now()}`;
+        
+        // Build buttons based on available content
+        let buttonsHTML = '';
+        if (mat.viewUrl) {
+          buttonsHTML += `<button onclick="openPDF('${escapedViewUrl}', '${escapedTitle}')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>`;
+        }
+        if (mat.downloadUrl) {
+          buttonsHTML += `<a href="${escapedDownloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`;
+        }
+        if (mat.digitalContent) {
+          buttonsHTML += `<button onclick="openDigitalReader('${matId}')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">📖 Read</button>`;
+        }
         
         return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 ${borderClass}">
     <div class="flex items-center gap-6">
@@ -5554,11 +5890,17 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
         </div>
     </div>
     <div class="flex gap-3 w-full md:w-auto">
-        <button onclick="openPDF('${escapedViewUrl}', '${escapedTitle}')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>
-        <a href="${escapedDownloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>
+        ${buttonsHTML}
     </div>
 </div>`;
       }).join('\n                    ');
+      
+      // Generate digital content data for embedding
+      const digitalContentData = {};
+      digitalMaterials.forEach(dm => {
+        digitalContentData[dm.id] = dm.digitalContent;
+      });
+      const digitalContentJSON = JSON.stringify(digitalContentData).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       
       // Generate the full materials view HTML
       const materialsHTML = `<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
@@ -5574,7 +5916,27 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                     </div>
                     <iframe id="pdf-frame" src="" width="100%" height="600" style="border:none;"></iframe>
                 </div>
-                <div class="grid grid-cols-1 gap-4">
+                <div id="digital-reader-container" class="hidden mb-12 bg-slate-900 rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">
+                    <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-emerald-500/30">
+                        <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">📖 Digital Resource</span>
+                        <button onclick="closeDigitalReader()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
+                    </div>
+                    <div class="flex h-[600px]">
+                        <div id="reader-toc" class="w-64 bg-slate-950 border-r border-slate-700 p-4 overflow-y-auto hidden md:block">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Contents</h4>
+                            <div id="reader-toc-items" class="space-y-1"></div>
+                        </div>
+                        <div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">
+                            <div id="reader-body" class="prose prose-invert max-w-none"></div>
+                            <div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-700">
+                                <button onclick="prevChapter()" id="prev-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">← Previous</button>
+                                <span id="reader-progress" class="text-xs text-slate-500"></span>
+                                <button onclick="nextChapter()" id="next-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next →</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="materials-list" class="grid grid-cols-1 gap-4">
                     ${materialCards}
                 </div>
             </div>
@@ -5589,6 +5951,98 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       // Inject the scripts (use standalone format if available, fallback to legacy)
       const materialsScript = item.script || itemCode.script || '';
       if (materialsScript) scriptInjection += '\n        ' + materialsScript + '\n';
+      
+      // Add digital reader script
+      if (digitalMaterials.length > 0) {
+        const digitalReaderScript = `
+        // Digital Reader System
+        var DIGITAL_CONTENT = ${digitalContentJSON};
+        var currentReader = { matId: null, chapterIdx: 0, data: null };
+        
+        function openDigitalReader(matId) {
+            var content = DIGITAL_CONTENT[matId];
+            if (!content) { console.error('No digital content for', matId); return; }
+            
+            currentReader = { matId: matId, chapterIdx: 0, data: content };
+            
+            // Update title
+            document.getElementById('reader-title').innerHTML = '📖 ' + (content.title || 'Digital Resource');
+            
+            // Build table of contents
+            var tocHTML = '';
+            (content.chapters || []).forEach(function(ch, idx) {
+                tocHTML += '<button onclick="goToChapter(' + idx + ')" class="toc-item w-full text-left px-3 py-2 rounded text-xs hover:bg-slate-800 transition-colors ' + (idx === 0 ? 'bg-emerald-900/50 text-emerald-400' : 'text-slate-400') + '" data-chapter="' + idx + '">' +
+                    '<span class="font-bold">' + (ch.number || (idx + 1)) + '.</span> ' + ch.title +
+                '</button>';
+            });
+            document.getElementById('reader-toc-items').innerHTML = tocHTML;
+            
+            // Show first chapter
+            renderChapter(0);
+            
+            // Show reader, hide materials list
+            document.getElementById('digital-reader-container').classList.remove('hidden');
+            document.getElementById('materials-list').classList.add('hidden');
+            document.getElementById('pdf-viewer-container').classList.add('hidden');
+        }
+        
+        function closeDigitalReader() {
+            document.getElementById('digital-reader-container').classList.add('hidden');
+            document.getElementById('materials-list').classList.remove('hidden');
+            currentReader = { matId: null, chapterIdx: 0, data: null };
+        }
+        
+        function renderChapter(idx) {
+            if (!currentReader.data || !currentReader.data.chapters) return;
+            var chapters = currentReader.data.chapters;
+            if (idx < 0 || idx >= chapters.length) return;
+            
+            currentReader.chapterIdx = idx;
+            var chapter = chapters[idx];
+            
+            // Build chapter content
+            var html = '<h2 class="text-2xl font-bold text-white mb-2">' + (chapter.number || (idx + 1)) + '. ' + chapter.title + '</h2>';
+            
+            (chapter.sections || []).forEach(function(sec) {
+                html += '<div class="mt-6">';
+                if (sec.heading) {
+                    html += '<h3 class="text-lg font-bold text-emerald-400 mb-3">' + sec.heading + '</h3>';
+                }
+                // Simple markdown-like rendering
+                var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, '• ');
+                html += '<div class="text-slate-300 leading-relaxed whitespace-pre-line">' + content + '</div>';
+                html += '</div>';
+            });
+            
+            document.getElementById('reader-body').innerHTML = html;
+            
+            // Update TOC highlighting
+            document.querySelectorAll('.toc-item').forEach(function(btn) {
+                var chIdx = parseInt(btn.getAttribute('data-chapter'));
+                if (chIdx === idx) {
+                    btn.classList.add('bg-emerald-900/50', 'text-emerald-400');
+                    btn.classList.remove('text-slate-400');
+                } else {
+                    btn.classList.remove('bg-emerald-900/50', 'text-emerald-400');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+            
+            // Update navigation buttons
+            document.getElementById('prev-btn').disabled = idx === 0;
+            document.getElementById('next-btn').disabled = idx === chapters.length - 1;
+            document.getElementById('reader-progress').textContent = 'Chapter ' + (idx + 1) + ' of ' + chapters.length;
+            
+            // Scroll to top
+            document.getElementById('reader-content').scrollTop = 0;
+        }
+        
+        function goToChapter(idx) { renderChapter(idx); }
+        function prevChapter() { renderChapter(currentReader.chapterIdx - 1); }
+        function nextChapter() { renderChapter(currentReader.chapterIdx + 1); }
+        `;
+        scriptInjection += '\n        ' + digitalReaderScript + '\n';
+      }
       
     }
     // Special handling for Assessments module
@@ -6302,6 +6756,12 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     // Materials (selected by user)
     const selectedMaterials = materials.filter(mat => exportMaterials.includes(mat.id));
     if (selectedMaterials.length > 0) {
+        // Check for digital materials
+        const digitalMats = selectedMaterials.filter(m => m.digitalContent);
+        const digitalContentData = {};
+        digitalMats.forEach(dm => { digitalContentData[dm.id] = dm.digitalContent; });
+        const digitalContentJSON = JSON.stringify(digitalContentData).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+        
         sectionsHTML += '<section id="materials" class="mb-12"><h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-2">📚 Materials</h2>';
         
         // Material viewer container
@@ -6313,7 +6773,28 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
             '<iframe id="material-frame" src="" width="100%" height="600" style="border:none;"></iframe>' +
             '</div>';
         
-        sectionsHTML += '<div class="space-y-4">';
+        // Digital reader container (for single module export)
+        if (digitalMats.length > 0) {
+            sectionsHTML += '<div id="digital-reader-container" class="hidden mb-8 bg-slate-900 rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">' +
+                '<div class="flex justify-between items-center p-3 bg-slate-800 border-b border-emerald-500/30">' +
+                '<span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">📖 Digital Resource</span>' +
+                '<button onclick="closeDigitalReader()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>' +
+                '</div>' +
+                '<div class="flex" style="height: 600px;">' +
+                '<div id="reader-toc" class="w-64 bg-slate-950 border-r border-slate-700 p-4 overflow-y-auto hidden md:block">' +
+                '<h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Contents</h4>' +
+                '<div id="reader-toc-items" class="space-y-1"></div>' +
+                '</div>' +
+                '<div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">' +
+                '<div id="reader-body" class="prose prose-invert max-w-none"></div>' +
+                '<div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-700">' +
+                '<button onclick="prevChapter()" id="prev-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">← Previous</button>' +
+                '<span id="reader-progress" class="text-xs text-slate-500"></span>' +
+                '<button onclick="nextChapter()" id="next-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next →</button>' +
+                '</div></div></div></div>';
+        }
+        
+        sectionsHTML += '<div id="materials-list" class="space-y-4">';
         selectedMaterials.forEach((mat, idx) => {
             const colorClass = mat.color || 'slate';
             const bgClass = colorClass !== 'slate' ? 'bg-' + colorClass + '-500/10' : 'bg-slate-800';
@@ -6324,6 +6805,18 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
             // Convert /view to /preview for iframe embedding
             const previewUrl = mat.viewUrl ? mat.viewUrl.replace('/view', '/preview') : '';
             
+            // Build buttons
+            let buttonsHTML = '';
+            if (mat.viewUrl) {
+                buttonsHTML += '<button onclick="openMaterialViewer(\'' + previewUrl.replace(/'/g, "\\'") + '\', \'' + mat.title.replace(/'/g, "\\'") + '\')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase px-6 py-3 rounded-lg border border-slate-600 transition-all text-center">View Inline</button>';
+            }
+            if (mat.downloadUrl) {
+                buttonsHTML += '<a href="' + mat.downloadUrl + '" target="_blank" class="flex-1 ' + buttonColorClass + ' text-white text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center">Download</a>';
+            }
+            if (mat.digitalContent) {
+                buttonsHTML += '<button onclick="openDigitalReader(\'' + mat.id + '\')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center flex items-center justify-center gap-2">📖 Read</button>';
+            }
+            
             sectionsHTML += '<div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-xl border border-slate-700 ' + bgClass + ' ' + borderClass + '">' +
                 '<div class="flex items-center gap-4">' +
                 '<div class="w-12 h-12 rounded-lg flex items-center justify-center ' + textColorClass + ' font-black text-xl border border-slate-700">' + (mat.number || '📄') + '</div>' +
@@ -6331,18 +6824,91 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                 '<h3 class="text-lg font-bold text-white uppercase italic">' + mat.title + '</h3>' +
                 '<p class="text-xs text-slate-400">' + (mat.description || '') + '</p>' +
                 '</div></div>' +
-                '<div class="flex gap-3 w-full md:w-auto">';
-            
-            if (mat.viewUrl) {
-                sectionsHTML += '<button onclick="openMaterialViewer(\'' + previewUrl.replace(/'/g, "\\'") + '\', \'' + mat.title.replace(/'/g, "\\'") + '\')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase px-6 py-3 rounded-lg border border-slate-600 transition-all text-center">View Inline</button>';
-            }
-            if (mat.downloadUrl) {
-                sectionsHTML += '<a href="' + mat.downloadUrl + '" target="_blank" class="flex-1 ' + buttonColorClass + ' text-white text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center">Download</a>';
-            }
-            
-            sectionsHTML += '</div></div>';
+                '<div class="flex gap-3 w-full md:w-auto">' + buttonsHTML + '</div></div>';
         });
         sectionsHTML += '</div></section>';
+        
+        // Add digital reader scripts if needed
+        if (digitalMats.length > 0) {
+            combinedScripts += `
+// Digital Reader System
+var DIGITAL_CONTENT = ${digitalContentJSON};
+var currentReader = { matId: null, chapterIdx: 0, data: null };
+
+window.openDigitalReader = function(matId) {
+    var content = DIGITAL_CONTENT[matId];
+    if (!content) { console.error('No digital content for', matId); return; }
+    
+    currentReader = { matId: matId, chapterIdx: 0, data: content };
+    
+    document.getElementById('reader-title').innerHTML = '📖 ' + (content.title || 'Digital Resource');
+    
+    var tocHTML = '';
+    (content.chapters || []).forEach(function(ch, idx) {
+        tocHTML += '<button onclick="goToChapter(' + idx + ')" class="toc-item w-full text-left px-3 py-2 rounded text-xs hover:bg-slate-800 transition-colors ' + (idx === 0 ? 'bg-emerald-900/50 text-emerald-400' : 'text-slate-400') + '" data-chapter="' + idx + '">' +
+            '<span class="font-bold">' + (ch.number || (idx + 1)) + '.</span> ' + ch.title +
+        '</button>';
+    });
+    document.getElementById('reader-toc-items').innerHTML = tocHTML;
+    
+    renderChapter(0);
+    
+    document.getElementById('digital-reader-container').classList.remove('hidden');
+    document.getElementById('materials-list').classList.add('hidden');
+    document.getElementById('material-viewer').classList.add('hidden');
+};
+
+window.closeDigitalReader = function() {
+    document.getElementById('digital-reader-container').classList.add('hidden');
+    document.getElementById('materials-list').classList.remove('hidden');
+    currentReader = { matId: null, chapterIdx: 0, data: null };
+};
+
+function renderChapter(idx) {
+    if (!currentReader.data || !currentReader.data.chapters) return;
+    var chapters = currentReader.data.chapters;
+    if (idx < 0 || idx >= chapters.length) return;
+    
+    currentReader.chapterIdx = idx;
+    var chapter = chapters[idx];
+    
+    var html = '<h2 class="text-2xl font-bold text-white mb-2">' + (chapter.number || (idx + 1)) + '. ' + chapter.title + '</h2>';
+    
+    (chapter.sections || []).forEach(function(sec) {
+        html += '<div class="mt-6">';
+        if (sec.heading) {
+            html += '<h3 class="text-lg font-bold text-emerald-400 mb-3">' + sec.heading + '</h3>';
+        }
+        var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, '• ');
+        html += '<div class="text-slate-300 leading-relaxed whitespace-pre-line">' + content + '</div>';
+        html += '</div>';
+    });
+    
+    document.getElementById('reader-body').innerHTML = html;
+    
+    document.querySelectorAll('.toc-item').forEach(function(btn) {
+        var chIdx = parseInt(btn.getAttribute('data-chapter'));
+        if (chIdx === idx) {
+            btn.classList.add('bg-emerald-900/50', 'text-emerald-400');
+            btn.classList.remove('text-slate-400');
+        } else {
+            btn.classList.remove('bg-emerald-900/50', 'text-emerald-400');
+            btn.classList.add('text-slate-400');
+        }
+    });
+    
+    document.getElementById('prev-btn').disabled = idx === 0;
+    document.getElementById('next-btn').disabled = idx === chapters.length - 1;
+    document.getElementById('reader-progress').textContent = 'Chapter ' + (idx + 1) + ' of ' + chapters.length;
+    
+    document.getElementById('reader-content').scrollTop = 0;
+}
+
+window.goToChapter = function(idx) { renderChapter(idx); };
+window.prevChapter = function() { renderChapter(currentReader.chapterIdx - 1); };
+window.nextChapter = function() { renderChapter(currentReader.chapterIdx + 1); };
+`;
+        }
     }
 
     // Tools
@@ -6361,7 +6927,91 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         sectionsHTML += '</div></section>';
     }
 
-    const finalHTML = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>' + selectedMod.title + '</title><script src="https://cdn.tailwindcss.com"><\/script><link href="https://fonts.googleapis.com/css?family=Inter:ital,wght@0,400;0,700;1,400;1,900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet"><script>tailwind.config = { darkMode: "class", theme: { extend: { fontFamily: { sans: ["Inter", "sans-serif"], mono: ["JetBrains Mono", "monospace"] } } } }<\/script><style>body { background-color: #020617; color: #e2e8f0; font-family: "Inter", sans-serif; min-height: 100vh; overflow-x: hidden; } .mono { font-family: "JetBrains Mono", monospace; } .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); } input, textarea, select { background: #0f172a !important; border: 1px solid #1e293b !important; color: #e2e8f0; } input:focus, textarea:focus, select:focus { border-color: #0ea5e9 !important; outline: none; box-shadow: 0 0 0 1px #0ea5e9; } .score-btn, .mod-nav-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; } .score-btn:hover, .mod-nav-btn:hover { border-color: #0ea5e9; color: white; } .score-btn.active, .mod-nav-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; } .step-content { display: none; } .step-content.active { display: block; } .assessment-container.hidden { display: none; } #assessment-list.hidden { display: none; } .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; } .rubric-cell:hover { background: rgba(255,255,255,0.05); } .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; } .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; } .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; } .helper-text { font-size: 8px; color: #64748b; font-style: italic; margin-top: 4px; }<\/style></head><body class="p-4 md:p-8 max-w-6xl mx-auto">' + sectionsHTML + '<script>' + combinedScripts + '<\/script></body></html>';
+    // Build autosave script for single module export
+    const moduleTitle = selectedMod.title.replace(/[^a-zA-Z0-9]/g, '_');
+    const autosaveScript = `
+// ========================================
+// GLOBAL AUTOSAVE SYSTEM (Single Module)
+// ========================================
+(function() {
+    var COURSE_KEY = 'CF_Module_' + '${moduleTitle}' + '_v1';
+    var hasExported = false;
+    var saveTimeout = null;
+    
+    function getAllInputState() {
+        var state = {};
+        document.querySelectorAll('input, textarea, select').forEach(function(el, i) {
+            var key = el.id || el.name || ('field_' + i);
+            if (el.type === 'checkbox' || el.type === 'radio') {
+                if (el.checked) state[key] = el.type === 'radio' ? el.value : true;
+            } else {
+                if (el.value) state[key] = el.value;
+            }
+        });
+        return state;
+    }
+    
+    function restoreInputState(state) {
+        if (!state) return;
+        document.querySelectorAll('input, textarea, select').forEach(function(el, i) {
+            var key = el.id || el.name || ('field_' + i);
+            var savedValue = state[key];
+            if (savedValue !== undefined) {
+                if (el.type === 'checkbox') {
+                    el.checked = !!savedValue;
+                } else if (el.type === 'radio') {
+                    el.checked = (el.value === savedValue);
+                } else {
+                    el.value = savedValue;
+                }
+            }
+        });
+    }
+    
+    function saveNow() {
+        try {
+            var state = getAllInputState();
+            if (Object.keys(state).length > 0) {
+                localStorage.setItem(COURSE_KEY, JSON.stringify({ t: Date.now(), state: state }));
+            }
+        } catch(e) {}
+    }
+    
+    function debouncedSave() {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(saveNow, 1000);
+    }
+    
+    function loadSaved() {
+        try {
+            var raw = localStorage.getItem(COURSE_KEY);
+            if (raw) {
+                var data = JSON.parse(raw);
+                if (data.state) restoreInputState(data.state);
+            }
+        } catch(e) {}
+    }
+    
+    window.markWorkSaved = function() { hasExported = true; };
+    
+    setTimeout(loadSaved, 100);
+    document.addEventListener('input', debouncedSave);
+    document.addEventListener('change', debouncedSave);
+    window.addEventListener('pagehide', saveNow);
+    window.addEventListener('beforeunload', function(e) {
+        saveNow();
+        if (!hasExported) {
+            var state = getAllInputState();
+            if (Object.keys(state).length > 0) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved work. Are you sure you want to leave?';
+            }
+        }
+    });
+})();
+`;
+
+    const finalHTML = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>' + selectedMod.title + '</title><script src="https://cdn.tailwindcss.com"><\/script><link href="https://fonts.googleapis.com/css?family=Inter:ital,wght@0,400;0,700;1,400;1,900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet"><script>tailwind.config = { darkMode: "class", theme: { extend: { fontFamily: { sans: ["Inter", "sans-serif"], mono: ["JetBrains Mono", "monospace"] } } } }<\/script><style>body { background-color: #020617; color: #e2e8f0; font-family: "Inter", sans-serif; min-height: 100vh; overflow-x: hidden; } .mono { font-family: "JetBrains Mono", monospace; } .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); } input, textarea, select { background: #0f172a !important; border: 1px solid #1e293b !important; color: #e2e8f0; } input:focus, textarea:focus, select:focus { border-color: #0ea5e9 !important; outline: none; box-shadow: 0 0 0 1px #0ea5e9; } .score-btn, .mod-nav-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; } .score-btn:hover, .mod-nav-btn:hover { border-color: #0ea5e9; color: white; } .score-btn.active, .mod-nav-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; } .step-content { display: none; } .step-content.active { display: block; } .assessment-container.hidden { display: none; } #assessment-list.hidden { display: none; } .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; } .rubric-cell:hover { background: rgba(255,255,255,0.05); } .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; } .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; } .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; } .helper-text { font-size: 8px; color: #64748b; font-style: italic; margin-top: 4px; }<\/style></head><body class="p-4 md:p-8 max-w-6xl mx-auto">' + sectionsHTML + '<script>' + combinedScripts + autosaveScript + '<\/script></body></html>';
 
       setExportedHTML(finalHTML);
     } catch (error) {
@@ -8097,7 +8747,8 @@ export default function App() {
       color: materialData.color || 'slate',
       hidden: false,
       order: currentMaterials.length,
-      assignedModules: materialData.assignedModules || []
+      assignedModules: materialData.assignedModules || [],
+      digitalContent: materialData.digitalContent || null
     };
     
       setProjectData({
