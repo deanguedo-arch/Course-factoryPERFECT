@@ -345,6 +345,7 @@ const PROJECT_DATA = {
     headingTextColor: "white",
     secondaryTextColor: "slate-400",
     assessmentTextColor: "white",
+    assessmentBoxColor: "slate-900",
     buttonColor: "sky-600",
     containerColor: "slate-900/80",
     fontFamily: "inter",
@@ -1966,6 +1967,22 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   // NEW: AI Studio Module Creator State
   const [aiDescription, setAiDescription] = useState("");
 
+  // Assessment override colors (Phase 1 Edit modal) — "Use course default" + common colors
+  const assessmentOverrideOptions = [
+    { value: '', label: 'Use course default' },
+    { value: 'white', label: 'White', swatch: 'bg-white border-slate-300', text: 'text-slate-900' },
+    { value: 'slate-900', label: 'Slate 900', swatch: 'bg-slate-900 border-slate-700', text: 'text-white' },
+    { value: 'slate-800', label: 'Slate 800', swatch: 'bg-slate-800 border-slate-700', text: 'text-white' },
+    { value: 'slate-700', label: 'Slate 700', swatch: 'bg-slate-700 border-slate-600', text: 'text-white' },
+    { value: 'slate-600', label: 'Slate 600', swatch: 'bg-slate-600 border-slate-500', text: 'text-white' },
+    { value: 'slate-400', label: 'Slate 400', swatch: 'bg-slate-400 border-slate-300', text: 'text-white' },
+    { value: 'slate-300', label: 'Slate 300', swatch: 'bg-slate-300 border-slate-200', text: 'text-slate-900' },
+    { value: 'slate-200', label: 'Slate 200', swatch: 'bg-slate-200 border-slate-100', text: 'text-slate-900' },
+    { value: 'gray-900', label: 'Gray 900', swatch: 'bg-gray-900 border-gray-700', text: 'text-white' },
+    { value: 'gray-700', label: 'Gray 700', swatch: 'bg-gray-700 border-gray-600', text: 'text-white' },
+    { value: 'black', label: 'Black', swatch: 'bg-black border-slate-700', text: 'text-white' }
+  ];
+
   // Materials Manager State
   const [editingMaterial, setEditingMaterial] = useState(null);
   const [materialForm, setMaterialForm] = useState({
@@ -3313,9 +3330,10 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                         title: assessmentTitle,
                                                         type: assessmentType,
                                                         html: parsed.html,
-                                                        script: parsed.script
+                                                        script: parsed.script,
+                                                        generatedId: parsed.id || null
                                                     });
-                                                    alert("âœ… Assessment added successfully! Switching to Manage tab...");
+                                                    alert("Assessment added successfully! Switching to Manage tab...");
                                                     setGeneratedAssessment("");
                                                     setAssessmentTitle("");
                                                     setQuizQuestions([{ question: '', options: ['', '', '', ''], correct: 0 }]);
@@ -3463,9 +3481,10 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                         type: 'mixed',
                                                         html: parsed.html,
                                                         script: parsed.script,
-                                                        questionCount: masterQuestions.length
+                                                        questionCount: masterQuestions.length,
+                                                        generatedId: parsed.id || null
                                                     });
-                                                    alert("âœ… Assessment added successfully! Switching to Manage tab...");
+                                                    alert("Assessment added successfully! Switching to Manage tab...");
                                                     setGeneratedAssessment("");
                                                     setMasterAssessmentTitle("");
                                                     setMasterQuestions([]);
@@ -3594,6 +3613,33 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                     </div>
                                                 </div>
 
+                                                <div>
+                                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Text Color Override</label>
+                                                    <p className="text-[10px] text-slate-500 mb-1 italic">Overrides Phase 5 Assessment Text Color for this assessment only</p>
+                                                    <select
+                                                        value={editingAssessment.textColorOverride ?? ''}
+                                                        onChange={(e) => setEditingAssessment({ ...editingAssessment, textColorOverride: e.target.value || null })}
+                                                        className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                                                    >
+                                                        {assessmentOverrideOptions.map((opt) => (
+                                                            <option key={opt.value || 'default'} value={opt.value}>{opt.label}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Box Color Override</label>
+                                                    <p className="text-[10px] text-slate-500 mb-1 italic">Overrides Phase 5 Assessment Box Color for this assessment only</p>
+                                                    <select
+                                                        value={editingAssessment.boxColorOverride ?? ''}
+                                                        onChange={(e) => setEditingAssessment({ ...editingAssessment, boxColorOverride: e.target.value || null })}
+                                                        className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                                                    >
+                                                        {assessmentOverrideOptions.map((opt) => (
+                                                            <option key={'box-' + (opt.value || 'default')} value={opt.value}>{opt.label}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
                                                 <div className="p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg">
                                                     <p className="text-amber-300 text-xs">
                                                         <strong>Note:</strong> To edit questions/prompts, you'll need to recreate the assessment in the "Create New" tab with your changes.
@@ -3610,7 +3656,9 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                     <button 
                                                         onClick={() => {
                                                             editAssessment(editingAssessment.id, {
-                                                                title: editingAssessment.title
+                                                                title: editingAssessment.title,
+                                                                textColorOverride: editingAssessment.textColorOverride || null,
+                                                                boxColorOverride: editingAssessment.boxColorOverride || null
                                                             });
                                                             setEditingAssessment(null);
                                                         }}
@@ -3790,7 +3838,8 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                 title: parsed.title,
                                                                 type: parsed.type,
                                                                 html: parsed.html,
-                                                                script: parsed.script
+                                                                script: parsed.script,
+                                                                generatedId: parsed.id || null
                                                             });
                                                             alert("Assessment added successfully!");
                                                             setMigrateCode('');
@@ -6479,8 +6528,36 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
         '        </div>';
       }).join('\n        ');
       
+      // Per-assessment text/box color overrides (Phase 1 Edit). Phase 5 defaults.
+      const defaultTextColor = courseSettings.assessmentTextColor || 'white';
+      const defaultBoxColor = courseSettings.assessmentBoxColor || 'slate-900';
+      const overrideHexMap = {
+        'white': '#ffffff', 'black': '#000000',
+        'slate-950': '#020617', 'slate-900': '#0f172a', 'slate-800': '#1e293b', 'slate-700': '#334155',
+        'slate-600': '#475569', 'slate-500': '#64748b', 'slate-400': '#94a3b8', 'slate-300': '#cbd5e1',
+        'slate-200': '#e2e8f0', 'slate-100': '#f1f5f9', 'slate-50': '#f8fafc',
+        'gray-900': '#111827', 'gray-800': '#1f2937', 'gray-700': '#374151', 'gray-600': '#4b5563',
+        'gray-500': '#6b7280', 'gray-400': '#9ca3af', 'gray-300': '#d1d5db', 'gray-200': '#e5e7eb', 'gray-100': '#f3f4f6', 'gray-50': '#f9fafb'
+      };
+      const assessmentOverrideCSS = assessments.map((assess) => {
+        const textColor = assess.textColorOverride != null && assess.textColorOverride !== '' ? assess.textColorOverride : defaultTextColor;
+        const boxColor = assess.boxColorOverride != null && assess.boxColorOverride !== '' ? assess.boxColorOverride : defaultBoxColor;
+        let genId = assess.generatedId;
+        if (!genId && (assess.html || '').match(/id="(quiz_|mixed_)\d+"/)) {
+          const m = (assess.html || '').match(/id="((?:quiz_|mixed_)\d+)"/);
+          genId = m ? m[1] : null;
+        }
+        if (!genId) return '';
+        const textHex = overrideHexMap[textColor] || overrideHexMap['white'];
+        const boxHex = overrideHexMap[boxColor] || overrideHexMap['slate-900'];
+        const isLightBox = ['white','slate-50','slate-100','slate-200','slate-300','slate-400','gray-50','gray-100','gray-200','gray-300','gray-400'].includes(boxColor);
+        const borderHex = isLightBox ? '#cbd5e1' : '#334155';
+        return `#${genId} .assessment-input,#${genId} textarea.assessment-input,#${genId} input.assessment-input{color:${textHex} !important;background-color:${boxHex} !important;border-color:${borderHex} !important;}`;
+      }).filter(Boolean).join('\n');
+      
       // Generate the full assessments view HTML with selection page (WITH INLINE SCRIPTS)
       const assessmentViewHTML = `<div id="view-assessments" class="w-full h-full custom-scroll p-8 md:p-12">
+            ${assessmentOverrideCSS ? `<style>/* per-assessment overrides */\n${assessmentOverrideCSS}</style>` : ''}
             <div class="max-w-5xl mx-auto">
                 <!-- Assessment Selection Page -->
                 <div id="assessment-list">
@@ -7576,8 +7653,36 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       // Collect assessment scripts
       const assessmentScripts = assessments.map(assess => assess.script || '').filter(s => s).join('\n');
 
+      // Per-assessment text/box color overrides (Phase 1 Edit; Phase 5 defaults)
+      const defaultTextColor = courseSettings.assessmentTextColor || 'white';
+      const defaultBoxColor = courseSettings.assessmentBoxColor || 'slate-900';
+      const overrideHexMap = {
+        'white': '#ffffff', 'black': '#000000',
+        'slate-950': '#020617', 'slate-900': '#0f172a', 'slate-800': '#1e293b', 'slate-700': '#334155',
+        'slate-600': '#475569', 'slate-500': '#64748b', 'slate-400': '#94a3b8', 'slate-300': '#cbd5e1',
+        'slate-200': '#e2e8f0', 'slate-100': '#f1f5f9', 'slate-50': '#f8fafc',
+        'gray-900': '#111827', 'gray-800': '#1f2937', 'gray-700': '#374151', 'gray-600': '#4b5563',
+        'gray-500': '#6b7280', 'gray-400': '#9ca3af', 'gray-300': '#d1d5db', 'gray-200': '#e5e7eb', 'gray-100': '#f3f4f6', 'gray-50': '#f9fafb'
+      };
+      const assessmentOverrideCSS = assessments.map((assess) => {
+        const textColor = assess.textColorOverride != null && assess.textColorOverride !== '' ? assess.textColorOverride : defaultTextColor;
+        const boxColor = assess.boxColorOverride != null && assess.boxColorOverride !== '' ? assess.boxColorOverride : defaultBoxColor;
+        let genId = assess.generatedId;
+        if (!genId && (assess.html || '').match(/id="(quiz_|mixed_)\d+"/)) {
+          const m = (assess.html || '').match(/id="((?:quiz_|mixed_)\d+)"/);
+          genId = m ? m[1] : null;
+        }
+        if (!genId) return '';
+        const textHex = overrideHexMap[textColor] || overrideHexMap['white'];
+        const boxHex = overrideHexMap[boxColor] || overrideHexMap['slate-900'];
+        const isLightBox = ['white','slate-50','slate-100','slate-200','slate-300','slate-400','gray-50','gray-100','gray-200','gray-300','gray-400'].includes(boxColor);
+        const borderHex = isLightBox ? '#cbd5e1' : '#334155';
+        return `#${genId} .assessment-input,#${genId} textarea.assessment-input,#${genId} input.assessment-input{color:${textHex} !important;background-color:${boxHex} !important;border-color:${borderHex} !important;}`;
+      }).filter(Boolean).join('\n');
+
       moduleContentHTML = `
         <div class="space-y-8">
+          ${assessmentOverrideCSS ? `<style>/* per-assessment overrides */\n${assessmentOverrideCSS}</style>` : ''}
           <div class="mb-8">
             <h2 class="text-3xl font-black ${headingTextClass} italic uppercase tracking-tighter">Assessment Center</h2>
             <p class="text-xs ${secondaryTextClass} font-mono uppercase tracking-widest mt-2">Quizzes, tests, and reflection exercises.</p>
@@ -9708,6 +9813,27 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
                     onClick={() => updateSettings({ assessmentTextColor: opt.value })}
                     className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
                       (settings.assessmentTextColor || 'white') === opt.value
+                        ? 'border-white bg-slate-700'
+                        : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded border ${opt.swatch}`}></div>
+                    <span className={`text-xs ${opt.text}`}>{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Assessment Box Color</label>
+              <p className="text-[10px] text-slate-500 mb-2 italic">Default background for assessment cards and input fields</p>
+              <div className="grid grid-cols-3 gap-2">
+                {assessmentTextColorOptions.map(opt => (
+                  <button
+                    key={'box-' + opt.value}
+                    onClick={() => updateSettings({ assessmentBoxColor: opt.value })}
+                    className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                      (settings.assessmentBoxColor || 'slate-900') === opt.value
                         ? 'border-white bg-slate-700'
                         : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
                     }`}
