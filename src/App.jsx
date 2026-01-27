@@ -1,4 +1,4 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Wrench, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X, Edit, Clock, RotateCcw } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
@@ -7,7 +7,7 @@ import { getFirestore, doc, setDoc, onSnapshot, collection } from 'firebase/fire
 const { useState, useEffect, useRef } = React;
 
 // ==========================================
-// 🟢 TOAST NOTIFICATION SYSTEM
+// ðŸŸ¢ TOAST NOTIFICATION SYSTEM
 // ==========================================
 const useToast = () => {
   const [toasts, setToasts] = useState([]);
@@ -74,7 +74,7 @@ const ToastContainer = ({ toasts, removeToast }) => {
 };
 
 // ==========================================
-// 🔴 FIREBASE CONFIG & INIT (DISABLED LOCALLY)
+// ðŸ”´ FIREBASE CONFIG & INIT (DISABLED LOCALLY)
 // ==========================================
 // const firebaseConfig = JSON.parse(__firebase_config);
 // const app = initializeApp(firebaseConfig);
@@ -83,7 +83,7 @@ const ToastContainer = ({ toasts, removeToast }) => {
 const appId = 'course-factory-v1';
 
 // ==========================================
-// 🟢 PROJECT DATA (THE LIVING LIBRARY)
+// ðŸŸ¢ PROJECT DATA (THE LIVING LIBRARY)
 // ==========================================
 
 const PROJECT_DATA = {
@@ -284,12 +284,12 @@ const PROJECT_DATA = {
                 <header class="mb-8 text-center"><h1 class="text-3xl font-black italic tracking-tighter text-white uppercase mb-2 text-sky-500">Elite Operator Toolkit</h1><p class="text-[10px] font-mono uppercase tracking-[0.3em] text-slate-500 mb-6 font-bold underline decoration-sky-500/30 underline-offset-4">Regulation Engine: Tactical Assignment</p><div class="flex flex-wrap justify-center gap-3 mb-6 bg-slate-900/50 p-3 rounded-xl border border-slate-800 max-w-2xl mx-auto"><div class="flex items-center gap-2 px-3"><div id="p1-save-indicator" class="w-2 h-2 rounded-full bg-slate-600"></div><span id="p1-save-text" class="text-[9px] uppercase font-bold text-slate-500 tracking-widest">System Ready</span></div><div class="w-px h-6 bg-slate-800 mx-2 hidden sm:block"></div><button onclick="p1_downloadBackup()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-[10px] uppercase font-bold tracking-wider transition-colors border border-slate-700">Save Backup File</button><button onclick="document.getElementById('p1-file-upload').click()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-sky-400 px-3 py-1.5 rounded-lg text-[10px] uppercase font-bold tracking-wider transition-colors border border-slate-700">Load Backup</button><input type="file" id="p1-file-upload" accept=".json" style="display: none;" onchange="p1_loadBackup(this)"></div><div class="flex justify-center gap-2 overflow-x-auto pb-2 px-2"><button onclick="p1_showStep(0)" class="mod-nav-btn active px-4 py-2 rounded-lg border border-slate-700 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">Briefing</button><button onclick="p1_showStep(1)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-700 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">01 Stress Reset</button><button onclick="p1_showStep(2)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-700 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">02 Arousal</button><button onclick="p1_showStep(3)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-800 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">03 Targeting</button><button onclick="p1_showStep(4)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-800 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">04 Confidence</button><button onclick="p1_showStep(5)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-800 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">Review & Print</button></div></header>
                 <div class="glass rounded-3xl shadow-2xl overflow-hidden min-h-[500px]">
                     <div id="p1-step0" class="step-content active"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-sky-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">System Briefing: The Regulation Engine</h2></div><div class="p-8 space-y-8 text-center"><div class="max-w-3xl mx-auto space-y-6 text-left"><p class="text-slate-400 text-sm italic leading-relaxed">Elite performance is defined by the ability to regulate your internal operating system under pressure. While physical skill sets the floor, your mental fitness sets the ceiling. This assignment uses four <strong>Manual Overrides</strong> to ensure you stay in your <strong>Ideal Performance State (IPS)</strong>.</p><div class="bg-sky-500/10 border border-sky-500/30 p-4 rounded-xl flex flex-col gap-4 mb-2"><h3 class="text-sky-400 font-bold uppercase text-[10px] tracking-widest">Dashboard Logic: Read then Regulate</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="p-3 bg-slate-900/50 rounded border border-slate-700"><span class="text-[9px] font-black text-rose-400 uppercase block mb-1">Somatic Indicators (Body)</span><p class="text-[10px] text-slate-400">Cold hands, butterflies, muscle tension, sweating.</p></div><div class="p-3 bg-slate-900/50 rounded border border-slate-700"><span class="text-[9px] font-black text-amber-400 uppercase block mb-1">Cognitive Indicators (Mind)</span><p class="text-[10px] text-slate-400">Negative self-talk, doubt, inability to concentrate.</p></div></div></div><div class="flex justify-center pt-6"><button onclick="p1_showStep(1)" class="bg-sky-600 px-12 py-4 rounded-xl text-white font-black uppercase text-xs tracking-[0.2em] hover:bg-sky-500 transition-all shadow-lg active:scale-95">Initialize Stations</button></div></div></div></div>
-                    <div id="p1-step1" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-rose-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 01: The Stress Loop Reset</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">The Pivot Point</h3><p class="text-sm text-slate-300 leading-relaxed">Breathing is your manual override switch. It intercepts the Stress Process Loop at the moment a demand is perceived as a "threat." <strong class="text-rose-400">The goal is to identify a specific time you can execute this trigger and how the breath anchor will help you stay present in the moment.</strong></p><div class="bg-rose-500/10 p-3 rounded border border-rose-500/30"><span class="text-[9px] text-rose-300 font-bold uppercase">Warning:</span><p class="text-[10px] text-rose-200">Unchecked loop acceleration leads to performance crash.</p></div></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-sky-500 mb-2 mono">Deployment Scenario</label><input type="text" id="p1_breath_scenario" oninput="p1_saveData()" placeholder="When exactly will you use this? (e.g. Between points...)" class="w-full rounded-lg p-3 text-xs italic"><p class="helper-text">Identify a specific time you can execute this trigger.</p></div><div><label class="block text-[10px] font-bold uppercase text-sky-500 mb-2 mono">Centering Action Detail</label><textarea id="p1_breath_detail" oninput="p1_saveData()" placeholder="Describe your rhythmic diaphragmatic breathing habit..." class="w-full h-32 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">How will this breath anchor help you stay present in the moment?</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(0)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">← Back</button><button onclick="p1_showStep(2)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station →</button></div></div></div>
-                    <div id="p1-step2" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-amber-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 02: Arousal Volume Control</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">The Inverted-U</h3><p class="text-sm text-slate-300 leading-relaxed">Performance peaks at moderate arousal. You must 'down-regulate' to discharge tension or 'up-regulate' to wake the nervous system.</p></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Down-Regulation (Relaxation)</label><p class="text-[10px] text-slate-400 italic mb-2"><strong>PMR (Progressive Muscle Relaxation)</strong> is a technique where you systematically tense and then relax specific muscle groups to release physical tension.</p><textarea id="p1_relax_plan" oninput="p1_saveData()" placeholder="List muscle groups for your PMR routine..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Describe your routine to discharge somatic tension.</p></div><div><label class="block text-[10px] font-bold uppercase text-rose-500 mb-2 mono">Up-Regulation (Activation)</label><p class="text-[10px] text-slate-400 italic mb-2"><strong>Up-Regulation</strong> involves using physical actions or environmental triggers to increase heart rate and alertness when energy is too low.</p><textarea id="p1_active_plan" oninput="p1_saveData()" placeholder="List your 'Psych-Up' triggers (Music, Cues, Physical actions)..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Triggers used to discharge apathy and enter the zone.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(1)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">← Back</button><button onclick="p1_showStep(3)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station →</button></div></div></div>
-                    <div id="p1-step3" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 03: The Focus Filter</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">Attentional Narrowing</h3><p class="text-sm text-slate-300 leading-relaxed">Under high stress, your peripheral vision and mental focus shrink—often called <strong>"Tunnel Vision."</strong> You lose the big picture. Cue words act as "Decoder Keys" that force the system to lock back onto task-relevant targets.</p><div class="bg-emerald-500/10 p-3 rounded border border-emerald-500/30"><span class="text-[9px] text-emerald-300 font-bold uppercase">The Goal:</span><p class="text-[10px] text-emerald-200">Shift from internal worry (Emotion) to external cues (Action).</p></div></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-sky-400 mb-2 mono">Instructional Decoder</label><input type="text" id="p1_cue_inst" oninput="p1_saveData()" placeholder="e.g., 'Elbows in', 'Smooth'..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">Create a 1-2 word key specifically to FIX sloppy mechanics or technical errors.</p></div><div><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Motivational Decoder</label><input type="text" id="p1_cue_mot" oninput="p1_saveData()" placeholder="e.g., 'Power', 'Explode'..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">Create a 1-2 word key specifically to FIX low energy or effort when drive is fading.</p></div><div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-2 mono italic underline">Radar Jamming Scenario</label><textarea id="p1_jam_scenario" oninput="p1_saveData()" placeholder="Describe a specific high-pressure moment where you lose focus..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Identify the exact moment panic sets in and which cue breaks the jam.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(2)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">← Back</button><button onclick="p1_showStep(4)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station →</button></div></div></div>
-                    <div id="p1-step4" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-sky-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 04: Confidence Builder</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">Certainty Logic</h3><p class="text-sm text-slate-300 leading-relaxed">Uncertainty generates anxiety; Certainty generates confidence. You cannot control the outcome (Winning), but you can control the process (Mechanics). By shifting your focus to what you control, you build a "High Confidence" state.</p><div class="bg-slate-900 p-4 border border-slate-700 rounded-xl space-y-2"><h4 class="text-[10px] font-black text-white uppercase">S.M.A.R.T. Definition</h4><ul class="text-[9px] text-slate-400 space-y-1 font-mono"><li><strong class="text-sky-400">S</strong>PECIFIC: Clear and defined.</li><li><strong class="text-sky-400">M</strong>EASURABLE: Can be tracked.</li><li><strong class="text-sky-400">A</strong>CHIEVABLE: Realistic to your skill.</li><li><strong class="text-sky-400">R</strong>ELEVANT: Matters to your sport.</li><li><strong class="text-sky-400">T</strong>IME-BOUND: Has a deadline.</li></ul></div></div><div class="space-y-6"><div class="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl"><label class="block text-[10px] font-bold uppercase text-emerald-400 mb-2 mono underline italic">Process Goal (100% Control)</label><input type="text" id="p1_goal_proc" oninput="p1_saveData()" placeholder="Specific form or mechanics goal..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">This goal builds high confidence because it is entirely under your power.</p></div><div class="grid grid-cols-2 gap-4"><div class="p-4 bg-slate-900 border border-slate-800 rounded-xl"><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Performance Goal</label><input type="text" id="p1_goal_perf" oninput="p1_saveData()" placeholder="e.g. 80% accuracy..." class="w-full rounded-lg p-2 text-xs italic"><p class="helper-text">Partial Control.</p></div><div class="p-4 bg-slate-900 border border-slate-800 rounded-xl"><label class="block text-[10px] font-bold uppercase text-rose-500 mb-2 mono">Outcome Goal</label><input type="text" id="p1_goal_out" oninput="p1_saveData()" placeholder="e.g. Winning..." class="w-full rounded-lg p-2 text-xs italic"><p class="helper-text">Low Control.</p></div></div><div><label class="block text-[10px] font-bold uppercase text-white mb-2 mono italic underline leading-none">Final S.M.A.R.T. Goal Statement</label><textarea id="p1_smart_final" oninput="p1_saveData()" placeholder="Write out your full goal statement here using the SMART criteria above..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none border-2 border-slate-700 focus:border-sky-500"></textarea><p class="helper-text">Combine your goals into one clear sentence.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(3)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">← Back</button><button onclick="p1_showStep(5)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Review & Export →</button></div></div>
+                    <div id="p1-step1" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-rose-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 01: The Stress Loop Reset</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">The Pivot Point</h3><p class="text-sm text-slate-300 leading-relaxed">Breathing is your manual override switch. It intercepts the Stress Process Loop at the moment a demand is perceived as a "threat." <strong class="text-rose-400">The goal is to identify a specific time you can execute this trigger and how the breath anchor will help you stay present in the moment.</strong></p><div class="bg-rose-500/10 p-3 rounded border border-rose-500/30"><span class="text-[9px] text-rose-300 font-bold uppercase">Warning:</span><p class="text-[10px] text-rose-200">Unchecked loop acceleration leads to performance crash.</p></div></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-sky-500 mb-2 mono">Deployment Scenario</label><input type="text" id="p1_breath_scenario" oninput="p1_saveData()" placeholder="When exactly will you use this? (e.g. Between points...)" class="w-full rounded-lg p-3 text-xs italic"><p class="helper-text">Identify a specific time you can execute this trigger.</p></div><div><label class="block text-[10px] font-bold uppercase text-sky-500 mb-2 mono">Centering Action Detail</label><textarea id="p1_breath_detail" oninput="p1_saveData()" placeholder="Describe your rhythmic diaphragmatic breathing habit..." class="w-full h-32 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">How will this breath anchor help you stay present in the moment?</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(0)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">â† Back</button><button onclick="p1_showStep(2)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station â†’</button></div></div></div>
+                    <div id="p1-step2" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-amber-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 02: Arousal Volume Control</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">The Inverted-U</h3><p class="text-sm text-slate-300 leading-relaxed">Performance peaks at moderate arousal. You must 'down-regulate' to discharge tension or 'up-regulate' to wake the nervous system.</p></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Down-Regulation (Relaxation)</label><p class="text-[10px] text-slate-400 italic mb-2"><strong>PMR (Progressive Muscle Relaxation)</strong> is a technique where you systematically tense and then relax specific muscle groups to release physical tension.</p><textarea id="p1_relax_plan" oninput="p1_saveData()" placeholder="List muscle groups for your PMR routine..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Describe your routine to discharge somatic tension.</p></div><div><label class="block text-[10px] font-bold uppercase text-rose-500 mb-2 mono">Up-Regulation (Activation)</label><p class="text-[10px] text-slate-400 italic mb-2"><strong>Up-Regulation</strong> involves using physical actions or environmental triggers to increase heart rate and alertness when energy is too low.</p><textarea id="p1_active_plan" oninput="p1_saveData()" placeholder="List your 'Psych-Up' triggers (Music, Cues, Physical actions)..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Triggers used to discharge apathy and enter the zone.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(1)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">â† Back</button><button onclick="p1_showStep(3)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station â†’</button></div></div></div>
+                    <div id="p1-step3" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 03: The Focus Filter</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">Attentional Narrowing</h3><p class="text-sm text-slate-300 leading-relaxed">Under high stress, your peripheral vision and mental focus shrinkâ€”often called <strong>"Tunnel Vision."</strong> You lose the big picture. Cue words act as "Decoder Keys" that force the system to lock back onto task-relevant targets.</p><div class="bg-emerald-500/10 p-3 rounded border border-emerald-500/30"><span class="text-[9px] text-emerald-300 font-bold uppercase">The Goal:</span><p class="text-[10px] text-emerald-200">Shift from internal worry (Emotion) to external cues (Action).</p></div></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-sky-400 mb-2 mono">Instructional Decoder</label><input type="text" id="p1_cue_inst" oninput="p1_saveData()" placeholder="e.g., 'Elbows in', 'Smooth'..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">Create a 1-2 word key specifically to FIX sloppy mechanics or technical errors.</p></div><div><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Motivational Decoder</label><input type="text" id="p1_cue_mot" oninput="p1_saveData()" placeholder="e.g., 'Power', 'Explode'..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">Create a 1-2 word key specifically to FIX low energy or effort when drive is fading.</p></div><div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-2 mono italic underline">Radar Jamming Scenario</label><textarea id="p1_jam_scenario" oninput="p1_saveData()" placeholder="Describe a specific high-pressure moment where you lose focus..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Identify the exact moment panic sets in and which cue breaks the jam.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(2)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">â† Back</button><button onclick="p1_showStep(4)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station â†’</button></div></div></div>
+                    <div id="p1-step4" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-sky-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 04: Confidence Builder</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">Certainty Logic</h3><p class="text-sm text-slate-300 leading-relaxed">Uncertainty generates anxiety; Certainty generates confidence. You cannot control the outcome (Winning), but you can control the process (Mechanics). By shifting your focus to what you control, you build a "High Confidence" state.</p><div class="bg-slate-900 p-4 border border-slate-700 rounded-xl space-y-2"><h4 class="text-[10px] font-black text-white uppercase">S.M.A.R.T. Definition</h4><ul class="text-[9px] text-slate-400 space-y-1 font-mono"><li><strong class="text-sky-400">S</strong>PECIFIC: Clear and defined.</li><li><strong class="text-sky-400">M</strong>EASURABLE: Can be tracked.</li><li><strong class="text-sky-400">A</strong>CHIEVABLE: Realistic to your skill.</li><li><strong class="text-sky-400">R</strong>ELEVANT: Matters to your sport.</li><li><strong class="text-sky-400">T</strong>IME-BOUND: Has a deadline.</li></ul></div></div><div class="space-y-6"><div class="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl"><label class="block text-[10px] font-bold uppercase text-emerald-400 mb-2 mono underline italic">Process Goal (100% Control)</label><input type="text" id="p1_goal_proc" oninput="p1_saveData()" placeholder="Specific form or mechanics goal..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">This goal builds high confidence because it is entirely under your power.</p></div><div class="grid grid-cols-2 gap-4"><div class="p-4 bg-slate-900 border border-slate-800 rounded-xl"><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Performance Goal</label><input type="text" id="p1_goal_perf" oninput="p1_saveData()" placeholder="e.g. 80% accuracy..." class="w-full rounded-lg p-2 text-xs italic"><p class="helper-text">Partial Control.</p></div><div class="p-4 bg-slate-900 border border-slate-800 rounded-xl"><label class="block text-[10px] font-bold uppercase text-rose-500 mb-2 mono">Outcome Goal</label><input type="text" id="p1_goal_out" oninput="p1_saveData()" placeholder="e.g. Winning..." class="w-full rounded-lg p-2 text-xs italic"><p class="helper-text">Low Control.</p></div></div><div><label class="block text-[10px] font-bold uppercase text-white mb-2 mono italic underline leading-none">Final S.M.A.R.T. Goal Statement</label><textarea id="p1_smart_final" oninput="p1_saveData()" placeholder="Write out your full goal statement here using the SMART criteria above..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none border-2 border-slate-700 focus:border-sky-500"></textarea><p class="helper-text">Combine your goals into one clear sentence.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(3)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">â† Back</button><button onclick="p1_showStep(5)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Review & Export â†’</button></div></div>
                     </div>
-                    <div id="p1-step5" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Final Review & Rubric</h2></div><div class="p-8 space-y-12"><div class="grid grid-cols-1 lg:grid-cols-2 gap-8"><div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-4 tracking-widest mono italic underline underline-offset-2">Mental Fitness Assessment</label><div id="sc-container" class="space-y-4"></div><div class="border-t border-slate-800 mt-6 pt-6 flex justify-between items-center"><span class="text-[10px] uppercase font-bold text-slate-500 tracking-[0.2em]">Readiness Score</span><div class="text-4xl font-black italic text-emerald-500 leading-none"><span id="p1-total-score">00</span><span class="text-xl text-slate-700 font-normal not-italic">/25</span></div></div></div><div class="space-y-6"><label class="block text-[10px] font-bold uppercase text-sky-400 mb-2 tracking-widest mono italic underline leading-none underline-offset-4">Integration Narrative (Required)</label><textarea id="p1_final_narrative" oninput="p1_saveData()" placeholder="Explain how you will use these four stations to monitor your indicators and regulate your performance state..." class="w-full h-[240px] rounded-xl p-4 text-sm resize-none text-slate-200 border-2 border-sky-500/20 focus:border-sky-500 transition-all"></textarea><p class="helper-text">Prove your understanding: How do these tools prevent the "Crash"?</p></div></div><div class="border-t border-slate-800 pt-8"><label class="block text-[10px] font-bold uppercase text-emerald-500 mb-4 tracking-widest mono italic underline underline-offset-4">Tactical Rubric</label><div class="overflow-x-auto glass rounded-2xl border border-slate-800 shadow-xl"><table class="w-full text-left text-[10px] border-collapse min-w-[700px]"><thead><tr class="bg-slate-900 border-b border-slate-800"><th class="p-4 text-slate-500 uppercase font-black">Criteria</th><th class="p-4 text-emerald-400 uppercase font-black tracking-widest">Proficient (4-5)</th><th class="p-4 text-amber-400 uppercase font-black tracking-widest">Developing (2-3)</th><th class="p-4 text-rose-400 uppercase font-black tracking-widest">Emerging (0-1)</th></tr></thead><tbody class="text-[10px] leading-relaxed italic text-slate-400"><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Stress Reset</td><td onclick="p1_setScore('reset', 5)" id="reset-5" class="rubric-cell p-4">Centering action is clearly defined (diaphragm) with a specific time trigger. Breath anchor logic is clear.</td><td onclick="p1_setScore('reset', 3)" id="reset-3" class="rubric-cell p-4">Breathing technique mentioned but lacks specific trigger or physiological detail.</td><td onclick="p1_setScore('reset', 1)" id="reset-1" class="rubric-cell p-4">Missing centering action or trigger.</td></tr><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Arousal Tuning</td><td onclick="p1_setScore('tune', 5)" id="tune-5" class="rubric-cell p-4">Clear distinction between Up/Down regulation. PMR definition is accurate. Tools are actionable.</td><td onclick="p1_setScore('tune', 3)" id="tune-3" class="rubric-cell p-4">Tools identified but generic. Lacks personal specificity or clear definition of PMR.</td><td onclick="p1_setScore('tune', 1)" id="tune-1" class="rubric-cell p-4">Incomplete tuning strategies.</td></tr><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Targeting (Cues)</td><td onclick="p1_setScore('focus', 5)" id="focus-5" class="rubric-cell p-4">Instructional (Technical) & Motivational (Energy) cues are distinct. Scenario breaks the 'jam'.</td><td onclick="p1_setScore('focus', 3)" id="focus-3" class="rubric-cell p-4">Cues are too long or vague. No distinction between instructional/motivational function.</td><td onclick="p1_setScore('focus', 1)" id="focus-1" class="rubric-cell p-4">Missing cues or scenario.</td></tr><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Confidence</td><td onclick="p1_setScore('goals', 5)" id="goals-5" class="rubric-cell p-4">Full SMART statement is written. Process goal is 100% controllable.</td><td onclick="p1_setScore('goals', 3)" id="goals-3" class="rubric-cell p-4">Process goal relies on partial external factors. SMART statement missing or incomplete.</td><td onclick="p1_setScore('goals', 1)" id="goals-1" class="rubric-cell p-4">Goals are confused (e.g. Outcome listed as Process).</td></tr><tr><td class="p-4 font-bold uppercase text-white mono">Integration</td><td onclick="p1_setScore('intel', 5)" id="intel-5" class="rubric-cell p-4">Narrative demonstrates understanding of the Dashboard (Somatic/Cognitive) and Regulation.</td><td onclick="p1_setScore('intel', 3)" id="intel-3" class="rubric-cell p-4">Restates definitions without demonstrating personal application or logic.</td><td onclick="p1_setScore('intel', 1)" id="intel-1" class="rubric-cell p-4">Incomplete narrative.</td></tr></tbody></table></div></div><div class="flex flex-col md:flex-row gap-4 pt-8"><button onclick="p1_showStep(1)" class="flex-1 text-slate-500 font-bold uppercase text-[10px] tracking-widest hover:text-white transition-colors border border-slate-800 rounded-xl py-4">← Start Over</button><button onclick="p1_generatePDF()" class="flex-[2] bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest py-4 rounded-xl shadow-lg active:scale-95">Generate Tactical Report</button></div></div></div>
+                    <div id="p1-step5" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Final Review & Rubric</h2></div><div class="p-8 space-y-12"><div class="grid grid-cols-1 lg:grid-cols-2 gap-8"><div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-4 tracking-widest mono italic underline underline-offset-2">Mental Fitness Assessment</label><div id="sc-container" class="space-y-4"></div><div class="border-t border-slate-800 mt-6 pt-6 flex justify-between items-center"><span class="text-[10px] uppercase font-bold text-slate-500 tracking-[0.2em]">Readiness Score</span><div class="text-4xl font-black italic text-emerald-500 leading-none"><span id="p1-total-score">00</span><span class="text-xl text-slate-700 font-normal not-italic">/25</span></div></div></div><div class="space-y-6"><label class="block text-[10px] font-bold uppercase text-sky-400 mb-2 tracking-widest mono italic underline leading-none underline-offset-4">Integration Narrative (Required)</label><textarea id="p1_final_narrative" oninput="p1_saveData()" placeholder="Explain how you will use these four stations to monitor your indicators and regulate your performance state..." class="w-full h-[240px] rounded-xl p-4 text-sm resize-none text-slate-200 border-2 border-sky-500/20 focus:border-sky-500 transition-all"></textarea><p class="helper-text">Prove your understanding: How do these tools prevent the "Crash"?</p></div></div><div class="border-t border-slate-800 pt-8"><label class="block text-[10px] font-bold uppercase text-emerald-500 mb-4 tracking-widest mono italic underline underline-offset-4">Tactical Rubric</label><div class="overflow-x-auto glass rounded-2xl border border-slate-800 shadow-xl"><table class="w-full text-left text-[10px] border-collapse min-w-[700px]"><thead><tr class="bg-slate-900 border-b border-slate-800"><th class="p-4 text-slate-500 uppercase font-black">Criteria</th><th class="p-4 text-emerald-400 uppercase font-black tracking-widest">Proficient (4-5)</th><th class="p-4 text-amber-400 uppercase font-black tracking-widest">Developing (2-3)</th><th class="p-4 text-rose-400 uppercase font-black tracking-widest">Emerging (0-1)</th></tr></thead><tbody class="text-[10px] leading-relaxed italic text-slate-400"><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Stress Reset</td><td onclick="p1_setScore('reset', 5)" id="reset-5" class="rubric-cell p-4">Centering action is clearly defined (diaphragm) with a specific time trigger. Breath anchor logic is clear.</td><td onclick="p1_setScore('reset', 3)" id="reset-3" class="rubric-cell p-4">Breathing technique mentioned but lacks specific trigger or physiological detail.</td><td onclick="p1_setScore('reset', 1)" id="reset-1" class="rubric-cell p-4">Missing centering action or trigger.</td></tr><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Arousal Tuning</td><td onclick="p1_setScore('tune', 5)" id="tune-5" class="rubric-cell p-4">Clear distinction between Up/Down regulation. PMR definition is accurate. Tools are actionable.</td><td onclick="p1_setScore('tune', 3)" id="tune-3" class="rubric-cell p-4">Tools identified but generic. Lacks personal specificity or clear definition of PMR.</td><td onclick="p1_setScore('tune', 1)" id="tune-1" class="rubric-cell p-4">Incomplete tuning strategies.</td></tr><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Targeting (Cues)</td><td onclick="p1_setScore('focus', 5)" id="focus-5" class="rubric-cell p-4">Instructional (Technical) & Motivational (Energy) cues are distinct. Scenario breaks the 'jam'.</td><td onclick="p1_setScore('focus', 3)" id="focus-3" class="rubric-cell p-4">Cues are too long or vague. No distinction between instructional/motivational function.</td><td onclick="p1_setScore('focus', 1)" id="focus-1" class="rubric-cell p-4">Missing cues or scenario.</td></tr><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Confidence</td><td onclick="p1_setScore('goals', 5)" id="goals-5" class="rubric-cell p-4">Full SMART statement is written. Process goal is 100% controllable.</td><td onclick="p1_setScore('goals', 3)" id="goals-3" class="rubric-cell p-4">Process goal relies on partial external factors. SMART statement missing or incomplete.</td><td onclick="p1_setScore('goals', 1)" id="goals-1" class="rubric-cell p-4">Goals are confused (e.g. Outcome listed as Process).</td></tr><tr><td class="p-4 font-bold uppercase text-white mono">Integration</td><td onclick="p1_setScore('intel', 5)" id="intel-5" class="rubric-cell p-4">Narrative demonstrates understanding of the Dashboard (Somatic/Cognitive) and Regulation.</td><td onclick="p1_setScore('intel', 3)" id="intel-3" class="rubric-cell p-4">Restates definitions without demonstrating personal application or logic.</td><td onclick="p1_setScore('intel', 1)" id="intel-1" class="rubric-cell p-4">Incomplete narrative.</td></tr></tbody></table></div></div><div class="flex flex-col md:flex-row gap-4 pt-8"><button onclick="p1_showStep(1)" class="flex-1 text-slate-500 font-bold uppercase text-[10px] tracking-widest hover:text-white transition-colors border border-slate-800 rounded-xl py-4">â† Start Over</button><button onclick="p1_generatePDF()" class="flex-[2] bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest py-4 rounded-xl shadow-lg active:scale-95">Generate Tactical Report</button></div></div></div>
                 </div>
             </div>
         </div>`,
@@ -342,6 +342,10 @@ const PROJECT_DATA = {
     academicYear: "",
     accentColor: "sky",
     backgroundColor: "slate-900",
+    headingTextColor: "white",
+    secondaryTextColor: "slate-400",
+    buttonColor: "sky-600",
+    containerColor: "slate-900/80",
     fontFamily: "inter",
     customCSS: "",
     compilationDefaults: {
@@ -388,7 +392,7 @@ const PROJECT_DATA = {
           html: `<div id="tool-calculator" class="hidden fixed bottom-4 right-4 bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-2xl z-50">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-sm font-bold text-white">Calculator</h3>
-              <button onclick="toggleTool('calculator')" class="text-slate-400 hover:text-white">✕</button>
+              <button onclick="toggleTool('calculator')" class="text-slate-400 hover:text-white">âœ•</button>
             </div>
             <input id="calc-display" type="text" readonly class="w-full mb-2 p-2 bg-slate-900 border border-slate-700 rounded text-right text-white" value="0">
             <div class="grid grid-cols-4 gap-2">
@@ -399,11 +403,11 @@ const PROJECT_DATA = {
               <button onclick="calcInput('4')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">4</button>
               <button onclick="calcInput('5')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">5</button>
               <button onclick="calcInput('6')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">6</button>
-              <button onclick="calcInput('*')" class="p-2 bg-blue-600 hover:bg-blue-500 rounded text-white">×</button>
+              <button onclick="calcInput('*')" class="p-2 bg-blue-600 hover:bg-blue-500 rounded text-white">Ã—</button>
               <button onclick="calcInput('1')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">1</button>
               <button onclick="calcInput('2')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">2</button>
               <button onclick="calcInput('3')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">3</button>
-              <button onclick="calcInput('-')" class="p-2 bg-blue-600 hover:bg-blue-500 rounded text-white">−</button>
+              <button onclick="calcInput('-')" class="p-2 bg-blue-600 hover:bg-blue-500 rounded text-white">âˆ’</button>
               <button onclick="calcInput('0')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">0</button>
               <button onclick="calcInput('.')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">.</button>
               <button onclick="calcEquals()" class="p-2 bg-emerald-600 hover:bg-emerald-500 rounded text-white">=</button>
@@ -443,7 +447,7 @@ const PROJECT_DATA = {
           html: `<div id="tool-timer" class="hidden fixed bottom-4 left-4 bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-2xl z-50 w-64">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-sm font-bold text-white">Timer</h3>
-              <button onclick="toggleTool('timer')" class="text-slate-400 hover:text-white">✕</button>
+              <button onclick="toggleTool('timer')" class="text-slate-400 hover:text-white">âœ•</button>
             </div>
             <div id="timer-display" class="text-4xl font-bold text-center text-white mb-3">05:00</div>
             <div class="flex gap-2">
@@ -492,7 +496,7 @@ const PROJECT_DATA = {
         description: "Adds print button to toolbar",
         code: {
           id: "tool-print",
-          html: `<button onclick="window.print()" class="fixed top-4 right-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg z-50">🖨️ Print</button>`,
+          html: `<button onclick="window.print()" class="fixed top-4 right-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg z-50">ðŸ–¨ï¸ Print</button>`,
           script: ``
         }
       }
@@ -500,7 +504,7 @@ const PROJECT_DATA = {
 };
 
 // ==========================================
-// 🟡 MASTER SHELL TEMPLATE
+// ðŸŸ¡ MASTER SHELL TEMPLATE
 // ==========================================
 // Canvas Instructions: To update the default template, replace the string below.
 // ==========================================
@@ -565,23 +569,59 @@ const generateMasterShell = (data) => {
     courseName = "Course Factory",
     courseNameUpper = "COURSE FACTORY",
     accentColor = "sky",
+    backgroundColor = "slate-900",
     fontFamily = "inter",
     customCSS = "",
     courseInfo = "",
     navItems = "",
     content = "",
     scripts = "",
-    progressTracking = ""
+    progressTracking = "",
+    containerBgRgba = null
   } = data;
   
   const colors = getAccentColor(accentColor);
   const font = getFontFamilyGlobal(fontFamily);
   
+  // Map Tailwind color names to hex values for background
+  const bgColorMap = {
+    'slate-900': '#0f172a',
+    'slate-950': '#020617',
+    'zinc-900': '#18181b',
+    'neutral-900': '#171717',
+    'stone-900': '#1c1917',
+    'gray-900': '#111827',
+    'slate-50': '#f8fafc',
+    'zinc-50': '#fafafa',
+    'neutral-50': '#fafafa',
+    'stone-50': '#fafaf9',
+    'gray-50': '#f9fafb',
+    'white': '#ffffff'
+  };
+  const bgHex = bgColorMap[backgroundColor] || bgColorMap['slate-900'];
+  const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
+  const textColor = isLightBg ? '#0f172a' : '#e2e8f0';
+  const hexToRgba = (hex, alpha = 1) => {
+    if (!hex) return `rgba(15, 23, 42, ${alpha})`;
+    const clean = hex.replace('#', '');
+    if (clean.length !== 6) return `rgba(15, 23, 42, ${alpha})`;
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+  const sidebarBg = hexToRgba(bgHex, isLightBg ? 0.92 : 0.95);
+  const sidebarBorder = isLightBg ? 'rgba(15, 23, 42, 0.12)' : 'rgba(51, 65, 85, 0.5)';
+  const sidebarHoverBg = isLightBg ? hexToRgba(bgHex, 0.98) : 'rgba(30, 41, 59, 0.95)';
+  const containerBgVar = containerBgRgba || hexToRgba(isLightBg ? '#ffffff' : '#0f172a', 0.8);
+  
   // Build styles with accent color applied
   const baseStyles = `        /* --- GLOBAL & SHARED STYLES --- */
-        body { ${font.css} background-color: #020617; color: #e2e8f0; margin: 0; height: 100vh; overflow: hidden; }
+        html, body { background-color: ${bgHex} !important; }
+        body { ${font.css} color: ${textColor}; margin: 0; height: 100vh; overflow: hidden; }
+        :root { --cf-container-bg: ${containerBgVar}; }
         .mono { font-family: 'JetBrains Mono', monospace; }
-        .glass-panel { background: rgba(15, 23, 42, 0.95); border-right: 1px solid rgba(51, 65, 85, 0.5); }
+        .glass-panel { background: ${sidebarBg}; border-right: 1px solid ${sidebarBorder}; }
         .custom-scroll { overflow-y: auto; }
         .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
         input, textarea, select { background: #0f172a !important; border: 1px solid #1e293b !important; transition: all 0.2s; color: #e2e8f0; }
@@ -623,9 +663,9 @@ const generateMasterShell = (data) => {
             top: 1rem; 
             left: 1rem; 
             z-index: 100; 
-            background: rgba(15, 23, 42, 0.95); 
-            border: 1px solid rgba(51, 65, 85, 0.5); 
-            color: #e2e8f0; 
+            background: ${sidebarBg}; 
+            border: 1px solid ${sidebarBorder}; 
+            color: ${textColor}; 
             padding: 0.75rem; 
             border-radius: 0.5rem; 
             cursor: pointer; 
@@ -637,7 +677,22 @@ const generateMasterShell = (data) => {
             width: 44px;
             height: 44px;
         }
-        .sidebar-toggle:hover { background: rgba(30, 41, 59, 0.95); border-color: ${colors.hex}; }
+        .sidebar-toggle:hover { background: ${sidebarHoverBg}; border-color: ${colors.hex}; }
+
+        /* Materials & Assessments Container Colors */
+        #view-materials .material-card,
+        #view-assessments .assessment-card {
+            background: var(--cf-container-bg) !important;
+        }
+        #view-assessments .assessment-container [class*="bg-slate-9"],
+        #view-assessments .assessment-container [class*="bg-slate-8"],
+        #view-assessments .assessment-container [class*="bg-slate-7"],
+        #view-assessments .assessment-container [class*="bg-slate-6"],
+        #view-assessments .assessment-container [class*="bg-gray-9"],
+        #view-assessments .assessment-container [class*="bg-gray-8"],
+        #view-assessments .assessment-container [class*="bg-gray-7"] {
+            background: var(--cf-container-bg) !important;
+        }
         
         /* Overlay for mobile */
         .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); z-index: 60; backdrop-filter: blur(4px); pointer-events: none; }
@@ -662,6 +717,8 @@ const generateMasterShell = (data) => {
             flex: 1;
             transition: all 0.3s ease;
             width: 100%;
+            background: ${bgHex} !important;
+            background-color: ${bgHex} !important;
         }
         
         /* Toggle button position */
@@ -707,7 +764,7 @@ const generateMasterShell = (data) => {
         }`;
   
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -718,10 +775,27 @@ const generateMasterShell = (data) => {
     <style>
         ${baseStyles}${customCSS ? `\n        /* Custom CSS from Settings */\n        ${customCSS}` : ''}
     </style>
+    <script>
+        // Force background color after Tailwind loads
+        (function() {
+            function setBackground() {
+                document.documentElement.style.backgroundColor = '${bgHex}';
+                document.documentElement.style.background = '${bgHex}';
+                document.body.style.backgroundColor = '${bgHex}';
+                document.body.style.background = '${bgHex}';
+            }
+            setBackground();
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', setBackground);
+            }
+            setTimeout(setBackground, 100);
+            setTimeout(setBackground, 500);
+        })();
+    </script>
 </head>
-<body class="flex">
+<body class="flex" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
     <!-- Sidebar Toggle Button (Works on ALL screen sizes) -->
-    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation" title="Toggle Menu">☰</button>
+    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation" title="Toggle Menu">â˜°</button>
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
     <div id="sidebar-nav" class="w-64 glass-panel flex flex-col h-full z-50">
@@ -736,7 +810,7 @@ const generateMasterShell = (data) => {
         <div class="p-6 border-t border-slate-800 text-center"><p class="text-[9px] text-slate-600 italic">"Recognition is the trigger for regulation."</p></div>
     </div>
 
-    <div class="flex-1 relative bg-slate-900 h-full overflow-hidden" id="content-container">
+    <div class="flex-1 relative h-full overflow-hidden" id="content-container">
         ${content}
         <iframe id="view-external" class="w-full h-full hidden" src=""></iframe>
     </div>
@@ -796,7 +870,7 @@ const generateMasterShell = (data) => {
         
         // --- CORE NAVIGATION LOGIC ---
         function switchView(view) {
-            console.log('🔄 [switchView] Switching to view:', view);
+            console.log('ðŸ”„ [switchView] Switching to view:', view);
             
             // 1. Close sidebar on mobile after selecting a view
             if (window.innerWidth <= 768) {
@@ -816,16 +890,16 @@ const generateMasterShell = (data) => {
             
             // 3. Hide All Views (both native divs and iframe containers)
             const allViews = document.querySelectorAll('[id^="view-"]');
-            console.log('🔄 [switchView] Hiding', allViews.length, 'views');
+            console.log('ðŸ”„ [switchView] Hiding', allViews.length, 'views');
             allViews.forEach(v => v.classList.add('hidden'));
 
             // 4. Show Target View
             const target = document.getElementById('view-' + view);
             if(target) {
                 target.classList.remove('hidden');
-                console.log('✅ [switchView] Showing view:', 'view-' + view);
+                console.log('âœ… [switchView] Showing view:', 'view-' + view);
             } else {
-                console.error('❌ [switchView] View not found:', 'view-' + view);
+                console.error('âŒ [switchView] View not found:', 'view-' + view);
             }
             
             // Backward compatibility: Call module init if available
@@ -914,7 +988,7 @@ const generateMasterShell = (data) => {
                             course: '${courseName}',
                             state: state
                         }));
-                        console.log('💾 [Autosave] Saved', Object.keys(state).length, 'fields');
+                        console.log('ðŸ’¾ [Autosave] Saved', Object.keys(state).length, 'fields');
                     }
                 } catch(e) {
                     console.warn('Autosave failed:', e);
@@ -936,7 +1010,7 @@ const generateMasterShell = (data) => {
                         if (state) {
                             restoreInputState(state);
                             const savedDate = new Date(timestamp);
-                            console.log('📂 [Autosave] Restored from', savedDate.toLocaleString());
+                            console.log('ðŸ“‚ [Autosave] Restored from', savedDate.toLocaleString());
                         }
                     }
                 } catch(e) {
@@ -947,7 +1021,7 @@ const generateMasterShell = (data) => {
             // Mark work as exported (disables unsaved warning)
             window.markWorkSaved = function() {
                 hasExported = true;
-                console.log('✅ [Autosave] Work marked as saved/exported');
+                console.log('âœ… [Autosave] Work marked as saved/exported');
             };
             
             // Initialize on DOM ready
@@ -975,7 +1049,7 @@ const generateMasterShell = (data) => {
                     }
                 });
                 
-                console.log('🔧 [Autosave] Initialized for course: ${courseName}');
+                console.log('ðŸ”§ [Autosave] Initialized for course: ${courseName}');
             }
             
             if (document.readyState === 'loading') {
@@ -1103,7 +1177,7 @@ const MASTER_SHELL = `<!DOCTYPE html>
         
         // --- CORE NAVIGATION LOGIC ---
         function switchView(view) {
-            console.log('🔄 [switchView] Switching to view:', view);
+            console.log('ðŸ”„ [switchView] Switching to view:', view);
             
             // 1. Handle Mobile Nav
             if (window.innerWidth <= 768) {
@@ -1122,16 +1196,16 @@ const MASTER_SHELL = `<!DOCTYPE html>
             
             // 3. Hide All Views (both native divs and iframe containers)
             const allViews = document.querySelectorAll('[id^="view-"]');
-            console.log('🔄 [switchView] Hiding', allViews.length, 'views');
+            console.log('ðŸ”„ [switchView] Hiding', allViews.length, 'views');
             allViews.forEach(v => v.classList.add('hidden'));
 
             // 4. Show Target View
             const target = document.getElementById('view-' + view);
             if(target) {
                 target.classList.remove('hidden');
-                console.log('✅ [switchView] Showing view:', 'view-' + view);
+                console.log('âœ… [switchView] Showing view:', 'view-' + view);
             } else {
-                console.error('❌ [switchView] View not found:', 'view-' + view);
+                console.error('âŒ [switchView] View not found:', 'view-' + view);
             }
         }
 
@@ -1225,7 +1299,7 @@ const Toggle = ({ active, labelA, labelB, labelC, onToggle, iconA: IconA, iconB:
 );
 
 // ==========================================
-// 🔧 MODULE UTILITY FUNCTIONS (Unified)
+// ðŸ”§ MODULE UTILITY FUNCTIONS (Unified)
 // ==========================================
 
 /**
@@ -1777,7 +1851,7 @@ const BatchHarvester = ({ onImport }) => {
   );
 };
 
-// 🛡️ THE BULLETPROOF VEST: Cleans up messy AI output or raw text input
+// ðŸ›¡ï¸ THE BULLETPROOF VEST: Cleans up messy AI output or raw text input
 const sanitizeImportData = (input) => {
   let cleanData = [];
   try {
@@ -1973,10 +2047,10 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         <!-- Action Buttons -->
         <div class="flex flex-wrap gap-3 mt-8 no-print">
           <button type="button" onclick="${quizId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-            🔄 Reset
+            ðŸ”„ Reset
           </button>
           <button type="button" onclick="${quizId}_generateReport()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-            🖨️ Print & Submit
+            ðŸ–¨ï¸ Print & Submit
           </button>
         </div>
         
@@ -2068,7 +2142,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
             placeholder="Type your answer here..."
             class="w-full h-48 bg-slate-950 border border-slate-700 rounded-lg p-4 text-white resize-none focus:border-purple-500 focus:outline-none print-response"
           ></textarea>
-          <p class="text-xs text-slate-500 italic mt-2 no-print">Auto-saved to browser ✓</p>
+          <p class="text-xs text-slate-500 italic mt-2 no-print">Auto-saved to browser âœ“</p>
         </div>
       `).join('');
 
@@ -2108,23 +2182,23 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
           <!-- Action Buttons -->
           <div class="flex flex-wrap gap-3 mt-8 no-print">
             <button type="button" onclick="${quizId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              🔄 Reset
+              ðŸ”„ Reset
             </button>
             <button type="button" onclick="${quizId}_download()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              📥 Download Backup
+              ðŸ“¥ Download Backup
             </button>
             <button type="button" onclick="document.getElementById('${quizId}-upload').click()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              📤 Upload Backup
+              ðŸ“¤ Upload Backup
             </button>
             <button type="button" onclick="${quizId}_generateReport()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              🖨️ Print & Submit
+              ðŸ–¨ï¸ Print & Submit
             </button>
           </div>
           <input type="file" id="${quizId}-upload" accept=".json" style="display: none;" onchange="${quizId}_loadBackup(this)" />
 
           <!-- Status Messages -->
           <div id="${quizId}-loaded" class="hidden mt-6 p-4 rounded-xl bg-blue-900/20 border border-blue-500">
-            <p class="text-blue-400 font-bold">✅ Backup loaded successfully!</p>
+            <p class="text-blue-400 font-bold">âœ… Backup loaded successfully!</p>
           </div>
 
           <!-- Reset Confirmation Modal -->
@@ -2142,7 +2216,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
           <!-- Print Instructions -->
           <div class="mt-8 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg no-print">
             <p class="text-amber-300 text-sm">
-              📋 <strong>Instructions:</strong> Complete all questions, then click "Print & Submit" to generate a clean printable report.
+              ðŸ“‹ <strong>Instructions:</strong> Complete all questions, then click "Print & Submit" to generate a clean printable report.
             </p>
           </div>
         </div>
@@ -2365,7 +2439,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
             <button type="button" onclick="window.print()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-8 rounded-lg">Print & Submit</button>
           </div>
           <div class="mt-4 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg">
-            <p class="text-amber-300 text-sm">📋 <strong>Reminder:</strong> Print this page, complete the assignment, and submit to your instructor.</p>
+            <p class="text-amber-300 text-sm">ðŸ“‹ <strong>Reminder:</strong> Print this page, complete the assignment, and submit to your instructor.</p>
                 </div>
             </div>
         </div>`;
@@ -2567,7 +2641,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       setModuleManagerID('');
       setModuleManagerTitle('');
       setModuleManagerStatus('success');
-      setModuleManagerMessage(`✅ Module "${title}" added successfully! It will run in an isolated iframe.`);
+      setModuleManagerMessage(`âœ… Module "${title}" added successfully! It will run in an isolated iframe.`);
       
       setTimeout(() => {
         setModuleManagerStatus(null);
@@ -2663,7 +2737,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       setModuleManagerID('');
       setModuleManagerTitle('');
       setModuleManagerStatus('success');
-      setModuleManagerMessage(`✅ External link module "${newModule.title}" added successfully!`);
+      setModuleManagerMessage(`âœ… External link module "${newModule.title}" added successfully!`);
       
       setTimeout(() => {
         setModuleManagerStatus(null);
@@ -2775,10 +2849,10 @@ I need to extract ONE specific ${harvestType.toLowerCase()} from it to create a 
      // Force script execution in sandboxed environments
      if (document.readyState === 'loading') {
          document.addEventListener('DOMContentLoaded', function() {
-             console.log('✅ ${divId} module loaded');
+             console.log('âœ… ${divId} module loaded');
          });
      } else {
-         console.log('✅ ${divId} module loaded');
+         console.log('âœ… ${divId} module loaded');
      }
      \`\`\`
 
@@ -2860,31 +2934,31 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                 onClick={() => setMode('ADD')} 
                                 className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'ADD' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
                             >
-                                ➕ Add Questions
+                                âž• Add Questions
                             </button>
                             <button 
                                 onClick={() => setMode('MASTER')} 
                                 className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'MASTER' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
                             >
-                                ⭐ Master Assessment
+                                â­ Master Assessment
                             </button>
                             <button 
                                 onClick={() => setMode('MANAGE')} 
                                 className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'MANAGE' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
                             >
-                                📋 Manage
+                                ðŸ“‹ Manage
                             </button>
                             <button 
                                 onClick={() => setMode('MIGRATE')} 
                                 className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'MIGRATE' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
                             >
-                                🔄 Migrate
+                                ðŸ”„ Migrate
                             </button>
                             <button 
                                 onClick={() => setMode('IMPORT')} 
                                 className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'IMPORT' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
                             >
-                                📄 Smart Import
+                                ðŸ“„ Smart Import
                             </button>
                         </div>
 
@@ -2902,7 +2976,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                         }} 
                                         className={`flex-1 py-3 px-4 rounded text-xs font-bold transition-all ${currentQuestionType === 'multiple-choice' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
                                     >
-                                        📝 Multiple Choice
+                                        ðŸ“ Multiple Choice
                                     </button>
                                     <button 
                                         onClick={() => {
@@ -2911,7 +2985,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                         }} 
                                         className={`flex-1 py-3 px-4 rounded text-xs font-bold transition-all ${currentQuestionType === 'long-answer' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
                                     >
-                                        ✍️ Long Answer
+                                        âœï¸ Long Answer
                                     </button>
                         </div>
 
@@ -2975,7 +3049,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                     options: currentQuestion.options,
                                                     correct: currentQuestion.correct
                                                 });
-                                                alert("✅ Question added to Master Assessment!");
+                                                alert("âœ… Question added to Master Assessment!");
                                             }}
                                             className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded flex items-center justify-center gap-2"
                                         >
@@ -3010,7 +3084,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                     type: 'long-answer',
                                                     question: currentQuestion.question
                                                 });
-                                                alert("✅ Question added to Master Assessment!");
+                                                alert("âœ… Question added to Master Assessment!");
                                             }}
                                             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded flex items-center justify-center gap-2"
                                         >
@@ -3022,7 +3096,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                 {/* Quick Info */}
                                 <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg">
                                     <p className="text-purple-300 text-xs">
-                                        💡 <strong>Tip:</strong> Add all your questions here, then go to the "Master Assessment" tab to organize them and generate the final assessment.
+                                        ðŸ’¡ <strong>Tip:</strong> Add all your questions here, then go to the "Master Assessment" tab to organize them and generate the final assessment.
                                     </p>
                  </div>
              </div>
@@ -3193,13 +3267,13 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                         html: parsed.html,
                                                         script: parsed.script
                                                     });
-                                                    alert("✅ Assessment added successfully! Switching to Manage tab...");
+                                                    alert("âœ… Assessment added successfully! Switching to Manage tab...");
                                                     setGeneratedAssessment("");
                                                     setAssessmentTitle("");
                                                     setQuizQuestions([{ question: '', options: ['', '', '', ''], correct: 0 }]);
                                                     setMode('MANAGE'); // Switch to Manage tab to see it
                                                 } catch(e) {
-                                                    alert("❌ Error adding assessment. Please try again.");
+                                                    alert("âŒ Error adding assessment. Please try again.");
                                                     console.error(e);
                                                 }
                                             }}
@@ -3261,7 +3335,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2 mb-1">
                                                                 <span className={`text-[9px] font-bold uppercase px-2 py-1 rounded ${q.type === 'multiple-choice' ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                                                                    {q.type === 'multiple-choice' ? '📝 MC' : '✍️ LA'}
+                                                                    {q.type === 'multiple-choice' ? 'ðŸ“ MC' : 'âœï¸ LA'}
                                                                 </span>
                                                             </div>
                                                             <p className="text-sm text-slate-200 font-medium mb-1">{q.question}</p>
@@ -3343,13 +3417,13 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                         script: parsed.script,
                                                         questionCount: masterQuestions.length
                                                     });
-                                                    alert("✅ Assessment added successfully! Switching to Manage tab...");
+                                                    alert("âœ… Assessment added successfully! Switching to Manage tab...");
                                                     setGeneratedAssessment("");
                                                     setMasterAssessmentTitle("");
                                                     setMasterQuestions([]);
                                                     setMode('MANAGE');
                                                 } catch(e) {
-                                                    alert("❌ Error adding assessment. Please try again.");
+                                                    alert("âŒ Error adding assessment. Please try again.");
                                                     console.error(e);
                                                 }
                                             }}
@@ -3700,8 +3774,8 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         </p>
                                         <button 
                                             onClick={() => {
-                                                if (window.confirm('⚠️ WARNING: This will permanently delete ALL your course data including:\n\n• Course settings\n• All modules\n• All assessments\n• All materials\n\nAre you sure you want to continue?')) {
-                                                    if (window.confirm('🚨 FINAL CONFIRMATION: Type "DELETE" in the next prompt to confirm.\n\nClick OK to proceed with deletion.')) {
+                                                if (window.confirm('âš ï¸ WARNING: This will permanently delete ALL your course data including:\n\nâ€¢ Course settings\nâ€¢ All modules\nâ€¢ All assessments\nâ€¢ All materials\n\nAre you sure you want to continue?')) {
+                                                    if (window.confirm('ðŸš¨ FINAL CONFIRMATION: Type "DELETE" in the next prompt to confirm.\n\nClick OK to proceed with deletion.')) {
                                                         const userInput = window.prompt('Type DELETE to confirm:');
                                                         if (userInput === 'DELETE') {
                                                             localStorage.removeItem('course_factory_v2_data');
@@ -3712,7 +3786,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                     localStorage.removeItem(key);
                                                                 }
                                                             });
-                                                            alert('✅ All data cleared! The page will now reload.');
+                                                            alert('âœ… All data cleared! The page will now reload.');
                                                             window.location.reload();
                                                         } else {
                                                             alert('Deletion cancelled. Your data is safe.');
@@ -3767,7 +3841,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             </div>
                                         </div>
                                         <div>
-                                            <p className="text-xs font-bold text-amber-300 mb-1">⭐ For Mixed Types (Recommended):</p>
+                                            <p className="text-xs font-bold text-amber-300 mb-1">â­ For Mixed Types (Recommended):</p>
                                             <div className="bg-black p-2 rounded border border-amber-700 relative group">
                                                 <code className="text-[10px] text-amber-400 font-mono block break-words">
                                                     Convert this mixed assessment into JSON. Multiple-choice: [{"{"} "question": "...", "options": ["A","B","C","D"], "correct": 0 {"}"}]. Long-answer: [{"{"} "question": "...", "options": [] {"}"}]. Include ALL questions in order. Output JSON ONLY.
@@ -3855,7 +3929,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                         return (
                                                                             <div key={oIdx} className={`flex items-center gap-2 ${q.correct === oIdx ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
                                                                                 <span>{String.fromCharCode(65+oIdx)}.</span> <span>{optionText}</span>
-                                                                                {q.correct === oIdx && <span className="text-[10px] text-emerald-400">✓</span>}
+                                                                                {q.correct === oIdx && <span className="text-[10px] text-emerald-400">âœ“</span>}
                                                                             </div>
                                                                         );
                                                                     })
@@ -3883,7 +3957,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             setMasterQuestions(prev => [...prev, ...formattedQuestions]);
                                             const mcCount = formattedQuestions.filter(q => q.type === 'multiple-choice').length;
                                             const laCount = formattedQuestions.filter(q => q.type === 'long-answer').length;
-                                            alert(`✅ Imported ${formattedQuestions.length} questions! (${mcCount} multiple-choice, ${laCount} long-answer)`);
+                                            alert(`âœ… Imported ${formattedQuestions.length} questions! (${mcCount} multiple-choice, ${laCount} long-answer)`);
                                             setImportInput("");
                                             setImportPreview([]);
                                             setMode('MASTER');
@@ -4380,7 +4454,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-indigo-100 text-xs font-mono h-64 resize-y focus:border-indigo-500 outline-none"
                                         />
                                         <p className="text-[10px] text-emerald-400 mt-1 font-bold">
-                                            ✓ Your code runs AS-IS in an isolated iframe - no modifications needed!
+                                            âœ“ Your code runs AS-IS in an isolated iframe - no modifications needed!
                                         </p>
                                     </div>
                                     
@@ -4434,7 +4508,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     : 'bg-rose-900/30 text-rose-400 border-rose-500/30'
                                             }`}>
                                                 <div className="flex items-start gap-2">
-                                                    <span className="font-bold">{linkTestResult.success ? '✓' : '✗'}</span>
+                                                    <span className="font-bold">{linkTestResult.success ? 'âœ“' : 'âœ—'}</span>
                                                     <span>{linkTestResult.message}</span>
                                                 </div>
                                             </div>
@@ -4495,13 +4569,13 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                             
                             {/* Help Section */}
                             <div className="p-4 bg-sky-900/10 border border-sky-500/20 rounded-lg">
-                                <h4 className="text-xs font-bold text-sky-400 uppercase mb-2">💡 Module Types</h4>
+                                <h4 className="text-xs font-bold text-sky-400 uppercase mb-2">ðŸ’¡ Module Types</h4>
                                 <ul className="text-[10px] text-slate-400 space-y-1 leading-relaxed">
                                     <li><strong className="text-sky-300">Standalone HTML:</strong> Complete HTML file (like HSS3020). CSS auto-scoped, wrapped in view container.</li>
                                     <li><strong className="text-sky-300">External Link:</strong> Link to hosted module. Choose iframe (embedded) or new tab (external).</li>
-                                    <li>✅ Modules appear in sidebar navigation</li>
-                                    <li>✅ Can be hidden/shown in Phase 2</li>
-                                    <li>✅ Included in compiled site</li>
+                                    <li>âœ… Modules appear in sidebar navigation</li>
+                                    <li>âœ… Can be hidden/shown in Phase 2</li>
+                                    <li>âœ… Included in compiled site</li>
                                 </ul>
                             </div>
                         </div>
@@ -4592,10 +4666,10 @@ Return ONLY valid JSON. No markdown. Single-line strings.
    // Force script execution
    if (document.readyState === 'loading') {
        document.addEventListener('DOMContentLoaded', function() {
-           console.log('✅ [feature-name] loaded');
+           console.log('âœ… [feature-name] loaded');
        });
    } else {
-       console.log('✅ [feature-name] loaded');
+       console.log('âœ… [feature-name] loaded');
    }
    \`\`\`
    If your code has state to restore from localStorage, call your populate/init function here instead.
@@ -4806,7 +4880,7 @@ ${aiDescription}
 
                         <input type="text" value={stagingTitle} onChange={(e) => setStagingTitle(e.target.value)} placeholder="Title (e.g. Save System)" className="w-full mb-2 bg-slate-950 border border-emerald-900 rounded p-2 text-white text-sm"/>
                         <textarea value={stagingJson} onChange={(e) => setStagingJson(e.target.value)} className="w-full bg-slate-950 border border-emerald-900 rounded-lg p-3 text-xs text-emerald-100 font-mono h-24 focus:border-emerald-500 outline-none resize-y mb-2" placeholder='Paste output JSON here...' />
-                            <div className="flex gap-2 mb-6"><button onClick={() => handleSessionSave()} disabled={!stagingJson || !stagingTitle} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-xs shadow-lg"><Zap size={14} /> ⚡ Add to Session (Instant)</button></div>
+                            <div className="flex gap-2 mb-6"><button onClick={() => handleSessionSave()} disabled={!stagingJson || !stagingTitle} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-xs shadow-lg"><Zap size={14} /> âš¡ Add to Session (Instant)</button></div>
                         <div className="pt-4 border-t border-emerald-800/50"><div className="flex items-center justify-between mb-2"><p className="text-[10px] text-emerald-400/60 uppercase font-bold">Optional: Hard Save</p><span className="text-[9px] text-emerald-600 bg-emerald-950/50 px-2 py-0.5 rounded">Only do this once at the end</span></div><CodeBlock label="Permanent Save Prompt (Use Sparingly)" code={saveToDocPrompt} height="h-24" /></div>
                     </div>
                 </div>
@@ -4900,7 +4974,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
     
     // Prevent deletion of protected modules
     if (isProtectedModule(item)) {
-      alert('⚠️ Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle.');
+      alert('âš ï¸ Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle.');
       return;
     }
     
@@ -5274,9 +5348,9 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                             <div className="flex items-center gap-2 mb-3 text-xs text-slate-400">
                                 <FileCode size={12} />
                                 <span>{(stats.total / 1024).toFixed(1)} KB</span>
-                                <span className="text-slate-700">•</span>
+                                <span className="text-slate-700">â€¢</span>
                                 <span>{stats.htmlLength > 0 ? 'Has HTML' : 'No HTML'}</span>
-                                <span className="text-slate-700">•</span>
+                                <span className="text-slate-700">â€¢</span>
                                 <span>{stats.scriptLength > 0 ? 'Has Script' : 'No Script'}</span>
                             </div>
 
@@ -5384,7 +5458,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                   {materialPreview.digitalContent ? (
                     <div className="mt-1">
                       <span className="inline-flex items-center gap-2 px-2 py-1 bg-emerald-900/50 text-emerald-400 text-xs rounded font-bold">
-                        📖 Enabled - {materialPreview.digitalContent.chapters?.length || 0} Chapters
+                        ðŸ“– Enabled - {materialPreview.digitalContent.chapters?.length || 0} Chapters
                       </span>
                     </div>
                   ) : (
@@ -5748,7 +5822,7 @@ const Phase3 = ({ onGoToMaster, projectData, setProjectData }) => {
       try {
         const restored = JSON.parse(e.target.result);
         setProjectData(restored);
-        // alert("✅ Project Restored Successfully!"); // Removed Alert
+        // alert("âœ… Project Restored Successfully!"); // Removed Alert
       } catch (error) {
         console.error("Invalid backup file", error);
       }
@@ -5875,9 +5949,67 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
   const instructor = courseSettings.instructor || "";
   const academicYear = courseSettings.academicYear || "";
   const accentColor = courseSettings.accentColor || "sky";
+  const backgroundColor = courseSettings.backgroundColor || "slate-900";
   const fontFamily = courseSettings.fontFamily || "inter";
   const customCSS = courseSettings.customCSS || "";
   const compDefaults = courseSettings.compilationDefaults || {};
+  const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
+  const headingTextColor = courseSettings.headingTextColor || (isLightBg ? 'slate-900' : 'white');
+  const secondaryTextColor = courseSettings.secondaryTextColor || (isLightBg ? 'slate-600' : 'slate-400');
+  const buttonColor = courseSettings.buttonColor || `${accentColor}-600`;
+  const containerColor = courseSettings.containerColor || (isLightBg ? 'white/80' : 'slate-900/80');
+  
+  const toTextClass = (value) => value.startsWith('text-') ? value : `text-${value}`;
+  const toBgBase = (value) => value.startsWith('bg-') ? value.slice(3) : value;
+  const hexToRgba = (hex, alpha = 1) => {
+    if (!hex) return `rgba(15, 23, 42, ${alpha})`;
+    const clean = hex.replace('#', '');
+    if (clean.length !== 6) return `rgba(15, 23, 42, ${alpha})`;
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+  const parseColorToken = (value) => {
+    const raw = (value || '').toString().trim();
+    if (!raw) return { base: isLightBg ? 'white' : 'slate-900', alpha: 0.8, alphaRaw: '80' };
+    let token = raw;
+    if (token.startsWith('bg-')) token = token.slice(3);
+    if (token.startsWith('text-')) token = token.slice(5);
+    const parts = token.split('/');
+    const base = parts[0] || (isLightBg ? 'white' : 'slate-900');
+    const alphaRaw = parts[1] || null;
+    const alpha = alphaRaw ? Math.max(0, Math.min(1, parseInt(alphaRaw, 10) / 100)) : 1;
+    return { base, alpha, alphaRaw };
+  };
+  const colorHexMap = {
+    'slate-900': '#0f172a',
+    'slate-800': '#1e293b',
+    'slate-700': '#334155',
+    'slate-600': '#475569',
+    'slate-500': '#64748b',
+    'slate-950': '#020617',
+    'gray-900': '#111827',
+    'gray-800': '#1f2937',
+    'gray-700': '#374151',
+    'gray-600': '#4b5563',
+    'zinc-900': '#18181b',
+    'zinc-800': '#27272a',
+    'neutral-900': '#171717',
+    'stone-900': '#1c1917',
+    'white': '#ffffff'
+  };
+  
+  const headingTextClass = toTextClass(headingTextColor);
+  const secondaryTextClass = toTextClass(secondaryTextColor);
+  const buttonBgBase = toBgBase(buttonColor);
+  const buttonBgClass = `bg-${buttonBgBase}`;
+  const buttonHoverClass = buttonBgBase.endsWith('-600') ? `hover:bg-${buttonBgBase.replace(/-600$/, '-500')}` : `hover:bg-${buttonBgBase}`;
+  const buttonTextClass = secondaryTextClass;
+  const containerToken = parseColorToken(containerColor);
+  const containerBgClass = containerToken.alphaRaw ? `bg-${containerToken.base}/${containerToken.alphaRaw}` : `bg-${containerToken.base}`;
+  const containerHex = colorHexMap[containerToken.base] || (isLightBg ? '#ffffff' : '#0f172a');
+  const containerBgRgba = hexToRgba(containerHex, containerToken.alpha);
   
   // Build course info HTML
   const courseInfoParts = [];
@@ -5885,7 +6017,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
   if (instructor) courseInfoParts.push(instructor);
   if (academicYear) courseInfoParts.push(academicYear);
   const courseInfoHTML = courseInfoParts.length > 0 
-    ? `\n            <p class="text-[9px] text-slate-600 uppercase tracking-widest mono mt-1">${courseInfoParts.join(' • ')}</p>`
+    ? `\n            <p class="text-[9px] text-slate-600 uppercase tracking-widest mono mt-1">${courseInfoParts.join(' â€¢ ')}</p>`
     : "";
   
   // FILTER MODULES & TOOLKIT BASED ON COMPILATION DEFAULTS
@@ -5943,8 +6075,8 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
         const borderClass = colorClass !== 'slate' ? `border-l-4 border-l-${colorClass}-500` : '';
         const bgClass = colorClass !== 'slate' ? `bg-${colorClass}-500/10` : 'bg-slate-800';
         const borderColorClass = colorClass !== 'slate' ? `border-${colorClass}-500/20` : 'border-slate-700';
-        const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : 'text-slate-500';
-        const buttonColorClass = colorClass !== 'slate' ? `bg-${colorClass}-600 hover:bg-${colorClass}-500` : 'bg-sky-600 hover:bg-sky-500';
+        const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : secondaryTextClass;
+        const buttonColorClass = `${buttonBgClass} ${buttonHoverClass}`;
         
         // Properly escape quotes in the onclick handlers
         const escapedViewUrl = (mat.viewUrl || '').replace(/'/g, "\\'");
@@ -5956,21 +6088,21 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
         // Using data attributes for better compatibility with sandboxed environments (Google Sites)
         let buttonsHTML = '';
         if (mat.viewUrl) {
-          buttonsHTML += `<button data-pdf-url="${escapedViewUrl}" data-pdf-title="${escapedTitle}" class="pdf-viewer-btn flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>`;
+          buttonsHTML += `<button data-pdf-url="${escapedViewUrl}" data-pdf-title="${escapedTitle}" class="pdf-viewer-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>`;
         }
         if (mat.downloadUrl) {
-          buttonsHTML += `<a href="${escapedDownloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`;
+          buttonsHTML += `<a href="${escapedDownloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`;
         }
         if (mat.digitalContent) {
-          buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">📖 Read</button>`;
+          buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">ðŸ“– Read</button>`;
         }
         
-        return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 ${borderClass}">
+        return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 ${containerBgClass} rounded-xl border border-slate-700 p-6 ${borderClass}">
     <div class="flex items-center gap-6">
         <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center ${textColorClass} font-black italic text-xl border ${borderColorClass}">${mat.number}</div>
         <div>
-            <h3 class="text-lg font-bold text-white uppercase italic">${mat.title}</h3>
-            <p class="text-xs text-slate-400 font-mono">${mat.description}</p>
+            <h3 class="text-lg font-bold ${headingTextClass} uppercase italic">${mat.title}</h3>
+            <p class="text-xs ${secondaryTextClass} font-mono">${mat.description}</p>
         </div>
     </div>
     <div class="flex gap-3 w-full md:w-auto">
@@ -5994,8 +6126,8 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       const materialsHTML = `<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
             <div class="max-w-5xl mx-auto space-y-8">
                 <div class="mb-12">
-                    <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Course <span class="text-${accentColor}-500">Materials</span></h2>
-                    <p class="text-xs text-slate-400 font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
+                    <h2 class="text-3xl font-black ${headingTextClass} italic uppercase tracking-tighter">Course Materials</h2>
+                    <p class="text-xs ${secondaryTextClass} font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
                 </div>
                 <div id="pdf-viewer-container" class="hidden mb-12 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl">
                     <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-slate-700">
@@ -6006,20 +6138,20 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                 </div>
                 <div id="digital-reader-container" class="hidden mb-12 bg-slate-900 rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">
                     <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-emerald-500/30">
-                        <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">📖 Digital Resource</span>
+                        <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">ðŸ“– Digital Resource</span>
                         <button data-close-digital-reader class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
                     </div>
                     <div class="flex" style="height: 600px;">
                         <div id="reader-toc" class="w-64 bg-slate-950 border-r border-slate-700 p-4 overflow-y-auto hidden md:block">
-                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Contents</h4>
+                            <h4 class="text-xs font-bold ${secondaryTextClass} uppercase tracking-wider mb-4">Contents</h4>
                             <div id="reader-toc-items" class="space-y-1"></div>
                         </div>
                         <div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">
                             <div id="reader-body" class="prose prose-invert max-w-none"></div>
                             <div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-700">
-                                <button data-prev-chapter id="prev-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">← Previous</button>
-                                <span id="reader-progress" class="text-xs text-slate-500"></span>
-                                <button data-next-chapter id="next-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next →</button>
+                                <button data-prev-chapter id="prev-btn" class="px-4 py-2 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">â† Previous</button>
+                                <span id="reader-progress" class="text-xs ${secondaryTextClass}"></span>
+                                <button data-next-chapter id="next-btn" class="px-4 py-2 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next â†’</button>
                             </div>
                         </div>
                     </div>
@@ -6098,7 +6230,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             currentReader = { matId: matId, chapterIdx: 0, data: content };
             
             // Update title
-            document.getElementById('reader-title').innerHTML = '📖 ' + (content.title || 'Digital Resource');
+            document.getElementById('reader-title').innerHTML = 'ðŸ“– ' + (content.title || 'Digital Resource');
             
             // Build table of contents (using data attributes, not onclick)
             var tocHTML = '';
@@ -6141,7 +6273,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                     html += '<h3 class="text-lg font-bold text-emerald-400 mb-3">' + sec.heading + '</h3>';
                 }
                 // Simple markdown-like rendering
-                var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, '• ');
+                var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, 'â€¢ ');
                 html += '<div class="text-slate-300 leading-relaxed whitespace-pre-line">' + content + '</div>';
                 html += '</div>';
             });
@@ -6204,7 +6336,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             }
         });
         
-        console.log('📖 Digital Reader initialized with event delegation');
+        console.log('ðŸ“– Digital Reader initialized with event delegation');
         `;
         scriptInjection += '\n        ' + digitalReaderScript + '\n';
       }
@@ -6217,18 +6349,18 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       // Generate assessment cards for selection page
       const assessmentCards = assessments.map((assess, idx) => {
         const typeLabel = assess.type === 'quiz' ? 'Multiple Choice' : assess.type === 'longanswer' ? 'Long Answer' : assess.type === 'print' ? 'Print & Submit' : 'Mixed Assessment';
-        const typeIcon = assess.type === 'quiz' ? '📝' : assess.type === 'longanswer' ? '✍️' : assess.type === 'print' ? '🖨️' : '📋';
+        const typeIcon = assess.type === 'quiz' ? 'ðŸ“' : assess.type === 'longanswer' ? 'âœï¸' : assess.type === 'print' ? 'ðŸ–¨ï¸' : 'ðŸ“‹';
         const questionCount = assess.questionCount || (assess.type === 'mixed' ? 'Multiple' : 'Unknown');
         
         return `
-          <div class="p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-${accentColor}-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
+          <div class="assessment-card p-6 ${containerBgClass} rounded-xl border border-slate-700 hover:border-${accentColor}-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
             <div class="flex items-center justify-between">
               <div class="flex-1">
                 <div class="flex items-center gap-3 mb-2">
                   <span class="text-3xl">${typeIcon}</span>
                   <div>
-                    <h3 class="text-xl font-bold text-white group-hover:text-${accentColor}-400 transition-colors">${assess.title}</h3>
-                    <p class="text-xs text-slate-400 uppercase tracking-wider">${typeLabel}${assess.questionCount ? ' • ' + questionCount + ' Questions' : ''}</p>
+                    <h3 class="text-xl font-bold ${headingTextClass} group-hover:text-${accentColor}-400 transition-colors">${assess.title}</h3>
+                    <p class="text-xs ${secondaryTextClass} uppercase tracking-wider">${typeLabel}${assess.questionCount ? ' â€¢ ' + questionCount + ' Questions' : ''}</p>
                   </div>
                 </div>
               </div>
@@ -6244,7 +6376,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       // Generate individual assessment containers (hidden by default) WITH INLINE SCRIPTS
       const assessmentContainers = assessments.map((assess, idx) => {
         return '\n        <div id="assessment-' + idx + '" class="assessment-container hidden">\n' +
-        '          <button onclick="backToAssessmentList()" class="mb-6 flex items-center gap-2 text-${accentColor}-400 hover:text-${accentColor}-300 font-bold text-sm transition-colors">\n' +
+        '          <button onclick="backToAssessmentList()" class="mb-6 inline-flex items-center gap-2 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg transition-colors">\n' +
         '            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">\n' +
         '              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>\n' +
         '            </svg>\n' +
@@ -6265,13 +6397,13 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                 <!-- Assessment Selection Page -->
                 <div id="assessment-list">
                     <div class="mb-12">
-                        <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Assessment <span class="text-${accentColor}-500">Center</span></h2>
-                        <p class="text-xs text-slate-400 font-mono uppercase tracking-widest mt-2">Select an assessment to begin</p>
+                        <h2 class="text-3xl font-black ${headingTextClass} italic uppercase tracking-tighter">Assessment Center</h2>
+                        <p class="text-xs ${secondaryTextClass} font-mono uppercase tracking-widest mt-2">Select an assessment to begin</p>
                     </div>
                     ${assessments.length > 0 ? `
                     <div class="grid grid-cols-1 gap-4">
                         ${assessmentCards}
-                    </div>` : '<p class="text-center text-slate-500 italic py-12">No assessments available.</p>'}
+                    </div>` : `<p class="text-center ${secondaryTextClass} italic py-12">No assessments available.</p>`}
                 </div>
                 
                 <!-- Individual Assessments (hidden by default) -->
@@ -6281,10 +6413,10 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             <!-- INLINE ASSESSMENT NAVIGATION SCRIPTS -->
             <script>
             (function() {
-              console.log('🔧 [INLINE] Initializing assessment navigation functions...');
+              console.log('ðŸ”§ [INLINE] Initializing assessment navigation functions...');
               
               window.showAssessment = function(index) {
-                console.log('📋 [INLINE] Showing assessment:', index);
+                console.log('ðŸ“‹ [INLINE] Showing assessment:', index);
                 var listEl = document.getElementById('assessment-list');
                 var targetEl = document.getElementById('assessment-' + index);
                 
@@ -6295,13 +6427,13 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                 if (targetEl) {
                   targetEl.classList.remove('hidden');
                 } else {
-                  console.error('❌ Assessment container not found:', 'assessment-' + index);
+                  console.error('âŒ Assessment container not found:', 'assessment-' + index);
                 }
                 window.scrollTo(0, 0);
               };
               
               window.backToAssessmentList = function() {
-                console.log('⬅️ [INLINE] Returning to assessment list');
+                console.log('â¬…ï¸ [INLINE] Returning to assessment list');
                 document.querySelectorAll('.assessment-container').forEach(function(c) {
                   c.classList.add('hidden');
                 });
@@ -6312,7 +6444,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
               
               // Global Toolkit Menu Toggle
               window.toggleToolkitMenu = function() {
-                console.log('🔧 [INLINE] Toggling toolkit menu');
+                console.log('ðŸ”§ [INLINE] Toggling toolkit menu');
                 var dropdown = document.getElementById('toolkit-dropdown');
                 if (dropdown) {
                   dropdown.classList.toggle('hidden');
@@ -6323,8 +6455,8 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
               var toolkitState = JSON.parse(localStorage.getItem('mf_toolkit') || '{}');
               
               window.toggleTool = function(toolId) {
-                console.log('🔧 [INLINE] Toggling tool:', toolId);
-                console.log('🔧 [DEBUG] Looking for element ID:', 'feat-' + toolId);
+                console.log('ðŸ”§ [INLINE] Toggling tool:', toolId);
+                console.log('ðŸ”§ [DEBUG] Looking for element ID:', 'feat-' + toolId);
                 
                 toolkitState[toolId] = !toolkitState[toolId];
                 localStorage.setItem('mf_toolkit', JSON.stringify(toolkitState));
@@ -6332,17 +6464,17 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                 var toolElement = document.getElementById('feat-' + toolId);
                 var toggleButton = document.getElementById('toggle-' + toolId);
                 
-                console.log('🔧 [DEBUG] Tool element found:', !!toolElement);
-                console.log('🔧 [DEBUG] Toggle button found:', !!toggleButton);
-                console.log('🔧 [DEBUG] New state:', toolkitState[toolId]);
+                console.log('ðŸ”§ [DEBUG] Tool element found:', !!toolElement);
+                console.log('ðŸ”§ [DEBUG] Toggle button found:', !!toggleButton);
+                console.log('ðŸ”§ [DEBUG] New state:', toolkitState[toolId]);
                 
                 if (toolElement) {
                   if (toolkitState[toolId]) {
                     toolElement.classList.remove('hidden');
-                    console.log('🔧 [DEBUG] Showing tool');
+                    console.log('ðŸ”§ [DEBUG] Showing tool');
                   } else {
                     toolElement.classList.add('hidden');
-                    console.log('🔧 [DEBUG] Hiding tool');
+                    console.log('ðŸ”§ [DEBUG] Hiding tool');
                   }
                 }
                 
@@ -6352,20 +6484,20 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                     toggleButton.classList.add('bg-emerald-600');
                     var dot = toggleButton.querySelector('div');
                     if (dot) dot.classList.add('translate-x-4');
-                    console.log('🔧 [DEBUG] Toggle ON visual');
+                    console.log('ðŸ”§ [DEBUG] Toggle ON visual');
                   } else {
                     toggleButton.classList.remove('bg-emerald-600');
                     toggleButton.classList.add('bg-slate-600');
                     var dot = toggleButton.querySelector('div');
                     if (dot) dot.classList.remove('translate-x-4');
-                    console.log('🔧 [DEBUG] Toggle OFF visual');
+                    console.log('ðŸ”§ [DEBUG] Toggle OFF visual');
                   }
                 }
               };
               
               // Initialize toolkit state on load
               window.initializeToolkit = function() {
-                console.log('🔧 [INLINE] Initializing toolkit state');
+                console.log('ðŸ”§ [INLINE] Initializing toolkit state');
                 Object.keys(toolkitState).forEach(function(toolId) {
                   if (toolkitState[toolId]) {
                     var toolElement = document.getElementById('feat-' + toolId);
@@ -6388,7 +6520,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                 window.initializeToolkit();
               }
               
-              console.log('✅ [INLINE] Assessment navigation + toolkit functions ready!');
+              console.log('âœ… [INLINE] Assessment navigation + toolkit functions ready!');
             })();
             </script>
         </div>`;
@@ -6399,10 +6531,10 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       // Add navigation functions (attached to window for onclick access)
       const navScripts = `
         (function() {
-          console.log('🔧 Initializing assessment navigation functions...');
+          console.log('ðŸ”§ Initializing assessment navigation functions...');
           
           window.showAssessment = function(index) {
-            console.log('📋 Showing assessment:', index);
+            console.log('ðŸ“‹ Showing assessment:', index);
             var listEl = document.getElementById('assessment-list');
             var targetEl = document.getElementById('assessment-' + index);
             
@@ -6419,7 +6551,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
           };
           
           window.backToAssessmentList = function() {
-            console.log('⬅️ Returning to assessment list');
+            console.log('â¬…ï¸ Returning to assessment list');
             document.querySelectorAll('.assessment-container').forEach(function(c) {
               c.classList.add('hidden');
             });
@@ -6428,7 +6560,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             window.scrollTo(0, 0);
           };
           
-          console.log('✅ Assessment navigation functions ready!');
+          console.log('âœ… Assessment navigation functions ready!');
         })();
         `;
       
@@ -6592,7 +6724,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
         <div id="toolkit-dropdown" class="hidden fixed top-16 left-4 bg-slate-800 border border-slate-700 rounded-xl p-3 shadow-2xl z-50 w-64">
             <div class="flex items-center justify-between mb-3">
                 <h3 class="text-sm font-bold text-white">Global Toolkit</h3>
-                <button onclick="toggleToolkitMenu()" class="text-slate-400 hover:text-white">✕</button>
+                <button onclick="toggleToolkitMenu()" class="text-slate-400 hover:text-white">âœ•</button>
             </div>
             <div class="space-y-1">
                 ${dropdownItems}
@@ -6685,9 +6817,9 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             if (moduleProgress[moduleId]) {
               // Add checkmark indicator
               if (moduleProgress[moduleId].completed && !btn.querySelector('.progress-check')) {
-                btn.insertAdjacentHTML('beforeend', '<span class="progress-check ml-2 text-emerald-400">✓</span>');
+                btn.insertAdjacentHTML('beforeend', '<span class="progress-check ml-2 text-emerald-400">âœ“</span>');
               } else if (moduleProgress[moduleId].viewed && !moduleProgress[moduleId].completed && !btn.querySelector('.progress-dot')) {
-                btn.insertAdjacentHTML('beforeend', '<span class="progress-dot ml-2 text-amber-400">●</span>');
+                btn.insertAdjacentHTML('beforeend', '<span class="progress-dot ml-2 text-amber-400">â—</span>');
               }
             }
           });
@@ -6744,13 +6876,15 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
     courseName,
     courseNameUpper,
     accentColor,
+    backgroundColor,
     fontFamily,
     customCSS,
     courseInfo: courseInfoHTML,
     navItems: navInjection,
     content: contentInjection,
     scripts: scriptInjection + initScript,
-    progressTracking: progressTrackingScript
+    progressTracking: progressTrackingScript,
+    containerBgRgba
   });
 
   return finalCode;
@@ -6832,24 +6966,69 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     
     // Determine if background is light (for text color)
     const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
-    const textColor = isLightBg ? 'text-slate-900' : 'text-white';
-    const textColorSecondary = isLightBg ? 'text-slate-600' : 'text-slate-400';
-    const textColorTertiary = isLightBg ? 'text-slate-500' : 'text-slate-500';
+    const headingTextColor = courseSettings.headingTextColor || (isLightBg ? 'slate-900' : 'white');
+    const secondaryTextColor = courseSettings.secondaryTextColor || (isLightBg ? 'slate-600' : 'slate-400');
+    const containerColor = courseSettings.containerColor || (isLightBg ? 'white/80' : 'slate-900/80');
+    const toTextClass = (value) => value.startsWith('text-') ? value : `text-${value}`;
+    const hexToRgba = (hex, alpha = 1) => {
+      if (!hex) return `rgba(15, 23, 42, ${alpha})`;
+      const clean = hex.replace('#', '');
+      if (clean.length !== 6) return `rgba(15, 23, 42, ${alpha})`;
+      const r = parseInt(clean.slice(0, 2), 16);
+      const g = parseInt(clean.slice(2, 4), 16);
+      const b = parseInt(clean.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+    const parseColorToken = (value) => {
+      const raw = (value || '').toString().trim();
+      if (!raw) return { base: isLightBg ? 'white' : 'slate-900', alpha: 0.8, alphaRaw: '80' };
+      let token = raw;
+      if (token.startsWith('bg-')) token = token.slice(3);
+      if (token.startsWith('text-')) token = token.slice(5);
+      const parts = token.split('/');
+      const base = parts[0] || (isLightBg ? 'white' : 'slate-900');
+      const alphaRaw = parts[1] || null;
+      const alpha = alphaRaw ? Math.max(0, Math.min(1, parseInt(alphaRaw, 10) / 100)) : 1;
+      return { base, alpha, alphaRaw };
+    };
+    const colorHexMap = {
+      'slate-900': '#0f172a',
+      'slate-800': '#1e293b',
+      'slate-700': '#334155',
+      'slate-600': '#475569',
+      'slate-500': '#64748b',
+      'slate-950': '#020617',
+      'gray-900': '#111827',
+      'gray-800': '#1f2937',
+      'gray-700': '#374151',
+      'gray-600': '#4b5563',
+      'zinc-900': '#18181b',
+      'zinc-800': '#27272a',
+      'neutral-900': '#171717',
+      'stone-900': '#1c1917',
+      'white': '#ffffff'
+    };
+    const headingTextClass = toTextClass(headingTextColor);
+    const secondaryTextClass = toTextClass(secondaryTextColor);
+    const tertiaryTextClass = toTextClass(isLightBg ? 'slate-500' : 'slate-500');
     const borderColor = isLightBg ? 'border-slate-300' : 'border-slate-700';
-    const cardBg = isLightBg ? 'bg-white/80' : 'bg-slate-800/50';
-    const cardHoverBg = isLightBg ? 'hover:bg-white' : 'hover:bg-slate-800';
-    const arrowColor = isLightBg ? 'text-slate-400' : 'text-slate-600';
+    const containerToken = parseColorToken(containerColor);
+    const containerBgClass = containerToken.alphaRaw ? `bg-${containerToken.base}/${containerToken.alphaRaw}` : `bg-${containerToken.base}`;
+    const containerHoverClass = `hover:bg-${containerToken.base}`;
+    const containerHex = colorHexMap[containerToken.base] || (isLightBg ? '#ffffff' : '#0f172a');
+    const containerBgRgba = hexToRgba(containerHex, containerToken.alpha);
+    const arrowColor = secondaryTextClass;
     
     const moduleListHTML = manifest.modules.map((mod, idx) => `
-      <a href="./${mod.path}" class="block p-6 ${cardBg} rounded-xl border ${borderColor} hover:border-${accentColor}-500 ${cardHoverBg} transition-all group">
+      <a href="./${mod.path}" class="block p-6 ${containerBgClass} rounded-xl border ${borderColor} hover:border-${accentColor}-500 ${containerHoverClass} transition-all group">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">
             <div class="w-10 h-10 rounded-lg bg-${accentColor}-500/20 flex items-center justify-center text-${accentColor}-400 font-bold">
               ${String(idx + 1).padStart(2, '0')}
             </div>
             <div>
-              <h3 class="text-lg font-bold ${textColor} group-hover:text-${accentColor}-400 transition-colors">${mod.title}</h3>
-              <p class="text-xs ${textColorTertiary} font-mono">${mod.id}</p>
+              <h3 class="text-lg font-bold ${headingTextClass} group-hover:text-${accentColor}-400 transition-colors">${mod.title}</h3>
+              <p class="text-xs ${tertiaryTextClass} font-mono">${mod.id}</p>
             </div>
           </div>
           <svg class="w-5 h-5 ${arrowColor} group-hover:text-${accentColor}-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -6881,7 +7060,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     const scrollbarThumb = isLightBg ? '#94a3b8' : '#475569';
     
     return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -6889,23 +7068,49 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
   <script src="https://cdn.tailwindcss.com"><\/script>
   <link href="${font.url}" rel="stylesheet">
   <style>
-    body { 
+    * { 
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body { 
       background: ${bgHex} !important;
+      background-color: ${bgHex} !important;
       ${font.css}
     }
-    html { background: ${bgHex} !important; }
+    body { 
+      min-height: 100vh;
+    }
+    :root { --cf-container-bg: ${containerBgRgba}; }
     .custom-scroll::-webkit-scrollbar { width: 6px; }
     .custom-scroll::-webkit-scrollbar-track { background: ${scrollbarTrack}; }
     .custom-scroll::-webkit-scrollbar-thumb { background: ${scrollbarThumb}; border-radius: 3px; }
     ${customCSS ? `\n    /* Custom CSS from Settings */\n    ${customCSS}` : ''}
   </style>
+  <script>
+    // Force background color after Tailwind loads
+    (function() {
+      function setBackground() {
+        document.documentElement.style.backgroundColor = '${bgHex}';
+        document.documentElement.style.background = '${bgHex}';
+        document.body.style.backgroundColor = '${bgHex}';
+        document.body.style.background = '${bgHex}';
+      }
+      setBackground();
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setBackground);
+      }
+      setTimeout(setBackground, 100);
+      setTimeout(setBackground, 500);
+    })();
+  <\/script>
 </head>
-<body class="min-h-screen ${textColor} custom-scroll">
+<body class="${secondaryTextClass} custom-scroll" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
   <div class="max-w-4xl mx-auto px-6 py-12">
     <header class="mb-12 text-center">
-      <h1 class="text-4xl font-black ${textColor} uppercase tracking-tight mb-2">${courseName}</h1>
-      <p class="text-sm ${textColorSecondary}">Select a module to begin</p>
-      <p class="text-xs ${textColorTertiary} mt-2 font-mono">Last updated: ${new Date(manifest.updatedAt).toLocaleDateString()}</p>
+      <h1 class="text-4xl font-black ${headingTextClass} uppercase tracking-tight mb-2">${courseName}</h1>
+      <p class="text-sm ${secondaryTextClass}">Select a module to begin</p>
+      <p class="text-xs ${tertiaryTextClass} mt-2 font-mono">Last updated: ${new Date(manifest.updatedAt).toLocaleDateString()}</p>
     </header>
     
     <nav class="space-y-4">
@@ -6913,7 +7118,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     </nav>
     
     <footer class="mt-16 pt-8 border-t ${borderColor} text-center">
-      <p class="text-xs ${textColorTertiary}">Built with Course Factory</p>
+      <p class="text-xs ${tertiaryTextClass}">Built with Course Factory</p>
     </footer>
   </div>
 </body>
@@ -6958,6 +7163,57 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     const textColorSecondary = isLightBg ? 'text-slate-600' : 'text-slate-400';
     const textColorTertiary = isLightBg ? 'text-slate-500' : 'text-slate-500';
     const cardBorder = isLightBg ? 'border-slate-300' : 'border-slate-700';
+    const headingTextColor = courseSettings.headingTextColor || (isLightBg ? 'slate-900' : 'white');
+    const secondaryTextColor = courseSettings.secondaryTextColor || (isLightBg ? 'slate-600' : 'slate-400');
+    const buttonColor = courseSettings.buttonColor || `${accentColor}-600`;
+    const containerColor = courseSettings.containerColor || (isLightBg ? 'white/80' : 'slate-900/80');
+    
+    const toTextClass = (value) => value.startsWith('text-') ? value : `text-${value}`;
+    const toBgBase = (value) => value.startsWith('bg-') ? value.slice(3) : value;
+    const hexToRgba = (hex, alpha = 1) => {
+      if (!hex) return `rgba(15, 23, 42, ${alpha})`;
+      const clean = hex.replace('#', '');
+      if (clean.length !== 6) return `rgba(15, 23, 42, ${alpha})`;
+      const r = parseInt(clean.slice(0, 2), 16);
+      const g = parseInt(clean.slice(2, 4), 16);
+      const b = parseInt(clean.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+    const parseColorToken = (value) => {
+      const raw = (value || '').toString().trim();
+      if (!raw) return { base: isLightBg ? 'white' : 'slate-900', alpha: 0.8, alphaRaw: '80' };
+      let token = raw;
+      if (token.startsWith('bg-')) token = token.slice(3);
+      if (token.startsWith('text-')) token = token.slice(5);
+      const parts = token.split('/');
+      const base = parts[0] || (isLightBg ? 'white' : 'slate-900');
+      const alphaRaw = parts[1] || null;
+      const alpha = alphaRaw ? Math.max(0, Math.min(1, parseInt(alphaRaw, 10) / 100)) : 1;
+      return { base, alpha, alphaRaw };
+    };
+    const colorHexMap = {
+      ...bgColorMap,
+      'slate-800': '#1e293b',
+      'slate-700': '#334155',
+      'slate-600': '#475569',
+      'slate-500': '#64748b',
+      'gray-800': '#1f2937',
+      'gray-700': '#374151',
+      'gray-600': '#4b5563',
+      'zinc-800': '#27272a',
+      'white': '#ffffff'
+    };
+    
+    const headingTextClass = toTextClass(headingTextColor);
+    const secondaryTextClass = toTextClass(secondaryTextColor);
+    const buttonBgBase = toBgBase(buttonColor);
+    const buttonBgClass = `bg-${buttonBgBase}`;
+    const buttonHoverClass = buttonBgBase.endsWith('-600') ? `hover:bg-${buttonBgBase.replace(/-600$/, '-500')}` : `hover:bg-${buttonBgBase}`;
+    const buttonTextClass = secondaryTextClass;
+    const containerToken = parseColorToken(containerColor);
+    const containerBgClass = containerToken.alphaRaw ? `bg-${containerToken.base}/${containerToken.alphaRaw}` : `bg-${containerToken.base}`;
+    const containerHex = colorHexMap[containerToken.base] || (isLightBg ? '#ffffff' : '#0f172a');
+    const containerBgRgba = hexToRgba(containerHex, containerToken.alpha);
 
     // Check module type
     let itemCode = mod.code || {};
@@ -6994,8 +7250,8 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         const borderClass = colorClass !== 'slate' ? `border-l-4 border-l-${colorClass}-500` : '';
         const bgClass = colorClass !== 'slate' ? `bg-${colorClass}-500/10` : 'bg-slate-800';
         const borderColorClass = colorClass !== 'slate' ? `border-${colorClass}-500/20` : 'border-slate-700';
-        const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : 'text-slate-500';
-        const buttonColorClass = colorClass !== 'slate' ? `bg-${colorClass}-600 hover:bg-${colorClass}-500` : 'bg-sky-600 hover:bg-sky-500';
+        const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : secondaryTextClass;
+        const buttonColorClass = `${buttonBgClass} ${buttonHoverClass}`;
         
         const escapedViewUrl = (mat.viewUrl || '').replace(/'/g, "\\'");
         const escapedTitle = (mat.title || '').replace(/'/g, "\\'");
@@ -7003,23 +7259,23 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         
         let buttonsHTML = '';
         if (mat.viewUrl) {
-          buttonsHTML += `<button onclick="openPDF('${escapedViewUrl}', '${escapedTitle}')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>`;
+          buttonsHTML += `<button onclick="openPDF('${escapedViewUrl}', '${escapedTitle}')" class="flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>`;
         }
         if (mat.downloadUrl) {
-          buttonsHTML += `<a href="${mat.downloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`;
+          buttonsHTML += `<a href="${mat.downloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`;
         }
         if (mat.digitalContent) {
-          buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">📖 Read</button>`;
+          buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">ðŸ“– Read</button>`;
         }
         
-        const cardBg = isLightBg ? 'bg-white/80' : 'bg-slate-900/80';
+        const cardBg = containerBgClass;
         
         return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 p-6 ${cardBg} rounded-xl border ${cardBorder} ${borderClass}">
           <div class="flex items-center gap-6">
             <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center ${textColorClass} font-black italic text-xl border ${borderColorClass}">${mat.number || '00'}</div>
             <div>
-              <h3 class="text-lg font-bold ${textColor} uppercase italic">${mat.title}</h3>
-              <p class="text-xs ${textColorSecondary} font-mono">${mat.description || ''}</p>
+              <h3 class="text-lg font-bold ${headingTextClass} uppercase italic">${mat.title}</h3>
+              <p class="text-xs ${secondaryTextClass} font-mono">${mat.description || ''}</p>
             </div>
           </div>
           <div class="flex gap-3 w-full md:w-auto">${buttonsHTML}</div>
@@ -7029,19 +7285,19 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       moduleContentHTML = `
         <div class="space-y-8">
           <div class="mb-8">
-            <h2 class="text-3xl font-black ${textColor} italic uppercase tracking-tighter">Course <span class="text-${accentColor}-500">Materials</span></h2>
-            <p class="text-xs ${textColorSecondary} font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
+            <h2 class="text-3xl font-black ${headingTextClass} italic uppercase tracking-tighter">Course Materials</h2>
+            <p class="text-xs ${secondaryTextClass} font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
           </div>
           <div id="pdf-viewer-container" class="hidden mb-8 ${isLightBg ? 'bg-white' : 'bg-black'} rounded-xl border ${cardBorder} overflow-hidden shadow-2xl">
             <div class="flex justify-between items-center p-3 ${isLightBg ? 'bg-slate-100' : 'bg-slate-800'} border-b ${cardBorder}">
-              <span id="viewer-title" class="text-xs font-bold ${textColor} uppercase tracking-widest px-2">Document Viewer</span>
+              <span id="viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Document Viewer</span>
               <button onclick="closeViewer()" class="text-xs text-rose-400 hover:${isLightBg ? 'text-slate-900' : 'text-white'} font-bold uppercase tracking-widest px-2">Close X</button>
             </div>
             <iframe id="pdf-frame" src="" width="100%" height="600" style="border:none;"></iframe>
           </div>
           <div id="digital-reader-container" class="hidden mb-8 ${isLightBg ? 'bg-white' : 'bg-slate-900'} rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">
             <div class="flex justify-between items-center p-3 ${isLightBg ? 'bg-slate-100' : 'bg-slate-800'} border-b border-emerald-500/30">
-              <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">📖 Digital Resource</span>
+              <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">ðŸ“– Digital Resource</span>
               <button onclick="closeDigitalReader()" class="text-xs text-rose-400 hover:${isLightBg ? 'text-slate-900' : 'text-white'} font-bold uppercase tracking-widest px-2">Close X</button>
             </div>
             <div class="flex" style="height: 600px;">
@@ -7052,15 +7308,15 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
               <div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">
                 <div id="reader-body" class="prose ${isLightBg ? 'prose-slate' : 'prose-invert'} max-w-none"></div>
                 <div class="flex justify-between items-center mt-8 pt-4 border-t ${cardBorder}">
-                  <button id="prev-btn" onclick="prevChapter()" class="px-4 py-2 ${isLightBg ? 'bg-slate-200 hover:bg-slate-300 text-slate-900' : 'bg-slate-800 hover:bg-slate-700 text-white'} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">← Previous</button>
+                  <button id="prev-btn" onclick="prevChapter()" class="px-4 py-2 ${isLightBg ? 'bg-slate-200 hover:bg-slate-300 text-slate-900' : 'bg-slate-800 hover:bg-slate-700 text-white'} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">â† Previous</button>
                   <span id="reader-progress" class="text-xs ${textColorSecondary}"></span>
-                  <button id="next-btn" onclick="nextChapter()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next →</button>
+                  <button id="next-btn" onclick="nextChapter()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next â†’</button>
                 </div>
               </div>
             </div>
           </div>
           <div id="materials-list" class="grid grid-cols-1 gap-4">
-            ${materials.length > 0 ? materialCards : `<p class="text-center ${textColorSecondary} italic py-8">No materials available.</p>`}
+            ${materials.length > 0 ? materialCards : `<p class="text-center ${secondaryTextClass} italic py-8">No materials available.</p>`}
           </div>
         </div>`;
       
@@ -7077,7 +7333,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
           
           currentReader = { matId: matId, chapterIdx: 0, data: content };
           
-          document.getElementById('reader-title').innerHTML = '📖 ' + (content.title || 'Digital Resource');
+          document.getElementById('reader-title').innerHTML = 'ðŸ“– ' + (content.title || 'Digital Resource');
           
           var tocHTML = '';
           (content.chapters || []).forEach(function(ch, idx) {
@@ -7115,7 +7371,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
             if (sec.heading) {
               html += '<h3 class="text-lg font-bold text-emerald-400 mb-3">' + sec.heading + '</h3>';
             }
-            var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, '• ');
+            var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, 'â€¢ ');
             html += '<div class="text-slate-300 leading-relaxed whitespace-pre-line">' + content + '</div>';
             html += '</div>';
           });
@@ -7185,21 +7441,21 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     else if (isAssessmentsModule) {
       const assessments = (mod.assessments || []).filter(a => !a.hidden).sort((a, b) => (a.order || 0) - (b.order || 0));
       
-      const cardBg = isLightBg ? 'bg-white/80' : 'bg-slate-900/80';
+      const cardBg = containerBgClass;
       
       // Generate assessment list
       const assessmentListHTML = assessments.map((assess, idx) => {
         const typeLabel = assess.type === 'quiz' ? 'Multiple Choice' : assess.type === 'longanswer' ? 'Long Answer' : assess.type === 'print' ? 'Print & Submit' : 'Mixed Assessment';
-        const typeIcon = assess.type === 'quiz' ? '📝' : assess.type === 'longanswer' ? '✍️' : assess.type === 'print' ? '🖨️' : '📋';
+        const typeIcon = assess.type === 'quiz' ? 'ðŸ“' : assess.type === 'longanswer' ? 'âœï¸' : assess.type === 'print' ? 'ðŸ–¨ï¸' : 'ðŸ“‹';
         
-        return `<div class="p-6 ${cardBg} rounded-xl border ${cardBorder} hover:border-${accentColor}-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
+        return `<div class="assessment-card p-6 ${cardBg} rounded-xl border ${cardBorder} hover:border-${accentColor}-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
           <div class="flex items-center justify-between">
             <div class="flex-1">
               <div class="flex items-center gap-3 mb-2">
                 <span class="text-3xl">${typeIcon}</span>
                 <div>
-                  <h3 class="text-xl font-bold ${textColor} group-hover:text-${accentColor}-400 transition-colors">${assess.title}</h3>
-                  <p class="text-xs ${textColorSecondary} uppercase tracking-wider">${typeLabel}</p>
+                  <h3 class="text-xl font-bold ${headingTextClass} group-hover:text-${accentColor}-400 transition-colors">${assess.title}</h3>
+                  <p class="text-xs ${secondaryTextClass} uppercase tracking-wider">${typeLabel}</p>
                 </div>
               </div>
             </div>
@@ -7215,7 +7471,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       // Generate individual assessment containers
       const assessmentContainersHTML = assessments.map((assess, idx) => {
         return `<div id="assessment-${idx}" class="assessment-container hidden">
-          <button onclick="backToAssessmentList()" class="mb-6 flex items-center gap-2 text-${accentColor}-400 hover:text-${accentColor}-300 font-bold text-sm transition-colors">
+          <button onclick="backToAssessmentList()" class="mb-6 inline-flex items-center gap-2 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
             </svg>
@@ -7231,11 +7487,11 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       moduleContentHTML = `
         <div class="space-y-8">
           <div class="mb-8">
-            <h2 class="text-3xl font-black ${textColor} italic uppercase tracking-tighter">Assessment <span class="text-${accentColor}-500">Center</span></h2>
-            <p class="text-xs ${textColorSecondary} font-mono uppercase tracking-widest mt-2">Quizzes, tests, and reflection exercises.</p>
+            <h2 class="text-3xl font-black ${headingTextClass} italic uppercase tracking-tighter">Assessment Center</h2>
+            <p class="text-xs ${secondaryTextClass} font-mono uppercase tracking-widest mt-2">Quizzes, tests, and reflection exercises.</p>
           </div>
           <div id="assessment-list" class="grid grid-cols-1 gap-4">
-            ${assessments.length > 0 ? assessmentListHTML : `<p class="text-center ${textColorSecondary} italic py-8">No assessments available.</p>`}
+            ${assessments.length > 0 ? assessmentListHTML : `<p class="text-center ${secondaryTextClass} italic py-8">No assessments available.</p>`}
           </div>
           ${assessmentContainersHTML}
         </div>`;
@@ -7286,7 +7542,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     });
 
     return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7294,9 +7550,18 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
   <script src="https://cdn.tailwindcss.com"><\/script>
   <link href="${font.url}" rel="stylesheet">
   <style>
-    body { 
-      background: ${bgHex};
+    * { 
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body { 
+      background: ${bgHex} !important;
+      background-color: ${bgHex} !important;
       ${font.css}
+    }
+    body { 
+      min-height: 100vh;
     }
     .custom-scroll::-webkit-scrollbar { width: 6px; }
     .custom-scroll::-webkit-scrollbar-track { background: ${isLightBg ? '#e2e8f0' : '#1e293b'}; }
@@ -7304,11 +7569,37 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     .glass { background: ${isLightBg ? 'rgba(255, 255, 255, 0.8)' : 'rgba(15, 23, 42, 0.8)'}; backdrop-filter: blur(10px); }
     .material-card { transition: all 0.2s; }
     .material-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+    .assessment-container [class*="bg-slate-9"],
+    .assessment-container [class*="bg-slate-8"],
+    .assessment-container [class*="bg-slate-7"],
+    .assessment-container [class*="bg-slate-6"],
+    .assessment-container [class*="bg-gray-9"],
+    .assessment-container [class*="bg-gray-8"],
+    .assessment-container [class*="bg-gray-7"] {
+      background: var(--cf-container-bg) !important;
+    }
     ${moduleCSS}
     ${customCSS ? `\n    /* Custom CSS from Settings */\n    ${customCSS}` : ''}
   </style>
+  <script>
+    // Force background color after Tailwind loads
+    (function() {
+      function setBackground() {
+        document.documentElement.style.backgroundColor = '${bgHex}';
+        document.documentElement.style.background = '${bgHex}';
+        document.body.style.backgroundColor = '${bgHex}';
+        document.body.style.background = '${bgHex}';
+      }
+      setBackground();
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setBackground);
+      }
+      setTimeout(setBackground, 100);
+      setTimeout(setBackground, 500);
+    })();
+  <\/script>
 </head>
-<body class="min-h-screen ${textColor} custom-scroll">
+<body class="${textColor} custom-scroll" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
   <header class="sticky top-0 z-50 ${isLightBg ? 'bg-white/95' : 'bg-slate-900/95'} backdrop-blur border-b ${cardBorder}">
     <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
       <a href="../index.html" class="flex items-center gap-2 ${textColorSecondary} hover:text-${accentColor}-400 transition-colors text-sm font-bold">
@@ -7524,6 +7815,75 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         return;
       }
 
+      const courseSettings = projectData["Course Settings"] || {};
+      const accentColor = courseSettings.accentColor || "sky";
+      const backgroundColor = courseSettings.backgroundColor || "slate-900";
+      const fontFamily = courseSettings.fontFamily || "inter";
+      const font = getFontFamilyGlobal(fontFamily);
+      const fontNameMatch = font.css.match(/'([^']+)'/);
+      const fontName = fontNameMatch ? fontNameMatch[1] : 'Inter';
+      const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
+      const headingTextColor = courseSettings.headingTextColor || (isLightBg ? 'slate-900' : 'white');
+      const secondaryTextColor = courseSettings.secondaryTextColor || (isLightBg ? 'slate-600' : 'slate-400');
+      const buttonColor = courseSettings.buttonColor || `${accentColor}-600`;
+      const containerColor = courseSettings.containerColor || (isLightBg ? 'white/80' : 'slate-900/80');
+      const toTextClass = (value) => value.startsWith('text-') ? value : `text-${value}`;
+      const toBgBase = (value) => value.startsWith('bg-') ? value.slice(3) : value;
+      const hexToRgba = (hex, alpha = 1) => {
+        if (!hex) return `rgba(15, 23, 42, ${alpha})`;
+        const clean = hex.replace('#', '');
+        if (clean.length !== 6) return `rgba(15, 23, 42, ${alpha})`;
+        const r = parseInt(clean.slice(0, 2), 16);
+        const g = parseInt(clean.slice(2, 4), 16);
+        const b = parseInt(clean.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      };
+      const parseColorToken = (value) => {
+        const raw = (value || '').toString().trim();
+        if (!raw) return { base: isLightBg ? 'white' : 'slate-900', alpha: 0.8, alphaRaw: '80' };
+        let token = raw;
+        if (token.startsWith('bg-')) token = token.slice(3);
+        if (token.startsWith('text-')) token = token.slice(5);
+        const parts = token.split('/');
+        const base = parts[0] || (isLightBg ? 'white' : 'slate-900');
+        const alphaRaw = parts[1] || null;
+        const alpha = alphaRaw ? Math.max(0, Math.min(1, parseInt(alphaRaw, 10) / 100)) : 1;
+        return { base, alpha, alphaRaw };
+      };
+      const bgColorMap = {
+        'slate-900': '#0f172a',
+        'slate-950': '#020617',
+        'zinc-900': '#18181b',
+        'neutral-900': '#171717',
+        'stone-900': '#1c1917',
+        'gray-900': '#111827',
+        'slate-50': '#f8fafc',
+        'zinc-50': '#fafafa',
+        'neutral-50': '#fafafa',
+        'stone-50': '#fafaf9',
+        'gray-50': '#f9fafb',
+        'white': '#ffffff',
+        'slate-800': '#1e293b',
+        'slate-700': '#334155',
+        'slate-600': '#475569',
+        'slate-500': '#64748b',
+        'gray-800': '#1f2937',
+        'gray-700': '#374151',
+        'gray-600': '#4b5563',
+        'zinc-800': '#27272a'
+      };
+      const bgHex = bgColorMap[backgroundColor] || bgColorMap['slate-900'];
+      const headingTextClass = toTextClass(headingTextColor);
+      const secondaryTextClass = toTextClass(secondaryTextColor);
+      const buttonBgBase = toBgBase(buttonColor);
+      const buttonBgClass = `bg-${buttonBgBase}`;
+      const buttonHoverClass = buttonBgBase.endsWith('-600') ? `hover:bg-${buttonBgBase.replace(/-600$/, '-500')}` : `hover:bg-${buttonBgBase}`;
+      const buttonTextClass = secondaryTextClass;
+      const containerToken = parseColorToken(containerColor);
+      const containerBgClass = containerToken.alphaRaw ? `bg-${containerToken.base}/${containerToken.alphaRaw}` : `bg-${containerToken.base}`;
+      const containerHex = bgColorMap[containerToken.base] || (isLightBg ? '#ffffff' : '#0f172a');
+      const containerBgRgba = hexToRgba(containerHex, containerToken.alpha);
+
     const allAssessments = modules.flatMap(m => m.assessments || []);
     const selectedAssessments = allAssessments.filter(a => exportAssessments.includes(a.id));
     const selectedTools = toolkit.filter(t => exportTools.includes(t.id));
@@ -7614,20 +7974,20 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
 
     // Assessments with Selection UI
     if (selectedAssessments.length > 0) {
-        sectionsHTML += '<section id="assessments" class="mb-12"><h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-2">📝 Assessments</h2>';
+        sectionsHTML += '<section id="assessments" class="mb-12"><h2 class="text-2xl font-bold ' + headingTextClass + ' mb-6 border-b border-slate-700 pb-2">ðŸ“ Assessments</h2>';
         
         // Assessment List (Selection Page)
         sectionsHTML += '<div id="assessment-list"><div class="grid grid-cols-1 gap-4">';
         selectedAssessments.forEach((assess, idx) => {
             const qCount = assess.questions ? assess.questions.length : 'Multiple';
-            sectionsHTML += '<div class="p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 transition-all cursor-pointer group" onclick="showAssessment(' + idx + ')">' +
+            sectionsHTML += '<div class="assessment-card p-6 ' + containerBgClass + ' rounded-xl border border-slate-700 hover:border-' + accentColor + '-500 transition-all cursor-pointer group" onclick="showAssessment(' + idx + ')">' +
                 '<div class="flex items-center justify-between">' +
                 '<div class="flex-1"><div class="flex items-center gap-3 mb-2">' +
-                '<span class="text-3xl">📋</span><div>' +
-                '<h3 class="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">' + assess.title + '</h3>' +
-                '<p class="text-xs text-slate-400 uppercase tracking-wider">Mixed Assessment • ' + qCount + ' Questions</p>' +
+                '<span class="text-3xl">ðŸ“‹</span><div>' +
+                '<h3 class="text-xl font-bold ' + headingTextClass + ' group-hover:text-' + accentColor + '-400 transition-colors">' + assess.title + '</h3>' +
+                '<p class="text-xs ' + secondaryTextClass + ' uppercase tracking-wider">Mixed Assessment â€¢ ' + qCount + ' Questions</p>' +
                 '</div></div></div>' +
-                '<div class="text-purple-400 group-hover:translate-x-1 transition-transform">' +
+                '<div class="text-' + accentColor + '-400 group-hover:translate-x-1 transition-transform">' +
                 '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                 '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></div></div></div>';
         });
@@ -7636,7 +7996,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         // Individual Assessment Containers
         selectedAssessments.forEach((assess, idx) => {
             sectionsHTML += '<div id="assessment-' + idx + '" class="assessment-container hidden">' +
-                '<button onclick="backToAssessmentList()" class="mb-6 flex items-center gap-2 text-purple-400 hover:text-purple-300 font-bold text-sm transition-colors">' +
+                '<button onclick="backToAssessmentList()" class="mb-6 inline-flex items-center gap-2 ' + buttonBgClass + ' ' + buttonHoverClass + ' ' + buttonTextClass + ' font-bold text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg transition-colors">' +
                 '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                 '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>' +
                 'Back to Assessments</button>' +
@@ -7660,7 +8020,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
             .replace(/</g, '\\u003c')         // Escape < for HTML safety
             .replace(/>/g, '\\u003e');        // Escape > for HTML safety
         
-        sectionsHTML += '<section id="materials" class="mb-12"><h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-2">📚 Materials</h2>';
+        sectionsHTML += '<section id="materials" class="mb-12"><h2 class="text-2xl font-bold ' + headingTextClass + ' mb-6 border-b border-slate-700 pb-2">ðŸ“š Materials</h2>';
         
         // Material viewer container
         sectionsHTML += '<div id="material-viewer" class="hidden mb-8 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl">' +
@@ -7675,7 +8035,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         if (digitalMats.length > 0) {
             sectionsHTML += '<div id="digital-reader-container" class="hidden mb-8 bg-slate-900 rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">' +
                 '<div class="flex justify-between items-center p-3 bg-slate-800 border-b border-emerald-500/30">' +
-                '<span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">📖 Digital Resource</span>' +
+                '<span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">ðŸ“– Digital Resource</span>' +
                 '<button data-close-digital-reader class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>' +
                 '</div>' +
                 '<div class="flex" style="height: 600px;">' +
@@ -7686,19 +8046,19 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                 '<div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">' +
                 '<div id="reader-body" class="prose prose-invert max-w-none"></div>' +
                 '<div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-700">' +
-                '<button data-prev-chapter id="prev-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">← Previous</button>' +
+                '<button data-prev-chapter id="prev-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">â† Previous</button>' +
                 '<span id="reader-progress" class="text-xs text-slate-500"></span>' +
-                '<button data-next-chapter id="next-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next →</button>' +
+                '<button data-next-chapter id="next-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next â†’</button>' +
                 '</div></div></div></div>';
         }
         
         sectionsHTML += '<div id="materials-list" class="space-y-4">';
         selectedMaterials.forEach((mat, idx) => {
             const colorClass = mat.color || 'slate';
-            const bgClass = colorClass !== 'slate' ? 'bg-' + colorClass + '-500/10' : 'bg-slate-800';
             const borderClass = colorClass !== 'slate' ? 'border-l-4 border-l-' + colorClass + '-500' : '';
             const textColorClass = colorClass !== 'slate' ? 'text-' + colorClass + '-500' : 'text-slate-500';
-            const buttonColorClass = colorClass !== 'slate' ? 'bg-' + colorClass + '-600 hover:bg-' + colorClass + '-500' : 'bg-sky-600 hover:bg-sky-500';
+            const cardBgClass = containerBgClass;
+            const buttonColorClass = buttonBgClass + ' ' + buttonHoverClass;
             
             // Convert /view to /preview for iframe embedding
             const previewUrl = mat.viewUrl ? mat.viewUrl.replace('/view', '/preview') : '';
@@ -7708,21 +8068,21 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
             if (mat.viewUrl) {
                 const escapedPreviewUrl = previewUrl.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                 const escapedTitle = mat.title.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-                buttonsHTML += '<button data-material-viewer-url="' + escapedPreviewUrl + '" data-material-viewer-title="' + escapedTitle + '" class="material-viewer-btn flex-1 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase px-6 py-3 rounded-lg border border-slate-600 transition-all text-center">View Inline</button>';
+                buttonsHTML += '<button data-material-viewer-url="' + escapedPreviewUrl + '" data-material-viewer-title="' + escapedTitle + '" class="material-viewer-btn flex-1 ' + buttonColorClass + ' ' + buttonTextClass + ' text-xs font-bold uppercase px-6 py-3 rounded-lg border border-slate-600 transition-all text-center">View Inline</button>';
             }
             if (mat.downloadUrl) {
-                buttonsHTML += '<a href="' + mat.downloadUrl + '" target="_blank" class="flex-1 ' + buttonColorClass + ' text-white text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center">Download</a>';
+                buttonsHTML += '<a href="' + mat.downloadUrl + '" target="_blank" class="flex-1 ' + buttonColorClass + ' ' + buttonTextClass + ' text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center">Download</a>';
             }
             if (mat.digitalContent) {
-                buttonsHTML += '<button data-digital-reader="' + mat.id + '" class="digital-reader-btn flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center flex items-center justify-center gap-2">📖 Read</button>';
+                buttonsHTML += '<button data-digital-reader="' + mat.id + '" class="digital-reader-btn flex-1 ' + buttonColorClass + ' ' + buttonTextClass + ' text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center flex items-center justify-center gap-2">ðŸ“– Read</button>';
             }
             
-            sectionsHTML += '<div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-xl border border-slate-700 ' + bgClass + ' ' + borderClass + '">' +
+            sectionsHTML += '<div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-xl border border-slate-700 ' + cardBgClass + ' ' + borderClass + '">' +
                 '<div class="flex items-center gap-4">' +
-                '<div class="w-12 h-12 rounded-lg flex items-center justify-center ' + textColorClass + ' font-black text-xl border border-slate-700">' + (mat.number || '📄') + '</div>' +
+                '<div class="w-12 h-12 rounded-lg flex items-center justify-center ' + textColorClass + ' font-black text-xl border border-slate-700">' + (mat.number || 'ðŸ“„') + '</div>' +
                 '<div>' +
-                '<h3 class="text-lg font-bold text-white uppercase italic">' + mat.title + '</h3>' +
-                '<p class="text-xs text-slate-400">' + (mat.description || '') + '</p>' +
+                '<h3 class="text-lg font-bold ' + headingTextClass + ' uppercase italic">' + mat.title + '</h3>' +
+                '<p class="text-xs ' + secondaryTextClass + '">' + (mat.description || '') + '</p>' +
                 '</div></div>' +
                 '<div class="flex gap-3 w-full md:w-auto">' + buttonsHTML + '</div></div>';
         });
@@ -7784,7 +8144,7 @@ function openDigitalReaderFn(matId) {
     
     currentReader = { matId: matId, chapterIdx: 0, data: content };
     
-    document.getElementById('reader-title').innerHTML = '📖 ' + (content.title || 'Digital Resource');
+    document.getElementById('reader-title').innerHTML = 'ðŸ“– ' + (content.title || 'Digital Resource');
     
     // Build table of contents (using data attributes, not onclick)
     var tocHTML = '';
@@ -7823,7 +8183,7 @@ function renderChapterFn(idx) {
         if (sec.heading) {
             html += '<h3 class="text-lg font-bold text-emerald-400 mb-3">' + sec.heading + '</h3>';
         }
-        var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, '• ');
+        var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, 'â€¢ ');
         html += '<div class="text-slate-300 leading-relaxed whitespace-pre-line">' + content + '</div>';
         html += '</div>';
     });
@@ -7882,14 +8242,14 @@ document.addEventListener('click', function(e) {
     }
 });
 
-console.log('📖 Digital Reader initialized with event delegation (Single Module)');
+console.log('ðŸ“– Digital Reader initialized with event delegation (Single Module)');
 `;
         }
     }
 
     // Tools
     if (selectedTools.length > 0) {
-        sectionsHTML += '<section id="toolkit" class="mb-12"><h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-2">🛠️ Tools</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
+        sectionsHTML += '<section id="toolkit" class="mb-12"><h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-2">ðŸ› ï¸ Tools</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
         selectedTools.forEach(tool => {
             let toolCode = tool.code;
             if (typeof toolCode === 'string') { try { toolCode = JSON.parse(toolCode); } catch(e){} }
@@ -7987,7 +8347,52 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
 })();
 `;
 
-    const finalHTML = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>' + selectedMod.title + '</title><script src="https://cdn.tailwindcss.com"><\/script><link href="https://fonts.googleapis.com/css?family=Inter:ital,wght@0,400;0,700;1,400;1,900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet"><script>tailwind.config = { darkMode: "class", theme: { extend: { fontFamily: { sans: ["Inter", "sans-serif"], mono: ["JetBrains Mono", "monospace"] } } } }<\/script><style>body { background-color: #020617; color: #e2e8f0; font-family: "Inter", sans-serif; min-height: 100vh; overflow-x: hidden; } .mono { font-family: "JetBrains Mono", monospace; } .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); } input, textarea, select { background: #0f172a !important; border: 1px solid #1e293b !important; color: #e2e8f0; } input:focus, textarea:focus, select:focus { border-color: #0ea5e9 !important; outline: none; box-shadow: 0 0 0 1px #0ea5e9; } .score-btn, .mod-nav-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; } .score-btn:hover, .mod-nav-btn:hover { border-color: #0ea5e9; color: white; } .score-btn.active, .mod-nav-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; } .step-content { display: none; } .step-content.active { display: block; } .assessment-container.hidden { display: none; } #assessment-list.hidden { display: none; } .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; } .rubric-cell:hover { background: rgba(255,255,255,0.05); } .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; } .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; } .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; } .helper-text { font-size: 8px; color: #64748b; font-style: italic; margin-top: 4px; }<\/style></head><body class="p-4 md:p-8 max-w-6xl mx-auto">' + sectionsHTML + '<script>' + combinedScripts + autosaveScript + '<\/script></body></html>';
+    const finalHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${selectedMod.title}</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <link href="${font.url}" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+  <script>tailwind.config = { darkMode: "class", theme: { extend: { fontFamily: { sans: ["${fontName}", "sans-serif"], mono: ["JetBrains Mono", "monospace"] } } } }<\/script>
+  <style>
+    body { ${font.css} background-color: ${bgHex}; color: ${isLightBg ? '#0f172a' : '#e2e8f0'}; min-height: 100vh; overflow-x: hidden; }
+    .mono { font-family: "JetBrains Mono", monospace; }
+    .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
+    input, textarea, select { background: #0f172a !important; border: 1px solid #1e293b !important; color: #e2e8f0; }
+    input:focus, textarea:focus, select:focus { border-color: #0ea5e9 !important; outline: none; box-shadow: 0 0 0 1px #0ea5e9; }
+    .score-btn, .mod-nav-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; }
+    .score-btn:hover, .mod-nav-btn:hover { border-color: #0ea5e9; color: white; }
+    .score-btn.active, .mod-nav-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; }
+    .step-content { display: none; }
+    .step-content.active { display: block; }
+    .assessment-container.hidden { display: none; }
+    #assessment-list.hidden { display: none; }
+    .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+    .rubric-cell:hover { background: rgba(255,255,255,0.05); }
+    .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
+    .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
+    .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; }
+    .helper-text { font-size: 8px; color: #64748b; font-style: italic; margin-top: 4px; }
+    :root { --cf-container-bg: ${containerBgRgba}; }
+    .assessment-container [class*="bg-slate-9"],
+    .assessment-container [class*="bg-slate-8"],
+    .assessment-container [class*="bg-slate-7"],
+    .assessment-container [class*="bg-slate-6"],
+    .assessment-container [class*="bg-gray-9"],
+    .assessment-container [class*="bg-gray-8"],
+    .assessment-container [class*="bg-gray-7"] {
+      background: var(--cf-container-bg) !important;
+    }
+  </style>
+</head>
+<body class="p-4 md:p-8 max-w-6xl mx-auto">
+  ${sectionsHTML}
+  <script>${combinedScripts}${autosaveScript}<\/script>
+</body>
+</html>`;
 
       setExportedHTML(finalHTML);
     } catch (error) {
@@ -7999,6 +8404,85 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
   };
 
   const generateHubPage = () => {
+    const courseSettings = projectData["Course Settings"] || {};
+    const accentColor = courseSettings.accentColor || "sky";
+    const backgroundColor = courseSettings.backgroundColor || "slate-900";
+    const fontFamily = courseSettings.fontFamily || "inter";
+    const font = getFontFamilyGlobal(fontFamily);
+    
+    const bgColorMap = {
+      'slate-900': '#0f172a',
+      'slate-950': '#020617',
+      'zinc-900': '#18181b',
+      'neutral-900': '#171717',
+      'stone-900': '#1c1917',
+      'gray-900': '#111827',
+      'slate-50': '#f8fafc',
+      'zinc-50': '#fafafa',
+      'neutral-50': '#fafafa',
+      'stone-50': '#fafaf9',
+      'gray-50': '#f9fafb',
+      'white': '#ffffff'
+    };
+    const bgHex = bgColorMap[backgroundColor] || bgColorMap['slate-900'];
+    const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
+    const headingTextColor = courseSettings.headingTextColor || (isLightBg ? 'slate-900' : 'white');
+    const secondaryTextColor = courseSettings.secondaryTextColor || (isLightBg ? 'slate-600' : 'slate-400');
+    const buttonColor = courseSettings.buttonColor || `${accentColor}-600`;
+    const toTextClass = (value) => value.startsWith('text-') ? value : `text-${value}`;
+    const toBgBase = (value) => value.startsWith('bg-') ? value.slice(3) : value;
+    const headingTextClass = toTextClass(headingTextColor);
+    const secondaryTextClass = toTextClass(secondaryTextColor);
+    const buttonBgBase = toBgBase(buttonColor);
+    const buttonBgClass = `bg-${buttonBgBase}`;
+    const buttonHoverClass = buttonBgBase.endsWith('-600') ? `hover:bg-${buttonBgBase.replace(/-600$/, '-500')}` : `hover:bg-${buttonBgBase}`;
+    const buttonTextClass = secondaryTextClass;
+    const badgeBgClass = isLightBg ? 'bg-black/10' : 'bg-white/20';
+    const containerColor = courseSettings.containerColor || (isLightBg ? 'white/80' : 'slate-900/80');
+    const hexToRgba = (hex, alpha = 1) => {
+      if (!hex) return `rgba(15, 23, 42, ${alpha})`;
+      const clean = hex.replace('#', '');
+      if (clean.length !== 6) return `rgba(15, 23, 42, ${alpha})`;
+      const r = parseInt(clean.slice(0, 2), 16);
+      const g = parseInt(clean.slice(2, 4), 16);
+      const b = parseInt(clean.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+    const parseColorToken = (value) => {
+      const raw = (value || '').toString().trim();
+      if (!raw) return { base: isLightBg ? 'white' : 'slate-900', alpha: 0.8, alphaRaw: '80' };
+      let token = raw;
+      if (token.startsWith('bg-')) token = token.slice(3);
+      if (token.startsWith('text-')) token = token.slice(5);
+      const parts = token.split('/');
+      const base = parts[0] || (isLightBg ? 'white' : 'slate-900');
+      const alphaRaw = parts[1] || null;
+      const alpha = alphaRaw ? Math.max(0, Math.min(1, parseInt(alphaRaw, 10) / 100)) : 1;
+      return { base, alpha, alphaRaw };
+    };
+    const colorHexMap = {
+      'slate-900': '#0f172a',
+      'slate-800': '#1e293b',
+      'slate-700': '#334155',
+      'slate-600': '#475569',
+      'slate-500': '#64748b',
+      'slate-950': '#020617',
+      'gray-900': '#111827',
+      'gray-800': '#1f2937',
+      'gray-700': '#374151',
+      'gray-600': '#4b5563',
+      'zinc-900': '#18181b',
+      'zinc-800': '#27272a',
+      'neutral-900': '#171717',
+      'stone-900': '#1c1917',
+      'white': '#ffffff'
+    };
+    const containerToken = parseColorToken(containerColor);
+    const containerBgClass = containerToken.alphaRaw ? `bg-${containerToken.base}/${containerToken.alphaRaw}` : `bg-${containerToken.base}`;
+    const containerHex = colorHexMap[containerToken.base] || (isLightBg ? '#ffffff' : '#0f172a');
+    const containerBgRgba = hexToRgba(containerHex, containerToken.alpha);
+    const cardBorderClass = isLightBg ? 'border-slate-300' : 'border-slate-700';
+
     // Filter out special modules
     const regularModules = modules.filter(m => {
       let itemCode = m.code || {};
@@ -8029,7 +8513,7 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
       const gradientClass = colorClasses[idx % colorClasses.length];
       
       moduleCardsHTML += `
-        <div class="group relative bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden hover:border-slate-600 transition-all duration-300 hover:shadow-2xl hover:shadow-${gradientClass.split(' ')[0].split('-')[1]}-500/20">
+        <div class="group relative ${containerBgClass} rounded-2xl border ${cardBorderClass} overflow-hidden hover:border-slate-600 transition-all duration-300 hover:shadow-2xl hover:shadow-${gradientClass.split(' ')[0].split('-')[1]}-500/20">
           <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradientClass}"></div>
           <div class="p-6">
             <div class="flex items-start justify-between mb-4">
@@ -8040,10 +8524,10 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
                 ${modAssessments.length > 0 ? `<span class="px-2 py-1 bg-purple-500/10 border border-purple-500/30 rounded text-purple-400 text-xs font-bold">${modAssessments.length} ${modAssessments.length === 1 ? 'Assessment' : 'Assessments'}</span>` : ''}
               </div>
             </div>
-            <h3 class="text-xl font-black text-white mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:${gradientClass} transition-all">
+            <h3 class="text-xl font-black ${headingTextClass} mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:${gradientClass} transition-all">
               ${mod.title}
             </h3>
-            <p class="text-sm text-slate-400 mb-4 line-clamp-2">
+            <p class="text-sm ${secondaryTextClass} mb-4 line-clamp-2">
               ${mod.description || 'Click to explore this module'}
             </p>
             <div class="flex gap-3">
@@ -8051,7 +8535,7 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
                 onclick="window.open('MODULE_${mod.id}_URL', '_blank')"
                 class="flex-1 bg-gradient-to-r ${gradientClass} text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-opacity text-sm"
               >
-                Start Module →
+                Start Module â†’
               </button>
             </div>
           </div>
@@ -8066,13 +8550,15 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${hubCourseTitle}</title>
     <script src="https://cdn.tailwindcss.com"><\/script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="${font.url}" rel="stylesheet">
     <style>
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            ${font.css}
+            background: ${bgHex};
+            background-color: ${bgHex};
             min-height: 100vh;
         }
+        :root { --cf-container-bg: ${containerBgRgba}; }
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -8080,10 +8566,11 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
             overflow: hidden;
         }
         .hero-gradient {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: ${bgHex};
+            background-color: ${bgHex};
         }
         .stat-card {
-            background: rgba(15, 23, 42, 0.6);
+            background: var(--cf-container-bg);
             backdrop-filter: blur(10px);
         }
     </style>
@@ -8093,23 +8580,23 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
     <div class="hero-gradient">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <div class="text-center">
-                <h1 class="text-5xl md:text-6xl font-black text-white mb-4 tracking-tight">
+                <h1 class="text-5xl md:text-6xl font-black ${headingTextClass} mb-4 tracking-tight">
                     ${hubCourseTitle}
                 </h1>
-                <p class="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
+                <p class="text-xl ${secondaryTextClass} mb-8 max-w-2xl mx-auto">
                     ${hubCourseDescription}
                 </p>
                 <div class="flex flex-wrap justify-center gap-4">
                     ${materialCount > 0 ? `
-                    <a href="MATERIALS_PAGE_URL" target="_blank" class="bg-white/10 backdrop-blur-md border border-white/20 text-white px-6 py-3 rounded-xl font-bold hover:bg-white/20 transition-all flex items-center gap-2">
-                        📚 Course Materials
-                        <span class="bg-white/20 px-2 py-1 rounded text-sm">${materialCount}</span>
+                    <a href="MATERIALS_PAGE_URL" target="_blank" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2">
+                        ðŸ“š Course Materials
+                        <span class="${badgeBgClass} px-2 py-1 rounded text-sm">${materialCount}</span>
                     </a>
                     ` : ''}
                     ${assessmentCount > 0 ? `
-                    <a href="ASSESSMENTS_PAGE_URL" target="_blank" class="bg-white/10 backdrop-blur-md border border-white/20 text-white px-6 py-3 rounded-xl font-bold hover:bg-white/20 transition-all flex items-center gap-2">
-                        📝 All Assessments
-                        <span class="bg-white/20 px-2 py-1 rounded text-sm">${assessmentCount}</span>
+                    <a href="ASSESSMENTS_PAGE_URL" target="_blank" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2">
+                        ðŸ“ All Assessments
+                        <span class="${badgeBgClass} px-2 py-1 rounded text-sm">${assessmentCount}</span>
                     </a>
                     ` : ''}
                 </div>
@@ -8120,17 +8607,17 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
     <!-- Stats Bar -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="stat-card border border-slate-700 rounded-xl p-6 text-center">
+            <div class="stat-card border ${cardBorderClass} rounded-xl p-6 text-center">
                 <div class="text-4xl font-black text-sky-400 mb-2">${regularModules.length}</div>
-                <div class="text-sm text-slate-400 uppercase tracking-wider font-bold">Modules</div>
+                <div class="text-sm ${secondaryTextClass} uppercase tracking-wider font-bold">Modules</div>
             </div>
-            <div class="stat-card border border-slate-700 rounded-xl p-6 text-center">
+            <div class="stat-card border ${cardBorderClass} rounded-xl p-6 text-center">
                 <div class="text-4xl font-black text-purple-400 mb-2">${assessmentCount}</div>
-                <div class="text-sm text-slate-400 uppercase tracking-wider font-bold">Assessments</div>
+                <div class="text-sm ${secondaryTextClass} uppercase tracking-wider font-bold">Assessments</div>
             </div>
-            <div class="stat-card border border-slate-700 rounded-xl p-6 text-center">
+            <div class="stat-card border ${cardBorderClass} rounded-xl p-6 text-center">
                 <div class="text-4xl font-black text-emerald-400 mb-2">${materialCount}</div>
-                <div class="text-sm text-slate-400 uppercase tracking-wider font-bold">Materials</div>
+                <div class="text-sm ${secondaryTextClass} uppercase tracking-wider font-bold">Materials</div>
             </div>
         </div>
     </div>
@@ -8138,8 +8625,8 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
     <!-- Modules Grid -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div class="mb-12">
-            <h2 class="text-3xl font-black text-white mb-2">Course Modules</h2>
-            <p class="text-slate-400">Select a module to begin your journey</p>
+            <h2 class="text-3xl font-black ${headingTextClass} mb-2">Course Modules</h2>
+            <p class="${secondaryTextClass}">Select a module to begin your journey</p>
         </div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -8149,10 +8636,10 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
 
     <!-- Footer -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-t border-slate-800">
-        <div class="text-center text-slate-500 text-sm">
-            <p class="font-bold">Built with Course Factory</p>
-            <p class="mt-2">Ready to begin? Click any module above to start.</p>
-        </div>
+    <div class="text-center ${secondaryTextClass} text-sm">
+      <p class="font-bold">Built with Course Factory</p>
+      <p class="mt-2">Ready to begin? Click any module above to start.</p>
+    </div>
     </div>
 
     <script>
@@ -8311,9 +8798,9 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
               </div>
               <div className="mt-3 text-xs text-slate-500">
                 {betaStructureMode === 'multi-file' ? (
-                  <span>✅ Separate HTML files per module • Bookmarkable URLs • Delta publish support</span>
+                  <span>âœ… Separate HTML files per module â€¢ Bookmarkable URLs â€¢ Delta publish support</span>
                 ) : (
-                  <span>✅ Single HTML file • Sidebar navigation • Instant switching • State preserved</span>
+                  <span>âœ… Single HTML file â€¢ Sidebar navigation â€¢ Instant switching â€¢ State preserved</span>
                 )}
               </div>
             </div>
@@ -8346,24 +8833,24 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
                   {betaStructureMode === 'multi-file' ? (
                     <>
                       <div className="flex items-center gap-2">
-                        <span className="text-emerald-400">📄</span> index.html
+                        <span className="text-emerald-400">ðŸ“„</span> index.html
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-amber-400">📋</span> manifest.json
+                        <span className="text-amber-400">ðŸ“‹</span> manifest.json
                       </div>
                       {modules.filter(m => !excludedIds.includes(m.id) && !m.hidden).map(m => (
                         <div key={m.id} className="flex items-center gap-2 pl-2">
-                          <span className="text-sky-400">📁</span> modules/{m.id}.html
+                          <span className="text-sky-400">ðŸ“</span> modules/{m.id}.html
                         </div>
                       ))}
                     </>
                   ) : (
                     <>
                       <div className="flex items-center gap-2">
-                        <span className="text-emerald-400">📄</span> index.html (single-page app with sidebar)
+                        <span className="text-emerald-400">ðŸ“„</span> index.html (single-page app with sidebar)
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-amber-400">📋</span> manifest.json
+                        <span className="text-amber-400">ðŸ“‹</span> manifest.json
                       </div>
                     </>
                   )}
@@ -8442,14 +8929,14 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
                   <div className="text-xs font-mono text-slate-400 space-y-1">
                     {betaIncludeManifest && (
                       <div className="flex items-center gap-2">
-                        <span className="text-amber-400">📋</span> manifest.json
+                        <span className="text-amber-400">ðŸ“‹</span> manifest.json
                       </div>
                     )}
                     {betaSelectedModules.map(modId => {
                       const mod = modules.find(m => m.id === modId);
                       return (
                         <div key={modId} className="flex items-center gap-2 pl-2">
-                          <span className="text-sky-400">📁</span> modules/{modId}.html
+                          <span className="text-sky-400">ðŸ“</span> modules/{modId}.html
                           {mod && <span className="text-slate-600 text-[10px]">({mod.title})</span>}
                         </div>
                       );
@@ -8558,7 +9045,7 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
                 {exportedHTML && (
                     <div className="animate-in fade-in slide-in-from-top-2">
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs font-bold text-emerald-400">✅ Successfully Generated!</span>
+                            <span className="text-xs font-bold text-emerald-400">âœ… Successfully Generated!</span>
                             <button onClick={() => navigator.clipboard.writeText(exportedHTML)} className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded flex items-center gap-1"><Copy size={12}/> Copy Code</button>
                         </div>
                         <textarea readOnly value={exportedHTML} className="w-full h-32 bg-black border border-emerald-900/50 rounded-lg p-3 text-[10px] font-mono text-emerald-500/80 focus:outline-none resize-y" />
@@ -8677,7 +9164,7 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
                       <>
                         <div className="flex items-center gap-2 text-rose-300 font-bold mb-2">
                           <AlertTriangle size={18} />
-                          {compileValidation.errors.length} validation error{compileValidation.errors.length !== 1 ? 's' : ''} — fix before compiling
+                          {compileValidation.errors.length} validation error{compileValidation.errors.length !== 1 ? 's' : ''} â€” fix before compiling
                         </div>
                         <ul className="list-disc list-inside space-y-1 text-sm text-rose-200/90">
                           {compileValidation.errors.map((e, i) => (
@@ -8831,19 +9318,19 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
         const imported = JSON.parse(e.target.result);
         if (imported && imported["Current Course"]) {
           setProjectData(imported);
-          alert('✅ Project imported successfully!');
+          alert('âœ… Project imported successfully!');
         } else {
-          alert('❌ Invalid project file');
+          alert('âŒ Invalid project file');
         }
       } catch (error) {
-        alert('❌ Failed to import: ' + error.message);
+        alert('âŒ Failed to import: ' + error.message);
       }
     };
     reader.readAsText(file);
   };
   
   const resetProject = () => {
-    if (window.confirm('⚠️ This will delete all your course data! Are you sure?')) {
+    if (window.confirm('âš ï¸ This will delete all your course data! Are you sure?')) {
       localStorage.removeItem('course_factory_v2_data');
       window.location.reload();
     }
@@ -8858,6 +9345,37 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
     { value: 'indigo', label: 'Indigo', class: 'bg-indigo-500' },
     { value: 'pink', label: 'Pink', class: 'bg-pink-500' },
     { value: 'teal', label: 'Teal', class: 'bg-teal-500' }
+  ];
+  
+  const textColorOptions = [
+    { value: 'white', label: 'White', swatch: 'bg-white border-slate-300', text: 'text-slate-900' },
+    { value: 'slate-900', label: 'Slate 900', swatch: 'bg-slate-900 border-slate-700', text: 'text-white' },
+    { value: 'slate-700', label: 'Slate 700', swatch: 'bg-slate-700 border-slate-600', text: 'text-white' },
+    { value: 'slate-600', label: 'Slate 600', swatch: 'bg-slate-600 border-slate-500', text: 'text-white' },
+    { value: 'slate-500', label: 'Slate 500', swatch: 'bg-slate-500 border-slate-400', text: 'text-white' },
+    { value: 'gray-900', label: 'Gray 900', swatch: 'bg-gray-900 border-gray-700', text: 'text-white' },
+    { value: 'gray-700', label: 'Gray 700', swatch: 'bg-gray-700 border-gray-600', text: 'text-white' },
+    { value: 'gray-600', label: 'Gray 600', swatch: 'bg-gray-600 border-gray-500', text: 'text-white' }
+  ];
+  
+  const buttonColorOptions = [
+    { value: 'sky-600', label: 'Sky', swatch: 'bg-sky-600 border-sky-500', text: 'text-white' },
+    { value: 'emerald-600', label: 'Emerald', swatch: 'bg-emerald-600 border-emerald-500', text: 'text-white' },
+    { value: 'rose-600', label: 'Rose', swatch: 'bg-rose-600 border-rose-500', text: 'text-white' },
+    { value: 'amber-600', label: 'Amber', swatch: 'bg-amber-600 border-amber-500', text: 'text-white' },
+    { value: 'purple-600', label: 'Purple', swatch: 'bg-purple-600 border-purple-500', text: 'text-white' },
+    { value: 'slate-800', label: 'Slate 800', swatch: 'bg-slate-800 border-slate-700', text: 'text-white' },
+    { value: 'gray-800', label: 'Gray 800', swatch: 'bg-gray-800 border-gray-700', text: 'text-white' },
+    { value: 'black', label: 'Black', swatch: 'bg-black border-slate-700', text: 'text-white' }
+  ];
+  
+  const containerColorOptions = [
+    { value: 'slate-900/80', label: 'Slate 900', swatch: 'bg-slate-900 border-slate-700', text: 'text-white' },
+    { value: 'slate-800/80', label: 'Slate 800', swatch: 'bg-slate-800 border-slate-700', text: 'text-white' },
+    { value: 'slate-700/80', label: 'Slate 700', swatch: 'bg-slate-700 border-slate-600', text: 'text-white' },
+    { value: 'gray-800/80', label: 'Gray 800', swatch: 'bg-gray-800 border-gray-700', text: 'text-white' },
+    { value: 'gray-700/80', label: 'Gray 700', swatch: 'bg-gray-700 border-gray-600', text: 'text-white' },
+    { value: 'white/90', label: 'White', swatch: 'bg-white border-slate-300', text: 'text-slate-900' }
   ];
   
   const getStorageSize = () => {
@@ -9018,6 +9536,90 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Heading Text Color</label>
+              <p className="text-[10px] text-slate-500 mb-2 italic">Applies to Materials & Assessments titles</p>
+              <div className="grid grid-cols-3 gap-2">
+                {textColorOptions.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => updateSettings({ headingTextColor: opt.value })}
+                    className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                      (settings.headingTextColor || 'white') === opt.value
+                        ? 'border-white bg-slate-700'
+                        : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded border ${opt.swatch}`}></div>
+                    <span className={`text-xs ${opt.text}`}>{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Secondary Text Color</label>
+              <p className="text-[10px] text-slate-500 mb-2 italic">Applies to subtext, descriptions, and button text</p>
+              <div className="grid grid-cols-3 gap-2">
+                {textColorOptions.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => updateSettings({ secondaryTextColor: opt.value })}
+                    className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                      (settings.secondaryTextColor || 'slate-400') === opt.value
+                        ? 'border-white bg-slate-700'
+                        : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded border ${opt.swatch}`}></div>
+                    <span className={`text-xs ${opt.text}`}>{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Materials & Assessments Button Color</label>
+              <p className="text-[10px] text-slate-500 mb-2 italic">Uniform button background for Materials & Assessments</p>
+              <div className="grid grid-cols-3 gap-2">
+                {buttonColorOptions.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => updateSettings({ buttonColor: opt.value })}
+                    className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                      (settings.buttonColor || 'sky-600') === opt.value
+                        ? 'border-white bg-slate-700'
+                        : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded border ${opt.swatch}`}></div>
+                    <span className={`text-xs ${opt.text}`}>{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Materials & Assessments Container Color</label>
+              <p className="text-[10px] text-slate-500 mb-2 italic">Applies to material cards and assessment containers</p>
+              <div className="grid grid-cols-3 gap-2">
+                {containerColorOptions.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => updateSettings({ containerColor: opt.value })}
+                    className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                      (settings.containerColor || 'slate-900/80') === opt.value
+                        ? 'border-white bg-slate-700'
+                        : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded border ${opt.swatch}`}></div>
+                    <span className={`text-xs ${opt.text}`}>{opt.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
             
@@ -9195,7 +9797,7 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
                   if (projectBackup) {
                     localStorage.setItem('course_factory_v2_data', projectBackup);
                   }
-                  alert('✅ Cache cleared');
+                  alert('âœ… Cache cleared');
                 }
               }}
               className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all"
@@ -9205,7 +9807,7 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
 
             <button
               onClick={async () => {
-                if (window.confirm('🔄 Force Refresh?\n\nThis will:\n• Clear browser cache for this site\n• Clear any service workers\n• Reload with fresh code\n\nYour project data will be preserved.')) {
+                if (window.confirm('ðŸ”„ Force Refresh?\n\nThis will:\nâ€¢ Clear browser cache for this site\nâ€¢ Clear any service workers\nâ€¢ Reload with fresh code\n\nYour project data will be preserved.')) {
                   try {
                     // Clear service worker caches
                     if ('caches' in window) {
@@ -9238,7 +9840,7 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
               </p>
               <button
                 onClick={() => {
-                  if (window.confirm('⚠️ FULL RESET WARNING!\n\nThis will permanently delete:\n• All your materials (but keep Materials module)\n• All your assessments (but keep Assessments module)\n• All other custom modules\n• All toolkit items\n\nThe Course Materials and Assessments containers will remain empty.\n\nContinue?')) {
+                  if (window.confirm('âš ï¸ FULL RESET WARNING!\n\nThis will permanently delete:\nâ€¢ All your materials (but keep Materials module)\nâ€¢ All your assessments (but keep Assessments module)\nâ€¢ All other custom modules\nâ€¢ All toolkit items\n\nThe Course Materials and Assessments containers will remain empty.\n\nContinue?')) {
                     const userInput = window.prompt('Type RESET to confirm full data wipe:');
                     if (userInput === 'RESET') {
                       // Get the current Course Materials and Assessments modules from PROJECT_DATA defaults
@@ -9348,7 +9950,7 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
                         });
                       }
                       
-                      alert('✅ Reset complete! Course Materials and Assessments modules preserved (but emptied). All other content cleared.');
+                      alert('âœ… Reset complete! Course Materials and Assessments modules preserved (but emptied). All other content cleared.');
                     } else {
                       alert('Reset cancelled. Your data is safe.');
                     }
@@ -9542,7 +10144,7 @@ const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies 
             <div className={`bg-slate-900 border rounded-xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto ${hasDeps ? 'border-amber-900' : 'border-rose-900'}`} onClick={e => e.stopPropagation()}>
                 <div className={`flex items-center gap-3 mb-4 ${hasDeps ? 'text-amber-500' : 'text-rose-500'}`}>
                     <AlertOctagon size={24} />
-                    <h3 className="text-lg font-bold">{hasDeps ? '⚠️ Dependencies Found' : 'Delete Item?'}</h3>
+                    <h3 className="text-lg font-bold">{hasDeps ? 'âš ï¸ Dependencies Found' : 'Delete Item?'}</h3>
                 </div>
                 
                 {hasDeps ? (
@@ -9557,7 +10159,7 @@ const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies 
                                     <p className="text-xs font-bold text-amber-400 uppercase mb-1">Modules ({dependencies.dependencies.modules.length}):</p>
                                     <ul className="text-xs text-amber-200 space-y-1 ml-4">
                                         {dependencies.dependencies.modules.map(dep => (
-                                            <li key={dep.id}>• {dep.title} <span className="text-amber-500">({dep.type})</span></li>
+                                            <li key={dep.id}>â€¢ {dep.title} <span className="text-amber-500">({dep.type})</span></li>
                                         ))}
                                     </ul>
                                 </div>
@@ -9568,7 +10170,7 @@ const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies 
                                     <p className="text-xs font-bold text-amber-400 uppercase mb-1">Assessments ({dependencies.dependencies.assessments.length}):</p>
                                     <ul className="text-xs text-amber-200 space-y-1 ml-4">
                                         {dependencies.dependencies.assessments.map(dep => (
-                                            <li key={dep.id}>• {dep.title} <span className="text-amber-500">(in {dep.moduleTitle})</span></li>
+                                            <li key={dep.id}>â€¢ {dep.title} <span className="text-amber-500">(in {dep.moduleTitle})</span></li>
                                         ))}
                                     </ul>
                                 </div>
@@ -9579,7 +10181,7 @@ const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies 
                                     <p className="text-xs font-bold text-amber-400 uppercase mb-1">Toolkit Items ({dependencies.dependencies.toolkit.length}):</p>
                                     <ul className="text-xs text-amber-200 space-y-1 ml-4">
                                         {dependencies.dependencies.toolkit.map(dep => (
-                                            <li key={dep.id}>• {dep.title}</li>
+                                            <li key={dep.id}>â€¢ {dep.title}</li>
                                         ))}
                                     </ul>
                                 </div>
@@ -9590,7 +10192,7 @@ const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies 
                                     <p className="text-xs font-bold text-amber-400 uppercase mb-1">Materials ({dependencies.dependencies.materials.length}):</p>
                                     <ul className="text-xs text-amber-200 space-y-1 ml-4">
                                         {dependencies.dependencies.materials.map(dep => (
-                                            <li key={dep.id}>• {dep.title}</li>
+                                            <li key={dep.id}>â€¢ {dep.title}</li>
                                         ))}
                                     </ul>
                                 </div>
@@ -9608,7 +10210,7 @@ const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies 
                 <div className="flex gap-3">
                     <button onClick={onCancel} className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition-colors">Cancel</button>
                     <button onClick={onConfirm} className={`flex-1 py-2 rounded-lg text-sm font-bold shadow-lg transition-colors ${hasDeps ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-900/20' : 'bg-rose-600 hover:bg-rose-500 shadow-rose-900/20'}`}>
-                        {hasDeps ? '⚠️ Delete Anyway' : 'Delete Forever'}
+                        {hasDeps ? 'âš ï¸ Delete Anyway' : 'Delete Forever'}
                     </button>
                 </div>
       </div>
@@ -9669,7 +10271,7 @@ export default function App() {
   
   const dismissError = () => setAppError(null);
 
-  // 💾 AUTO-LOAD: Runs once on mount
+  // ðŸ’¾ AUTO-LOAD: Runs once on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -9684,12 +10286,12 @@ export default function App() {
       setIsAutoLoaded(true); // Allow saving to start
     } catch (error) {
       showToast('Failed to load project data. Starting fresh.', 'error');
-      console.error("❌ Load failed:", error);
+      console.error("âŒ Load failed:", error);
       setIsAutoLoaded(true);
     }
   }, []);
 
-  // 💾 AUTO-SAVE: Runs when projectData changes
+  // ðŸ’¾ AUTO-SAVE: Runs when projectData changes
   useEffect(() => {
     if (!isAutoLoaded) return; // Safety Lock: Don't save empty defaults
 
@@ -9711,7 +10313,7 @@ export default function App() {
         } else {
           showToast('Failed to save project. Check console for details.', 'error');
         }
-        console.error("❌ Save failed:", error);
+        console.error("âŒ Save failed:", error);
       }
     }, 1000); // 1-second debounce
 
@@ -10067,7 +10669,7 @@ export default function App() {
   const deleteModule = (item) => {
     // Prevent deletion of protected modules
     if (isProtectedModule(item)) {
-      alert('⚠️ Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle in Phase 2.');
+      alert('âš ï¸ Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle in Phase 2.');
       return;
     }
     
@@ -10094,7 +10696,7 @@ export default function App() {
       // Safety check: prevent deletion of protected modules
       const moduleToDelete = projectData["Current Course"]?.modules?.find(m => m.id === deleteConfirmation.id);
       if (moduleToDelete && isProtectedModule(moduleToDelete)) {
-        alert('⚠️ Course Materials and Assessments are core modules and cannot be deleted.');
+        alert('âš ï¸ Course Materials and Assessments are core modules and cannot be deleted.');
         setDeleteConfirmation(null);
         return;
       }
@@ -10437,7 +11039,7 @@ Questions.filter((_, i) => i !== index);
               placeholder="Type your answer here..."
               class="w-full h-48 bg-slate-950 border border-slate-700 rounded-lg p-4 text-white resize-none focus:border-purple-500 focus:outline-none print-response"
             ></textarea>
-            <p class="text-xs text-slate-500 italic mt-2 no-print">Auto-saved to browser ✓</p>
+            <p class="text-xs text-slate-500 italic mt-2 no-print">Auto-saved to browser âœ“</p>
           </div>
         `;
         laIndex++;
@@ -10490,25 +11092,25 @@ Questions.filter((_, i) => i !== index);
         <!-- Action Buttons -->
         <div class="flex flex-wrap gap-3 mt-8 no-print">
           <button type="button" onclick="${assessmentId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-            🔄 Reset
+            ðŸ”„ Reset
           </button>
           ${laQuestions.length > 0 ? `
           <button type="button" onclick="${assessmentId}_download()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-            📥 Download Backup
+            ðŸ“¥ Download Backup
           </button>
           <button type="button" onclick="document.getElementById('${assessmentId}-upload').click()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-            📤 Upload Backup
+            ðŸ“¤ Upload Backup
           </button>
           ` : ''}
           <button type="button" onclick="${assessmentId}_generateReport()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-            🖨️ Print & Submit
+            ðŸ–¨ï¸ Print & Submit
           </button>
         </div>
         
         ${laQuestions.length > 0 ? `
         <input type="file" id="${assessmentId}-upload" accept=".json" style="display: none;" onchange="${assessmentId}_loadBackup(this)" />
         <div id="${assessmentId}-loaded" class="hidden mt-6 p-4 rounded-xl bg-blue-900/20 border border-blue-500">
-          <p class="text-blue-400 font-bold">✅ Backup loaded successfully!</p>
+          <p class="text-blue-400 font-bold">âœ… Backup loaded successfully!</p>
         </div>
         ` : ''}
 
@@ -10527,7 +11129,7 @@ Questions.filter((_, i) => i !== index);
         <!-- Print Instructions -->
         <div class="mt-8 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg no-print">
           <p class="text-amber-300 text-sm">
-            📋 <strong>Instructions:</strong> Complete all questions, then click "Print & Submit" to generate a clean printable report.
+            ðŸ“‹ <strong>Instructions:</strong> Complete all questions, then click "Print & Submit" to generate a clean printable report.
           </p>
         </div>
 
@@ -10802,7 +11404,7 @@ Questions.filter((_, i) => i !== index);
               Course Factory Dashboard
             </h1>
             <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-1 font-mono">
-              LIVING DOC • SAVED {lastSaved ? lastSaved.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }).toUpperCase() : '---'}
+              LIVING DOC â€¢ SAVED {lastSaved ? lastSaved.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }).toUpperCase() : '---'}
             </p>
           </div>
           
@@ -11279,7 +11881,7 @@ Questions.filter((_, i) => i !== index);
 <body>
   <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">${safeTitle}</h2>
   <p style="margin-bottom: 1.5rem; color: #94a3b8;">This module opens in a new tab.</p>
-  <a href="${safeUrl}" target="_blank" rel="noopener noreferrer">Open ${safeTitle} →</a>
+  <a href="${safeUrl}" target="_blank" rel="noopener noreferrer">Open ${safeTitle} â†’</a>
 </body>
 </html>`;
                     }
@@ -11355,3 +11957,8 @@ const Section = ({ title, icon: Icon, isActive, onClick, badge, badgeColor }) =>
     )}
   </button>
 );
+
+
+
+
+
