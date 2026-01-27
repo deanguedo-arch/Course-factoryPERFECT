@@ -6727,7 +6727,652 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
   const [hubCourseTitle, setHubCourseTitle] = useState('Mental Fitness Course');
   const [hubCourseDescription, setHubCourseDescription] = useState('Master your mental game and unlock peak performance.');
 
+  // --- BETA STATIC PUBLISH STATE ---
+  const [publishMode, setPublishMode] = useState('legacy'); // 'legacy' | 'beta'
+  const [betaStructureMode, setBetaStructureMode] = useState('multi-file'); // 'multi-file' | 'single-page'
+  const [betaSelectedModules, setBetaSelectedModules] = useState([]); // for delta publish
+  const [betaIncludeManifest, setBetaIncludeManifest] = useState(true);
+  const [betaPublishStatus, setBetaPublishStatus] = useState(''); // '', 'loading', 'success', 'error'
+  const [betaPublishMessage, setBetaPublishMessage] = useState('');
+
   const modules = projectData["Current Course"]?.modules || [];
+
+  // ========================================
+  // BETA STATIC PUBLISH HELPER FUNCTIONS
+  // ========================================
+
+  // Load JSZip from CDN dynamically
+  const loadJSZip = async () => {
+    if (window.JSZip) return window.JSZip;
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      script.onload = () => resolve(window.JSZip);
+      script.onerror = () => reject(new Error('Failed to load JSZip'));
+      document.head.appendChild(script);
+    });
+  };
+
+  // Build manifest.json for beta publish
+  const buildBetaManifest = () => {
+    const courseSettings = projectData["Course Settings"] || {};
+    const courseName = courseSettings.courseName || projectData["Current Course"]?.name || "Course";
+    const activeModules = modules.filter(m => !excludedIds.includes(m.id) && !m.hidden);
+    
+    return {
+      courseTitle: courseName,
+      updatedAt: new Date().toISOString(),
+      modules: activeModules.map(m => ({
+        id: m.id,
+        title: m.title,
+        path: `modules/${m.id}.html`
+      }))
+    };
+  };
+
+  // Generate hub page (index.html) for beta publish
+  const generateHubPageBeta = (manifest) => {
+    const courseSettings = projectData["Course Settings"] || {};
+    const accentColor = courseSettings.accentColor || "sky";
+    const courseName = manifest.courseTitle;
+    
+    const moduleListHTML = manifest.modules.map((mod, idx) => `
+      <a href="./${mod.path}" class="block p-6 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-${accentColor}-500 hover:bg-slate-800 transition-all group">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg bg-${accentColor}-500/20 flex items-center justify-center text-${accentColor}-400 font-bold">
+              ${String(idx + 1).padStart(2, '0')}
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-white group-hover:text-${accentColor}-400 transition-colors">${mod.title}</h3>
+              <p class="text-xs text-slate-500 font-mono">${mod.id}</p>
+            </div>
+          </div>
+          <svg class="w-5 h-5 text-slate-600 group-hover:text-${accentColor}-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        </div>
+      </a>
+    `).join('\n');
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${courseName}</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <style>
+    body { background: #0f172a; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen text-white custom-scroll">
+  <div class="max-w-4xl mx-auto px-6 py-12">
+    <header class="mb-12 text-center">
+      <h1 class="text-4xl font-black text-white uppercase tracking-tight mb-2">${courseName}</h1>
+      <p class="text-sm text-slate-400">Select a module to begin</p>
+      <p class="text-xs text-slate-600 mt-2 font-mono">Last updated: ${new Date(manifest.updatedAt).toLocaleDateString()}</p>
+    </header>
+    
+    <nav class="space-y-4">
+      ${moduleListHTML}
+    </nav>
+    
+    <footer class="mt-16 pt-8 border-t border-slate-800 text-center">
+      <p class="text-xs text-slate-600">Built with Course Factory</p>
+    </footer>
+  </div>
+</body>
+</html>`;
+  };
+
+  // Generate individual module HTML page for beta publish
+  const generateModuleHtmlBeta = (moduleId) => {
+    const mod = modules.find(m => m.id === moduleId);
+    if (!mod) return null;
+
+    const courseSettings = projectData["Course Settings"] || {};
+    const courseName = courseSettings.courseName || projectData["Current Course"]?.name || "Course";
+    const accentColor = courseSettings.accentColor || "sky";
+    const enabledTools = (projectData["Global Toolkit"] || []).filter(t => t.enabled);
+
+    // Check module type
+    let itemCode = mod.code || {};
+    if (typeof itemCode === 'string') {
+      try { itemCode = JSON.parse(itemCode); } catch(e) {}
+    }
+    const isMaterialsModule = itemCode.id === "view-materials";
+    const isAssessmentsModule = mod.id === "item-assessments" || mod.title === "Assessments";
+
+    // Extract module content
+    let moduleContentHTML = '';
+    let moduleCSS = '';
+    let moduleScript = '';
+
+    // Special handling for Course Materials module
+    if (isMaterialsModule) {
+      const courseMaterials = projectData["Current Course"]?.materials || [];
+      const materials = courseMaterials.filter(m => !m.hidden).sort((a, b) => (a.order || 0) - (b.order || 0));
+      
+      // Collect digital content for materials that have it
+      const digitalMaterials = materials.filter(m => m.digitalContent);
+      const digitalContentData = {};
+      digitalMaterials.forEach(dm => {
+        digitalContentData[dm.id] = dm.digitalContent;
+      });
+      const digitalContentJSON = JSON.stringify(digitalContentData)
+        .replace(/`/g, '\\`')
+        .replace(/\$\{/g, '\\${')
+        .replace(/</g, '\\u003c')
+        .replace(/>/g, '\\u003e');
+      
+      const materialCards = materials.map(mat => {
+        const colorClass = mat.color || 'slate';
+        const borderClass = colorClass !== 'slate' ? `border-l-4 border-l-${colorClass}-500` : '';
+        const bgClass = colorClass !== 'slate' ? `bg-${colorClass}-500/10` : 'bg-slate-800';
+        const borderColorClass = colorClass !== 'slate' ? `border-${colorClass}-500/20` : 'border-slate-700';
+        const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : 'text-slate-500';
+        const buttonColorClass = colorClass !== 'slate' ? `bg-${colorClass}-600 hover:bg-${colorClass}-500` : 'bg-sky-600 hover:bg-sky-500';
+        
+        const escapedViewUrl = (mat.viewUrl || '').replace(/'/g, "\\'");
+        const escapedTitle = (mat.title || '').replace(/'/g, "\\'");
+        const matId = mat.id || `mat-${Date.now()}`;
+        
+        let buttonsHTML = '';
+        if (mat.viewUrl) {
+          buttonsHTML += `<button onclick="openPDF('${escapedViewUrl}', '${escapedTitle}')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>`;
+        }
+        if (mat.downloadUrl) {
+          buttonsHTML += `<a href="${mat.downloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`;
+        }
+        if (mat.digitalContent) {
+          buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">📖 Read</button>`;
+        }
+        
+        return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 p-6 bg-slate-900/80 rounded-xl border border-slate-700 ${borderClass}">
+          <div class="flex items-center gap-6">
+            <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center ${textColorClass} font-black italic text-xl border ${borderColorClass}">${mat.number || '00'}</div>
+            <div>
+              <h3 class="text-lg font-bold text-white uppercase italic">${mat.title}</h3>
+              <p class="text-xs text-slate-400 font-mono">${mat.description || ''}</p>
+            </div>
+          </div>
+          <div class="flex gap-3 w-full md:w-auto">${buttonsHTML}</div>
+        </div>`;
+      }).join('\n');
+
+      moduleContentHTML = `
+        <div class="space-y-8">
+          <div class="mb-8">
+            <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Course <span class="text-sky-500">Materials</span></h2>
+            <p class="text-xs text-slate-400 font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
+          </div>
+          <div id="pdf-viewer-container" class="hidden mb-8 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl">
+            <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-slate-700">
+              <span id="viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Document Viewer</span>
+              <button onclick="closeViewer()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
+            </div>
+            <iframe id="pdf-frame" src="" width="100%" height="600" style="border:none;"></iframe>
+          </div>
+          <div id="digital-reader-container" class="hidden mb-8 bg-slate-900 rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">
+            <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-emerald-500/30">
+              <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">📖 Digital Resource</span>
+              <button onclick="closeDigitalReader()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
+            </div>
+            <div class="flex" style="height: 600px;">
+              <div id="reader-toc" class="w-64 bg-slate-950 border-r border-slate-700 p-4 overflow-y-auto hidden md:block">
+                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Contents</h4>
+                <div id="reader-toc-items" class="space-y-1"></div>
+              </div>
+              <div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">
+                <div id="reader-body" class="prose prose-invert max-w-none"></div>
+                <div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-700">
+                  <button id="prev-btn" onclick="prevChapter()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">← Previous</button>
+                  <span id="reader-progress" class="text-xs text-slate-500"></span>
+                  <button id="next-btn" onclick="nextChapter()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next →</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="materials-list" class="grid grid-cols-1 gap-4">
+            ${materials.length > 0 ? materialCards : '<p class="text-center text-slate-500 italic py-8">No materials available.</p>'}
+          </div>
+        </div>`;
+      
+      // Build digital reader script if there are digital materials
+      let digitalReaderScript = '';
+      if (digitalMaterials.length > 0) {
+        digitalReaderScript = `
+        var DIGITAL_CONTENT = ${digitalContentJSON};
+        var currentReader = { matId: null, chapterIdx: 0, data: null };
+        
+        function openDigitalReader(matId) {
+          var content = DIGITAL_CONTENT[matId];
+          if (!content) { console.error('No digital content for', matId); return; }
+          
+          currentReader = { matId: matId, chapterIdx: 0, data: content };
+          
+          document.getElementById('reader-title').innerHTML = '📖 ' + (content.title || 'Digital Resource');
+          
+          var tocHTML = '';
+          (content.chapters || []).forEach(function(ch, idx) {
+            tocHTML += '<button onclick="goToChapter(' + idx + ')" class="toc-item w-full text-left px-3 py-2 rounded text-xs hover:bg-slate-800 transition-colors ' + (idx === 0 ? 'bg-emerald-900/50 text-emerald-400' : 'text-slate-400') + '">' +
+              '<span class="font-bold">' + (ch.number || (idx + 1)) + '.</span> ' + ch.title +
+            '</button>';
+          });
+          document.getElementById('reader-toc-items').innerHTML = tocHTML;
+          
+          renderChapter(0);
+          
+          document.getElementById('digital-reader-container').classList.remove('hidden');
+          document.getElementById('materials-list').classList.add('hidden');
+          document.getElementById('pdf-viewer-container').classList.add('hidden');
+        }
+        
+        function closeDigitalReader() {
+          document.getElementById('digital-reader-container').classList.add('hidden');
+          document.getElementById('materials-list').classList.remove('hidden');
+          currentReader = { matId: null, chapterIdx: 0, data: null };
+        }
+        
+        function renderChapter(idx) {
+          if (!currentReader.data || !currentReader.data.chapters) return;
+          var chapters = currentReader.data.chapters;
+          if (idx < 0 || idx >= chapters.length) return;
+          
+          currentReader.chapterIdx = idx;
+          var chapter = chapters[idx];
+          
+          var html = '<h2 class="text-2xl font-bold text-white mb-2">' + (chapter.number || (idx + 1)) + '. ' + chapter.title + '</h2>';
+          
+          (chapter.sections || []).forEach(function(sec) {
+            html += '<div class="mt-6">';
+            if (sec.heading) {
+              html += '<h3 class="text-lg font-bold text-emerald-400 mb-3">' + sec.heading + '</h3>';
+            }
+            var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, '• ');
+            html += '<div class="text-slate-300 leading-relaxed whitespace-pre-line">' + content + '</div>';
+            html += '</div>';
+          });
+          
+          document.getElementById('reader-body').innerHTML = html;
+          
+          document.querySelectorAll('.toc-item').forEach(function(btn, i) {
+            if (i === idx) {
+              btn.classList.add('bg-emerald-900/50', 'text-emerald-400');
+              btn.classList.remove('text-slate-400');
+            } else {
+              btn.classList.remove('bg-emerald-900/50', 'text-emerald-400');
+              btn.classList.add('text-slate-400');
+            }
+          });
+          
+          document.getElementById('prev-btn').disabled = idx === 0;
+          document.getElementById('next-btn').disabled = idx === chapters.length - 1;
+          document.getElementById('reader-progress').textContent = 'Chapter ' + (idx + 1) + ' of ' + chapters.length;
+          
+          document.getElementById('reader-content').scrollTop = 0;
+        }
+        
+        function goToChapter(idx) {
+          renderChapter(idx);
+        }
+        
+        function prevChapter() {
+          if (currentReader.chapterIdx > 0) {
+            renderChapter(currentReader.chapterIdx - 1);
+          }
+        }
+        
+        function nextChapter() {
+          if (currentReader.data && currentReader.data.chapters && currentReader.chapterIdx < currentReader.data.chapters.length - 1) {
+            renderChapter(currentReader.chapterIdx + 1);
+          }
+        }
+        
+        // Event delegation for digital reader buttons
+        document.addEventListener('click', function(e) {
+          var readerBtn = e.target.closest('[data-digital-reader]');
+          if (readerBtn) {
+            e.preventDefault();
+            openDigitalReader(readerBtn.getAttribute('data-digital-reader'));
+            return;
+          }
+        });`;
+      }
+      
+      moduleScript = `
+        function openPDF(url, title) {
+          var container = document.getElementById('pdf-viewer-container');
+          var previewUrl = url.replace('/view', '/preview');
+          document.getElementById('pdf-frame').src = previewUrl;
+          document.getElementById('viewer-title').innerText = "VIEWING: " + title;
+          container.classList.remove('hidden');
+          container.scrollIntoView({ behavior: 'smooth' });
+        }
+        function closeViewer() {
+          document.getElementById('pdf-viewer-container').classList.add('hidden');
+          document.getElementById('pdf-frame').src = "";
+        }
+        ${digitalReaderScript}`;
+    }
+    // Special handling for Assessments module
+    else if (isAssessmentsModule) {
+      const assessments = (mod.assessments || []).filter(a => !a.hidden).sort((a, b) => (a.order || 0) - (b.order || 0));
+      
+      // Generate assessment list
+      const assessmentListHTML = assessments.map((assess, idx) => {
+        const typeLabel = assess.type === 'quiz' ? 'Multiple Choice' : assess.type === 'longanswer' ? 'Long Answer' : assess.type === 'print' ? 'Print & Submit' : 'Mixed Assessment';
+        const typeIcon = assess.type === 'quiz' ? '📝' : assess.type === 'longanswer' ? '✍️' : assess.type === 'print' ? '🖨️' : '📋';
+        
+        return `<div class="p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-2">
+                <span class="text-3xl">${typeIcon}</span>
+                <div>
+                  <h3 class="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">${assess.title}</h3>
+                  <p class="text-xs text-slate-400 uppercase tracking-wider">${typeLabel}</p>
+                </div>
+              </div>
+            </div>
+            <div class="text-purple-400 group-hover:translate-x-1 transition-transform">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </div>
+          </div>
+        </div>`;
+      }).join('\n');
+
+      // Generate individual assessment containers
+      const assessmentContainersHTML = assessments.map((assess, idx) => {
+        return `<div id="assessment-${idx}" class="assessment-container hidden">
+          <button onclick="backToAssessmentList()" class="mb-6 flex items-center gap-2 text-purple-400 hover:text-purple-300 font-bold text-sm transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Back to Assessments
+          </button>
+          ${assess.html || ''}
+        </div>`;
+      }).join('\n');
+
+      // Collect assessment scripts
+      const assessmentScripts = assessments.map(assess => assess.script || '').filter(s => s).join('\n');
+
+      moduleContentHTML = `
+        <div class="space-y-8">
+          <div class="mb-8">
+            <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Assessment <span class="text-purple-500">Center</span></h2>
+            <p class="text-xs text-slate-400 font-mono uppercase tracking-widest mt-2">Quizzes, tests, and reflection exercises.</p>
+          </div>
+          <div id="assessment-list" class="grid grid-cols-1 gap-4">
+            ${assessments.length > 0 ? assessmentListHTML : '<p class="text-center text-slate-500 italic py-8">No assessments available.</p>'}
+          </div>
+          ${assessmentContainersHTML}
+        </div>`;
+      
+      moduleScript = `
+        function showAssessment(index) {
+          document.getElementById('assessment-list').classList.add('hidden');
+          document.querySelectorAll('.assessment-container').forEach(function(c) { c.classList.add('hidden'); });
+          var target = document.getElementById('assessment-' + index);
+          if (target) target.classList.remove('hidden');
+          window.scrollTo(0, 0);
+        }
+        function backToAssessmentList() {
+          document.querySelectorAll('.assessment-container').forEach(function(c) { c.classList.add('hidden'); });
+          document.getElementById('assessment-list').classList.remove('hidden');
+          window.scrollTo(0, 0);
+        }
+        ${assessmentScripts}`;
+    }
+    // Regular module handling
+    else if (mod.rawHtml) {
+      // New format: rawHtml - render in iframe
+      const escapedRawHtml = mod.rawHtml
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+      moduleContentHTML = `<div class="w-full rounded-xl overflow-hidden border border-slate-700 shadow-2xl">
+        <iframe srcdoc="${escapedRawHtml}" class="w-full border-0" style="min-height: 80vh; height: 100%;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"></iframe>
+      </div>`;
+    } else {
+      // Legacy format
+      const html = mod.html || (mod.code && mod.code.html) || '';
+      const css = mod.css || (mod.code && mod.code.css) || '';
+      const script = mod.script || (mod.code && mod.code.script) || '';
+      
+      moduleContentHTML = html;
+      moduleCSS = css;
+      moduleScript = script;
+    }
+
+    // Build toolkit scripts
+    let toolkitScripts = '';
+    let toolkitHTML = '';
+    enabledTools.forEach(tool => {
+      if (tool.code) {
+        if (tool.code.script) toolkitScripts += tool.code.script + '\n';
+        if (tool.code.html && tool.includeUi) toolkitHTML += tool.code.html + '\n';
+      }
+    });
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${mod.title} | ${courseName}</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <style>
+    body { background: #0f172a; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); }
+    .material-card { transition: all 0.2s; }
+    .material-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+    ${moduleCSS}
+  </style>
+</head>
+<body class="min-h-screen text-white custom-scroll">
+  <header class="sticky top-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="flex items-center gap-2 text-slate-400 hover:text-${accentColor}-400 transition-colors text-sm font-bold">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        Back to Course
+      </a>
+      <h1 class="text-sm font-bold text-white uppercase tracking-wider">${mod.title}</h1>
+    </div>
+  </header>
+  
+  <main class="max-w-6xl mx-auto px-6 py-8">
+    ${moduleContentHTML}
+  </main>
+
+  ${toolkitHTML}
+  
+  <script>
+    ${toolkitScripts}
+    ${moduleScript}
+  <\/script>
+</body>
+</html>`;
+  };
+
+  // Build single-page app (with sidebar) for beta publish
+  const buildSinglePageAppBeta = () => {
+    const manifest = buildBetaManifest();
+    const filesMap = {};
+    const toolkit = projectData["Global Toolkit"] || [];
+    
+    // Use buildSiteHtml to generate single-page app (same as legacy but for beta)
+    const singlePageHtml = buildSiteHtml({
+      modules,
+      toolkit,
+      excludedIds,
+      initialViewKey: null,
+      projectData
+    });
+    
+    // Add index.html (single-page app)
+    filesMap['index.html'] = singlePageHtml;
+    
+    // Add manifest.json
+    filesMap['manifest.json'] = JSON.stringify(manifest, null, 2);
+    
+    return filesMap;
+  };
+
+  // Build all static files for full publish (multi-file mode)
+  const buildStaticFilesBeta = () => {
+    const manifest = buildBetaManifest();
+    const filesMap = {};
+    
+    // Add index.html (hub page)
+    filesMap['index.html'] = generateHubPageBeta(manifest);
+    
+    // Add manifest.json
+    filesMap['manifest.json'] = JSON.stringify(manifest, null, 2);
+    
+    // Add individual module pages
+    manifest.modules.forEach(mod => {
+      const moduleHtml = generateModuleHtmlBeta(mod.id);
+      if (moduleHtml) {
+        filesMap[`modules/${mod.id}.html`] = moduleHtml;
+      }
+    });
+    
+    return filesMap;
+  };
+
+  // Build delta files for selective publish
+  const buildDeltaFilesBeta = (selectedModuleIds, includeManifest) => {
+    const filesMap = {};
+    
+    // Add manifest if requested
+    if (includeManifest) {
+      const manifest = buildBetaManifest();
+      filesMap['manifest.json'] = JSON.stringify(manifest, null, 2);
+    }
+    
+    // Add selected module pages only
+    selectedModuleIds.forEach(modId => {
+      const moduleHtml = generateModuleHtmlBeta(modId);
+      if (moduleHtml) {
+        filesMap[`modules/${modId}.html`] = moduleHtml;
+      }
+    });
+    
+    return filesMap;
+  };
+
+  // Download files as ZIP
+  const downloadZipFromFilesMap = async (filesMap, zipName) => {
+    try {
+      setBetaPublishStatus('loading');
+      setBetaPublishMessage('Loading ZIP library...');
+      
+      const JSZip = await loadJSZip();
+      const zip = new JSZip();
+      
+      setBetaPublishMessage('Creating ZIP archive...');
+      
+      // Add files to ZIP
+      Object.entries(filesMap).forEach(([path, content]) => {
+        zip.file(path, content);
+      });
+      
+      setBetaPublishMessage('Generating download...');
+      
+      // Generate ZIP blob
+      const blob = await zip.generateAsync({ type: 'blob' });
+      
+      // Download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = zipName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      setBetaPublishStatus('success');
+      setBetaPublishMessage(`Downloaded ${zipName}`);
+      setTimeout(() => {
+        setBetaPublishStatus('');
+        setBetaPublishMessage('');
+      }, 3000);
+    } catch (error) {
+      setBetaPublishStatus('error');
+      setBetaPublishMessage(`Failed: ${error.message}`);
+    }
+  };
+
+  // Get safe filename from course name
+  const getSafeFilename = (name) => {
+    return name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+  };
+
+  // Full publish handler
+  const handleFullPublishBeta = async () => {
+    const courseSettings = projectData["Course Settings"] || {};
+    const courseName = courseSettings.courseName || projectData["Current Course"]?.name || "course";
+    const safeTitle = getSafeFilename(courseName);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const zipName = `course_${safeTitle}_${dateStr}.zip`;
+    
+    // Use appropriate function based on structure mode
+    const filesMap = betaStructureMode === 'single-page' 
+      ? buildSinglePageAppBeta()
+      : buildStaticFilesBeta();
+    
+    await downloadZipFromFilesMap(filesMap, zipName);
+  };
+
+  // Delta publish handler
+  const handleDeltaPublishBeta = async () => {
+    if (betaSelectedModules.length === 0) {
+      setBetaPublishStatus('error');
+      setBetaPublishMessage('Please select at least one module');
+      return;
+    }
+    
+    const courseSettings = projectData["Course Settings"] || {};
+    const courseName = courseSettings.courseName || projectData["Current Course"]?.name || "course";
+    const safeTitle = getSafeFilename(courseName);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const zipName = `delta_${safeTitle}_${dateStr}.zip`;
+    
+    const filesMap = buildDeltaFilesBeta(betaSelectedModules, betaIncludeManifest);
+    await downloadZipFromFilesMap(filesMap, zipName);
+  };
+
+  // Toggle module selection for delta publish
+  const toggleBetaModuleSelection = (moduleId) => {
+    setBetaSelectedModules(prev => 
+      prev.includes(moduleId) 
+        ? prev.filter(id => id !== moduleId)
+        : [...prev, moduleId]
+    );
+  };
+
+  // Select/deselect all modules for delta
+  const selectAllBetaModules = () => {
+    const activeModules = modules.filter(m => !excludedIds.includes(m.id) && !m.hidden);
+    setBetaSelectedModules(activeModules.map(m => m.id));
+  };
+
+  const deselectAllBetaModules = () => {
+    setBetaSelectedModules([]);
+  };
   const materials = projectData["Current Course"]?.materials || [];
   const toolkit = projectData["Global Toolkit"] || [];
 
@@ -7471,6 +8116,233 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
           <Package className="text-purple-400" /> Phase 4: Compile & Export
         </h2>
 
+        {/* --- PUBLISHING MODE SELECTOR --- */}
+        <div className="mb-6 p-4 bg-slate-900/50 rounded-xl border border-slate-700">
+          <label className="block text-xs font-bold text-slate-400 uppercase mb-3">Publishing Mode</label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPublishMode('legacy')}
+              className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all ${
+                publishMode === 'legacy'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              Legacy Compile (Single HTML)
+            </button>
+            <button
+              onClick={() => setPublishMode('beta')}
+              className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                publishMode === 'beta'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              Static Multi-File Publish
+              <span className="text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">BETA</span>
+            </button>
+          </div>
+        </div>
+
+        {/* --- BETA STATIC PUBLISH UI --- */}
+        {publishMode === 'beta' && (
+          <div className="mb-8 bg-gradient-to-br from-emerald-900/20 to-slate-900/50 p-6 rounded-xl border border-emerald-500/30">
+            <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+              <Zap size={20} className="text-emerald-400" /> Static Multi-File Publish
+              <span className="text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">BETA</span>
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">
+              Generate a proper static site structure with <code className="bg-slate-800 px-1 rounded">index.html</code>, <code className="bg-slate-800 px-1 rounded">manifest.json</code>, and individual module pages in <code className="bg-slate-800 px-1 rounded">modules/</code> folder.
+            </p>
+
+            {/* Structure Mode Selector */}
+            <div className="mb-6 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-3">Site Structure</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setBetaStructureMode('multi-file')}
+                  className={`flex-1 py-2.5 px-4 rounded-lg font-bold text-xs transition-all ${
+                    betaStructureMode === 'multi-file'
+                      ? 'bg-sky-600 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  Multi-File (Separate Pages)
+                </button>
+                <button
+                  onClick={() => setBetaStructureMode('single-page')}
+                  className={`flex-1 py-2.5 px-4 rounded-lg font-bold text-xs transition-all ${
+                    betaStructureMode === 'single-page'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  Single-Page App (With Sidebar)
+                </button>
+              </div>
+              <div className="mt-3 text-xs text-slate-500">
+                {betaStructureMode === 'multi-file' ? (
+                  <span>✅ Separate HTML files per module • Bookmarkable URLs • Delta publish support</span>
+                ) : (
+                  <span>✅ Single HTML file • Sidebar navigation • Instant switching • State preserved</span>
+                )}
+              </div>
+            </div>
+
+            {/* Status indicator */}
+            {betaPublishStatus && (
+              <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 text-sm ${
+                betaPublishStatus === 'loading' ? 'bg-sky-900/50 border border-sky-700 text-sky-300' :
+                betaPublishStatus === 'success' ? 'bg-emerald-900/50 border border-emerald-700 text-emerald-300' :
+                'bg-rose-900/50 border border-rose-700 text-rose-300'
+              }`}>
+                {betaPublishStatus === 'loading' && (
+                  <RefreshCw size={14} className="animate-spin" />
+                )}
+                {betaPublishStatus === 'success' && <CheckCircle size={14} />}
+                {betaPublishStatus === 'error' && <AlertTriangle size={14} />}
+                {betaPublishMessage}
+              </div>
+            )}
+
+            {/* Full Publish Section */}
+            <div className="mb-6 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+              <h4 className="text-sm font-bold text-emerald-400 mb-2 uppercase tracking-wider">Full Publish</h4>
+              <p className="text-xs text-slate-500 mb-4">Downloads a complete ZIP containing all active modules.</p>
+              
+              {/* Preview of files to be generated */}
+              <div className="mb-4 p-3 bg-slate-950 rounded border border-slate-800">
+                <div className="text-[10px] font-bold text-slate-500 uppercase mb-2">Files to be generated:</div>
+                <div className="text-xs font-mono text-slate-400 space-y-1">
+                  {betaStructureMode === 'multi-file' ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="text-emerald-400">📄</span> index.html
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-amber-400">📋</span> manifest.json
+                      </div>
+                      {modules.filter(m => !excludedIds.includes(m.id) && !m.hidden).map(m => (
+                        <div key={m.id} className="flex items-center gap-2 pl-2">
+                          <span className="text-sky-400">📁</span> modules/{m.id}.html
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="text-emerald-400">📄</span> index.html (single-page app with sidebar)
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-amber-400">📋</span> manifest.json
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={handleFullPublishBeta}
+                disabled={betaPublishStatus === 'loading' || modules.filter(m => !excludedIds.includes(m.id) && !m.hidden).length === 0}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all"
+              >
+                <Download size={16} /> Full Publish (ZIP)
+              </button>
+            </div>
+
+            {/* Delta Publish Section (only for multi-file mode) */}
+            {betaStructureMode === 'multi-file' && (
+            <div className="p-4 bg-slate-900/50 rounded-lg border border-slate-700">
+              <h4 className="text-sm font-bold text-sky-400 mb-2 uppercase tracking-wider">Delta Publish (Selected Modules Only)</h4>
+              <p className="text-xs text-slate-500 mb-4">Select specific modules to include in a partial update ZIP.</p>
+
+              {/* Include manifest checkbox */}
+              <label className="flex items-center gap-2 mb-4 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={betaIncludeManifest}
+                  onChange={(e) => setBetaIncludeManifest(e.target.checked)}
+                  className="rounded border-slate-600 bg-slate-900 text-sky-600"
+                />
+                <span className="text-sm text-slate-300">Include manifest.json</span>
+              </label>
+
+              {/* Module selection */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase">Select Modules</label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={selectAllBetaModules}
+                      className="text-[10px] text-sky-400 hover:text-sky-300 font-bold"
+                    >
+                      Select All
+                    </button>
+                    <span className="text-slate-600">|</span>
+                    <button
+                      onClick={deselectAllBetaModules}
+                      className="text-[10px] text-slate-500 hover:text-slate-400 font-bold"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+                <div className="bg-slate-950 rounded-lg border border-slate-800 max-h-48 overflow-y-auto p-2 space-y-1">
+                  {modules.filter(m => !excludedIds.includes(m.id) && !m.hidden).map(m => (
+                    <label key={m.id} className="flex items-center gap-2 p-2 rounded hover:bg-slate-900 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={betaSelectedModules.includes(m.id)}
+                        onChange={() => toggleBetaModuleSelection(m.id)}
+                        className="rounded border-slate-600 bg-slate-900 text-sky-600"
+                      />
+                      <span className="text-sm text-slate-300">{m.title}</span>
+                      <span className="text-[10px] text-slate-600 font-mono ml-auto">{m.id}</span>
+                    </label>
+                  ))}
+                  {modules.filter(m => !excludedIds.includes(m.id) && !m.hidden).length === 0 && (
+                    <p className="text-xs text-slate-500 italic p-2 text-center">No active modules</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Delta files preview */}
+              {betaSelectedModules.length > 0 && (
+                <div className="mb-4 p-3 bg-slate-950 rounded border border-slate-800">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase mb-2">Delta ZIP will contain:</div>
+                  <div className="text-xs font-mono text-slate-400 space-y-1">
+                    {betaIncludeManifest && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-amber-400">📋</span> manifest.json
+                      </div>
+                    )}
+                    {betaSelectedModules.map(modId => {
+                      const mod = modules.find(m => m.id === modId);
+                      return (
+                        <div key={modId} className="flex items-center gap-2 pl-2">
+                          <span className="text-sky-400">📁</span> modules/{modId}.html
+                          {mod && <span className="text-slate-600 text-[10px]">({mod.title})</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={handleDeltaPublishBeta}
+                disabled={betaPublishStatus === 'loading' || betaSelectedModules.length === 0}
+                className="w-full bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all"
+              >
+                <Download size={16} /> Publish Selected (Delta ZIP)
+                {betaSelectedModules.length > 0 && (
+                  <span className="bg-sky-800 px-2 py-0.5 rounded text-xs">{betaSelectedModules.length} selected</span>
+                )}
+              </button>
+            </div>
+            )}
+          </div>
+        )}
 
         {/* --- EXPORT MODULE PAGE UI --- */}
         <div className="mb-8 bg-slate-900/50 p-6 rounded-xl border border-blue-500/30">
@@ -7565,7 +8437,10 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
                 )}
             </div>
         </div>
-        
+
+        {/* --- LEGACY COMPILE UI (only shown in legacy mode) --- */}
+        {publishMode === 'legacy' && (
+        <>
         {!isGenerated ? (
             <div className="text-center py-6">
                 <div className="mb-6 bg-slate-900 rounded-xl border border-slate-700 overflow-hidden text-left">
@@ -7751,6 +8626,8 @@ console.log('📖 Digital Reader initialized with event delegation (Single Modul
                     <strong>Next Step:</strong> Download the file above, or copy the block and paste it into your Google Sites "Embed Code" widget.
                 </div>
             </div>
+        )}
+        </>
         )}
       </div>
     </div>
