@@ -341,6 +341,8 @@ const PROJECT_DATA = {
     instructor: "",
     academicYear: "",
     accentColor: "sky",
+    backgroundColor: "slate-900",
+    fontFamily: "inter",
     customCSS: "",
     compilationDefaults: {
       includeMaterials: true,
@@ -518,12 +520,52 @@ const getAccentColor = (accentColor) => {
   return colorMap[accentColor] || colorMap.sky;
 };
 
+// Helper function to get font family CSS and URL
+const getFontFamilyGlobal = (fontFamily) => {
+  const fonts = {
+    inter: {
+      url: 'https://fonts.googleapis.com/css?family=Inter:ital,wght@0,400;0,700;1,400;1,900&display=swap',
+      css: "font-family: 'Inter', sans-serif;"
+    },
+    roboto: {
+      url: 'https://fonts.googleapis.com/css?family=Roboto:ital,wght@0,400;0,700;1,400;1,900&display=swap',
+      css: "font-family: 'Roboto', sans-serif;"
+    },
+    opensans: {
+      url: 'https://fonts.googleapis.com/css?family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap',
+      css: "font-family: 'Open Sans', sans-serif;"
+    },
+    lato: {
+      url: 'https://fonts.googleapis.com/css?family=Lato:ital,wght@0,400;0,700;1,400;1,700&display=swap',
+      css: "font-family: 'Lato', sans-serif;"
+    },
+    montserrat: {
+      url: 'https://fonts.googleapis.com/css?family=Montserrat:ital,wght@0,400;0,700;1,400;1,700&display=swap',
+      css: "font-family: 'Montserrat', sans-serif;"
+    },
+    poppins: {
+      url: 'https://fonts.googleapis.com/css?family=Poppins:ital,wght@0,400;0,700;1,400;1,700&display=swap',
+      css: "font-family: 'Poppins', sans-serif;"
+    },
+    raleway: {
+      url: 'https://fonts.googleapis.com/css?family=Raleway:ital,wght@0,400;0,700;1,400;1,700&display=swap',
+      css: "font-family: 'Raleway', sans-serif;"
+    },
+    nunito: {
+      url: 'https://fonts.googleapis.com/css?family=Nunito:ital,wght@0,400;0,700;1,400;1,700&display=swap',
+      css: "font-family: 'Nunito', sans-serif;"
+    }
+  };
+  return fonts[fontFamily] || fonts.inter;
+};
+
 // Template function to generate master shell HTML
 const generateMasterShell = (data) => {
   const {
     courseName = "Course Factory",
     courseNameUpper = "COURSE FACTORY",
     accentColor = "sky",
+    fontFamily = "inter",
     customCSS = "",
     courseInfo = "",
     navItems = "",
@@ -533,10 +575,11 @@ const generateMasterShell = (data) => {
   } = data;
   
   const colors = getAccentColor(accentColor);
+  const font = getFontFamilyGlobal(fontFamily);
   
   // Build styles with accent color applied
   const baseStyles = `        /* --- GLOBAL & SHARED STYLES --- */
-        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; margin: 0; height: 100vh; overflow: hidden; }
+        body { ${font.css} background-color: #020617; color: #e2e8f0; margin: 0; height: 100vh; overflow: hidden; }
         .mono { font-family: 'JetBrains Mono', monospace; }
         .glass-panel { background: rgba(15, 23, 42, 0.95); border-right: 1px solid rgba(51, 65, 85, 0.5); }
         .custom-scroll { overflow-y: auto; }
@@ -670,7 +713,8 @@ const generateMasterShell = (data) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${courseNameUpper} | MASTER CONSOLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css?family=Inter:ital,wght@0,400;0,700;1,400;1,900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <link href="${font.url}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <style>
         ${baseStyles}${customCSS ? `\n        /* Custom CSS from Settings */\n        ${customCSS}` : ''}
     </style>
@@ -5831,6 +5875,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
   const instructor = courseSettings.instructor || "";
   const academicYear = courseSettings.academicYear || "";
   const accentColor = courseSettings.accentColor || "sky";
+  const fontFamily = courseSettings.fontFamily || "inter";
   const customCSS = courseSettings.customCSS || "";
   const compDefaults = courseSettings.compilationDefaults || {};
   
@@ -5949,7 +5994,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       const materialsHTML = `<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
             <div class="max-w-5xl mx-auto space-y-8">
                 <div class="mb-12">
-                    <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Course <span class="text-sky-500">Materials</span></h2>
+                    <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Course <span class="text-${accentColor}-500">Materials</span></h2>
                     <p class="text-xs text-slate-400 font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
                 </div>
                 <div id="pdf-viewer-container" class="hidden mb-12 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl">
@@ -6176,18 +6221,18 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
         const questionCount = assess.questionCount || (assess.type === 'mixed' ? 'Multiple' : 'Unknown');
         
         return `
-          <div class="p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
+          <div class="p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-${accentColor}-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
             <div class="flex items-center justify-between">
               <div class="flex-1">
                 <div class="flex items-center gap-3 mb-2">
                   <span class="text-3xl">${typeIcon}</span>
                   <div>
-                    <h3 class="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">${assess.title}</h3>
+                    <h3 class="text-xl font-bold text-white group-hover:text-${accentColor}-400 transition-colors">${assess.title}</h3>
                     <p class="text-xs text-slate-400 uppercase tracking-wider">${typeLabel}${assess.questionCount ? ' • ' + questionCount + ' Questions' : ''}</p>
                   </div>
                 </div>
               </div>
-              <div class="text-purple-400 group-hover:translate-x-1 transition-transform">
+              <div class="text-${accentColor}-400 group-hover:translate-x-1 transition-transform">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                 </svg>
@@ -6199,7 +6244,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       // Generate individual assessment containers (hidden by default) WITH INLINE SCRIPTS
       const assessmentContainers = assessments.map((assess, idx) => {
         return '\n        <div id="assessment-' + idx + '" class="assessment-container hidden">\n' +
-        '          <button onclick="backToAssessmentList()" class="mb-6 flex items-center gap-2 text-purple-400 hover:text-purple-300 font-bold text-sm transition-colors">\n' +
+        '          <button onclick="backToAssessmentList()" class="mb-6 flex items-center gap-2 text-${accentColor}-400 hover:text-${accentColor}-300 font-bold text-sm transition-colors">\n' +
         '            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">\n' +
         '              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>\n' +
         '            </svg>\n' +
@@ -6220,7 +6265,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                 <!-- Assessment Selection Page -->
                 <div id="assessment-list">
                     <div class="mb-12">
-                        <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Assessment <span class="text-purple-500">Center</span></h2>
+                        <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Assessment <span class="text-${accentColor}-500">Center</span></h2>
                         <p class="text-xs text-slate-400 font-mono uppercase tracking-widest mt-2">Select an assessment to begin</p>
                     </div>
                     ${assessments.length > 0 ? `
@@ -6699,6 +6744,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
     courseName,
     courseNameUpper,
     accentColor,
+    fontFamily,
     customCSS,
     courseInfo: courseInfoHTML,
     navItems: navInjection,
@@ -6770,31 +6816,70 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     };
   };
 
+  // Use global font family helper
+  const getFontFamily = getFontFamilyGlobal;
+
   // Generate hub page (index.html) for beta publish
   const generateHubPageBeta = (manifest) => {
     const courseSettings = projectData["Course Settings"] || {};
     const accentColor = courseSettings.accentColor || "sky";
+    const backgroundColor = courseSettings.backgroundColor || "slate-900";
+    const fontFamily = courseSettings.fontFamily || "inter";
+    const customCSS = courseSettings.customCSS || "";
     const courseName = manifest.courseTitle;
     
+    const font = getFontFamily(fontFamily);
+    
+    // Determine if background is light (for text color)
+    const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
+    const textColor = isLightBg ? 'text-slate-900' : 'text-white';
+    const textColorSecondary = isLightBg ? 'text-slate-600' : 'text-slate-400';
+    const textColorTertiary = isLightBg ? 'text-slate-500' : 'text-slate-500';
+    const borderColor = isLightBg ? 'border-slate-300' : 'border-slate-700';
+    const cardBg = isLightBg ? 'bg-white/80' : 'bg-slate-800/50';
+    const cardHoverBg = isLightBg ? 'hover:bg-white' : 'hover:bg-slate-800';
+    const arrowColor = isLightBg ? 'text-slate-400' : 'text-slate-600';
+    
     const moduleListHTML = manifest.modules.map((mod, idx) => `
-      <a href="./${mod.path}" class="block p-6 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-${accentColor}-500 hover:bg-slate-800 transition-all group">
+      <a href="./${mod.path}" class="block p-6 ${cardBg} rounded-xl border ${borderColor} hover:border-${accentColor}-500 ${cardHoverBg} transition-all group">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">
             <div class="w-10 h-10 rounded-lg bg-${accentColor}-500/20 flex items-center justify-center text-${accentColor}-400 font-bold">
               ${String(idx + 1).padStart(2, '0')}
             </div>
             <div>
-              <h3 class="text-lg font-bold text-white group-hover:text-${accentColor}-400 transition-colors">${mod.title}</h3>
-              <p class="text-xs text-slate-500 font-mono">${mod.id}</p>
+              <h3 class="text-lg font-bold ${textColor} group-hover:text-${accentColor}-400 transition-colors">${mod.title}</h3>
+              <p class="text-xs ${textColorTertiary} font-mono">${mod.id}</p>
             </div>
           </div>
-          <svg class="w-5 h-5 text-slate-600 group-hover:text-${accentColor}-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 ${arrowColor} group-hover:text-${accentColor}-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
           </svg>
         </div>
       </a>
     `).join('\n');
 
+    // Map Tailwind color names to hex values for background
+    const bgColorMap = {
+      // Dark backgrounds
+      'slate-900': '#0f172a',
+      'slate-950': '#020617',
+      'zinc-900': '#18181b',
+      'neutral-900': '#171717',
+      'stone-900': '#1c1917',
+      'gray-900': '#111827',
+      // Light backgrounds
+      'slate-50': '#f8fafc',
+      'zinc-50': '#fafafa',
+      'neutral-50': '#fafafa',
+      'stone-50': '#fafaf9',
+      'gray-50': '#f9fafb',
+      'white': '#ffffff'
+    };
+    const bgHex = bgColorMap[backgroundColor] || bgColorMap['slate-900'];
+    const scrollbarTrack = isLightBg ? '#e2e8f0' : '#1e293b';
+    const scrollbarThumb = isLightBg ? '#94a3b8' : '#475569';
+    
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6802,27 +6887,33 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${courseName}</title>
   <script src="https://cdn.tailwindcss.com"><\/script>
+  <link href="${font.url}" rel="stylesheet">
   <style>
-    body { background: #0f172a; }
+    body { 
+      background: ${bgHex} !important;
+      ${font.css}
+    }
+    html { background: ${bgHex} !important; }
     .custom-scroll::-webkit-scrollbar { width: 6px; }
-    .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    .custom-scroll::-webkit-scrollbar-track { background: ${scrollbarTrack}; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: ${scrollbarThumb}; border-radius: 3px; }
+    ${customCSS ? `\n    /* Custom CSS from Settings */\n    ${customCSS}` : ''}
   </style>
 </head>
-<body class="min-h-screen text-white custom-scroll">
+<body class="min-h-screen ${textColor} custom-scroll">
   <div class="max-w-4xl mx-auto px-6 py-12">
     <header class="mb-12 text-center">
-      <h1 class="text-4xl font-black text-white uppercase tracking-tight mb-2">${courseName}</h1>
-      <p class="text-sm text-slate-400">Select a module to begin</p>
-      <p class="text-xs text-slate-600 mt-2 font-mono">Last updated: ${new Date(manifest.updatedAt).toLocaleDateString()}</p>
+      <h1 class="text-4xl font-black ${textColor} uppercase tracking-tight mb-2">${courseName}</h1>
+      <p class="text-sm ${textColorSecondary}">Select a module to begin</p>
+      <p class="text-xs ${textColorTertiary} mt-2 font-mono">Last updated: ${new Date(manifest.updatedAt).toLocaleDateString()}</p>
     </header>
     
     <nav class="space-y-4">
       ${moduleListHTML}
     </nav>
     
-    <footer class="mt-16 pt-8 border-t border-slate-800 text-center">
-      <p class="text-xs text-slate-600">Built with Course Factory</p>
+    <footer class="mt-16 pt-8 border-t ${borderColor} text-center">
+      <p class="text-xs ${textColorTertiary}">Built with Course Factory</p>
     </footer>
   </div>
 </body>
@@ -6837,7 +6928,36 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     const courseSettings = projectData["Course Settings"] || {};
     const courseName = courseSettings.courseName || projectData["Current Course"]?.name || "Course";
     const accentColor = courseSettings.accentColor || "sky";
+    const backgroundColor = courseSettings.backgroundColor || "slate-900";
+    const fontFamily = courseSettings.fontFamily || "inter";
+    const customCSS = courseSettings.customCSS || "";
     const enabledTools = (projectData["Global Toolkit"] || []).filter(t => t.enabled);
+    
+    const font = getFontFamily(fontFamily);
+    
+    // Map Tailwind color names to hex values for background
+    const bgColorMap = {
+      'slate-900': '#0f172a',
+      'slate-950': '#020617',
+      'zinc-900': '#18181b',
+      'neutral-900': '#171717',
+      'stone-900': '#1c1917',
+      'gray-900': '#111827',
+      'slate-50': '#f8fafc',
+      'zinc-50': '#fafafa',
+      'neutral-50': '#fafafa',
+      'stone-50': '#fafaf9',
+      'gray-50': '#f9fafb',
+      'white': '#ffffff'
+    };
+    const bgHex = bgColorMap[backgroundColor] || bgColorMap['slate-900'];
+    
+    // Determine if background is light (for text color)
+    const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
+    const textColor = isLightBg ? 'text-slate-900' : 'text-white';
+    const textColorSecondary = isLightBg ? 'text-slate-600' : 'text-slate-400';
+    const textColorTertiary = isLightBg ? 'text-slate-500' : 'text-slate-500';
+    const cardBorder = isLightBg ? 'border-slate-300' : 'border-slate-700';
 
     // Check module type
     let itemCode = mod.code || {};
@@ -6892,12 +7012,14 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
           buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">📖 Read</button>`;
         }
         
-        return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 p-6 bg-slate-900/80 rounded-xl border border-slate-700 ${borderClass}">
+        const cardBg = isLightBg ? 'bg-white/80' : 'bg-slate-900/80';
+        
+        return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 p-6 ${cardBg} rounded-xl border ${cardBorder} ${borderClass}">
           <div class="flex items-center gap-6">
             <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center ${textColorClass} font-black italic text-xl border ${borderColorClass}">${mat.number || '00'}</div>
             <div>
-              <h3 class="text-lg font-bold text-white uppercase italic">${mat.title}</h3>
-              <p class="text-xs text-slate-400 font-mono">${mat.description || ''}</p>
+              <h3 class="text-lg font-bold ${textColor} uppercase italic">${mat.title}</h3>
+              <p class="text-xs ${textColorSecondary} font-mono">${mat.description || ''}</p>
             </div>
           </div>
           <div class="flex gap-3 w-full md:w-auto">${buttonsHTML}</div>
@@ -6907,38 +7029,38 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       moduleContentHTML = `
         <div class="space-y-8">
           <div class="mb-8">
-            <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Course <span class="text-sky-500">Materials</span></h2>
-            <p class="text-xs text-slate-400 font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
+            <h2 class="text-3xl font-black ${textColor} italic uppercase tracking-tighter">Course <span class="text-${accentColor}-500">Materials</span></h2>
+            <p class="text-xs ${textColorSecondary} font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
           </div>
-          <div id="pdf-viewer-container" class="hidden mb-8 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl">
-            <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-slate-700">
-              <span id="viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Document Viewer</span>
-              <button onclick="closeViewer()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
+          <div id="pdf-viewer-container" class="hidden mb-8 ${isLightBg ? 'bg-white' : 'bg-black'} rounded-xl border ${cardBorder} overflow-hidden shadow-2xl">
+            <div class="flex justify-between items-center p-3 ${isLightBg ? 'bg-slate-100' : 'bg-slate-800'} border-b ${cardBorder}">
+              <span id="viewer-title" class="text-xs font-bold ${textColor} uppercase tracking-widest px-2">Document Viewer</span>
+              <button onclick="closeViewer()" class="text-xs text-rose-400 hover:${isLightBg ? 'text-slate-900' : 'text-white'} font-bold uppercase tracking-widest px-2">Close X</button>
             </div>
             <iframe id="pdf-frame" src="" width="100%" height="600" style="border:none;"></iframe>
           </div>
-          <div id="digital-reader-container" class="hidden mb-8 bg-slate-900 rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">
-            <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-emerald-500/30">
+          <div id="digital-reader-container" class="hidden mb-8 ${isLightBg ? 'bg-white' : 'bg-slate-900'} rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">
+            <div class="flex justify-between items-center p-3 ${isLightBg ? 'bg-slate-100' : 'bg-slate-800'} border-b border-emerald-500/30">
               <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">📖 Digital Resource</span>
-              <button onclick="closeDigitalReader()" class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
+              <button onclick="closeDigitalReader()" class="text-xs text-rose-400 hover:${isLightBg ? 'text-slate-900' : 'text-white'} font-bold uppercase tracking-widest px-2">Close X</button>
             </div>
             <div class="flex" style="height: 600px;">
-              <div id="reader-toc" class="w-64 bg-slate-950 border-r border-slate-700 p-4 overflow-y-auto hidden md:block">
-                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Contents</h4>
+              <div id="reader-toc" class="w-64 ${isLightBg ? 'bg-slate-50' : 'bg-slate-950'} border-r ${cardBorder} p-4 overflow-y-auto hidden md:block">
+                <h4 class="text-xs font-bold ${textColorSecondary} uppercase tracking-wider mb-4">Contents</h4>
                 <div id="reader-toc-items" class="space-y-1"></div>
               </div>
               <div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">
-                <div id="reader-body" class="prose prose-invert max-w-none"></div>
-                <div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-700">
-                  <button id="prev-btn" onclick="prevChapter()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">← Previous</button>
-                  <span id="reader-progress" class="text-xs text-slate-500"></span>
+                <div id="reader-body" class="prose ${isLightBg ? 'prose-slate' : 'prose-invert'} max-w-none"></div>
+                <div class="flex justify-between items-center mt-8 pt-4 border-t ${cardBorder}">
+                  <button id="prev-btn" onclick="prevChapter()" class="px-4 py-2 ${isLightBg ? 'bg-slate-200 hover:bg-slate-300 text-slate-900' : 'bg-slate-800 hover:bg-slate-700 text-white'} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">← Previous</button>
+                  <span id="reader-progress" class="text-xs ${textColorSecondary}"></span>
                   <button id="next-btn" onclick="nextChapter()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next →</button>
                 </div>
               </div>
             </div>
           </div>
           <div id="materials-list" class="grid grid-cols-1 gap-4">
-            ${materials.length > 0 ? materialCards : '<p class="text-center text-slate-500 italic py-8">No materials available.</p>'}
+            ${materials.length > 0 ? materialCards : `<p class="text-center ${textColorSecondary} italic py-8">No materials available.</p>`}
           </div>
         </div>`;
       
@@ -7063,23 +7185,25 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     else if (isAssessmentsModule) {
       const assessments = (mod.assessments || []).filter(a => !a.hidden).sort((a, b) => (a.order || 0) - (b.order || 0));
       
+      const cardBg = isLightBg ? 'bg-white/80' : 'bg-slate-900/80';
+      
       // Generate assessment list
       const assessmentListHTML = assessments.map((assess, idx) => {
         const typeLabel = assess.type === 'quiz' ? 'Multiple Choice' : assess.type === 'longanswer' ? 'Long Answer' : assess.type === 'print' ? 'Print & Submit' : 'Mixed Assessment';
         const typeIcon = assess.type === 'quiz' ? '📝' : assess.type === 'longanswer' ? '✍️' : assess.type === 'print' ? '🖨️' : '📋';
         
-        return `<div class="p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
+        return `<div class="p-6 ${cardBg} rounded-xl border ${cardBorder} hover:border-${accentColor}-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
           <div class="flex items-center justify-between">
             <div class="flex-1">
               <div class="flex items-center gap-3 mb-2">
                 <span class="text-3xl">${typeIcon}</span>
                 <div>
-                  <h3 class="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">${assess.title}</h3>
-                  <p class="text-xs text-slate-400 uppercase tracking-wider">${typeLabel}</p>
+                  <h3 class="text-xl font-bold ${textColor} group-hover:text-${accentColor}-400 transition-colors">${assess.title}</h3>
+                  <p class="text-xs ${textColorSecondary} uppercase tracking-wider">${typeLabel}</p>
                 </div>
               </div>
             </div>
-            <div class="text-purple-400 group-hover:translate-x-1 transition-transform">
+            <div class="text-${accentColor}-400 group-hover:translate-x-1 transition-transform">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
               </svg>
@@ -7091,7 +7215,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       // Generate individual assessment containers
       const assessmentContainersHTML = assessments.map((assess, idx) => {
         return `<div id="assessment-${idx}" class="assessment-container hidden">
-          <button onclick="backToAssessmentList()" class="mb-6 flex items-center gap-2 text-purple-400 hover:text-purple-300 font-bold text-sm transition-colors">
+          <button onclick="backToAssessmentList()" class="mb-6 flex items-center gap-2 text-${accentColor}-400 hover:text-${accentColor}-300 font-bold text-sm transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
             </svg>
@@ -7107,11 +7231,11 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       moduleContentHTML = `
         <div class="space-y-8">
           <div class="mb-8">
-            <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">Assessment <span class="text-purple-500">Center</span></h2>
-            <p class="text-xs text-slate-400 font-mono uppercase tracking-widest mt-2">Quizzes, tests, and reflection exercises.</p>
+            <h2 class="text-3xl font-black ${textColor} italic uppercase tracking-tighter">Assessment <span class="text-${accentColor}-500">Center</span></h2>
+            <p class="text-xs ${textColorSecondary} font-mono uppercase tracking-widest mt-2">Quizzes, tests, and reflection exercises.</p>
           </div>
           <div id="assessment-list" class="grid grid-cols-1 gap-4">
-            ${assessments.length > 0 ? assessmentListHTML : '<p class="text-center text-slate-500 italic py-8">No assessments available.</p>'}
+            ${assessments.length > 0 ? assessmentListHTML : `<p class="text-center ${textColorSecondary} italic py-8">No assessments available.</p>`}
           </div>
           ${assessmentContainersHTML}
         </div>`;
@@ -7168,27 +7292,32 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${mod.title} | ${courseName}</title>
   <script src="https://cdn.tailwindcss.com"><\/script>
+  <link href="${font.url}" rel="stylesheet">
   <style>
-    body { background: #0f172a; }
+    body { 
+      background: ${bgHex};
+      ${font.css}
+    }
     .custom-scroll::-webkit-scrollbar { width: 6px; }
-    .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-    .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); }
+    .custom-scroll::-webkit-scrollbar-track { background: ${isLightBg ? '#e2e8f0' : '#1e293b'}; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: ${isLightBg ? '#94a3b8' : '#475569'}; border-radius: 3px; }
+    .glass { background: ${isLightBg ? 'rgba(255, 255, 255, 0.8)' : 'rgba(15, 23, 42, 0.8)'}; backdrop-filter: blur(10px); }
     .material-card { transition: all 0.2s; }
     .material-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
     ${moduleCSS}
+    ${customCSS ? `\n    /* Custom CSS from Settings */\n    ${customCSS}` : ''}
   </style>
 </head>
-<body class="min-h-screen text-white custom-scroll">
-  <header class="sticky top-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+<body class="min-h-screen ${textColor} custom-scroll">
+  <header class="sticky top-0 z-50 ${isLightBg ? 'bg-white/95' : 'bg-slate-900/95'} backdrop-blur border-b ${cardBorder}">
     <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-      <a href="../index.html" class="flex items-center gap-2 text-slate-400 hover:text-${accentColor}-400 transition-colors text-sm font-bold">
+      <a href="../index.html" class="flex items-center gap-2 ${textColorSecondary} hover:text-${accentColor}-400 transition-colors text-sm font-bold">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
         </svg>
         Back to Course
       </a>
-      <h1 class="text-sm font-bold text-white uppercase tracking-wider">${mod.title}</h1>
+      <h1 class="text-sm font-bold ${textColor} uppercase tracking-wider">${mod.title}</h1>
     </div>
   </header>
   
@@ -8642,6 +8771,8 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
     instructor: "",
     academicYear: "",
     accentColor: "sky",
+    backgroundColor: "slate-900", // Default dark background
+    fontFamily: "inter", // Default font
     customCSS: "",
     compilationDefaults: {
       includeMaterials: true,
@@ -8832,7 +8963,86 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
             </div>
             
             <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Background Color</label>
+              <p className="text-[10px] text-slate-500 mb-2 italic">Applies to hub pages and compiled sites</p>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[10px] text-slate-500 mb-2 font-bold">Dark Options</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: 'slate-900', label: 'Dark Slate', class: 'bg-slate-900 border-slate-700' },
+                      { value: 'slate-950', label: 'Darker Slate', class: 'bg-slate-950 border-slate-800' },
+                      { value: 'zinc-900', label: 'Dark Zinc', class: 'bg-zinc-900 border-zinc-700' },
+                      { value: 'neutral-900', label: 'Dark Neutral', class: 'bg-neutral-900 border-neutral-700' },
+                      { value: 'stone-900', label: 'Dark Stone', class: 'bg-stone-900 border-stone-700' },
+                      { value: 'gray-900', label: 'Dark Gray', class: 'bg-gray-900 border-gray-700' }
+                    ].map(bg => (
+                      <button
+                        key={bg.value}
+                        onClick={() => updateSettings({ backgroundColor: bg.value })}
+                        className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                          (settings.backgroundColor || 'slate-900') === bg.value
+                            ? 'border-white bg-slate-700'
+                            : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                        }`}
+                      >
+                        <div className={`w-6 h-6 rounded border ${bg.class}`}></div>
+                        <span className="text-xs text-white">{bg.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-500 mb-2 font-bold">Light Options</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: 'slate-50', label: 'Light Slate', class: 'bg-slate-50 border-slate-300', textClass: 'text-slate-900' },
+                      { value: 'zinc-50', label: 'Light Zinc', class: 'bg-zinc-50 border-zinc-300', textClass: 'text-zinc-900' },
+                      { value: 'neutral-50', label: 'Light Neutral', class: 'bg-neutral-50 border-neutral-300', textClass: 'text-neutral-900' },
+                      { value: 'stone-50', label: 'Light Stone', class: 'bg-stone-50 border-stone-300', textClass: 'text-stone-900' },
+                      { value: 'gray-50', label: 'Light Gray', class: 'bg-gray-50 border-gray-300', textClass: 'text-gray-900' },
+                      { value: 'white', label: 'White', class: 'bg-white border-gray-200', textClass: 'text-gray-900' }
+                    ].map(bg => (
+                      <button
+                        key={bg.value}
+                        onClick={() => updateSettings({ backgroundColor: bg.value })}
+                        className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                          (settings.backgroundColor || 'slate-900') === bg.value
+                            ? 'border-white bg-slate-700'
+                            : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                        }`}
+                      >
+                        <div className={`w-6 h-6 rounded border ${bg.class}`}></div>
+                        <span className="text-xs text-white">{bg.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Font Family</label>
+              <p className="text-[10px] text-slate-500 mb-2 italic">Primary font for hub pages and compiled sites</p>
+              <select
+                value={settings.fontFamily || 'inter'}
+                onChange={(e) => updateSettings({ fontFamily: e.target.value })}
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm"
+              >
+                <option value="inter">Inter (Default)</option>
+                <option value="roboto">Roboto</option>
+                <option value="opensans">Open Sans</option>
+                <option value="lato">Lato</option>
+                <option value="montserrat">Montserrat</option>
+                <option value="poppins">Poppins</option>
+                <option value="raleway">Raleway</option>
+                <option value="nunito">Nunito</option>
+              </select>
+            </div>
+            
+            <div>
               <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Custom CSS (Advanced)</label>
+              <p className="text-[10px] text-slate-500 mb-2 italic">Applies to all compiled outputs (legacy, beta single-page, and beta multi-file hub)</p>
               <textarea 
                 value={settings.customCSS || ''}
                 onChange={(e) => updateSettings({ customCSS: e.target.value })}
