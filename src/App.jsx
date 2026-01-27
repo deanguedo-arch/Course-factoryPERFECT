@@ -1,4 +1,4 @@
-﻿import * as React from 'react';
+import * as React from 'react';
 import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Wrench, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X, Edit, Clock, RotateCcw } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
@@ -392,7 +392,7 @@ const PROJECT_DATA = {
           html: `<div id="tool-calculator" class="hidden fixed bottom-4 right-4 bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-2xl z-50">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-sm font-bold text-white">Calculator</h3>
-              <button onclick="toggleTool('calculator')" class="text-slate-400 hover:text-white">âœ•</button>
+              <button onclick="toggleTool('calculator')" class="text-slate-400 hover:text-white">&times;</button>
             </div>
             <input id="calc-display" type="text" readonly class="w-full mb-2 p-2 bg-slate-900 border border-slate-700 rounded text-right text-white" value="0">
             <div class="grid grid-cols-4 gap-2">
@@ -447,7 +447,7 @@ const PROJECT_DATA = {
           html: `<div id="tool-timer" class="hidden fixed bottom-4 left-4 bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-2xl z-50 w-64">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-sm font-bold text-white">Timer</h3>
-              <button onclick="toggleTool('timer')" class="text-slate-400 hover:text-white">âœ•</button>
+              <button onclick="toggleTool('timer')" class="text-slate-400 hover:text-white">&times;</button>
             </div>
             <div id="timer-display" class="text-4xl font-bold text-center text-white mb-3">05:00</div>
             <div class="flex gap-2">
@@ -7307,6 +7307,10 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         const borderColorClass = colorClass !== 'slate' ? `border-${colorClass}-500/20` : 'border-slate-700';
         const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : secondaryTextClass;
         const buttonColorClass = `${buttonBgClass} ${buttonHoverClass}`;
+        const badgeLabel = getMaterialBadgeLabel(mat) || mat.number || '';
+        const badgeTextClass = mat.mediaType && mat.mediaType !== 'number'
+          ? 'text-[9px] font-black uppercase tracking-widest'
+          : 'font-black italic text-xl';
         
         const escapedViewUrl = (mat.viewUrl || '').replace(/'/g, "\\'");
         const escapedTitle = (mat.title || '').replace(/'/g, "\\'");
