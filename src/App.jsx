@@ -284,7 +284,7 @@ const PROJECT_DATA = {
                 <header class="mb-8 text-center"><h1 class="text-3xl font-black italic tracking-tighter text-white uppercase mb-2 text-sky-500">Elite Operator Toolkit</h1><p class="text-[10px] font-mono uppercase tracking-[0.3em] text-slate-500 mb-6 font-bold underline decoration-sky-500/30 underline-offset-4">Regulation Engine: Tactical Assignment</p><div class="flex flex-wrap justify-center gap-3 mb-6 bg-slate-900/50 p-3 rounded-xl border border-slate-800 max-w-2xl mx-auto"><div class="flex items-center gap-2 px-3"><div id="p1-save-indicator" class="w-2 h-2 rounded-full bg-slate-600"></div><span id="p1-save-text" class="text-[9px] uppercase font-bold text-slate-500 tracking-widest">System Ready</span></div><div class="w-px h-6 bg-slate-800 mx-2 hidden sm:block"></div><button onclick="p1_downloadBackup()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-[10px] uppercase font-bold tracking-wider transition-colors border border-slate-700">Save Backup File</button><button onclick="document.getElementById('p1-file-upload').click()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-sky-400 px-3 py-1.5 rounded-lg text-[10px] uppercase font-bold tracking-wider transition-colors border border-slate-700">Load Backup</button><input type="file" id="p1-file-upload" accept=".json" style="display: none;" onchange="p1_loadBackup(this)"></div><div class="flex justify-center gap-2 overflow-x-auto pb-2 px-2"><button onclick="p1_showStep(0)" class="mod-nav-btn active px-4 py-2 rounded-lg border border-slate-700 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">Briefing</button><button onclick="p1_showStep(1)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-700 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">01 Stress Reset</button><button onclick="p1_showStep(2)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-700 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">02 Arousal</button><button onclick="p1_showStep(3)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-800 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">03 Targeting</button><button onclick="p1_showStep(4)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-800 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">04 Confidence</button><button onclick="p1_showStep(5)" class="mod-nav-btn px-4 py-2 rounded-lg border border-slate-800 text-[10px] font-bold uppercase tracking-widest mono transition-all flex-shrink-0">Review & Print</button></div></header>
                 <div class="glass rounded-3xl shadow-2xl overflow-hidden min-h-[500px]">
                     <div id="p1-step0" class="step-content active"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-sky-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">System Briefing: The Regulation Engine</h2></div><div class="p-8 space-y-8 text-center"><div class="max-w-3xl mx-auto space-y-6 text-left"><p class="text-slate-400 text-sm italic leading-relaxed">Elite performance is defined by the ability to regulate your internal operating system under pressure. While physical skill sets the floor, your mental fitness sets the ceiling. This assignment uses four <strong>Manual Overrides</strong> to ensure you stay in your <strong>Ideal Performance State (IPS)</strong>.</p><div class="bg-sky-500/10 border border-sky-500/30 p-4 rounded-xl flex flex-col gap-4 mb-2"><h3 class="text-sky-400 font-bold uppercase text-[10px] tracking-widest">Dashboard Logic: Read then Regulate</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="p-3 bg-slate-900/50 rounded border border-slate-700"><span class="text-[9px] font-black text-rose-400 uppercase block mb-1">Somatic Indicators (Body)</span><p class="text-[10px] text-slate-400">Cold hands, butterflies, muscle tension, sweating.</p></div><div class="p-3 bg-slate-900/50 rounded border border-slate-700"><span class="text-[9px] font-black text-amber-400 uppercase block mb-1">Cognitive Indicators (Mind)</span><p class="text-[10px] text-slate-400">Negative self-talk, doubt, inability to concentrate.</p></div></div></div><div class="flex justify-center pt-6"><button onclick="p1_showStep(1)" class="bg-sky-600 px-12 py-4 rounded-xl text-white font-black uppercase text-xs tracking-[0.2em] hover:bg-sky-500 transition-all shadow-lg active:scale-95">Initialize Stations</button></div></div></div></div>
-                    <div id="p1-step1" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-rose-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 01: The Stress Loop Reset</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">The Pivot Point</h3><p class="text-sm text-slate-300 leading-relaxed">Breathing is your manual override switch. It intercepts the Stress Process Loop at the moment a demand is perceived as a "threat." <strong class="text-rose-400">The goal is to identify a specific time you can execute this trigger and how the breath anchor will help you stay present in the moment.</strong></p><div class="bg-rose-500/10 p-3 rounded border border-rose-500/30"><span class="text-[9px] text-rose-300 font-bold uppercase">Warning:</span><p class="text-[10px] text-rose-200">Unchecked loop acceleration leads to performance crash.</p></div></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-sky-500 mb-2 mono">Deployment Scenario</label><input type="text" id="p1_breath_scenario" oninput="p1_saveData()" placeholder="When exactly will you use this? (e.g. Between points...)" class="w-full rounded-lg p-3 text-xs italic"><p class="helper-text">Identify a specific time you can execute this trigger.</p></div><div><label class="block text-[10px] font-bold uppercase text-sky-500 mb-2 mono">Centering Action Detail</label><textarea id="p1_breath_detail" oninput="p1_saveData()" placeholder="Describe your rhythmic diaphragmatic breathing habit..." class="w-full h-32 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">How will this breath anchor help you stay present in the moment?</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(0)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">â† Back</button><button onclick="p1_showStep(2)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station â†’</button></div></div></div>
+<div id="p1-step1" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-rose-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 01: The Stress Loop Reset</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">The Pivot Point</h3><p class="text-sm text-slate-300 leading-relaxed">Breathing is your manual override switch. It intercepts the Stress Process Loop at the moment a demand is perceived as a "threat." <strong class="text-rose-400">The goal is to identify a specific time you can execute this trigger and how the breath anchor will help you stay present in the moment.</strong></p><div class="bg-rose-500/10 p-3 rounded border border-rose-500/30"><span class="text-[9px] text-rose-300 font-bold uppercase">Warning:</span><p class="text-[10px] text-rose-200">Unchecked loop acceleration leads to performance crash.</p></div></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-sky-500 mb-2 mono">Deployment Scenario</label><input type="text" id="p1_breath_scenario" oninput="p1_saveData()" placeholder="When exactly will you use this? (e.g. Between points...)" class="w-full rounded-lg p-3 text-xs italic"><p class="helper-text">Identify a specific time you can execute this trigger.</p></div><div><label class="block text-[10px] font-bold uppercase text-sky-500 mb-2 mono">Centering Action Detail</label><textarea id="p1_breath_detail" oninput="p1_saveData()" placeholder="Describe your rhythmic diaphragmatic breathing habit..." class="w-full h-32 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">How will this breath anchor help you stay present in the moment?</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(0)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">&larr; Back</button><button onclick="p1_showStep(2)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station &rarr;</button></div></div></div>
                     <div id="p1-step2" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-amber-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 02: Arousal Volume Control</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">The Inverted-U</h3><p class="text-sm text-slate-300 leading-relaxed">Performance peaks at moderate arousal. You must 'down-regulate' to discharge tension or 'up-regulate' to wake the nervous system.</p></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Down-Regulation (Relaxation)</label><p class="text-[10px] text-slate-400 italic mb-2"><strong>PMR (Progressive Muscle Relaxation)</strong> is a technique where you systematically tense and then relax specific muscle groups to release physical tension.</p><textarea id="p1_relax_plan" oninput="p1_saveData()" placeholder="List muscle groups for your PMR routine..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Describe your routine to discharge somatic tension.</p></div><div><label class="block text-[10px] font-bold uppercase text-rose-500 mb-2 mono">Up-Regulation (Activation)</label><p class="text-[10px] text-slate-400 italic mb-2"><strong>Up-Regulation</strong> involves using physical actions or environmental triggers to increase heart rate and alertness when energy is too low.</p><textarea id="p1_active_plan" oninput="p1_saveData()" placeholder="List your 'Psych-Up' triggers (Music, Cues, Physical actions)..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Triggers used to discharge apathy and enter the zone.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(1)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">â† Back</button><button onclick="p1_showStep(3)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station â†’</button></div></div></div>
                     <div id="p1-step3" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 03: The Focus Filter</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">Attentional Narrowing</h3><p class="text-sm text-slate-300 leading-relaxed">Under high stress, your peripheral vision and mental focus shrinkâ€”often called <strong>"Tunnel Vision."</strong> You lose the big picture. Cue words act as "Decoder Keys" that force the system to lock back onto task-relevant targets.</p><div class="bg-emerald-500/10 p-3 rounded border border-emerald-500/30"><span class="text-[9px] text-emerald-300 font-bold uppercase">The Goal:</span><p class="text-[10px] text-emerald-200">Shift from internal worry (Emotion) to external cues (Action).</p></div></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-sky-400 mb-2 mono">Instructional Decoder</label><input type="text" id="p1_cue_inst" oninput="p1_saveData()" placeholder="e.g., 'Elbows in', 'Smooth'..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">Create a 1-2 word key specifically to FIX sloppy mechanics or technical errors.</p></div><div><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Motivational Decoder</label><input type="text" id="p1_cue_mot" oninput="p1_saveData()" placeholder="e.g., 'Power', 'Explode'..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">Create a 1-2 word key specifically to FIX low energy or effort when drive is fading.</p></div><div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-2 mono italic underline">Radar Jamming Scenario</label><textarea id="p1_jam_scenario" oninput="p1_saveData()" placeholder="Describe a specific high-pressure moment where you lose focus..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Identify the exact moment panic sets in and which cue breaks the jam.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(2)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">â† Back</button><button onclick="p1_showStep(4)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station â†’</button></div></div></div>
                     <div id="p1-step4" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-sky-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 04: Confidence Builder</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">Certainty Logic</h3><p class="text-sm text-slate-300 leading-relaxed">Uncertainty generates anxiety; Certainty generates confidence. You cannot control the outcome (Winning), but you can control the process (Mechanics). By shifting your focus to what you control, you build a "High Confidence" state.</p><div class="bg-slate-900 p-4 border border-slate-700 rounded-xl space-y-2"><h4 class="text-[10px] font-black text-white uppercase">S.M.A.R.T. Definition</h4><ul class="text-[9px] text-slate-400 space-y-1 font-mono"><li><strong class="text-sky-400">S</strong>PECIFIC: Clear and defined.</li><li><strong class="text-sky-400">M</strong>EASURABLE: Can be tracked.</li><li><strong class="text-sky-400">A</strong>CHIEVABLE: Realistic to your skill.</li><li><strong class="text-sky-400">R</strong>ELEVANT: Matters to your sport.</li><li><strong class="text-sky-400">T</strong>IME-BOUND: Has a deadline.</li></ul></div></div><div class="space-y-6"><div class="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl"><label class="block text-[10px] font-bold uppercase text-emerald-400 mb-2 mono underline italic">Process Goal (100% Control)</label><input type="text" id="p1_goal_proc" oninput="p1_saveData()" placeholder="Specific form or mechanics goal..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">This goal builds high confidence because it is entirely under your power.</p></div><div class="grid grid-cols-2 gap-4"><div class="p-4 bg-slate-900 border border-slate-800 rounded-xl"><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Performance Goal</label><input type="text" id="p1_goal_perf" oninput="p1_saveData()" placeholder="e.g. 80% accuracy..." class="w-full rounded-lg p-2 text-xs italic"><p class="helper-text">Partial Control.</p></div><div class="p-4 bg-slate-900 border border-slate-800 rounded-xl"><label class="block text-[10px] font-bold uppercase text-rose-500 mb-2 mono">Outcome Goal</label><input type="text" id="p1_goal_out" oninput="p1_saveData()" placeholder="e.g. Winning..." class="w-full rounded-lg p-2 text-xs italic"><p class="helper-text">Low Control.</p></div></div><div><label class="block text-[10px] font-bold uppercase text-white mb-2 mono italic underline leading-none">Final S.M.A.R.T. Goal Statement</label><textarea id="p1_smart_final" oninput="p1_saveData()" placeholder="Write out your full goal statement here using the SMART criteria above..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none border-2 border-slate-700 focus:border-sky-500"></textarea><p class="helper-text">Combine your goals into one clear sentence.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(3)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">â† Back</button><button onclick="p1_showStep(5)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Review & Export â†’</button></div></div>
@@ -795,7 +795,7 @@ const generateMasterShell = (data) => {
 </head>
 <body class="flex" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
     <!-- Sidebar Toggle Button (Works on ALL screen sizes) -->
-    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation" title="Toggle Menu">â˜°</button>
+    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation" title="Toggle Menu">&#9776;</button>
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
     <div id="sidebar-nav" class="w-64 glass-panel flex flex-col h-full z-50">
@@ -1363,6 +1363,20 @@ function validateUrl(url) {
     // If URL parsing fails, it might be a relative URL - allow it but escape it
     return { isValid: true, safeUrl: escapeHtml(trimmed) };
   }
+}
+
+/**
+ * Material badge label (ASCII-only for reliable export)
+ */
+function getMaterialBadgeLabel(mat) {
+  if (!mat) return '';
+  const type = (mat.mediaType || '').toLowerCase();
+  if (type === 'book') return 'BOOK';
+  if (type === 'pdf') return 'PDF';
+  if (type === 'video') return 'VID';
+  if (type === 'slides') return 'SLD';
+  if (type === 'number' || !type) return mat.number || '';
+  return mat.number || '';
 }
 
 /**
@@ -1960,6 +1974,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     viewUrl: '',
     downloadUrl: '',
     color: 'slate',
+    mediaType: 'number',
     assignedModules: [],
     hasDigitalContent: false,
     digitalContent: null,
@@ -2142,7 +2157,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
             placeholder="Type your answer here..."
             class="w-full h-48 bg-slate-950 border border-slate-700 rounded-lg p-4 text-white resize-none focus:border-purple-500 focus:outline-none print-response"
           ></textarea>
-          <p class="text-xs text-slate-500 italic mt-2 no-print">Auto-saved to browser âœ“</p>
+          <p class="text-xs text-slate-500 italic mt-2 no-print">Auto-saved to browser</p>
         </div>
       `).join('');
 
@@ -2182,23 +2197,23 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
           <!-- Action Buttons -->
           <div class="flex flex-wrap gap-3 mt-8 no-print">
             <button type="button" onclick="${quizId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              ðŸ”„ Reset
+              Reset
             </button>
             <button type="button" onclick="${quizId}_download()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              ðŸ“¥ Download Backup
+              Download Backup
             </button>
             <button type="button" onclick="document.getElementById('${quizId}-upload').click()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              ðŸ“¤ Upload Backup
+              Upload Backup
             </button>
             <button type="button" onclick="${quizId}_generateReport()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-              ðŸ–¨ï¸ Print & Submit
+              Print & Submit
             </button>
           </div>
           <input type="file" id="${quizId}-upload" accept=".json" style="display: none;" onchange="${quizId}_loadBackup(this)" />
 
           <!-- Status Messages -->
           <div id="${quizId}-loaded" class="hidden mt-6 p-4 rounded-xl bg-blue-900/20 border border-blue-500">
-            <p class="text-blue-400 font-bold">âœ… Backup loaded successfully!</p>
+            <p class="text-blue-400 font-bold">Backup loaded successfully!</p>
           </div>
 
           <!-- Reset Confirmation Modal -->
@@ -2216,7 +2231,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
           <!-- Print Instructions -->
           <div class="mt-8 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg no-print">
             <p class="text-amber-300 text-sm">
-              ðŸ“‹ <strong>Instructions:</strong> Complete all questions, then click "Print & Submit" to generate a clean printable report.
+              <strong>Instructions:</strong> Complete all questions, then click "Print & Submit" to generate a clean printable report.
             </p>
           </div>
         </div>
@@ -2439,7 +2454,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
             <button type="button" onclick="window.print()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-8 rounded-lg">Print & Submit</button>
           </div>
           <div class="mt-4 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg">
-            <p class="text-amber-300 text-sm">ðŸ“‹ <strong>Reminder:</strong> Print this page, complete the assignment, and submit to your instructor.</p>
+            <p class="text-amber-300 text-sm"><strong>Reminder:</strong> Print this page, complete the assignment, and submit to your instructor.</p>
                 </div>
             </div>
         </div>`;
@@ -2934,31 +2949,31 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                 onClick={() => setMode('ADD')} 
                                 className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'ADD' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
                             >
-                                âž• Add Questions
+                                <Plus size={14} /> Add Questions
                             </button>
                             <button 
                                 onClick={() => setMode('MASTER')} 
                                 className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'MASTER' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
                             >
-                                â­ Master Assessment
+                                <Sparkles size={14} /> Master Assessment
                             </button>
                             <button 
                                 onClick={() => setMode('MANAGE')} 
                                 className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'MANAGE' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
                             >
-                                ðŸ“‹ Manage
+                                <Clipboard size={14} /> Manage
                             </button>
                             <button 
                                 onClick={() => setMode('MIGRATE')} 
                                 className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'MIGRATE' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
                             >
-                                ðŸ”„ Migrate
+                                <RefreshCw size={14} /> Migrate
                             </button>
                             <button 
                                 onClick={() => setMode('IMPORT')} 
                                 className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'IMPORT' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
                             >
-                                ðŸ“„ Smart Import
+                                <FileJson size={14} /> Smart Import
                             </button>
                         </div>
 
@@ -2976,7 +2991,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                         }} 
                                         className={`flex-1 py-3 px-4 rounded text-xs font-bold transition-all ${currentQuestionType === 'multiple-choice' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
                                     >
-                                        ðŸ“ Multiple Choice
+                                        <CheckCircle size={14} /> Multiple Choice
                                     </button>
                                     <button 
                                         onClick={() => {
@@ -2985,7 +3000,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                         }} 
                                         className={`flex-1 py-3 px-4 rounded text-xs font-bold transition-all ${currentQuestionType === 'long-answer' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
                                     >
-                                        âœï¸ Long Answer
+                                        <Edit size={14} /> Long Answer
                                     </button>
                         </div>
 
@@ -3335,7 +3350,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2 mb-1">
                                                                 <span className={`text-[9px] font-bold uppercase px-2 py-1 rounded ${q.type === 'multiple-choice' ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                                                                    {q.type === 'multiple-choice' ? 'ðŸ“ MC' : 'âœï¸ LA'}
+                                                                    {q.type === 'multiple-choice' ? 'MC' : 'LA'}
                                                                 </span>
                                                             </div>
                                                             <p className="text-sm text-slate-200 font-medium mb-1">{q.question}</p>
@@ -3982,7 +3997,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                         {/* ADD NEW MATERIAL FORM */}
                         <div className="p-4 bg-slate-950 rounded-xl border border-pink-800/50 mb-4">
                             <h4 className="text-xs font-bold text-pink-300 mb-3">Add New Material</h4>
-                            <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                                 <input 
                                     type="text"
                                     value={materialForm.number}
@@ -4001,6 +4016,17 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                     <option value="emerald">Green</option>
                                     <option value="sky">Blue</option>
                                     <option value="purple">Purple</option>
+                                </select>
+                                <select
+                                    value={materialForm.mediaType}
+                                    onChange={(e) => setMaterialForm({...materialForm, mediaType: e.target.value})}
+                                    className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                >
+                                    <option value="number">Badge: Number</option>
+                                    <option value="book">Badge: Book</option>
+                                    <option value="pdf">Badge: PDF</option>
+                                    <option value="video">Badge: Video</option>
+                                    <option value="slides">Badge: Slides</option>
                                 </select>
                             </div>
                             <input 
@@ -4126,7 +4152,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         return;
                                     }
                                     addMaterial(materialForm);
-                                    setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
+                                    setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', mediaType: 'number', assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
                                 }}
                                 className="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-2 rounded text-xs flex items-center justify-center gap-2"
                             >
@@ -4144,70 +4170,77 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                     return <p className="text-xs text-slate-500 italic text-center py-4">No materials yet. Add one above.</p>;
                                 }
 
-                                return courseMaterials.sort((a, b) => a.order - b.order).map((mat) => (
-                                    <div key={mat.id} className="p-3 bg-slate-900 rounded-lg border border-slate-800 hover:bg-slate-800/70 transition-colors">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3 flex-1">
-                                                <div className={`w-8 h-8 rounded flex items-center justify-center text-${mat.color}-500 bg-${mat.color}-500/10 border border-${mat.color}-500/20 font-bold text-xs`}>
-                                                    {mat.number}
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className={`text-sm font-medium ${mat.hidden ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
-                                                        {mat.title} {mat.hidden && <span className="text-[9px] text-slate-600">(HIDDEN)</span>}
-                                                        {mat.digitalContent && <span className="ml-2 px-1.5 py-0.5 text-[9px] bg-emerald-900 text-emerald-400 rounded uppercase font-bold">Digital</span>}
+                                return courseMaterials.sort((a, b) => a.order - b.order).map((mat) => {
+                                    const badgeLabel = getMaterialBadgeLabel(mat);
+                                    const badgeTextClass = mat.mediaType && mat.mediaType !== 'number'
+                                        ? 'text-[9px] font-black uppercase tracking-widest'
+                                        : 'text-xs font-bold';
+                                    return (
+                                        <div key={mat.id} className="p-3 bg-slate-900 rounded-lg border border-slate-800 hover:bg-slate-800/70 transition-colors">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3 flex-1">
+                                                    <div className={`w-8 h-8 rounded flex items-center justify-center text-${mat.color}-500 bg-${mat.color}-500/10 border border-${mat.color}-500/20 ${badgeTextClass}`}>
+                                                        {badgeLabel}
                                                     </div>
-                                                    <div className="text-[10px] text-slate-500">{mat.description}</div>
+                                                    <div className="flex-1">
+                                                        <div className={`text-sm font-medium ${mat.hidden ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
+                                                            {mat.title} {mat.hidden && <span className="text-[9px] text-slate-600">(HIDDEN)</span>}
+                                                            {mat.digitalContent && <span className="ml-2 px-1.5 py-0.5 text-[9px] bg-emerald-900 text-emerald-400 rounded uppercase font-bold">Digital</span>}
+                                                        </div>
+                                                        <div className="text-[10px] text-slate-500">{mat.description}</div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <button 
-                                                    onClick={() => toggleMaterialHidden(mat.id)}
-                                                    className={`p-1.5 rounded transition-colors ${mat.hidden ? 'bg-slate-700 text-slate-400' : 'bg-emerald-900 text-emerald-400'}`}
-                                                    title={mat.hidden ? "Show" : "Hide"}
-                                                >
-                                                    {mat.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
-                                                </button>
-                                                <button 
-                                                    onClick={() => {
-                                                        setEditingMaterial(mat.id);
-                                                        setMaterialForm({
-                                                            ...mat,
-                                                            hasDigitalContent: !!mat.digitalContent,
-                                                            digitalContentJson: mat.digitalContent ? JSON.stringify(mat.digitalContent, null, 2) : ''
-                                                        });
-                                                    }}
-                                                    className="p-1.5 hover:bg-blue-900 hover:text-blue-400 rounded"
-                                                    title="Edit"
-                                                >
-                                                    <PenTool size={12} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => moveMaterial(mat.id, 'up')}
-                                                    disabled={mat.order === 0}
-                                                    className="p-1.5 hover:bg-slate-700 rounded disabled:opacity-30"
-                                                    title="Move up"
-                                                >
-                                                    <ArrowUpCircle size={12} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => moveMaterial(mat.id, 'down')}
-                                                    disabled={mat.order === courseMaterials.length - 1}
-                                                    className="p-1.5 hover:bg-slate-700 rounded disabled:opacity-30 rotate-180"
-                                                    title="Move down"
-                                                >
-                                                    <ArrowUpCircle size={12} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => deleteMaterial(mat.id)}
-                                                    className="p-1.5 hover:bg-rose-900 hover:text-rose-400 rounded"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 size={12} />
-                                                </button>
+                                                <div className="flex items-center gap-1">
+                                                    <button 
+                                                        onClick={() => toggleMaterialHidden(mat.id)}
+                                                        className={`p-1.5 rounded transition-colors ${mat.hidden ? 'bg-slate-700 text-slate-400' : 'bg-emerald-900 text-emerald-400'}`}
+                                                        title={mat.hidden ? "Show" : "Hide"}
+                                                    >
+                                                        {mat.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => {
+                                                            setEditingMaterial(mat.id);
+                                                            setMaterialForm({
+                                                                ...mat,
+                                                                mediaType: mat.mediaType || 'number',
+                                                                hasDigitalContent: !!mat.digitalContent,
+                                                                digitalContentJson: mat.digitalContent ? JSON.stringify(mat.digitalContent, null, 2) : ''
+                                                            });
+                                                        }}
+                                                        className="p-1.5 hover:bg-blue-900 hover:text-blue-400 rounded"
+                                                        title="Edit"
+                                                    >
+                                                        <PenTool size={12} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => moveMaterial(mat.id, 'up')}
+                                                        disabled={mat.order === 0}
+                                                        className="p-1.5 hover:bg-slate-700 rounded disabled:opacity-30"
+                                                        title="Move up"
+                                                    >
+                                                        <ArrowUpCircle size={12} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => moveMaterial(mat.id, 'down')}
+                                                        disabled={mat.order === courseMaterials.length - 1}
+                                                        className="p-1.5 hover:bg-slate-700 rounded disabled:opacity-30 rotate-180"
+                                                        title="Move down"
+                                                    >
+                                                        <ArrowUpCircle size={12} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => deleteMaterial(mat.id)}
+                                                        className="p-1.5 hover:bg-rose-900 hover:text-rose-400 rounded"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ));
+                                    );
+                                });
                             })()}
                         </div>
 
@@ -4217,7 +4250,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full p-6">
                                     <h3 className="text-lg font-bold text-white mb-4">Edit Material</h3>
                                     <div className="space-y-3">
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                             <input 
                                                 type="text"
                                                 value={materialForm.number}
@@ -4236,6 +4269,17 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 <option value="emerald">Green</option>
                                                 <option value="sky">Blue</option>
                                                 <option value="purple">Purple</option>
+                                            </select>
+                                            <select
+                                                value={materialForm.mediaType}
+                                                onChange={(e) => setMaterialForm({...materialForm, mediaType: e.target.value})}
+                                                className="bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                            >
+                                                <option value="number">Badge: Number</option>
+                                                <option value="book">Badge: Book</option>
+                                                <option value="pdf">Badge: PDF</option>
+                                                <option value="video">Badge: Video</option>
+                                                <option value="slides">Badge: Slides</option>
                                             </select>
                                         </div>
                                         <input 
@@ -4349,7 +4393,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         <button 
                                             onClick={() => {
                                                 setEditingMaterial(null);
-                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
+                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', mediaType: 'number', assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
                                             }}
                                             className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded font-bold"
                                         >
@@ -4359,7 +4403,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             onClick={() => {
                                                 editMaterial(editingMaterial, materialForm);
                                                 setEditingMaterial(null);
-                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
+                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', mediaType: 'number', assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
                                             }}
                                             className="flex-1 bg-pink-600 hover:bg-pink-500 text-white py-2 rounded font-bold flex items-center justify-center gap-2"
                                         >
@@ -5458,7 +5502,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                   {materialPreview.digitalContent ? (
                     <div className="mt-1">
                       <span className="inline-flex items-center gap-2 px-2 py-1 bg-emerald-900/50 text-emerald-400 text-xs rounded font-bold">
-                        ðŸ“– Enabled - {materialPreview.digitalContent.chapters?.length || 0} Chapters
+                        Enabled - {materialPreview.digitalContent.chapters?.length || 0} Chapters
                       </span>
                     </div>
                   ) : (
@@ -6017,7 +6061,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
   if (instructor) courseInfoParts.push(instructor);
   if (academicYear) courseInfoParts.push(academicYear);
   const courseInfoHTML = courseInfoParts.length > 0 
-    ? `\n            <p class="text-[9px] text-slate-600 uppercase tracking-widest mono mt-1">${courseInfoParts.join(' â€¢ ')}</p>`
+    ? `\n            <p class="text-[9px] text-slate-600 uppercase tracking-widest mono mt-1">${courseInfoParts.join(' | ')}</p>`
     : "";
   
   // FILTER MODULES & TOOLKIT BASED ON COMPILATION DEFAULTS
@@ -6077,6 +6121,17 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
         const borderColorClass = colorClass !== 'slate' ? `border-${colorClass}-500/20` : 'border-slate-700';
         const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : secondaryTextClass;
         const buttonColorClass = `${buttonBgClass} ${buttonHoverClass}`;
+        const badgeLabel = getMaterialBadgeLabel(mat) || '00';
+        const badgeTextClass = mat.mediaType && mat.mediaType !== 'number'
+          ? 'text-[9px] font-black uppercase tracking-widest'
+          : 'font-black italic text-xl';
+        const isCustomColor = colorClass !== 'slate';
+        const actionBtnBase = isCustomColor
+          ? `bg-${colorClass}-600 hover:bg-${colorClass}-500 text-white`
+          : `${buttonBgClass} ${buttonHoverClass} ${buttonTextClass}`;
+        const actionBtnBorder = isCustomColor
+          ? `border border-${colorClass}-500/30`
+          : 'border border-slate-600';
         
         // Properly escape quotes in the onclick handlers
         const escapedViewUrl = (mat.viewUrl || '').replace(/'/g, "\\'");
@@ -6094,12 +6149,12 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
           buttonsHTML += `<a href="${escapedDownloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`;
         }
         if (mat.digitalContent) {
-          buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">ðŸ“– Read</button>`;
+          buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">Read</button>`;
         }
         
         return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 ${containerBgClass} rounded-xl border border-slate-700 p-6 ${borderClass}">
     <div class="flex items-center gap-6">
-        <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center ${textColorClass} font-black italic text-xl border ${borderColorClass}">${mat.number}</div>
+        <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center ${textColorClass} ${badgeTextClass} border ${borderColorClass}">${badgeLabel}</div>
         <div>
             <h3 class="text-lg font-bold ${headingTextClass} uppercase italic">${mat.title}</h3>
             <p class="text-xs ${secondaryTextClass} font-mono">${mat.description}</p>
@@ -6138,7 +6193,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                 </div>
                 <div id="digital-reader-container" class="hidden mb-12 bg-slate-900 rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">
                     <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-emerald-500/30">
-                        <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">ðŸ“– Digital Resource</span>
+                        <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">Digital Resource</span>
                         <button data-close-digital-reader class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
                     </div>
                     <div class="flex" style="height: 600px;">
@@ -6149,9 +6204,9 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                         <div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">
                             <div id="reader-body" class="prose prose-invert max-w-none"></div>
                             <div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-700">
-                                <button data-prev-chapter id="prev-btn" class="px-4 py-2 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">â† Previous</button>
+                                <button data-prev-chapter id="prev-btn" class="px-4 py-2 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Previous</button>
                                 <span id="reader-progress" class="text-xs ${secondaryTextClass}"></span>
-                                <button data-next-chapter id="next-btn" class="px-4 py-2 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next â†’</button>
+                                <button data-next-chapter id="next-btn" class="px-4 py-2 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next</button>
                             </div>
                         </div>
                     </div>
@@ -6230,7 +6285,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             currentReader = { matId: matId, chapterIdx: 0, data: content };
             
             // Update title
-            document.getElementById('reader-title').innerHTML = 'ðŸ“– ' + (content.title || 'Digital Resource');
+            document.getElementById('reader-title').innerText = (content.title || 'Digital Resource');
             
             // Build table of contents (using data attributes, not onclick)
             var tocHTML = '';
@@ -6273,7 +6328,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                     html += '<h3 class="text-lg font-bold text-emerald-400 mb-3">' + sec.heading + '</h3>';
                 }
                 // Simple markdown-like rendering
-                var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, 'â€¢ ');
+                var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, '- ');
                 html += '<div class="text-slate-300 leading-relaxed whitespace-pre-line">' + content + '</div>';
                 html += '</div>';
             });
@@ -6349,18 +6404,18 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       // Generate assessment cards for selection page
       const assessmentCards = assessments.map((assess, idx) => {
         const typeLabel = assess.type === 'quiz' ? 'Multiple Choice' : assess.type === 'longanswer' ? 'Long Answer' : assess.type === 'print' ? 'Print & Submit' : 'Mixed Assessment';
-        const typeIcon = assess.type === 'quiz' ? 'ðŸ“' : assess.type === 'longanswer' ? 'âœï¸' : assess.type === 'print' ? 'ðŸ–¨ï¸' : 'ðŸ“‹';
+        const typeBadge = assess.type === 'quiz' ? 'MC' : assess.type === 'longanswer' ? 'LA' : assess.type === 'print' ? 'PRINT' : 'MIX';
         const questionCount = assess.questionCount || (assess.type === 'mixed' ? 'Multiple' : 'Unknown');
         
         return `
-          <div class="assessment-card p-6 ${containerBgClass} rounded-xl border border-slate-700 hover:border-${accentColor}-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
+            <div class="assessment-card p-6 ${containerBgClass} rounded-xl border border-slate-700 hover:border-${accentColor}-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
             <div class="flex items-center justify-between">
               <div class="flex-1">
                 <div class="flex items-center gap-3 mb-2">
-                  <span class="text-3xl">${typeIcon}</span>
+                  <span class="text-[10px] font-black uppercase tracking-widest ${secondaryTextClass}">${typeBadge}</span>
                   <div>
                     <h3 class="text-xl font-bold ${headingTextClass} group-hover:text-${accentColor}-400 transition-colors">${assess.title}</h3>
-                    <p class="text-xs ${secondaryTextClass} uppercase tracking-wider">${typeLabel}${assess.questionCount ? ' â€¢ ' + questionCount + ' Questions' : ''}</p>
+                    <p class="text-xs ${secondaryTextClass} uppercase tracking-wider">${typeLabel}${assess.questionCount ? ' | ' + questionCount + ' Questions' : ''}</p>
                   </div>
                 </div>
               </div>
@@ -7265,14 +7320,14 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
           buttonsHTML += `<a href="${mat.downloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`;
         }
         if (mat.digitalContent) {
-          buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">ðŸ“– Read</button>`;
+          buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">Read</button>`;
         }
         
         const cardBg = containerBgClass;
         
         return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 p-6 ${cardBg} rounded-xl border ${cardBorder} ${borderClass}">
           <div class="flex items-center gap-6">
-            <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center ${textColorClass} font-black italic text-xl border ${borderColorClass}">${mat.number || '00'}</div>
+            <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center ${textColorClass} ${badgeTextClass} border ${borderColorClass}">${badgeLabel}</div>
             <div>
               <h3 class="text-lg font-bold ${headingTextClass} uppercase italic">${mat.title}</h3>
               <p class="text-xs ${secondaryTextClass} font-mono">${mat.description || ''}</p>
@@ -7297,7 +7352,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
           </div>
           <div id="digital-reader-container" class="hidden mb-8 ${isLightBg ? 'bg-white' : 'bg-slate-900'} rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">
             <div class="flex justify-between items-center p-3 ${isLightBg ? 'bg-slate-100' : 'bg-slate-800'} border-b border-emerald-500/30">
-              <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">ðŸ“– Digital Resource</span>
+              <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">Digital Resource</span>
               <button onclick="closeDigitalReader()" class="text-xs text-rose-400 hover:${isLightBg ? 'text-slate-900' : 'text-white'} font-bold uppercase tracking-widest px-2">Close X</button>
             </div>
             <div class="flex" style="height: 600px;">
@@ -7308,9 +7363,9 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
               <div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">
                 <div id="reader-body" class="prose ${isLightBg ? 'prose-slate' : 'prose-invert'} max-w-none"></div>
                 <div class="flex justify-between items-center mt-8 pt-4 border-t ${cardBorder}">
-                  <button id="prev-btn" onclick="prevChapter()" class="px-4 py-2 ${isLightBg ? 'bg-slate-200 hover:bg-slate-300 text-slate-900' : 'bg-slate-800 hover:bg-slate-700 text-white'} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">â† Previous</button>
+                  <button id="prev-btn" onclick="prevChapter()" class="px-4 py-2 ${isLightBg ? 'bg-slate-200 hover:bg-slate-300 text-slate-900' : 'bg-slate-800 hover:bg-slate-700 text-white'} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Previous</button>
                   <span id="reader-progress" class="text-xs ${textColorSecondary}"></span>
-                  <button id="next-btn" onclick="nextChapter()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next â†’</button>
+                  <button id="next-btn" onclick="nextChapter()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next</button>
                 </div>
               </div>
             </div>
@@ -7333,7 +7388,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
           
           currentReader = { matId: matId, chapterIdx: 0, data: content };
           
-          document.getElementById('reader-title').innerHTML = 'ðŸ“– ' + (content.title || 'Digital Resource');
+          document.getElementById('reader-title').innerText = (content.title || 'Digital Resource');
           
           var tocHTML = '';
           (content.chapters || []).forEach(function(ch, idx) {
@@ -7371,7 +7426,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
             if (sec.heading) {
               html += '<h3 class="text-lg font-bold text-emerald-400 mb-3">' + sec.heading + '</h3>';
             }
-            var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, 'â€¢ ');
+            var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, '- ');
             html += '<div class="text-slate-300 leading-relaxed whitespace-pre-line">' + content + '</div>';
             html += '</div>';
           });
@@ -7446,13 +7501,13 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       // Generate assessment list
       const assessmentListHTML = assessments.map((assess, idx) => {
         const typeLabel = assess.type === 'quiz' ? 'Multiple Choice' : assess.type === 'longanswer' ? 'Long Answer' : assess.type === 'print' ? 'Print & Submit' : 'Mixed Assessment';
-        const typeIcon = assess.type === 'quiz' ? 'ðŸ“' : assess.type === 'longanswer' ? 'âœï¸' : assess.type === 'print' ? 'ðŸ–¨ï¸' : 'ðŸ“‹';
+        const typeBadge = assess.type === 'quiz' ? 'MC' : assess.type === 'longanswer' ? 'LA' : assess.type === 'print' ? 'PRINT' : 'MIX';
         
         return `<div class="assessment-card p-6 ${cardBg} rounded-xl border ${cardBorder} hover:border-${accentColor}-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
           <div class="flex items-center justify-between">
             <div class="flex-1">
               <div class="flex items-center gap-3 mb-2">
-                <span class="text-3xl">${typeIcon}</span>
+                <span class="text-[10px] font-black uppercase tracking-widest ${secondaryTextClass}">${typeBadge}</span>
                 <div>
                   <h3 class="text-xl font-bold ${headingTextClass} group-hover:text-${accentColor}-400 transition-colors">${assess.title}</h3>
                   <p class="text-xs ${secondaryTextClass} uppercase tracking-wider">${typeLabel}</p>
@@ -7974,7 +8029,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
 
     // Assessments with Selection UI
     if (selectedAssessments.length > 0) {
-        sectionsHTML += '<section id="assessments" class="mb-12"><h2 class="text-2xl font-bold ' + headingTextClass + ' mb-6 border-b border-slate-700 pb-2">ðŸ“ Assessments</h2>';
+        sectionsHTML += '<section id="assessments" class="mb-12"><h2 class="text-2xl font-bold ' + headingTextClass + ' mb-6 border-b border-slate-700 pb-2">Assessments</h2>';
         
         // Assessment List (Selection Page)
         sectionsHTML += '<div id="assessment-list"><div class="grid grid-cols-1 gap-4">';
@@ -7983,9 +8038,9 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
             sectionsHTML += '<div class="assessment-card p-6 ' + containerBgClass + ' rounded-xl border border-slate-700 hover:border-' + accentColor + '-500 transition-all cursor-pointer group" onclick="showAssessment(' + idx + ')">' +
                 '<div class="flex items-center justify-between">' +
                 '<div class="flex-1"><div class="flex items-center gap-3 mb-2">' +
-                '<span class="text-3xl">ðŸ“‹</span><div>' +
+                '<span class="text-[10px] font-black uppercase tracking-widest ' + secondaryTextClass + '">MIX</span><div>' +
                 '<h3 class="text-xl font-bold ' + headingTextClass + ' group-hover:text-' + accentColor + '-400 transition-colors">' + assess.title + '</h3>' +
-                '<p class="text-xs ' + secondaryTextClass + ' uppercase tracking-wider">Mixed Assessment â€¢ ' + qCount + ' Questions</p>' +
+                '<p class="text-xs ' + secondaryTextClass + ' uppercase tracking-wider">Mixed Assessment | ' + qCount + ' Questions</p>' +
                 '</div></div></div>' +
                 '<div class="text-' + accentColor + '-400 group-hover:translate-x-1 transition-transform">' +
                 '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
@@ -8020,7 +8075,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
             .replace(/</g, '\\u003c')         // Escape < for HTML safety
             .replace(/>/g, '\\u003e');        // Escape > for HTML safety
         
-        sectionsHTML += '<section id="materials" class="mb-12"><h2 class="text-2xl font-bold ' + headingTextClass + ' mb-6 border-b border-slate-700 pb-2">ðŸ“š Materials</h2>';
+        sectionsHTML += '<section id="materials" class="mb-12"><h2 class="text-2xl font-bold ' + headingTextClass + ' mb-6 border-b border-slate-700 pb-2">Materials</h2>';
         
         // Material viewer container
         sectionsHTML += '<div id="material-viewer" class="hidden mb-8 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl">' +
@@ -8035,7 +8090,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         if (digitalMats.length > 0) {
             sectionsHTML += '<div id="digital-reader-container" class="hidden mb-8 bg-slate-900 rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">' +
                 '<div class="flex justify-between items-center p-3 bg-slate-800 border-b border-emerald-500/30">' +
-                '<span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">ðŸ“– Digital Resource</span>' +
+                '<span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">Digital Resource</span>' +
                 '<button data-close-digital-reader class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>' +
                 '</div>' +
                 '<div class="flex" style="height: 600px;">' +
@@ -8046,9 +8101,9 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                 '<div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">' +
                 '<div id="reader-body" class="prose prose-invert max-w-none"></div>' +
                 '<div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-700">' +
-                '<button data-prev-chapter id="prev-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">â† Previous</button>' +
+                '<button data-prev-chapter id="prev-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Previous</button>' +
                 '<span id="reader-progress" class="text-xs text-slate-500"></span>' +
-                '<button data-next-chapter id="next-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next â†’</button>' +
+                '<button data-next-chapter id="next-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next</button>' +
                 '</div></div></div></div>';
         }
         
@@ -8059,6 +8114,10 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
             const textColorClass = colorClass !== 'slate' ? 'text-' + colorClass + '-500' : 'text-slate-500';
             const cardBgClass = containerBgClass;
             const buttonColorClass = buttonBgClass + ' ' + buttonHoverClass;
+            const badgeLabel = getMaterialBadgeLabel(mat) || mat.number || '';
+            const badgeTextClass = mat.mediaType && mat.mediaType !== 'number'
+              ? 'text-[9px] font-black uppercase tracking-widest'
+              : 'font-black text-xl';
             
             // Convert /view to /preview for iframe embedding
             const previewUrl = mat.viewUrl ? mat.viewUrl.replace('/view', '/preview') : '';
@@ -8074,12 +8133,12 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                 buttonsHTML += '<a href="' + mat.downloadUrl + '" target="_blank" class="flex-1 ' + buttonColorClass + ' ' + buttonTextClass + ' text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center">Download</a>';
             }
             if (mat.digitalContent) {
-                buttonsHTML += '<button data-digital-reader="' + mat.id + '" class="digital-reader-btn flex-1 ' + buttonColorClass + ' ' + buttonTextClass + ' text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center flex items-center justify-center gap-2">ðŸ“– Read</button>';
+                buttonsHTML += '<button data-digital-reader="' + mat.id + '" class="digital-reader-btn flex-1 ' + buttonColorClass + ' ' + buttonTextClass + ' text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center flex items-center justify-center gap-2">Read</button>';
             }
             
             sectionsHTML += '<div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-xl border border-slate-700 ' + cardBgClass + ' ' + borderClass + '">' +
                 '<div class="flex items-center gap-4">' +
-                '<div class="w-12 h-12 rounded-lg flex items-center justify-center ' + textColorClass + ' font-black text-xl border border-slate-700">' + (mat.number || 'ðŸ“„') + '</div>' +
+                '<div class="w-12 h-12 rounded-lg flex items-center justify-center ' + textColorClass + ' ' + badgeTextClass + ' border border-slate-700">' + badgeLabel + '</div>' +
                 '<div>' +
                 '<h3 class="text-lg font-bold ' + headingTextClass + ' uppercase italic">' + mat.title + '</h3>' +
                 '<p class="text-xs ' + secondaryTextClass + '">' + (mat.description || '') + '</p>' +
@@ -8144,7 +8203,7 @@ function openDigitalReaderFn(matId) {
     
     currentReader = { matId: matId, chapterIdx: 0, data: content };
     
-    document.getElementById('reader-title').innerHTML = 'ðŸ“– ' + (content.title || 'Digital Resource');
+document.getElementById('reader-title').innerText = (content.title || 'Digital Resource');
     
     // Build table of contents (using data attributes, not onclick)
     var tocHTML = '';
@@ -8183,7 +8242,7 @@ function renderChapterFn(idx) {
         if (sec.heading) {
             html += '<h3 class="text-lg font-bold text-emerald-400 mb-3">' + sec.heading + '</h3>';
         }
-        var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, 'â€¢ ');
+        var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, '- ');
         html += '<div class="text-slate-300 leading-relaxed whitespace-pre-line">' + content + '</div>';
         html += '</div>';
     });
@@ -8535,7 +8594,7 @@ console.log('ðŸ“– Digital Reader initialized with event delegation (Single
                 onclick="window.open('MODULE_${mod.id}_URL', '_blank')"
                 class="flex-1 bg-gradient-to-r ${gradientClass} text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-opacity text-sm"
               >
-                Start Module â†’
+                Start Module
               </button>
             </div>
           </div>
@@ -8589,13 +8648,13 @@ console.log('ðŸ“– Digital Reader initialized with event delegation (Single
                 <div class="flex flex-wrap justify-center gap-4">
                     ${materialCount > 0 ? `
                     <a href="MATERIALS_PAGE_URL" target="_blank" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2">
-                        ðŸ“š Course Materials
+                        Course Materials
                         <span class="${badgeBgClass} px-2 py-1 rounded text-sm">${materialCount}</span>
                     </a>
                     ` : ''}
                     ${assessmentCount > 0 ? `
                     <a href="ASSESSMENTS_PAGE_URL" target="_blank" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2">
-                        ðŸ“ All Assessments
+                        All Assessments
                         <span class="${badgeBgClass} px-2 py-1 rounded text-sm">${assessmentCount}</span>
                     </a>
                     ` : ''}
@@ -8833,24 +8892,24 @@ console.log('ðŸ“– Digital Reader initialized with event delegation (Single
                   {betaStructureMode === 'multi-file' ? (
                     <>
                       <div className="flex items-center gap-2">
-                        <span className="text-emerald-400">ðŸ“„</span> index.html
+                        <span className="text-emerald-400"><FileCode size={14} /></span> index.html
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-amber-400">ðŸ“‹</span> manifest.json
+                        <span className="text-amber-400"><FileJson size={14} /></span> manifest.json
                       </div>
                       {modules.filter(m => !excludedIds.includes(m.id) && !m.hidden).map(m => (
                         <div key={m.id} className="flex items-center gap-2 pl-2">
-                          <span className="text-sky-400">ðŸ“</span> modules/{m.id}.html
+                          <span className="text-sky-400"><FolderOpen size={14} /></span> modules/{m.id}.html
                         </div>
                       ))}
                     </>
                   ) : (
                     <>
                       <div className="flex items-center gap-2">
-                        <span className="text-emerald-400">ðŸ“„</span> index.html (single-page app with sidebar)
+                        <span className="text-emerald-400"><FileCode size={14} /></span> index.html (single-page app with sidebar)
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-amber-400">ðŸ“‹</span> manifest.json
+                        <span className="text-amber-400"><FileJson size={14} /></span> manifest.json
                       </div>
                     </>
                   )}
@@ -8929,14 +8988,14 @@ console.log('ðŸ“– Digital Reader initialized with event delegation (Single
                   <div className="text-xs font-mono text-slate-400 space-y-1">
                     {betaIncludeManifest && (
                       <div className="flex items-center gap-2">
-                        <span className="text-amber-400">ðŸ“‹</span> manifest.json
+                        <span className="text-amber-400"><FileJson size={14} /></span> manifest.json
                       </div>
                     )}
                     {betaSelectedModules.map(modId => {
                       const mod = modules.find(m => m.id === modId);
                       return (
                         <div key={modId} className="flex items-center gap-2 pl-2">
-                          <span className="text-sky-400">ðŸ“</span> modules/{modId}.html
+                          <span className="text-sky-400"><FolderOpen size={14} /></span> modules/{modId}.html
                           {mod && <span className="text-slate-600 text-[10px]">({mod.title})</span>}
                         </div>
                       );
@@ -10788,6 +10847,7 @@ export default function App() {
     const newMaterial = {
       id: `mat-${Date.now()}`,
       number: materialData.number,
+      mediaType: materialData.mediaType || 'number',
       title: materialData.title,
       description: materialData.description,
       viewUrl: materialData.viewUrl,
@@ -11039,7 +11099,7 @@ Questions.filter((_, i) => i !== index);
               placeholder="Type your answer here..."
               class="w-full h-48 bg-slate-950 border border-slate-700 rounded-lg p-4 text-white resize-none focus:border-purple-500 focus:outline-none print-response"
             ></textarea>
-            <p class="text-xs text-slate-500 italic mt-2 no-print">Auto-saved to browser âœ“</p>
+            <p class="text-xs text-slate-500 italic mt-2 no-print">Auto-saved to browser</p>
           </div>
         `;
         laIndex++;
@@ -11092,25 +11152,25 @@ Questions.filter((_, i) => i !== index);
         <!-- Action Buttons -->
         <div class="flex flex-wrap gap-3 mt-8 no-print">
           <button type="button" onclick="${assessmentId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-            ðŸ”„ Reset
+            Reset
           </button>
           ${laQuestions.length > 0 ? `
           <button type="button" onclick="${assessmentId}_download()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-            ðŸ“¥ Download Backup
+            Download Backup
           </button>
           <button type="button" onclick="document.getElementById('${assessmentId}-upload').click()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-            ðŸ“¤ Upload Backup
+            Upload Backup
           </button>
           ` : ''}
           <button type="button" onclick="${assessmentId}_generateReport()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-            ðŸ–¨ï¸ Print & Submit
+            Print & Submit
           </button>
         </div>
         
         ${laQuestions.length > 0 ? `
         <input type="file" id="${assessmentId}-upload" accept=".json" style="display: none;" onchange="${assessmentId}_loadBackup(this)" />
         <div id="${assessmentId}-loaded" class="hidden mt-6 p-4 rounded-xl bg-blue-900/20 border border-blue-500">
-          <p class="text-blue-400 font-bold">âœ… Backup loaded successfully!</p>
+          <p class="text-blue-400 font-bold">Backup loaded successfully!</p>
         </div>
         ` : ''}
 
@@ -11129,7 +11189,7 @@ Questions.filter((_, i) => i !== index);
         <!-- Print Instructions -->
         <div class="mt-8 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg no-print">
           <p class="text-amber-300 text-sm">
-            ðŸ“‹ <strong>Instructions:</strong> Complete all questions, then click "Print & Submit" to generate a clean printable report.
+            <strong>Instructions:</strong> Complete all questions, then click "Print & Submit" to generate a clean printable report.
           </p>
         </div>
 
