@@ -344,6 +344,7 @@ const PROJECT_DATA = {
     backgroundColor: "slate-900",
     headingTextColor: "white",
     secondaryTextColor: "slate-400",
+    assessmentTextColor: "white",
     buttonColor: "sky-600",
     containerColor: "slate-900/80",
     fontFamily: "inter",
@@ -624,8 +625,8 @@ const generateMasterShell = (data) => {
         .glass-panel { background: ${sidebarBg}; border-right: 1px solid ${sidebarBorder}; }
         .custom-scroll { overflow-y: auto; }
         .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
-        input, textarea, select { background: #0f172a !important; border: 1px solid #1e293b !important; transition: all 0.2s; color: #e2e8f0; }
-        input:focus, textarea:focus, select:focus { border-color: ${colors.hex} !important; outline: none; box-shadow: 0 0 0 1px ${colors.hex}; }
+        input:not(.assessment-input), textarea:not(.assessment-input), select:not(.assessment-input) { background: #0f172a !important; border: 1px solid #1e293b !important; transition: all 0.2s; color: #e2e8f0; }
+        input:not(.assessment-input):focus, textarea:not(.assessment-input):focus, select:not(.assessment-input):focus { border-color: ${colors.hex} !important; outline: none; box-shadow: 0 0 0 1px ${colors.hex}; }
         
         /* Navigation */
         .nav-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; transition: all 0.2s; border-left: 2px solid transparent; }
@@ -1079,8 +1080,8 @@ const MASTER_SHELL = `<!DOCTYPE html>
         .glass-panel { background: rgba(15, 23, 42, 0.95); border-right: 1px solid rgba(51, 65, 85, 0.5); }
         .custom-scroll { overflow-y: auto; }
         .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
-        input, textarea, select { background: #0f172a !important; border: 1px solid #1e293b !important; transition: all 0.2s; color: #e2e8f0; }
-        input:focus, textarea:focus, select:focus { border-color: #0ea5e9 !important; outline: none; box-shadow: 0 0 0 1px #0ea5e9; }
+        input:not(.assessment-input), textarea:not(.assessment-input), select:not(.assessment-input) { background: #0f172a !important; border: 1px solid #1e293b !important; transition: all 0.2s; color: #e2e8f0; }
+        input:not(.assessment-input):focus, textarea:not(.assessment-input):focus, select:not(.assessment-input):focus { border-color: #0ea5e9 !important; outline: none; box-shadow: 0 0 0 1px #0ea5e9; }
         
         /* Navigation */
         .nav-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; transition: all 0.2s; border-left: 2px solid transparent; }
@@ -2031,16 +2032,48 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   const generateQuizAssessment = () => {
     const quizId = `quiz_${Date.now()}`;
     
+    // Get Course Settings for dynamic colors
+    const courseSettings = projectData["Course Settings"] || {};
+    const backgroundColor = courseSettings.backgroundColor || 'slate-950';
+    const accentColor = courseSettings.accentColor || 'sky';
+    const isLightBg = backgroundColor.includes('white') || backgroundColor.includes('slate-100') || backgroundColor.includes('slate-50');
+    
+    const headingTextColor = courseSettings.headingTextColor || (isLightBg ? 'slate-900' : 'white');
+    const secondaryTextColor = courseSettings.secondaryTextColor || (isLightBg ? 'slate-600' : 'slate-400');
+    const assessmentTextColor = courseSettings.assessmentTextColor || 'white';
+    const buttonColor = courseSettings.buttonColor || `${accentColor}-600`;
+    
+    const toTextClass = (value) => value.startsWith('text-') ? value : `text-${value}`;
+    const toBgBase = (value) => value.startsWith('bg-') ? value.slice(3) : value;
+    
+    const headingTextClass = toTextClass(headingTextColor);
+    const secondaryTextClass = toTextClass(secondaryTextColor);
+    const assessmentTextClass = toTextClass(assessmentTextColor);
+    const bodyTextClass = assessmentTextClass;
+    const buttonBgBase = toBgBase(buttonColor);
+    const buttonBgClass = `bg-${buttonBgBase}`;
+    const buttonHoverClass = buttonBgBase.endsWith('-600') ? `hover:bg-${buttonBgBase.replace(/-600$/, '-500')}` : `hover:bg-${buttonBgBase}`;
+    const buttonTextClass = isLightBg ? 'text-slate-900' : 'text-white';
+    
+    const cardBgClass = isLightBg ? 'bg-white' : 'bg-slate-900';
+    const cardBorderClass = isLightBg ? 'border-slate-300' : 'border-slate-700';
+    const optionBgClass = isLightBg ? 'bg-slate-100' : 'bg-slate-800';
+    const optionHoverClass = isLightBg ? 'hover:bg-slate-200' : 'hover:bg-slate-750';
+    const inputBgClass = isLightBg ? 'bg-white' : 'bg-slate-950';
+    const inputTextClass = assessmentTextClass;
+    const modalBgClass = isLightBg ? 'bg-white' : 'bg-slate-900';
+    const modalBorderClass = isLightBg ? 'border-slate-300' : 'border-slate-700';
+    
     // MULTIPLE CHOICE QUIZ
     if (assessmentType === 'quiz') {
     const questionsHtml = quizQuestions.map((q, idx) => `
-      <div class="mb-8 p-6 bg-slate-900 rounded-xl border border-slate-700">
-        <h3 class="text-lg font-bold text-white mb-4">${idx + 1}. ${q.question}</h3>
+      <div class="mb-8 p-6 ${cardBgClass} rounded-xl border ${cardBorderClass}">
+        <h3 class="text-lg font-bold ${headingTextClass} mb-4">${idx + 1}. ${q.question}</h3>
         <div class="space-y-2">
           ${q.options.map((opt, optIdx) => `
-            <label class="flex items-center gap-3 p-3 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-750 transition-colors">
-              <input type="radio" name="q${idx}" value="${optIdx}" class="w-4 h-4" />
-              <span class="text-slate-300">${opt}</span>
+            <label class="flex items-center gap-3 p-3 ${optionBgClass} rounded-lg cursor-pointer ${optionHoverClass} transition-colors">
+              <input type="radio" name="q${idx}" value="${optIdx}" class="w-4 h-4 assessment-input" />
+              <span class="${bodyTextClass}">${opt}</span>
             </label>
           `).join('')}
         </div>
@@ -2052,8 +2085,8 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     const html = `<div id="${quizId}" class="w-full h-full custom-scroll p-8">
       <div class="max-w-4xl mx-auto">
         <header class="mb-8">
-          <h1 class="text-3xl font-black text-white italic mb-2">${assessmentTitle}</h1>
-          <p class="text-sm text-slate-400">Select the best answer for each question.</p>
+          <h1 class="text-3xl font-black ${headingTextClass} italic mb-2">${assessmentTitle}</h1>
+          <p class="text-sm ${secondaryTextClass}">Select the best answer for each question.</p>
         </header>
         <form id="${quizId}-form" class="space-y-6">
           ${questionsHtml}
@@ -2061,21 +2094,21 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         
         <!-- Action Buttons -->
         <div class="flex flex-wrap gap-3 mt-8 no-print">
-          <button type="button" onclick="${quizId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+          <button type="button" onclick="${quizId}_reset()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
             ðŸ”„ Reset
           </button>
-          <button type="button" onclick="${quizId}_generateReport()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+          <button type="button" onclick="${quizId}_generateReport()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
             ðŸ–¨ï¸ Print & Submit
           </button>
         </div>
         
         <!-- Reset Confirmation Modal -->
         <div id="${quizId}-reset-modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden">
-          <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-md mx-4">
-            <h3 class="text-lg font-bold text-white mb-4">Reset Assessment?</h3>
-            <p class="text-slate-300 mb-6">Are you sure you want to reset all your answers? This cannot be undone.</p>
+          <div class="${modalBgClass} border ${modalBorderClass} rounded-xl p-6 max-w-md mx-4">
+            <h3 class="text-lg font-bold ${headingTextClass} mb-4">Reset Assessment?</h3>
+            <p class="${bodyTextClass} mb-6">Are you sure you want to reset all your answers? This cannot be undone.</p>
             <div class="flex gap-3">
-              <button onclick="document.getElementById('${quizId}-reset-modal').classList.add('hidden')" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded">Cancel</button>
+              <button onclick="document.getElementById('${quizId}-reset-modal').classList.add('hidden')" class="flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-2 rounded">Cancel</button>
               <button onclick="${quizId}_confirmReset()" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded">Reset</button>
             </div>
           </div>
@@ -2150,41 +2183,41 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     // LONG ANSWER
     else if (assessmentType === 'longanswer') {
       const promptsHtml = quizQuestions.map((q, idx) => `
-        <div class="mb-8 p-6 bg-slate-900 rounded-xl border border-slate-700 print-section">
-          <h3 class="text-lg font-bold text-white mb-4 print-question">${idx + 1}. ${q.question}</h3>
+        <div class="mb-8 p-6 ${cardBgClass} rounded-xl border ${cardBorderClass} print-section">
+          <h3 class="text-lg font-bold ${headingTextClass} mb-4 print-question">${idx + 1}. ${q.question}</h3>
           <textarea 
             id="${quizId}-answer-${idx}" 
             placeholder="Type your answer here..."
-            class="w-full h-48 bg-slate-950 border border-slate-700 rounded-lg p-4 text-white resize-none focus:border-purple-500 focus:outline-none print-response"
+            class="w-full h-48 ${inputBgClass} border ${cardBorderClass} rounded-lg p-4 ${inputTextClass} resize-none focus:border-${accentColor}-500 focus:outline-none print-response assessment-input"
           ></textarea>
-          <p class="text-xs text-slate-500 italic mt-2 no-print">Auto-saved to browser</p>
+          <p class="text-xs ${secondaryTextClass} italic mt-2 no-print">Auto-saved to browser</p>
         </div>
       `).join('');
 
       const html = `<div id="${quizId}" class="w-full h-full custom-scroll p-8">
         <div class="max-w-4xl mx-auto">
           <header class="mb-8">
-            <h1 class="text-3xl font-black text-white italic mb-2 print-title">${assessmentTitle}</h1>
-            <p class="text-sm text-slate-400 no-print">Complete all questions. Your responses are auto-saved.</p>
+            <h1 class="text-3xl font-black ${headingTextClass} italic mb-2 print-title">${assessmentTitle}</h1>
+            <p class="text-sm ${secondaryTextClass} no-print">Complete all questions. Your responses are auto-saved.</p>
           </header>
           
           <!-- Student Info -->
-          <div class="grid grid-cols-2 gap-4 mb-8 p-6 bg-slate-900 rounded-xl border border-slate-700 print-header">
+          <div class="grid grid-cols-2 gap-4 mb-8 p-6 ${cardBgClass} rounded-xl border ${cardBorderClass} print-header">
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Student Name</label>
+              <label class="block text-xs font-bold ${secondaryTextClass} uppercase mb-2">Student Name</label>
               <input 
                 type="text" 
                 id="${quizId}-student-name"
                 placeholder="Enter your name..."
-                class="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm focus:border-purple-500 focus:outline-none"
+                class="w-full ${inputBgClass} border ${cardBorderClass} rounded p-3 ${inputTextClass} text-sm focus:border-${accentColor}-500 focus:outline-none assessment-input"
               />
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Date</label>
+              <label class="block text-xs font-bold ${secondaryTextClass} uppercase mb-2">Date</label>
               <input 
                 type="date" 
                 id="${quizId}-student-date"
-                class="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm focus:border-purple-500 focus:outline-none"
+                class="w-full ${inputBgClass} border ${cardBorderClass} rounded p-3 ${inputTextClass} text-sm focus:border-${accentColor}-500 focus:outline-none assessment-input"
               />
             </div>
           </div>
@@ -2196,16 +2229,16 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
 
           <!-- Action Buttons -->
           <div class="flex flex-wrap gap-3 mt-8 no-print">
-            <button type="button" onclick="${quizId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+            <button type="button" onclick="${quizId}_reset()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
               Reset
             </button>
-            <button type="button" onclick="${quizId}_download()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+            <button type="button" onclick="${quizId}_download()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
               Download Backup
             </button>
-            <button type="button" onclick="document.getElementById('${quizId}-upload').click()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+            <button type="button" onclick="document.getElementById('${quizId}-upload').click()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
               Upload Backup
             </button>
-            <button type="button" onclick="${quizId}_generateReport()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+            <button type="button" onclick="${quizId}_generateReport()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
               Print & Submit
             </button>
           </div>
@@ -2218,11 +2251,11 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
 
           <!-- Reset Confirmation Modal -->
           <div id="${quizId}-reset-modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden">
-            <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-md mx-4">
-              <h3 class="text-lg font-bold text-white mb-4">Reset Assessment?</h3>
-              <p class="text-slate-300 mb-6">Are you sure you want to reset all your answers? This cannot be undone.</p>
+            <div class="${modalBgClass} border ${modalBorderClass} rounded-xl p-6 max-w-md mx-4">
+              <h3 class="text-lg font-bold ${headingTextClass} mb-4">Reset Assessment?</h3>
+              <p class="${bodyTextClass} mb-6">Are you sure you want to reset all your answers? This cannot be undone.</p>
               <div class="flex gap-3">
-                <button onclick="document.getElementById('${quizId}-reset-modal').classList.add('hidden')" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded">Cancel</button>
+                <button onclick="document.getElementById('${quizId}-reset-modal').classList.add('hidden')" class="flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-2 rounded">Cancel</button>
                 <button onclick="${quizId}_confirmReset()" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded">Reset</button>
               </div>
             </div>
@@ -2436,22 +2469,22 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       const html = `<div id="${quizId}" class="w-full h-full custom-scroll p-8">
         <div class="max-w-4xl mx-auto">
           <header class="mb-8">
-            <h1 class="text-3xl font-black text-white italic mb-2">${assessmentTitle}</h1>
-            <p class="text-sm text-slate-400">Complete this assignment and submit to your instructor.</p>
+            <h1 class="text-3xl font-black ${headingTextClass} italic mb-2">${assessmentTitle}</h1>
+            <p class="text-sm ${secondaryTextClass}">Complete this assignment and submit to your instructor.</p>
           </header>
-          <div class="p-8 bg-slate-900 rounded-xl border border-slate-700">
-            <h3 class="text-lg font-bold text-white mb-4">Instructions:</h3>
-            <ol class="list-decimal list-inside space-y-2 text-slate-300 mb-8">
+          <div class="p-8 ${cardBgClass} rounded-xl border ${cardBorderClass}">
+            <h3 class="text-lg font-bold ${headingTextClass} mb-4">Instructions:</h3>
+            <ol class="list-decimal list-inside space-y-2 ${bodyTextClass} mb-8">
               ${instructions}
             </ol>
-            <div class="border-t border-slate-700 pt-6 space-y-4">
-              <div><span class="font-bold text-white">Student Name:</span> <span class="inline-block border-b border-slate-600 w-64 ml-2"></span></div>
-              <div><span class="font-bold text-white">Date:</span> <span class="inline-block border-b border-slate-600 w-48 ml-2"></span></div>
-              <div><span class="font-bold text-white">Assignment:</span> <span class="text-purple-400">${assessmentTitle}</span></div>
+            <div class="border-t ${cardBorderClass} pt-6 space-y-4">
+              <div><span class="font-bold ${headingTextClass}">Student Name:</span> <span class="inline-block border-b ${cardBorderClass} w-64 ml-2"></span></div>
+              <div><span class="font-bold ${headingTextClass}">Date:</span> <span class="inline-block border-b ${cardBorderClass} w-48 ml-2"></span></div>
+              <div><span class="font-bold ${headingTextClass}">Assignment:</span> <span class="text-${accentColor}-400">${assessmentTitle}</span></div>
                 </div>
           </div>
           <div class="mt-6 flex gap-4">
-            <button type="button" onclick="window.print()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-8 rounded-lg">Print & Submit</button>
+            <button type="button" onclick="window.print()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-8 rounded-lg">Print & Submit</button>
           </div>
           <div class="mt-4 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg">
             <p class="text-amber-300 text-sm"><strong>Reminder:</strong> Print this page, complete the assignment, and submit to your instructor.</p>
@@ -8424,8 +8457,8 @@ console.log('ðŸ“– Digital Reader initialized with event delegation (Single
     body { ${font.css} background-color: ${bgHex}; color: ${isLightBg ? '#0f172a' : '#e2e8f0'}; min-height: 100vh; overflow-x: hidden; }
     .mono { font-family: "JetBrains Mono", monospace; }
     .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
-    input, textarea, select { background: #0f172a !important; border: 1px solid #1e293b !important; color: #e2e8f0; }
-    input:focus, textarea:focus, select:focus { border-color: #0ea5e9 !important; outline: none; box-shadow: 0 0 0 1px #0ea5e9; }
+    input:not(.assessment-input), textarea:not(.assessment-input), select:not(.assessment-input) { background: #0f172a !important; border: 1px solid #1e293b !important; color: #e2e8f0; }
+    input:not(.assessment-input):focus, textarea:not(.assessment-input):focus, select:not(.assessment-input):focus { border-color: #0ea5e9 !important; outline: none; box-shadow: 0 0 0 1px #0ea5e9; }
     .score-btn, .mod-nav-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; }
     .score-btn:hover, .mod-nav-btn:hover { border-color: #0ea5e9; color: white; }
     .score-btn.active, .mod-nav-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; }
@@ -9421,6 +9454,27 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
     { value: 'gray-600', label: 'Gray 600', swatch: 'bg-gray-600 border-gray-500', text: 'text-white' }
   ];
   
+  const assessmentTextColorOptions = [
+    { value: 'white', label: 'White', swatch: 'bg-white border-slate-300', text: 'text-slate-900' },
+    { value: 'slate-900', label: 'Slate 900', swatch: 'bg-slate-900 border-slate-700', text: 'text-white' },
+    { value: 'slate-800', label: 'Slate 800', swatch: 'bg-slate-800 border-slate-700', text: 'text-white' },
+    { value: 'slate-700', label: 'Slate 700', swatch: 'bg-slate-700 border-slate-600', text: 'text-white' },
+    { value: 'slate-600', label: 'Slate 600', swatch: 'bg-slate-600 border-slate-500', text: 'text-white' },
+    { value: 'slate-500', label: 'Slate 500', swatch: 'bg-slate-500 border-slate-400', text: 'text-white' },
+    { value: 'slate-400', label: 'Slate 400', swatch: 'bg-slate-400 border-slate-300', text: 'text-white' },
+    { value: 'slate-300', label: 'Slate 300', swatch: 'bg-slate-300 border-slate-200', text: 'text-slate-900' },
+    { value: 'slate-200', label: 'Slate 200', swatch: 'bg-slate-200 border-slate-100', text: 'text-slate-900' },
+    { value: 'slate-100', label: 'Slate 100', swatch: 'bg-slate-100 border-slate-50', text: 'text-slate-900' },
+    { value: 'gray-900', label: 'Gray 900', swatch: 'bg-gray-900 border-gray-700', text: 'text-white' },
+    { value: 'gray-800', label: 'Gray 800', swatch: 'bg-gray-800 border-gray-700', text: 'text-white' },
+    { value: 'gray-700', label: 'Gray 700', swatch: 'bg-gray-700 border-gray-600', text: 'text-white' },
+    { value: 'gray-600', label: 'Gray 600', swatch: 'bg-gray-600 border-gray-500', text: 'text-white' },
+    { value: 'gray-500', label: 'Gray 500', swatch: 'bg-gray-500 border-gray-400', text: 'text-white' },
+    { value: 'gray-400', label: 'Gray 400', swatch: 'bg-gray-400 border-gray-300', text: 'text-white' },
+    { value: 'gray-300', label: 'Gray 300', swatch: 'bg-gray-300 border-gray-200', text: 'text-slate-900' },
+    { value: 'black', label: 'Black', swatch: 'bg-black border-slate-700', text: 'text-white' }
+  ];
+  
   const buttonColorOptions = [
     { value: 'sky-600', label: 'Sky', swatch: 'bg-sky-600 border-sky-500', text: 'text-white' },
     { value: 'emerald-600', label: 'Emerald', swatch: 'bg-emerald-600 border-emerald-500', text: 'text-white' },
@@ -9633,6 +9687,27 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
                     onClick={() => updateSettings({ secondaryTextColor: opt.value })}
                     className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
                       (settings.secondaryTextColor || 'slate-400') === opt.value
+                        ? 'border-white bg-slate-700'
+                        : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded border ${opt.swatch}`}></div>
+                    <span className={`text-xs ${opt.text}`}>{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Assessment Text Color</label>
+              <p className="text-[10px] text-slate-500 mb-2 italic">Text color for questions, answers, and input fields in assessments</p>
+              <div className="grid grid-cols-3 gap-2">
+                {assessmentTextColorOptions.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => updateSettings({ assessmentTextColor: opt.value })}
+                    className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                      (settings.assessmentTextColor || 'white') === opt.value
                         ? 'border-white bg-slate-700'
                         : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
                     }`}
@@ -11055,6 +11130,38 @@ Questions.filter((_, i) => i !== index);
 
     const assessmentId = `mixed_${Date.now()}`;
     
+    // Get Course Settings for dynamic colors
+    const courseSettings = projectData["Course Settings"] || {};
+    const backgroundColor = courseSettings.backgroundColor || 'slate-950';
+    const accentColor = courseSettings.accentColor || 'sky';
+    const isLightBg = backgroundColor.includes('white') || backgroundColor.includes('slate-100') || backgroundColor.includes('slate-50');
+    
+    const headingTextColor = courseSettings.headingTextColor || (isLightBg ? 'slate-900' : 'white');
+    const secondaryTextColor = courseSettings.secondaryTextColor || (isLightBg ? 'slate-600' : 'slate-400');
+    const assessmentTextColor = courseSettings.assessmentTextColor || 'white';
+    const buttonColor = courseSettings.buttonColor || `${accentColor}-600`;
+    
+    const toTextClass = (value) => value.startsWith('text-') ? value : `text-${value}`;
+    const toBgBase = (value) => value.startsWith('bg-') ? value.slice(3) : value;
+    
+    const headingTextClass = toTextClass(headingTextColor);
+    const secondaryTextClass = toTextClass(secondaryTextColor);
+    const assessmentTextClass = toTextClass(assessmentTextColor);
+    const bodyTextClass = assessmentTextClass;
+    const buttonBgBase = toBgBase(buttonColor);
+    const buttonBgClass = `bg-${buttonBgBase}`;
+    const buttonHoverClass = buttonBgBase.endsWith('-600') ? `hover:bg-${buttonBgBase.replace(/-600$/, '-500')}` : `hover:bg-${buttonBgBase}`;
+    const buttonTextClass = isLightBg ? 'text-slate-900' : 'text-white';
+    
+    const cardBgClass = isLightBg ? 'bg-white' : 'bg-slate-900';
+    const cardBorderClass = isLightBg ? 'border-slate-300' : 'border-slate-700';
+    const optionBgClass = isLightBg ? 'bg-slate-100' : 'bg-slate-800';
+    const optionHoverClass = isLightBg ? 'hover:bg-slate-200' : 'hover:bg-slate-750';
+    const inputBgClass = isLightBg ? 'bg-white' : 'bg-slate-950';
+    const inputTextClass = assessmentTextClass;
+    const modalBgClass = isLightBg ? 'bg-white' : 'bg-slate-900';
+    const modalBorderClass = isLightBg ? 'border-slate-300' : 'border-slate-700';
+    
     // Helper function to determine question type consistently
     const getQuestionType = (q) => {
       if (q.type) return q.type;
@@ -11080,13 +11187,13 @@ Questions.filter((_, i) => i !== index);
       if (isMC && q.options && q.options.length > 0) {
         // Multiple Choice Question
         questionsHtml += `
-          <div class="mb-8 p-6 bg-slate-900 rounded-xl border border-slate-700">
-            <h3 class="text-lg font-bold text-white mb-4">${qNum}. ${q.question || 'Untitled Question'}</h3>
+          <div class="mb-8 p-6 ${cardBgClass} rounded-xl border ${cardBorderClass}">
+            <h3 class="text-lg font-bold ${headingTextClass} mb-4">${qNum}. ${q.question || 'Untitled Question'}</h3>
             <div class="space-y-2">
               ${q.options.map((opt, optIdx) => `
-                <label class="flex items-center gap-3 p-3 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-750 transition-colors">
-                  <input type="radio" name="q${idx}" value="${optIdx}" class="w-4 h-4" />
-                  <span class="text-slate-300">${opt || ''}</span>
+                <label class="flex items-center gap-3 p-3 ${optionBgClass} rounded-lg cursor-pointer ${optionHoverClass} transition-colors">
+                  <input type="radio" name="q${idx}" value="${optIdx}" class="w-4 h-4 assessment-input" />
+                  <span class="${bodyTextClass}">${opt || ''}</span>
                 </label>
               `).join('')}
             </div>
@@ -11096,14 +11203,14 @@ Questions.filter((_, i) => i !== index);
       } else {
         // Long Answer Question
         questionsHtml += `
-          <div class="mb-8 p-6 bg-slate-900 rounded-xl border border-slate-700 print-section">
-            <h3 class="text-lg font-bold text-white mb-4 print-question">${qNum}. ${q.question || 'Untitled Question'}</h3>
+          <div class="mb-8 p-6 ${cardBgClass} rounded-xl border ${cardBorderClass} print-section">
+            <h3 class="text-lg font-bold ${headingTextClass} mb-4 print-question">${qNum}. ${q.question || 'Untitled Question'}</h3>
             <textarea 
               id="${assessmentId}-answer-${laIndex}" 
               placeholder="Type your answer here..."
-              class="w-full h-48 bg-slate-950 border border-slate-700 rounded-lg p-4 text-white resize-none focus:border-purple-500 focus:outline-none print-response"
+              class="w-full h-48 ${inputBgClass} border ${cardBorderClass} rounded-lg p-4 ${inputTextClass} resize-none focus:border-${accentColor}-500 focus:outline-none print-response assessment-input"
             ></textarea>
-            <p class="text-xs text-slate-500 italic mt-2 no-print">Auto-saved to browser</p>
+            <p class="text-xs ${secondaryTextClass} italic mt-2 no-print">Auto-saved to browser</p>
           </div>
         `;
         laIndex++;
@@ -11114,8 +11221,8 @@ Questions.filter((_, i) => i !== index);
     const html = `<div id="${assessmentId}" class="w-full h-full custom-scroll p-8">
       <div class="max-w-4xl mx-auto">
         <header class="mb-8">
-          <h1 class="text-3xl font-black text-white italic mb-2 print-title">${masterAssessmentTitle}</h1>
-          <p class="text-sm text-slate-400 no-print">
+          <h1 class="text-3xl font-black ${headingTextClass} italic mb-2 print-title">${masterAssessmentTitle}</h1>
+          <p class="text-sm ${secondaryTextClass} no-print">
             ${mcQuestions.length > 0 && laQuestions.length > 0 
               ? `Complete ${mcQuestions.length} multiple-choice and ${laQuestions.length} long-answer questions.`
               : mcQuestions.length > 0 
@@ -11127,22 +11234,22 @@ Questions.filter((_, i) => i !== index);
         
         ${laQuestions.length > 0 ? `
           <!-- Student Info (only for long-answer assessments) -->
-          <div class="grid grid-cols-2 gap-4 mb-8 p-6 bg-slate-900 rounded-xl border border-slate-700 print-header no-print">
+          <div class="grid grid-cols-2 gap-4 mb-8 p-6 ${cardBgClass} rounded-xl border ${cardBorderClass} print-header no-print">
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Student Name</label>
+              <label class="block text-xs font-bold ${secondaryTextClass} uppercase mb-2">Student Name</label>
               <input 
                 type="text" 
                 id="${assessmentId}-student-name"
                 placeholder="Enter your name..."
-                class="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm focus:border-purple-500 focus:outline-none"
+                class="w-full ${inputBgClass} border ${cardBorderClass} rounded p-3 ${inputTextClass} text-sm focus:border-${accentColor}-500 focus:outline-none assessment-input"
               />
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Date</label>
+              <label class="block text-xs font-bold ${secondaryTextClass} uppercase mb-2">Date</label>
               <input 
                 type="date" 
                 id="${assessmentId}-student-date"
-                class="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm focus:border-purple-500 focus:outline-none"
+                class="w-full ${inputBgClass} border ${cardBorderClass} rounded p-3 ${inputTextClass} text-sm focus:border-${accentColor}-500 focus:outline-none assessment-input"
               />
             </div>
           </div>
@@ -11155,18 +11262,18 @@ Questions.filter((_, i) => i !== index);
 
         <!-- Action Buttons -->
         <div class="flex flex-wrap gap-3 mt-8 no-print">
-          <button type="button" onclick="${assessmentId}_reset()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+          <button type="button" onclick="${assessmentId}_reset()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
             Reset
           </button>
           ${laQuestions.length > 0 ? `
-          <button type="button" onclick="${assessmentId}_download()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+          <button type="button" onclick="${assessmentId}_download()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
             Download Backup
           </button>
-          <button type="button" onclick="document.getElementById('${assessmentId}-upload').click()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+          <button type="button" onclick="document.getElementById('${assessmentId}-upload').click()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
             Upload Backup
           </button>
           ` : ''}
-          <button type="button" onclick="${assessmentId}_generateReport()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+          <button type="button" onclick="${assessmentId}_generateReport()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
             Print & Submit
           </button>
         </div>
@@ -11180,11 +11287,11 @@ Questions.filter((_, i) => i !== index);
 
         <!-- Reset Confirmation Modal -->
         <div id="${assessmentId}-reset-modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden">
-          <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-md mx-4">
-            <h3 class="text-lg font-bold text-white mb-4">Reset Assessment?</h3>
-            <p class="text-slate-300 mb-6">Are you sure you want to reset all your answers? This cannot be undone.</p>
+          <div class="${modalBgClass} border ${modalBorderClass} rounded-xl p-6 max-w-md mx-4">
+            <h3 class="text-lg font-bold ${headingTextClass} mb-4">Reset Assessment?</h3>
+            <p class="${bodyTextClass} mb-6">Are you sure you want to reset all your answers? This cannot be undone.</p>
             <div class="flex gap-3">
-              <button onclick="document.getElementById('${assessmentId}-reset-modal').classList.add('hidden')" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded">Cancel</button>
+              <button onclick="document.getElementById('${assessmentId}-reset-modal').classList.add('hidden')" class="flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-2 rounded">Cancel</button>
               <button onclick="${assessmentId}_confirmReset()" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded">Reset</button>
             </div>
           </div>
