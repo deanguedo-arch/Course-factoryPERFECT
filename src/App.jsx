@@ -3494,7 +3494,13 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                         html: parsed.html,
                                                         script: parsed.script,
                                                         questionCount: masterQuestions.length,
-                                                        generatedId: parsed.id || null
+                                                        generatedId: parsed.id || null,
+                                                        source: 'master',
+                                                        masterAssessmentTitle,
+                                                        masterQuestionsSnapshot: masterQuestions.map((q) => ({
+                                                            ...q,
+                                                            options: q.options ? [...q.options] : []
+                                                        }))
                                                     });
                                                     alert("Assessment added successfully! Switching to Manage tab...");
                                                     setGeneratedAssessment("");
@@ -3529,66 +3535,93 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                             return <p className="text-xs text-slate-500 italic text-center py-4">No assessments yet. Create one using "Create New" tab.</p>;
                                         }
 
-                                        return assessments.sort((a, b) => a.order - b.order).map((assess) => (
-                                            <div key={assess.id} className="p-3 bg-slate-900 rounded-lg border border-slate-800 hover:bg-slate-800/70 transition-colors">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3 flex-1">
-                                                        <div className="w-8 h-8 rounded flex items-center justify-center text-purple-500 bg-purple-500/10 border border-purple-500/20 font-bold text-xs">
-                                                            <CheckCircle size={16} />
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <div className={`text-sm font-medium ${assess.hidden ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
-                                                                {assess.title} {assess.hidden && <span className="text-[9px] text-slate-600">(HIDDEN)</span>}
+                                        return assessments.sort((a, b) => a.order - b.order).map((assess) => {
+                                            const canSendToMaster = Array.isArray(assess.masterQuestionsSnapshot) && assess.masterQuestionsSnapshot.length > 0;
+                                            return (
+                                                <div key={assess.id} className="p-3 bg-slate-900 rounded-lg border border-slate-800 hover:bg-slate-800/70 transition-colors">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3 flex-1">
+                                                            <div className="w-8 h-8 rounded flex items-center justify-center text-purple-500 bg-purple-500/10 border border-purple-500/20 font-bold text-xs">
+                                                                <CheckCircle size={16} />
                                                             </div>
-                                                            <div className="text-[10px] text-slate-500">
-                                                                Type: {assess.type === 'quiz' ? 'Multiple Choice' : assess.type === 'longanswer' ? 'Long Answer' : 'Print & Submit'}
+                                                            <div className="flex-1">
+                                                                <div className={`text-sm font-medium ${assess.hidden ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
+                                                                    {assess.title} {assess.hidden && <span className="text-[9px] text-slate-600">(HIDDEN)</span>}
+                                                                </div>
+                                                                <div className="text-[10px] text-slate-500">
+                                                                    Type: {assess.type === 'quiz' ? 'Multiple Choice' : assess.type === 'longanswer' ? 'Long Answer' : 'Print & Submit'}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <button 
-                                                            onClick={() => toggleAssessmentHidden(assess.id)}
-                                                            className={`p-1.5 rounded transition-colors ${assess.hidden ? 'bg-slate-700 text-slate-400' : 'bg-emerald-900 text-emerald-400'}`}
-                                                            title={assess.hidden ? "Show" : "Hide"}
-                                                        >
-                                                            {assess.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => moveAssessment(assess.id, 'up')}
-                                                            disabled={assess.order === 0}
-                                                            className="p-1.5 hover:bg-slate-700 rounded disabled:opacity-30"
-                                                            title="Move up"
-                                                        >
-                                                            <ArrowUpCircle size={12} />
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => moveAssessment(assess.id, 'down')}
-                                                            disabled={assess.order === assessments.length - 1}
-                                                            className="p-1.5 hover:bg-slate-700 rounded disabled:opacity-30 rotate-180"
-                                                            title="Move down"
-                                                        >
-                                                            <ArrowUpCircle size={12} />
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => {
-                                                                setEditingAssessment(assess);
-                                                            }}
-                                                            className="p-1.5 hover:bg-blue-900 hover:text-blue-400 rounded"
-                                                            title="Edit"
-                                                        >
-                                                            <PenTool size={12} />
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => deleteAssessment(assess.id)}
-                                                            className="p-1.5 hover:bg-rose-900 hover:text-rose-400 rounded"
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 size={12} />
-                                                        </button>
+                                                        <div className="flex items-center gap-1">
+                                                            <button 
+                                                                onClick={() => toggleAssessmentHidden(assess.id)}
+                                                                className={`p-1.5 rounded transition-colors ${assess.hidden ? 'bg-slate-700 text-slate-400' : 'bg-emerald-900 text-emerald-400'}`}
+                                                                title={assess.hidden ? "Show" : "Hide"}
+                                                            >
+                                                                {assess.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => moveAssessment(assess.id, 'up')}
+                                                                disabled={assess.order === 0}
+                                                                className="p-1.5 hover:bg-slate-700 rounded disabled:opacity-30"
+                                                                title="Move up"
+                                                            >
+                                                                <ArrowUpCircle size={12} />
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => moveAssessment(assess.id, 'down')}
+                                                                disabled={assess.order === assessments.length - 1}
+                                                                className="p-1.5 hover:bg-slate-700 rounded disabled:opacity-30 rotate-180"
+                                                                title="Move down"
+                                                            >
+                                                                <ArrowUpCircle size={12} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (!canSendToMaster) return;
+                                                                    const hasMasterDraft = masterQuestions.length > 0 || masterAssessmentTitle.trim();
+                                                                    const warningMessage = hasMasterDraft
+                                                                        ? 'This will replace your current Master Assessment questions and title. Continue?'
+                                                                        : 'Send this assessment back to Master Assessment for editing?';
+                                                                    if (!confirm(warningMessage)) return;
+                                                                    const restoredQuestions = assess.masterQuestionsSnapshot.map((q) => ({
+                                                                        ...q,
+                                                                        options: q.options ? [...q.options] : []
+                                                                    }));
+                                                                    setMasterQuestions(restoredQuestions.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+                                                                    setMasterAssessmentTitle(assess.masterAssessmentTitle || assess.title || '');
+                                                                    setGeneratedAssessment('');
+                                                                    setEditingQuestion(null);
+                                                                    setMode('MASTER');
+                                                                }}
+                                                                disabled={!canSendToMaster}
+                                                                className={`p-1.5 rounded ${canSendToMaster ? 'hover:bg-slate-700' : 'opacity-30 cursor-not-allowed'}`}
+                                                                title={canSendToMaster ? "Send back to Master Assessment" : "No Master snapshot available"}
+                                                            >
+                                                                <RotateCcw size={12} />
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setEditingAssessment(assess);
+                                                                }}
+                                                                className="p-1.5 hover:bg-blue-900 hover:text-blue-400 rounded"
+                                                                title="Edit"
+                                                            >
+                                                                <PenTool size={12} />
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => deleteAssessment(assess.id)}
+                                                                className="p-1.5 hover:bg-rose-900 hover:text-rose-400 rounded"
+                                                                title="Delete"
+                                                            >
+                                                                <Trash2 size={12} />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ));
+                                            );
+                                        });
                                     })()}
                                 </div>
 
