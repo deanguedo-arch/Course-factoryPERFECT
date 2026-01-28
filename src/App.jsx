@@ -3684,51 +3684,122 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                     </div>
                                 )}
 
-                                {/* EDIT QUESTION MODAL */}
-                                {editingQuestion && (
-                                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setEditingQuestion(null)}>
-                                        <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                                            <div className="flex items-center justify-between mb-6">
-                                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                                    <PenTool size={20} className="text-purple-400" />
-                                                    Edit Question
-                                                </h3>
-                                                <button onClick={() => setEditingQuestion(null)} className="text-slate-400 hover:text-white transition-colors">
-                                                    <X size={24} />
+                            </div>
+                        )}
+                        {/* EDIT QUESTION MODAL */}
+                        {/* Rendered at the bottom so the same modal can be shown from any mode */}
+                        {editingQuestion && (() => {
+                            const isMC = editingQuestion.type === 'multiple-choice';
+                            const optionsList = editingQuestion.options?.length ? editingQuestion.options : ['', '', '', ''];
+                            const allOptionsFilled = optionsList.every(opt => opt && opt.trim());
+                            const canSave = editingQuestion.question?.trim() && (!isMC || allOptionsFilled);
+
+                            const setOptionValue = (idx, value) => {
+                                setEditingQuestion(prev => {
+                                    if (!prev) return prev;
+                                    const updatedOptions = prev.options ? [...prev.options] : ['', '', '', ''];
+                                    updatedOptions[idx] = value;
+                                    return { ...prev, options: updatedOptions };
+                                });
+                            };
+
+                            const switchQuestionType = (type) => {
+                                setEditingQuestion(prev => {
+                                    if (!prev) return prev;
+                                    if (type === 'multiple-choice') {
+                                        return {
+                                            ...prev,
+                                            type,
+                                            options: prev.options?.length ? [...prev.options] : ['', '', '', ''],
+                                            correct: typeof prev.correct === 'number' ? prev.correct : 0
+                                        };
+                                    }
+                                    return { ...prev, type };
+                                });
+                            };
+
+                            const saveChanges = () => {
+                                updateQuestion(editingQuestion.id, {
+                                    question: editingQuestion.question.trim(),
+                                    type: editingQuestion.type,
+                                    options: editingQuestion.type === 'multiple-choice'
+                                        ? (editingQuestion.options || ['', '', '', '']).map(opt => opt.trim())
+                                        : editingQuestion.options,
+                                    correct: editingQuestion.type === 'multiple-choice' ? (typeof editingQuestion.correct === 'number' ? editingQuestion.correct : 0) : 0
+                                });
+                                setEditingQuestion(null);
+                            };
+
+                            return (
+                                <div
+                                    className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                                    onClick={() => setEditingQuestion(null)}
+                                >
+                                    <div
+                                        className="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <div className="flex items-center justify-between mb-6">
+                                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                                <PenTool size={20} className="text-purple-400" />
+                                                Edit Question
+                                            </h3>
+                                            <button
+                                                onClick={() => setEditingQuestion(null)}
+                                                className="text-slate-400 hover:text-white transition-colors"
+                                            >
+                                                <X size={24} />
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => switchQuestionType('multiple-choice')}
+                                                    className={`flex-1 py-2 px-3 rounded text-xs font-bold transition-all ${isMC ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                                                >
+                                                    <CheckCircle size={14} /> Multiple Choice
+                                                </button>
+                                                <button
+                                                    onClick={() => switchQuestionType('long-answer')}
+                                                    className={`flex-1 py-2 px-3 rounded text-xs font-bold transition-all ${!isMC ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                                                >
+                                                    <Edit size={14} /> Long Answer
                                                 </button>
                                             </div>
 
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Question</label>
-                                                    <textarea 
-                                                        value={editingQuestion.question}
-                                                        onChange={(e) => setEditingQuestion({...editingQuestion, question: e.target.value})}
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm h-24 resize-none"
-                                                    />
-                                                </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
+                                                    Question
+                                                </label>
+                                                <textarea
+                                                    value={editingQuestion.question}
+                                                    onChange={(e) => setEditingQuestion({ ...editingQuestion, question: e.target.value })}
+                                                    placeholder="Enter your question or prompt..."
+                                                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm h-24 resize-none"
+                                                />
+                                            </div>
 
-                                                {editingQuestion.type === 'multiple-choice' && (
+                                            {isMC ? (
+                                                <div className="p-4 bg-blue-900/10 border border-blue-700/30 rounded-xl space-y-3">
                                                     <div>
-                                                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Answer Options</label>
+                                                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
+                                                            Answer Options
+                                                        </label>
                                                         <div className="space-y-2">
-                                                            {editingQuestion.options.map((opt, idx) => (
+                                                            {optionsList.map((opt, idx) => (
                                                                 <div key={idx} className="flex items-center gap-2">
-                                                                    <input 
+                                                                    <input
                                                                         type="radio"
-                                                                        name="edit-correct"
+                                                                        name="editing-correct-answer"
                                                                         checked={editingQuestion.correct === idx}
-                                                                        onChange={() => setEditingQuestion({...editingQuestion, correct: idx})}
+                                                                        onChange={() => setEditingQuestion({ ...editingQuestion, correct: idx })}
                                                                         className="w-4 h-4"
                                                                     />
-                                                                    <input 
+                                                                    <input
                                                                         type="text"
                                                                         value={opt}
-                                                                        onChange={(e) => {
-                                                                            const newOptions = [...editingQuestion.options];
-                                                                            newOptions[idx] = e.target.value;
-                                                                            setEditingQuestion({...editingQuestion, options: newOptions});
-                                                                        }}
+                                                                        onChange={(e) => setOptionValue(idx, e.target.value)}
                                                                         placeholder={`Option ${idx + 1}`}
                                                                         className="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
                                                                     />
@@ -3736,32 +3807,36 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                             ))}
                                                         </div>
                                                     </div>
-                                                )}
-
-                                                <div className="flex gap-3 pt-4">
-                                                    <button 
-                                                        onClick={() => setEditingQuestion(null)}
-                                                        className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded"
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => {
-                                                            updateQuestion(editingQuestion.id, editingQuestion);
-                                                            setEditingQuestion(null);
-                                                        }}
-                                                        className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded flex items-center justify-center gap-2"
-                                                    >
-                                                        <Save size={16} /> Save Changes
-                                                    </button>
+                                                    <p className="text-[9px] text-slate-500 italic">
+                                                        Select the correct answer by clicking the radio button.
+                                                    </p>
                                                 </div>
+                                            ) : (
+                                                <p className="text-[9px] text-slate-500 italic">
+                                                    Students will see a large text area to respond to this prompt.
+                                                </p>
+                                            )}
+
+                                            <div className="flex gap-3 pt-4">
+                                                <button
+                                                    onClick={() => setEditingQuestion(null)}
+                                                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    onClick={saveChanges}
+                                                    disabled={!canSave}
+                                                    className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded flex items-center justify-center gap-2 disabled:opacity-50"
+                                                >
+                                                    <Save size={16} /> Save Changes
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
-                                )}
-                            </div>
-                        )}
-
+                                </div>
+                            );
+                        })()}
                         {/* MIGRATE MODE - Assessment Migrator */}
                         {mode === 'MIGRATE' && (
                             <div className="space-y-4">
@@ -4054,12 +4129,12 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             if (importPreview.length === 0) return;
                                             // Convert to format expected by masterQuestions
                                             const formattedQuestions = importPreview.map(q => ({
-                                                type: q.type || (q.options.length > 0 ? 'multiple-choice' : 'long-answer'),
+                                                type: q.type || (q.options?.length > 0 ? 'multiple-choice' : 'long-answer'),
                                                 question: q.question,
                                                 options: q.options || [],
-                                                correct: q.correct || 0
+                                                correct: typeof q.correct === 'number' ? q.correct : 0
                                             }));
-                                            setMasterQuestions(prev => [...prev, ...formattedQuestions]);
+                                            formattedQuestions.forEach(q => addQuestionToMaster(q));
                                             const mcCount = formattedQuestions.filter(q => q.type === 'multiple-choice').length;
                                             const laCount = formattedQuestions.filter(q => q.type === 'long-answer').length;
                                             alert(`âœ… Imported ${formattedQuestions.length} questions! (${mcCount} multiple-choice, ${laCount} long-answer)`);
@@ -11344,24 +11419,37 @@ export default function App() {
   // MASTER ASSESSMENT FUNCTIONS
   const generateQuestionId = () => `q-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-  const addQuestionToMaster = (questionData = null) => {
-    const payload = questionData || { ...currentQuestion, type: currentQuestionType };
-    const question = {
+  const buildMasterQuestion = (payload, fallbackType = 'multiple-choice') => {
+    const questionType = payload.type || fallbackType;
+    return {
       id: payload.id || generateQuestionId(),
       question: payload.question || '',
       options: payload.options?.slice() || ['', '', '', ''],
       correct: typeof payload.correct === 'number' ? payload.correct : 0,
-      type: payload.type || currentQuestionType
+      type: questionType,
+      order: typeof payload.order === 'number' ? payload.order : 0
     };
+  };
 
+  const addQuestionToMaster = (questionData = null) => {
+    const payload = questionData || { ...currentQuestion, type: currentQuestionType };
     setMasterQuestions(prev => {
-      const existingIndex = prev.findIndex(q => q.id === question.id);
+      const existingIndex = prev.findIndex(q => q.id === payload.id);
       if (existingIndex !== -1) {
         const updated = [...prev];
-        updated[existingIndex] = { ...updated[existingIndex], ...question };
+        const preservedOrder = updated[existingIndex]?.order ?? existingIndex;
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          ...buildMasterQuestion(payload, currentQuestionType),
+          order: preservedOrder
+        };
         return updated;
       }
-      return [...prev, question];
+      const newQuestion = {
+        ...buildMasterQuestion(payload, currentQuestionType),
+        order: prev.length
+      };
+      return [...prev, newQuestion];
     });
 
     setCurrentQuestion({
@@ -11379,12 +11467,15 @@ export default function App() {
       if (targetIndex < 0 || targetIndex >= prev.length) return prev;
       const reordered = [...prev];
       [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
-      return reordered;
+      return reordered.map((q, idx) => ({ ...q, order: idx }));
     });
   };
 
   const deleteQuestion = (questionId) => {
-    setMasterQuestions(prev => prev.filter(q => q.id !== questionId));
+    setMasterQuestions(prev => {
+      const filtered = prev.filter(q => q.id !== questionId);
+      return filtered.map((q, idx) => ({ ...q, order: idx }));
+    });
   };
 
   const updateQuestion = (questionId, updates) => {
