@@ -360,6 +360,11 @@ const PROJECT_DATA = {
     exportSettings: {
       filenamePattern: "{courseName}_compiled",
       includeTimestamp: true
+    },
+    layoutSettings: {
+      showSidebar: true,
+      showFooter: true,
+      navPosition: 'side'
     }
   },
   "Global Toolkit": [
@@ -580,7 +585,8 @@ const generateMasterShell = (data) => {
     content = "",
     scripts = "",
     progressTracking = "",
-    containerBgRgba = null
+    containerBgRgba = null,
+    layoutSettings = { showSidebar: true, showFooter: true, navPosition: 'side' }
   } = data;
   
   const colors = getAccentColor(accentColor);
@@ -618,6 +624,11 @@ const generateMasterShell = (data) => {
   const sidebarHoverBg = isLightBg ? hexToRgba(bgHex, 0.98) : 'rgba(30, 41, 59, 0.95)';
   const containerBgVar = containerBgRgba || hexToRgba(isLightBg ? '#ffffff' : '#0f172a', 0.8);
   
+  const showSidebar = layoutSettings?.showSidebar !== false;
+  const showFooter = layoutSettings?.showFooter !== false;
+  const navPosition = layoutSettings?.navPosition || 'side';
+  const useTopNav = navPosition === 'top';
+
   // Build styles with accent color applied
   const baseStyles = `        /* --- GLOBAL & SHARED STYLES --- */
         html, body { background-color: ${bgHex} !important; }
@@ -766,6 +777,50 @@ const generateMasterShell = (data) => {
             }
         }`;
   
+  const bodyClass = useTopNav ? 'flex flex-col' : 'flex';
+  const sidebarToggleHtml = showSidebar && !useTopNav
+    ? `    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation" title="Toggle Menu">&#9776;</button>
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>`
+    : '';
+  const sidebarFooterHtml = showFooter
+    ? `        <div class="p-6 border-t border-slate-800 text-center"><p class="text-[9px] text-slate-600 italic">"Recognition is the trigger for regulation."</p></div>`
+    : '';
+  const sidebarHtml = showSidebar && !useTopNav
+    ? `    <div id="sidebar-nav" class="w-64 glass-panel flex flex-col h-full z-50">
+        <div class="p-8 border-b border-slate-800">
+            <h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none"><span class="text-${accentColor}-500">${courseName}</span></h1>
+            <p class="text-[10px] text-slate-500 mt-2 mono uppercase tracking-widest">Master Console v2.0</p>${courseInfo}
+        </div>
+        <nav class="flex-1 overflow-y-auto py-4 space-y-1" id="main-nav">
+            <div class="px-4 py-2 mt-4 text-[9px] font-bold text-slate-600 uppercase tracking-widest mono">System Modules</div>
+            ${navItems}
+        </nav>
+${sidebarFooterHtml}
+    </div>`
+    : '';
+  const topNavHtml = useTopNav
+    ? `    <header class="w-full border-b border-slate-800 bg-slate-900/80 backdrop-blur-sm">
+        <div class="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between gap-4">
+            <div>
+                <h1 class="text-lg font-bold flex items-center gap-2 text-white"><span class="text-${accentColor}-500">${courseName}</span></h1>
+                <p class="text-[10px] text-slate-500 uppercase tracking-wider mt-1 font-mono">MASTER CONSOLE</p>
+            </div>
+            <nav class="flex-1 overflow-x-auto">
+                <div class="flex items-center gap-2 justify-end min-w-max">
+                    ${navItems}
+                </div>
+            </nav>
+        </div>
+    </header>`
+    : '';
+  const footerHtml = showFooter && (useTopNav || !showSidebar)
+    ? `    <footer class="w-full border-t border-slate-800 bg-slate-900/80 backdrop-blur-sm">
+        <div class="max-w-[1800px] mx-auto px-6 py-4 text-[10px] text-slate-500 uppercase tracking-widest text-center">
+            Master Console v2.0
+        </div>
+    </footer>`
+    : '';
+
   return `<!DOCTYPE html>
 <html lang="en" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
 <head>
@@ -796,27 +851,19 @@ const generateMasterShell = (data) => {
         })();
     </script>
 </head>
-<body class="flex" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
+<body class="${bodyClass}" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
     <!-- Sidebar Toggle Button (Works on ALL screen sizes) -->
-    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation" title="Toggle Menu">&#9776;</button>
-    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+${sidebarToggleHtml}
 
-    <div id="sidebar-nav" class="w-64 glass-panel flex flex-col h-full z-50">
-        <div class="p-8 border-b border-slate-800">
-            <h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none"><span class="text-${accentColor}-500">${courseName}</span></h1>
-            <p class="text-[10px] text-slate-500 mt-2 mono uppercase tracking-widest">Master Console v2.0</p>${courseInfo}
-        </div>
-        <nav class="flex-1 overflow-y-auto py-4 space-y-1" id="main-nav">
-            <div class="px-4 py-2 mt-4 text-[9px] font-bold text-slate-600 uppercase tracking-widest mono">System Modules</div>
-            ${navItems}
-        </nav>
-        <div class="p-6 border-t border-slate-800 text-center"><p class="text-[9px] text-slate-600 italic">"Recognition is the trigger for regulation."</p></div>
-    </div>
+${topNavHtml}
+${sidebarHtml}
 
     <div class="flex-1 relative h-full overflow-hidden" id="content-container">
         ${content}
         <iframe id="view-external" class="w-full h-full hidden" src=""></iframe>
     </div>
+
+${footerHtml}
 
     <!-- MODULE SCRIPTS CONTAINER -->
     <script id="module-scripts">
@@ -1632,21 +1679,28 @@ function validateProject(projectData) {
 
 // --- Phases ---
 
-const Phase0 = () => {
-  const [updateMode, setUpdateMode] = useState(false);
-  const [newShell, setNewShell] = useState("");
+const Phase0 = ({ projectData, setProjectData }) => {
+  const layoutSettings = projectData?.["Course Settings"]?.layoutSettings || {
+    showSidebar: true,
+    showFooter: true,
+    navPosition: 'side'
+  };
 
-  const updateShellPrompt = `I need to update the Master Shell Template in "CourseFactoryDashboard.tsx".
-
-**New Shell Code:**
-\`\`\`html
-${newShell}
-\`\`\`
-
-**Task:**
-1. Locate the \`const MASTER_SHELL\` variable at the top of the file.
-2. Replace its entire content (the backticked string) with the new HTML code provided above.
-3. Do not modify any other logic.`;
+  const updateLayoutSetting = (key, value) => {
+    setProjectData(prev => ({
+      ...prev,
+      "Course Settings": {
+        ...prev["Course Settings"],
+        layoutSettings: {
+          showSidebar: true,
+          showFooter: true,
+          navPosition: 'side',
+          ...(prev["Course Settings"]?.layoutSettings || {}),
+          [key]: value
+        }
+      }
+    }));
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -1655,39 +1709,50 @@ ${newShell}
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Layers className="text-blue-400" /> Phase 0: Master Shell
             </h2>
-            <button 
-                onClick={() => setUpdateMode(!updateMode)}
-                className={`text-xs px-3 py-1 rounded-full border transition-all flex items-center gap-2 ${updateMode ? 'bg-amber-500/20 border-amber-500 text-amber-400' : 'bg-slate-700 border-slate-600 text-slate-400'}`}
-            >
-                <ArrowUpCircle size={14} /> {updateMode ? "Cancel Update" : "Update Template"}
-            </button>
         </div>
 
-        {updateMode ? (
-            <div className="animate-in fade-in slide-in-from-top-4 bg-amber-900/10 border border-amber-800/50 p-4 rounded-xl mb-4">
-                <h3 className="text-sm font-bold text-amber-400 mb-2">Update Master Template</h3>
-                <p className="text-xs text-slate-400 mb-4">
-                    Paste your <strong>improved</strong> empty shell here (e.g. with new Global Features added). 
-                    This will become the new "Factory Default" for all future projects.
-                </p>
-                <textarea 
-                    value={newShell}
-                    onChange={(e) => setNewShell(e.target.value)}
-                    className="w-full bg-slate-950 border border-amber-900 rounded-lg p-3 text-xs text-amber-100 font-mono h-48 focus:border-amber-500 outline-none resize-y mb-4"
-                    placeholder='<!DOCTYPE html>...'
-                />
-                {newShell && (
-                    <CodeBlock label="Canvas Update Prompt" code={updateShellPrompt} height="h-32" />
-                )}
+        <div className="space-y-4">
+            <div className="p-4 bg-slate-900/60 rounded-lg border border-slate-700 space-y-3">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-sm font-bold text-white">Show Sidebar</p>
+                        <p className="text-[10px] text-slate-500">Controls left navigation panel</p>
+                    </div>
+                    <button
+                        onClick={() => updateLayoutSetting('showSidebar', !layoutSettings.showSidebar)}
+                        className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${layoutSettings.showSidebar ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-slate-700 border-slate-600 text-slate-400'}`}
+                    >
+                        {layoutSettings.showSidebar ? 'On' : 'Off'}
+                    </button>
+                </div>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-sm font-bold text-white">Show Footer</p>
+                        <p className="text-[10px] text-slate-500">Controls global footer bar</p>
+                    </div>
+                    <button
+                        onClick={() => updateLayoutSetting('showFooter', !layoutSettings.showFooter)}
+                        className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${layoutSettings.showFooter ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-slate-700 border-slate-600 text-slate-400'}`}
+                    >
+                        {layoutSettings.showFooter ? 'On' : 'Off'}
+                    </button>
+                </div>
+                <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Navigation Style</label>
+                    <select
+                        value={layoutSettings.navPosition}
+                        onChange={(e) => updateLayoutSetting('navPosition', e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                    >
+                        <option value="side">Side (Left)</option>
+                        <option value="top">Top (Header)</option>
+                    </select>
+                </div>
             </div>
-        ) : (
-            <div>
-                <p className="text-slate-400 mb-4 text-sm">
-                This is your <strong>Golden Master</strong>. Copy this to start any new project.
-                </p>
-                <CodeBlock label="Master Shell (index.html)" code={MASTER_SHELL} height="h-64"/>
-            </div>
-        )}
+            <p className="text-[10px] text-slate-500 italic">
+                Changes here update the Master Shell layout without touching raw HTML.
+            </p>
+        </div>
       </div>
     </div>
   );
@@ -7206,7 +7271,8 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
     content: contentInjection,
     scripts: scriptInjection + initScript,
     progressTracking: progressTrackingScript,
-    containerBgRgba
+    containerBgRgba,
+    layoutSettings: projectData["Course Settings"]?.layoutSettings
   });
 
   return finalCode;
@@ -12150,7 +12216,7 @@ export default function App() {
 
         {/* Main Content */}
         <main className="flex-grow min-h-[600px]">
-          {activePhase === 0 && <Phase0 />}
+          {activePhase === 0 && <Phase0 projectData={projectData} setProjectData={setProjectData} />}
           {activePhase === 1 && <Phase1 projectData={projectData} setProjectData={setProjectData} scannerNotes={scannerNotes} setScannerNotes={setScannerNotes} addMaterial={addMaterial} editMaterial={editMaterial} deleteMaterial={deleteMaterial} moveMaterial={moveMaterial} toggleMaterialHidden={toggleMaterialHidden} addAssessment={addAssessment} editAssessment={editAssessment} deleteAssessment={deleteAssessment} moveAssessment={moveAssessment} toggleAssessmentHidden={toggleAssessmentHidden} addQuestionToMaster={addQuestionToMaster} moveQuestion={moveQuestion} deleteQuestion={deleteQuestion} updateQuestion={updateQuestion} clearMasterAssessment={clearMasterAssessment} masterQuestions={masterQuestions} setMasterQuestions={setMasterQuestions} masterAssessmentTitle={masterAssessmentTitle} setMasterAssessmentTitle={setMasterAssessmentTitle} currentQuestionType={currentQuestionType} setCurrentQuestionType={setCurrentQuestionType} currentQuestion={currentQuestion} setCurrentQuestion={setCurrentQuestion} editingQuestion={editingQuestion} setEditingQuestion={setEditingQuestion} generateMixedAssessment={generateMixedAssessment} generatedAssessment={generatedAssessment} setGeneratedAssessment={setGeneratedAssessment} assessmentType={assessmentType} setAssessmentType={setAssessmentType} assessmentTitle={assessmentTitle} setAssessmentTitle={setAssessmentTitle} quizQuestions={quizQuestions} setQuizQuestions={setQuizQuestions} printInstructions={printInstructions} setPrintInstructions={setPrintInstructions} editingAssessment={editingAssessment} setEditingAssessment={setEditingAssessment} migrateCode={migrateCode} setMigrateCode={setMigrateCode} migratePrompt={migratePrompt} setMigratePrompt={setMigratePrompt} migrateOutput={migrateOutput} setMigrateOutput={setMigrateOutput} />}
           {activePhase === 2 && <Phase2 projectData={projectData} setProjectData={setProjectData} editMaterial={editMaterial} onEdit={openEditModule} onPreview={openPreview} onDelete={deleteModule} onToggleHidden={toggleModuleHidden} deleteMaterial={deleteMaterial} deleteAssessment={deleteAssessment} toggleMaterialHidden={toggleMaterialHidden} toggleAssessmentHidden={toggleAssessmentHidden} />}
           {activePhase === 3 && <Phase3 onGoToMaster={() => setActivePhase(0)} projectData={projectData} setProjectData={setProjectData} />}
