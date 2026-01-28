@@ -3747,11 +3747,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                     </button>
                                                     <button 
                                                         onClick={() => {
-                                                            updateQuestion(editingQuestion.id, {
-                                                                question: editingQuestion.question,
-                                                                options: editingQuestion.options,
-                                                                correct: editingQuestion.correct
-                                                            });
+                                                            updateQuestion(editingQuestion.id, editingQuestion);
                                                             setEditingQuestion(null);
                                                         }}
                                                         className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded flex items-center justify-center gap-2"
@@ -9521,7 +9517,7 @@ console.log('ðŸ“– Digital Reader initialized with event delegation (Single
 };
 
 // --- PHASE 5: SETTINGS & PREFERENCES ---
-const Phase5Settings = ({ projectData, setProjectData }) => {
+const Phase5Settings = ({ projectData, setProjectData, applyVisualDefaults }) => {
   const settings = projectData["Course Settings"] || {
     courseName: "Mental Fitness",
     courseCode: "",
@@ -9980,6 +9976,18 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-800">
+              <p className="text-[10px] text-slate-500 mb-2 italic">
+                Clear every per-material theme and assessment color override so the Phase 5 palette becomes the source of truth again.
+              </p>
+              <button
+                onClick={applyVisualDefaults}
+                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold py-3 px-4 rounded-md text-xs w-full justify-center transition-colors"
+              >
+                <RefreshCw size={14} /> Apply Visual Defaults (materials & assessments)
+              </button>
             </div>
             
             <div>
@@ -11123,23 +11131,64 @@ export default function App() {
     });
   };
 
-  const updateAssessmentsModule = (updatedAssessments) => {
+  function updateAssessmentsModule(updatedAssessments) {
     const moduleIndex = currentCourse.modules.findIndex(m => m.id === "item-assessments" || m.title === "Assessments");
     if (moduleIndex === -1) return;
     
-      const newModules = [...currentCourse.modules];
+    const newModules = [...currentCourse.modules];
     newModules[moduleIndex] = {
       ...newModules[moduleIndex],
       assessments: updatedAssessments
     };
     
-      setProjectData({
-        ...projectData,
-        "Current Course": {
+    setProjectData({
+      ...projectData,
+      "Current Course": {
         ...projectData["Current Course"],
-          modules: newModules
-        }
-      });
+        modules: newModules
+      }
+    });
+  }
+
+  const resetMaterialOverrides = () => {
+    const currentMaterials = projectData["Current Course"]?.materials || [];
+    const hasOverride = currentMaterials.some(mat => mat.themeOverride);
+    if (!hasOverride) return false;
+    const clearedMaterials = currentMaterials.map(mat => (
+      mat.themeOverride ? { ...mat, themeOverride: null } : mat
+    ));
+    setProjectData(prev => ({
+      ...prev,
+      "Current Course": {
+        ...prev["Current Course"],
+        materials: clearedMaterials
+      }
+    }));
+    return true;
+  };
+
+  const resetAssessmentOverrides = () => {
+    const assessmentsModule = getAssessmentsModule();
+    const assessments = assessmentsModule?.assessments || [];
+    const hasOverride = assessments.some(a => a.textColorOverride || a.boxColorOverride);
+    if (!hasOverride) return false;
+    const clearedAssessments = assessments.map(a => ({
+      ...a,
+      textColorOverride: null,
+      boxColorOverride: null
+    }));
+    updateAssessmentsModule(clearedAssessments);
+    return true;
+  };
+
+  const applyVisualDefaults = () => {
+    const materialsCleared = resetMaterialOverrides();
+    const assessmentsCleared = resetAssessmentOverrides();
+    if (materialsCleared || assessmentsCleared) {
+      showToast('Per-material and assessment overrides were cleared, reverting to Phase 5 defaults.', 'success');
+    } else {
+      showToast('Materials and assessments already use the Phase 5 defaults.', 'info');
+    }
   };
 
   const addMaterial = (materialData) => {
@@ -11293,22 +11342,28 @@ export default function App() {
   };
 
   // MASTER ASSESSMENT FUNCTIONS
+  const generateQuestionId = () => `q-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
   const addQuestionToMaster = (questionData = null) => {
-    // Use passed questionData if provided, otherwise use currentQuestion from state
-    const questionToAdd = questionData || { ...currentQuestion };
-    
-    if (editingQuestion !== null) {
-      // Update existing question
-      const updated = [...masterQuestions];
-      updated[editingQuestion] = questionToAdd;
-      setMasterQuestions(updated);
-      setEditingQuestion(null);
-    } else {
-      // Add new question
-      setMasterQuestions([...masterQuestions, questionToAdd]);
-    }
-    
-    // Reset form
+    const payload = questionData || { ...currentQuestion, type: currentQuestionType };
+    const question = {
+      id: payload.id || generateQuestionId(),
+      question: payload.question || '',
+      options: payload.options?.slice() || ['', '', '', ''],
+      correct: typeof payload.correct === 'number' ? payload.correct : 0,
+      type: payload.type || currentQuestionType
+    };
+
+    setMasterQuestions(prev => {
+      const existingIndex = prev.findIndex(q => q.id === question.id);
+      if (existingIndex !== -1) {
+        const updated = [...prev];
+        updated[existingIndex] = { ...updated[existingIndex], ...question };
+        return updated;
+      }
+      return [...prev, question];
+    });
+
     setCurrentQuestion({
       question: '',
       options: ['', '', '', ''],
@@ -11316,25 +11371,24 @@ export default function App() {
     });
   };
 
-  const moveQuestion = (index, direction) => {
-    const newQuestions = [...masterQuestions];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= newQuestions.length) return;
-    [newQuestions[index], newQuestions[targetIndex]] = [newQuestions[targetIndex], newQuestions[index]];
-    setMasterQuestions(newQuestions);
+  const moveQuestion = (questionId, direction) => {
+    setMasterQuestions(prev => {
+      const index = prev.findIndex(q => q.id === questionId);
+      if (index === -1) return prev;
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+      const reordered = [...prev];
+      [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+      return reordered;
+    });
   };
 
-  const deleteQuestion = (index) => {
-    const newQuestions = master
-
-Questions.filter((_, i) => i !== index);
-    setMasterQuestions(newQuestions);
+  const deleteQuestion = (questionId) => {
+    setMasterQuestions(prev => prev.filter(q => q.id !== questionId));
   };
 
-  const updateQuestion = (index) => {
-    const question = masterQuestions[index];
-    setCurrentQuestion(question);
-    setEditingQuestion(index);
+  const updateQuestion = (questionId, updates) => {
+    setMasterQuestions(prev => prev.map(q => q.id === questionId ? { ...q, ...updates } : q));
   };
 
   const clearMasterAssessment = () => {
@@ -11977,7 +12031,13 @@ Questions.filter((_, i) => i !== index);
           {activePhase === 2 && <Phase2 projectData={projectData} setProjectData={setProjectData} editMaterial={editMaterial} onEdit={openEditModule} onPreview={openPreview} onDelete={deleteModule} onToggleHidden={toggleModuleHidden} deleteMaterial={deleteMaterial} deleteAssessment={deleteAssessment} toggleMaterialHidden={toggleMaterialHidden} toggleAssessmentHidden={toggleAssessmentHidden} />}
           {activePhase === 3 && <Phase3 onGoToMaster={() => setActivePhase(0)} projectData={projectData} setProjectData={setProjectData} />}
           {activePhase === 4 && <Phase4 projectData={projectData} setProjectData={setProjectData} excludedIds={excludedIds} toggleModule={toggleModuleExclusion} onToggleHidden={toggleModuleHidden} onError={handleError} />}
-          {activePhase === 5 && <Phase5Settings projectData={projectData} setProjectData={setProjectData} />}
+          {activePhase === 5 && (
+            <Phase5Settings
+              projectData={projectData}
+              setProjectData={setProjectData}
+              applyVisualDefaults={applyVisualDefaults}
+            />
+          )}
         </main>
       </div>
 
