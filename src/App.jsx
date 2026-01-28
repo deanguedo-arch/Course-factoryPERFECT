@@ -1,4 +1,4 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Wrench, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X, Edit, Clock, RotateCcw } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
@@ -346,6 +346,7 @@ const PROJECT_DATA = {
     secondaryTextColor: "slate-400",
     assessmentTextColor: "white",
     assessmentBoxColor: "slate-900",
+    defaultMaterialTheme: "dark",
     buttonColor: "sky-600",
     containerColor: "slate-900/80",
     fontFamily: "inter",
@@ -682,7 +683,7 @@ const generateMasterShell = (data) => {
         .sidebar-toggle:hover { background: ${sidebarHoverBg}; border-color: ${colors.hex}; }
 
         /* Materials & Assessments Container Colors */
-        #view-materials .material-card,
+        /* Material cards use per-material theme (Phase 1 card theme); do NOT override. */
         #view-assessments .assessment-card {
             background: var(--cf-container-bg) !important;
         }
@@ -1983,6 +1984,16 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     { value: 'black', label: 'Black', swatch: 'bg-black border-slate-700', text: 'text-white' }
   ];
 
+  // Material card themes (Phase 1 Edit modal)
+  const materialThemeOptions = [
+    { value: '', label: 'Use course default' },
+    { value: 'dark', label: 'Dark' },
+    { value: 'light', label: 'Light' },
+    { value: 'muted', label: 'Muted' },
+    { value: 'high-contrast-light', label: 'High contrast (light)' },
+    { value: 'high-contrast-dark', label: 'High contrast (dark)' }
+  ];
+
   // Materials Manager State
   const [editingMaterial, setEditingMaterial] = useState(null);
   const [materialForm, setMaterialForm] = useState({
@@ -1993,6 +2004,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     downloadUrl: '',
     color: 'slate',
     mediaType: 'number',
+    themeOverride: null,
     assignedModules: [],
     hasDigitalContent: false,
     digitalContent: null,
@@ -4111,6 +4123,18 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                     <option value="slides">Badge: Slides</option>
                                 </select>
                             </div>
+                            <div className="mb-2">
+                                <label className="block text-[10px] text-slate-500 mb-1">Card theme</label>
+                                <select
+                                    value={materialForm.themeOverride ?? ''}
+                                    onChange={(e) => setMaterialForm({...materialForm, themeOverride: e.target.value || null})}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                >
+                                    {materialThemeOptions.map((opt) => (
+                                        <option key={opt.value || 'default'} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                            </div>
                             <input 
                                 type="text"
                                 value={materialForm.title}
@@ -4234,7 +4258,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         return;
                                     }
                                     addMaterial(materialForm);
-                                    setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', mediaType: 'number', assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
+                                    setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', mediaType: 'number', themeOverride: null, assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
                                 }}
                                 className="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-2 rounded text-xs flex items-center justify-center gap-2"
                             >
@@ -4286,6 +4310,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                             setMaterialForm({
                                                                 ...mat,
                                                                 mediaType: mat.mediaType || 'number',
+                                                                themeOverride: mat.themeOverride ?? null,
                                                                 hasDigitalContent: !!mat.digitalContent,
                                                                 digitalContentJson: mat.digitalContent ? JSON.stringify(mat.digitalContent, null, 2) : ''
                                                             });
@@ -4362,6 +4387,19 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 <option value="pdf">Badge: PDF</option>
                                                 <option value="video">Badge: Video</option>
                                                 <option value="slides">Badge: Slides</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Card theme</label>
+                                            <p className="text-[10px] text-slate-500 mb-1 italic">Overrides Phase 5 default for this material</p>
+                                            <select
+                                                value={materialForm.themeOverride ?? ''}
+                                                onChange={(e) => setMaterialForm({...materialForm, themeOverride: e.target.value || null})}
+                                                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                            >
+                                                {materialThemeOptions.map((opt) => (
+                                                    <option key={opt.value || 'default'} value={opt.value}>{opt.label}</option>
+                                                ))}
                                             </select>
                                         </div>
                                         <input 
@@ -4475,7 +4513,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         <button 
                                             onClick={() => {
                                                 setEditingMaterial(null);
-                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', mediaType: 'number', assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
+                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', mediaType: 'number', themeOverride: null, assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
                                             }}
                                             className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded font-bold"
                                         >
@@ -4485,7 +4523,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             onClick={() => {
                                                 editMaterial(editingMaterial, materialForm);
                                                 setEditingMaterial(null);
-                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', mediaType: 'number', assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
+                                                setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', mediaType: 'number', themeOverride: null, assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
                                             }}
                                             className="flex-1 bg-pink-600 hover:bg-pink-500 text-white py-2 rounded font-bold flex items-center justify-center gap-2"
                                         >
@@ -6195,13 +6233,26 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       // Collect digital content for all materials
       const digitalMaterials = materials.filter(m => m.digitalContent);
       
+      const defaultMaterialTheme = courseSettings.defaultMaterialTheme || 'dark';
+      const materialThemeMap = {
+        dark: { cardBg: 'bg-slate-900', cardBorder: 'border-slate-700', heading: 'text-white', body: 'text-slate-400', inner: 'bg-slate-800', proseClass: 'prose-invert', tocHover: 'hover:bg-slate-700' },
+        light: { cardBg: 'bg-white', cardBorder: 'border-slate-300', heading: 'text-slate-900', body: 'text-slate-600', inner: 'bg-slate-100', proseClass: 'prose', tocHover: 'hover:bg-slate-200' },
+        muted: { cardBg: 'bg-slate-800', cardBorder: 'border-slate-700', heading: 'text-slate-200', body: 'text-slate-500', inner: 'bg-slate-800', proseClass: 'prose-invert', tocHover: 'hover:bg-slate-700' },
+        'high-contrast-light': { cardBg: 'bg-white', cardBorder: 'border-slate-300', heading: 'text-black', body: 'text-slate-800', inner: 'bg-slate-100', proseClass: 'prose', tocHover: 'hover:bg-slate-200' },
+        'high-contrast-dark': { cardBg: 'bg-black', cardBorder: 'border-slate-600', heading: 'text-white', body: 'text-slate-300', inner: 'bg-slate-900', proseClass: 'prose-invert', tocHover: 'hover:bg-slate-800' }
+      };
+      const chromeTheme = materialThemeMap[defaultMaterialTheme] || materialThemeMap.dark;
+      const tocActive = chromeTheme.inner + ' ' + chromeTheme.heading;
+      
       // Generate material cards dynamically
       const materialCards = materials.map(mat => {
+        const themeKey = (mat.themeOverride != null && mat.themeOverride !== '') ? mat.themeOverride : defaultMaterialTheme;
+        const theme = materialThemeMap[themeKey] || materialThemeMap.dark;
         const colorClass = mat.color || 'slate';
         const borderClass = colorClass !== 'slate' ? `border-l-4 border-l-${colorClass}-500` : '';
         const bgClass = colorClass !== 'slate' ? `bg-${colorClass}-500/10` : 'bg-slate-800';
         const borderColorClass = colorClass !== 'slate' ? `border-${colorClass}-500/20` : 'border-slate-700';
-        const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : secondaryTextClass;
+        const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : theme.body;
         const buttonColorClass = `${buttonBgClass} ${buttonHoverClass}`;
         const badgeLabel = getMaterialBadgeLabel(mat) || '00';
         const badgeTextClass = mat.mediaType && mat.mediaType !== 'number'
@@ -6215,14 +6266,11 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
           ? `border border-${colorClass}-500/30`
           : 'border border-slate-600';
         
-        // Properly escape quotes in the onclick handlers
         const escapedViewUrl = (mat.viewUrl || '').replace(/'/g, "\\'");
         const escapedTitle = (mat.title || '').replace(/'/g, "\\'");
         const escapedDownloadUrl = (mat.downloadUrl || '').replace(/'/g, "\\'");
         const matId = mat.id || `mat-${Date.now()}`;
         
-        // Build buttons based on available content
-        // Using data attributes for better compatibility with sandboxed environments (Google Sites)
         let buttonsHTML = '';
         if (mat.viewUrl) {
           buttonsHTML += `<button data-pdf-url="${escapedViewUrl}" data-pdf-title="${escapedTitle}" class="pdf-viewer-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>`;
@@ -6234,12 +6282,12 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
           buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">Read</button>`;
         }
         
-        return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 ${containerBgClass} rounded-xl border border-slate-700 p-6 ${borderClass}">
+        return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 ${theme.cardBg} rounded-xl border ${theme.cardBorder} p-6 ${borderClass}">
     <div class="flex items-center gap-6">
         <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center ${textColorClass} ${badgeTextClass} border ${borderColorClass}">${badgeLabel}</div>
         <div>
-            <h3 class="text-lg font-bold ${headingTextClass} uppercase italic">${mat.title}</h3>
-            <p class="text-xs ${secondaryTextClass} font-mono">${mat.description}</p>
+            <h3 class="text-lg font-bold ${theme.heading} uppercase italic">${mat.title}</h3>
+            <p class="text-xs ${theme.body} font-mono">${mat.description}</p>
         </div>
     </div>
     <div class="flex gap-3 w-full md:w-auto">
@@ -6259,35 +6307,35 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
         .replace(/</g, '\\u003c')         // Escape < for HTML safety
         .replace(/>/g, '\\u003e');        // Escape > for HTML safety
       
-      // Generate the full materials view HTML
+      // Generate the full materials view HTML (chrome themed by defaultMaterialTheme)
       const materialsHTML = `<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
             <div class="max-w-5xl mx-auto space-y-8">
                 <div class="mb-12">
-                    <h2 class="text-3xl font-black ${headingTextClass} italic uppercase tracking-tighter">Course Materials</h2>
-                    <p class="text-xs ${secondaryTextClass} font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
+                    <h2 class="text-3xl font-black ${chromeTheme.heading} italic uppercase tracking-tighter">Course Materials</h2>
+                    <p class="text-xs ${chromeTheme.body} font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
                 </div>
-                <div id="pdf-viewer-container" class="hidden mb-12 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl">
-                    <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-slate-700">
-                        <span id="viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Document Viewer</span>
-                        <button data-close-pdf-viewer class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
+                <div id="pdf-viewer-container" class="hidden mb-12 ${chromeTheme.cardBg} rounded-xl border ${chromeTheme.cardBorder} overflow-hidden shadow-2xl">
+                    <div class="flex justify-between items-center p-3 ${chromeTheme.inner} border-b ${chromeTheme.cardBorder}">
+                        <span id="viewer-title" class="text-xs font-bold ${chromeTheme.heading} uppercase tracking-widest px-2">Document Viewer</span>
+                        <button data-close-pdf-viewer class="text-xs ${chromeTheme.body} hover:opacity-80 font-bold uppercase tracking-widest px-2">Close X</button>
                     </div>
                     <iframe id="pdf-frame" src="" width="100%" height="600" style="border:none;"></iframe>
                 </div>
-                <div id="digital-reader-container" class="hidden mb-12 bg-slate-900 rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">
-                    <div class="flex justify-between items-center p-3 bg-slate-800 border-b border-emerald-500/30">
-                        <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">Digital Resource</span>
-                        <button data-close-digital-reader class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>
+                <div id="digital-reader-container" class="hidden mb-12 ${chromeTheme.cardBg} rounded-xl border ${chromeTheme.cardBorder} overflow-hidden shadow-2xl">
+                    <div class="flex justify-between items-center p-3 ${chromeTheme.inner} border-b ${chromeTheme.cardBorder}">
+                        <span id="reader-title" class="text-xs font-bold ${chromeTheme.heading} uppercase tracking-widest px-2 flex items-center gap-2">Digital Resource</span>
+                        <button data-close-digital-reader class="text-xs ${chromeTheme.body} hover:opacity-80 font-bold uppercase tracking-widest px-2">Close X</button>
                     </div>
                     <div class="flex" style="height: 600px;">
-                        <div id="reader-toc" class="w-64 bg-slate-950 border-r border-slate-700 p-4 overflow-y-auto hidden md:block">
-                            <h4 class="text-xs font-bold ${secondaryTextClass} uppercase tracking-wider mb-4">Contents</h4>
+                        <div id="reader-toc" class="w-64 ${chromeTheme.inner} border-r ${chromeTheme.cardBorder} p-4 overflow-y-auto hidden md:block">
+                            <h4 class="text-xs font-bold ${chromeTheme.heading} uppercase tracking-wider mb-4">Contents</h4>
                             <div id="reader-toc-items" class="space-y-1"></div>
                         </div>
-                        <div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">
-                            <div id="reader-body" class="prose prose-invert max-w-none"></div>
-                            <div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-700">
+                        <div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto ${chromeTheme.cardBg}">
+                            <div id="reader-body" class="prose ${chromeTheme.proseClass} max-w-none"></div>
+                            <div class="flex justify-between items-center mt-8 pt-4 border-t ${chromeTheme.cardBorder}">
                                 <button data-prev-chapter id="prev-btn" class="px-4 py-2 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Previous</button>
-                                <span id="reader-progress" class="text-xs ${secondaryTextClass}"></span>
+                                <span id="reader-progress" class="text-xs ${chromeTheme.body}"></span>
                                 <button data-next-chapter id="next-btn" class="px-4 py-2 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next</button>
                             </div>
                         </div>
@@ -6355,8 +6403,10 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       
       // Add digital reader script
       if (digitalMaterials.length > 0) {
+        const cfMatTheme = { heading: chromeTheme.heading, body: chromeTheme.body, tocActive, tocInactive: chromeTheme.body, tocHover: chromeTheme.tocHover };
         const digitalReaderScript = `
         // Digital Reader System - Using Event Delegation for Google Sites compatibility
+        var CF_MAT_THEME = ${JSON.stringify(cfMatTheme)};
         var DIGITAL_CONTENT = ${digitalContentJSON};
         var currentReader = { matId: null, chapterIdx: 0, data: null };
         
@@ -6369,10 +6419,11 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             // Update title
             document.getElementById('reader-title').innerText = (content.title || 'Digital Resource');
             
-            // Build table of contents (using data attributes, not onclick)
+            // Build table of contents (using data attributes, not onclick) - themed
             var tocHTML = '';
             (content.chapters || []).forEach(function(ch, idx) {
-                tocHTML += '<button data-toc-chapter="' + idx + '" class="toc-item w-full text-left px-3 py-2 rounded text-xs hover:bg-slate-800 transition-colors ' + (idx === 0 ? 'bg-emerald-900/50 text-emerald-400' : 'text-slate-400') + '" data-chapter="' + idx + '">' +
+                var tocCls = 'toc-item w-full text-left px-3 py-2 rounded text-xs ' + CF_MAT_THEME.tocHover + ' transition-colors ' + (idx === 0 ? CF_MAT_THEME.tocActive : CF_MAT_THEME.tocInactive);
+                tocHTML += '<button data-toc-chapter="' + idx + '" class="' + tocCls + '" data-chapter="' + idx + '">' +
                     '<span class="font-bold">' + (ch.number || (idx + 1)) + '.</span> ' + ch.title +
                 '</button>';
             });
@@ -6401,31 +6452,33 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             currentReader.chapterIdx = idx;
             var chapter = chapters[idx];
             
-            // Build chapter content
-            var html = '<h2 class="text-2xl font-bold text-white mb-2">' + (chapter.number || (idx + 1)) + '. ' + chapter.title + '</h2>';
+            // Build chapter content - themed
+            var html = '<h2 class="text-2xl font-bold ' + CF_MAT_THEME.heading + ' mb-2">' + (chapter.number || (idx + 1)) + '. ' + chapter.title + '</h2>';
             
             (chapter.sections || []).forEach(function(sec) {
                 html += '<div class="mt-6">';
                 if (sec.heading) {
-                    html += '<h3 class="text-lg font-bold text-emerald-400 mb-3">' + sec.heading + '</h3>';
+                    html += '<h3 class="text-lg font-bold ' + CF_MAT_THEME.heading + ' mb-3">' + sec.heading + '</h3>';
                 }
                 // Simple markdown-like rendering
                 var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, '- ');
-                html += '<div class="text-slate-300 leading-relaxed whitespace-pre-line">' + content + '</div>';
+                html += '<div class="' + CF_MAT_THEME.body + ' leading-relaxed whitespace-pre-line">' + content + '</div>';
                 html += '</div>';
             });
             
             document.getElementById('reader-body').innerHTML = html;
             
-            // Update TOC highlighting
+            // Update TOC highlighting - themed
+            var tocActiveArr = CF_MAT_THEME.tocActive.split(' ').filter(Boolean);
+            var tocInactiveArr = CF_MAT_THEME.tocInactive.split(' ').filter(Boolean);
             document.querySelectorAll('.toc-item').forEach(function(btn) {
                 var chIdx = parseInt(btn.getAttribute('data-chapter'));
                 if (chIdx === idx) {
-                    btn.classList.add('bg-emerald-900/50', 'text-emerald-400');
-                    btn.classList.remove('text-slate-400');
+                    tocInactiveArr.forEach(function(c) { btn.classList.remove(c); });
+                    tocActiveArr.forEach(function(c) { btn.classList.add(c); });
                 } else {
-                    btn.classList.remove('bg-emerald-900/50', 'text-emerald-400');
-                    btn.classList.add('text-slate-400');
+                    tocActiveArr.forEach(function(c) { btn.classList.remove(c); });
+                    tocInactiveArr.forEach(function(c) { btn.classList.add(c); });
                 }
             });
             
@@ -7410,12 +7463,23 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         .replace(/</g, '\\u003c')
         .replace(/>/g, '\\u003e');
       
+      const defaultMaterialTheme = courseSettings.defaultMaterialTheme || 'dark';
+      const materialThemeMap = {
+        dark: { cardBg: 'bg-slate-900', cardBorder: 'border-slate-700', heading: 'text-white', body: 'text-slate-400' },
+        light: { cardBg: 'bg-white', cardBorder: 'border-slate-300', heading: 'text-slate-900', body: 'text-slate-600' },
+        muted: { cardBg: 'bg-slate-800', cardBorder: 'border-slate-700', heading: 'text-slate-200', body: 'text-slate-500' },
+        'high-contrast-light': { cardBg: 'bg-white', cardBorder: 'border-slate-300', heading: 'text-black', body: 'text-slate-800' },
+        'high-contrast-dark': { cardBg: 'bg-black', cardBorder: 'border-slate-600', heading: 'text-white', body: 'text-slate-300' }
+      };
+      
       const materialCards = materials.map(mat => {
+        const themeKey = (mat.themeOverride != null && mat.themeOverride !== '') ? mat.themeOverride : defaultMaterialTheme;
+        const theme = materialThemeMap[themeKey] || materialThemeMap.dark;
         const colorClass = mat.color || 'slate';
         const borderClass = colorClass !== 'slate' ? `border-l-4 border-l-${colorClass}-500` : '';
         const bgClass = colorClass !== 'slate' ? `bg-${colorClass}-500/10` : 'bg-slate-800';
         const borderColorClass = colorClass !== 'slate' ? `border-${colorClass}-500/20` : 'border-slate-700';
-        const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : secondaryTextClass;
+        const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : theme.body;
         const buttonColorClass = `${buttonBgClass} ${buttonHoverClass}`;
         const badgeLabel = getMaterialBadgeLabel(mat) || mat.number || '';
         const badgeTextClass = mat.mediaType && mat.mediaType !== 'number'
@@ -7437,14 +7501,12 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
           buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">Read</button>`;
         }
         
-        const cardBg = containerBgClass;
-        
-        return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 p-6 ${cardBg} rounded-xl border ${cardBorder} ${borderClass}">
+        return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 p-6 ${theme.cardBg} rounded-xl border ${theme.cardBorder} ${borderClass}">
           <div class="flex items-center gap-6">
             <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center ${textColorClass} ${badgeTextClass} border ${borderColorClass}">${badgeLabel}</div>
             <div>
-              <h3 class="text-lg font-bold ${headingTextClass} uppercase italic">${mat.title}</h3>
-              <p class="text-xs ${secondaryTextClass} font-mono">${mat.description || ''}</p>
+              <h3 class="text-lg font-bold ${theme.heading} uppercase italic">${mat.title}</h3>
+              <p class="text-xs ${theme.body} font-mono">${mat.description || ''}</p>
             </div>
           </div>
           <div class="flex gap-3 w-full md:w-auto">${buttonsHTML}</div>
@@ -8249,22 +8311,29 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                 '</div></div></div></div>';
         }
         
+        const defaultMaterialTheme = courseSettings.defaultMaterialTheme || 'dark';
+        const materialThemeMap = {
+            dark: { cardBg: 'bg-slate-900', cardBorder: 'border-slate-700', heading: 'text-white', body: 'text-slate-400' },
+            light: { cardBg: 'bg-white', cardBorder: 'border-slate-300', heading: 'text-slate-900', body: 'text-slate-600' },
+            muted: { cardBg: 'bg-slate-800', cardBorder: 'border-slate-700', heading: 'text-slate-200', body: 'text-slate-500' },
+            'high-contrast-light': { cardBg: 'bg-white', cardBorder: 'border-slate-300', heading: 'text-black', body: 'text-slate-800' },
+            'high-contrast-dark': { cardBg: 'bg-black', cardBorder: 'border-slate-600', heading: 'text-white', body: 'text-slate-300' }
+        };
+        
         sectionsHTML += '<div id="materials-list" class="space-y-4">';
         selectedMaterials.forEach((mat, idx) => {
+            const themeKey = (mat.themeOverride != null && mat.themeOverride !== '') ? mat.themeOverride : defaultMaterialTheme;
+            const theme = materialThemeMap[themeKey] || materialThemeMap.dark;
             const colorClass = mat.color || 'slate';
             const borderClass = colorClass !== 'slate' ? 'border-l-4 border-l-' + colorClass + '-500' : '';
-            const textColorClass = colorClass !== 'slate' ? 'text-' + colorClass + '-500' : 'text-slate-500';
-            const cardBgClass = containerBgClass;
+            const textColorClass = colorClass !== 'slate' ? 'text-' + colorClass + '-500' : theme.body;
             const buttonColorClass = buttonBgClass + ' ' + buttonHoverClass;
             const badgeLabel = getMaterialBadgeLabel(mat) || mat.number || '';
             const badgeTextClass = mat.mediaType && mat.mediaType !== 'number'
               ? 'text-[9px] font-black uppercase tracking-widest'
               : 'font-black text-xl';
             
-            // Convert /view to /preview for iframe embedding
             const previewUrl = mat.viewUrl ? mat.viewUrl.replace('/view', '/preview') : '';
-            
-            // Build buttons (using data attributes for event delegation)
             let buttonsHTML = '';
             if (mat.viewUrl) {
                 const escapedPreviewUrl = previewUrl.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -8278,12 +8347,12 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                 buttonsHTML += '<button data-digital-reader="' + mat.id + '" class="digital-reader-btn flex-1 ' + buttonColorClass + ' ' + buttonTextClass + ' text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center flex items-center justify-center gap-2">Read</button>';
             }
             
-            sectionsHTML += '<div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-xl border border-slate-700 ' + cardBgClass + ' ' + borderClass + '">' +
+            sectionsHTML += '<div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-xl border ' + theme.cardBorder + ' ' + theme.cardBg + ' ' + borderClass + '">' +
                 '<div class="flex items-center gap-4">' +
                 '<div class="w-12 h-12 rounded-lg flex items-center justify-center ' + textColorClass + ' ' + badgeTextClass + ' border border-slate-700">' + badgeLabel + '</div>' +
                 '<div>' +
-                '<h3 class="text-lg font-bold ' + headingTextClass + ' uppercase italic">' + mat.title + '</h3>' +
-                '<p class="text-xs ' + secondaryTextClass + '">' + (mat.description || '') + '</p>' +
+                '<h3 class="text-lg font-bold ' + theme.heading + ' uppercase italic">' + mat.title + '</h3>' +
+                '<p class="text-xs ' + theme.body + '">' + (mat.description || '') + '</p>' +
                 '</div></div>' +
                 '<div class="flex gap-3 w-full md:w-auto">' + buttonsHTML + '</div></div>';
         });
@@ -9846,6 +9915,32 @@ const Phase5Settings = ({ projectData, setProjectData }) => {
             </div>
             
             <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Default Material Card Theme</label>
+              <p className="text-[10px] text-slate-500 mb-2 italic">Default card look for materials; overridable per material in Phase 1</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { value: 'dark', label: 'Dark' },
+                  { value: 'light', label: 'Light' },
+                  { value: 'muted', label: 'Muted' },
+                  { value: 'high-contrast-light', label: 'High contrast (light)' },
+                  { value: 'high-contrast-dark', label: 'High contrast (dark)' }
+                ].map(t => (
+                  <button
+                    key={t.value}
+                    onClick={() => updateSettings({ defaultMaterialTheme: t.value })}
+                    className={`flex items-center justify-center p-3 rounded-lg border-2 transition-all ${
+                      (settings.defaultMaterialTheme || 'dark') === t.value
+                        ? 'border-white bg-slate-700'
+                        : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="text-xs text-white">{t.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div>
               <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Materials & Assessments Button Color</label>
               <p className="text-[10px] text-slate-500 mb-2 italic">Uniform button background for Materials & Assessments</p>
               <div className="grid grid-cols-3 gap-2">
@@ -11058,6 +11153,7 @@ export default function App() {
       viewUrl: materialData.viewUrl,
       downloadUrl: materialData.downloadUrl,
       color: materialData.color || 'slate',
+      themeOverride: materialData.themeOverride || null,
       hidden: false,
       order: currentMaterials.length,
       assignedModules: materialData.assignedModules || [],
