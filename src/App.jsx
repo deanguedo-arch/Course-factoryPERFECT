@@ -1,4 +1,4 @@
-﻿import * as React from 'react';
+import * as React from 'react';
 import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Wrench, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X, Edit, Clock, RotateCcw } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
@@ -7,7 +7,7 @@ import { getFirestore, doc, setDoc, onSnapshot, collection } from 'firebase/fire
 const { useState, useEffect, useRef } = React;
 
 // ==========================================
-// ðŸŸ¢ TOAST NOTIFICATION SYSTEM
+// 🟢 TOAST NOTIFICATION SYSTEM
 // ==========================================
 const useToast = () => {
   const [toasts, setToasts] = useState([]);
@@ -74,7 +74,7 @@ const ToastContainer = ({ toasts, removeToast }) => {
 };
 
 // ==========================================
-// ðŸ”´ FIREBASE CONFIG & INIT (DISABLED LOCALLY)
+// 🔴 FIREBASE CONFIG & INIT (DISABLED LOCALLY)
 // ==========================================
 // const firebaseConfig = JSON.parse(__firebase_config);
 // const app = initializeApp(firebaseConfig);
@@ -83,7 +83,7 @@ const ToastContainer = ({ toasts, removeToast }) => {
 const appId = 'course-factory-v1';
 
 // ==========================================
-// ðŸŸ¢ PROJECT DATA (THE LIVING LIBRARY)
+// 🟢 PROJECT DATA (THE LIVING LIBRARY)
 // ==========================================
 
 const PROJECT_DATA = {
@@ -285,11 +285,11 @@ const PROJECT_DATA = {
                 <div class="glass rounded-3xl shadow-2xl overflow-hidden min-h-[500px]">
                     <div id="p1-step0" class="step-content active"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-sky-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">System Briefing: The Regulation Engine</h2></div><div class="p-8 space-y-8 text-center"><div class="max-w-3xl mx-auto space-y-6 text-left"><p class="text-slate-400 text-sm italic leading-relaxed">Elite performance is defined by the ability to regulate your internal operating system under pressure. While physical skill sets the floor, your mental fitness sets the ceiling. This assignment uses four <strong>Manual Overrides</strong> to ensure you stay in your <strong>Ideal Performance State (IPS)</strong>.</p><div class="bg-sky-500/10 border border-sky-500/30 p-4 rounded-xl flex flex-col gap-4 mb-2"><h3 class="text-sky-400 font-bold uppercase text-[10px] tracking-widest">Dashboard Logic: Read then Regulate</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="p-3 bg-slate-900/50 rounded border border-slate-700"><span class="text-[9px] font-black text-rose-400 uppercase block mb-1">Somatic Indicators (Body)</span><p class="text-[10px] text-slate-400">Cold hands, butterflies, muscle tension, sweating.</p></div><div class="p-3 bg-slate-900/50 rounded border border-slate-700"><span class="text-[9px] font-black text-amber-400 uppercase block mb-1">Cognitive Indicators (Mind)</span><p class="text-[10px] text-slate-400">Negative self-talk, doubt, inability to concentrate.</p></div></div></div><div class="flex justify-center pt-6"><button onclick="p1_showStep(1)" class="bg-sky-600 px-12 py-4 rounded-xl text-white font-black uppercase text-xs tracking-[0.2em] hover:bg-sky-500 transition-all shadow-lg active:scale-95">Initialize Stations</button></div></div></div></div>
 <div id="p1-step1" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-rose-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 01: The Stress Loop Reset</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">The Pivot Point</h3><p class="text-sm text-slate-300 leading-relaxed">Breathing is your manual override switch. It intercepts the Stress Process Loop at the moment a demand is perceived as a "threat." <strong class="text-rose-400">The goal is to identify a specific time you can execute this trigger and how the breath anchor will help you stay present in the moment.</strong></p><div class="bg-rose-500/10 p-3 rounded border border-rose-500/30"><span class="text-[9px] text-rose-300 font-bold uppercase">Warning:</span><p class="text-[10px] text-rose-200">Unchecked loop acceleration leads to performance crash.</p></div></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-sky-500 mb-2 mono">Deployment Scenario</label><input type="text" id="p1_breath_scenario" oninput="p1_saveData()" placeholder="When exactly will you use this? (e.g. Between points...)" class="w-full rounded-lg p-3 text-xs italic"><p class="helper-text">Identify a specific time you can execute this trigger.</p></div><div><label class="block text-[10px] font-bold uppercase text-sky-500 mb-2 mono">Centering Action Detail</label><textarea id="p1_breath_detail" oninput="p1_saveData()" placeholder="Describe your rhythmic diaphragmatic breathing habit..." class="w-full h-32 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">How will this breath anchor help you stay present in the moment?</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(0)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">&larr; Back</button><button onclick="p1_showStep(2)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station &rarr;</button></div></div></div>
-                    <div id="p1-step2" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-amber-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 02: Arousal Volume Control</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">The Inverted-U</h3><p class="text-sm text-slate-300 leading-relaxed">Performance peaks at moderate arousal. You must 'down-regulate' to discharge tension or 'up-regulate' to wake the nervous system.</p></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Down-Regulation (Relaxation)</label><p class="text-[10px] text-slate-400 italic mb-2"><strong>PMR (Progressive Muscle Relaxation)</strong> is a technique where you systematically tense and then relax specific muscle groups to release physical tension.</p><textarea id="p1_relax_plan" oninput="p1_saveData()" placeholder="List muscle groups for your PMR routine..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Describe your routine to discharge somatic tension.</p></div><div><label class="block text-[10px] font-bold uppercase text-rose-500 mb-2 mono">Up-Regulation (Activation)</label><p class="text-[10px] text-slate-400 italic mb-2"><strong>Up-Regulation</strong> involves using physical actions or environmental triggers to increase heart rate and alertness when energy is too low.</p><textarea id="p1_active_plan" oninput="p1_saveData()" placeholder="List your 'Psych-Up' triggers (Music, Cues, Physical actions)..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Triggers used to discharge apathy and enter the zone.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(1)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">â† Back</button><button onclick="p1_showStep(3)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station â†’</button></div></div></div>
-                    <div id="p1-step3" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 03: The Focus Filter</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">Attentional Narrowing</h3><p class="text-sm text-slate-300 leading-relaxed">Under high stress, your peripheral vision and mental focus shrinkâ€”often called <strong>"Tunnel Vision."</strong> You lose the big picture. Cue words act as "Decoder Keys" that force the system to lock back onto task-relevant targets.</p><div class="bg-emerald-500/10 p-3 rounded border border-emerald-500/30"><span class="text-[9px] text-emerald-300 font-bold uppercase">The Goal:</span><p class="text-[10px] text-emerald-200">Shift from internal worry (Emotion) to external cues (Action).</p></div></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-sky-400 mb-2 mono">Instructional Decoder</label><input type="text" id="p1_cue_inst" oninput="p1_saveData()" placeholder="e.g., 'Elbows in', 'Smooth'..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">Create a 1-2 word key specifically to FIX sloppy mechanics or technical errors.</p></div><div><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Motivational Decoder</label><input type="text" id="p1_cue_mot" oninput="p1_saveData()" placeholder="e.g., 'Power', 'Explode'..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">Create a 1-2 word key specifically to FIX low energy or effort when drive is fading.</p></div><div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-2 mono italic underline">Radar Jamming Scenario</label><textarea id="p1_jam_scenario" oninput="p1_saveData()" placeholder="Describe a specific high-pressure moment where you lose focus..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Identify the exact moment panic sets in and which cue breaks the jam.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(2)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">â† Back</button><button onclick="p1_showStep(4)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station â†’</button></div></div></div>
-                    <div id="p1-step4" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-sky-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 04: Confidence Builder</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">Certainty Logic</h3><p class="text-sm text-slate-300 leading-relaxed">Uncertainty generates anxiety; Certainty generates confidence. You cannot control the outcome (Winning), but you can control the process (Mechanics). By shifting your focus to what you control, you build a "High Confidence" state.</p><div class="bg-slate-900 p-4 border border-slate-700 rounded-xl space-y-2"><h4 class="text-[10px] font-black text-white uppercase">S.M.A.R.T. Definition</h4><ul class="text-[9px] text-slate-400 space-y-1 font-mono"><li><strong class="text-sky-400">S</strong>PECIFIC: Clear and defined.</li><li><strong class="text-sky-400">M</strong>EASURABLE: Can be tracked.</li><li><strong class="text-sky-400">A</strong>CHIEVABLE: Realistic to your skill.</li><li><strong class="text-sky-400">R</strong>ELEVANT: Matters to your sport.</li><li><strong class="text-sky-400">T</strong>IME-BOUND: Has a deadline.</li></ul></div></div><div class="space-y-6"><div class="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl"><label class="block text-[10px] font-bold uppercase text-emerald-400 mb-2 mono underline italic">Process Goal (100% Control)</label><input type="text" id="p1_goal_proc" oninput="p1_saveData()" placeholder="Specific form or mechanics goal..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">This goal builds high confidence because it is entirely under your power.</p></div><div class="grid grid-cols-2 gap-4"><div class="p-4 bg-slate-900 border border-slate-800 rounded-xl"><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Performance Goal</label><input type="text" id="p1_goal_perf" oninput="p1_saveData()" placeholder="e.g. 80% accuracy..." class="w-full rounded-lg p-2 text-xs italic"><p class="helper-text">Partial Control.</p></div><div class="p-4 bg-slate-900 border border-slate-800 rounded-xl"><label class="block text-[10px] font-bold uppercase text-rose-500 mb-2 mono">Outcome Goal</label><input type="text" id="p1_goal_out" oninput="p1_saveData()" placeholder="e.g. Winning..." class="w-full rounded-lg p-2 text-xs italic"><p class="helper-text">Low Control.</p></div></div><div><label class="block text-[10px] font-bold uppercase text-white mb-2 mono italic underline leading-none">Final S.M.A.R.T. Goal Statement</label><textarea id="p1_smart_final" oninput="p1_saveData()" placeholder="Write out your full goal statement here using the SMART criteria above..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none border-2 border-slate-700 focus:border-sky-500"></textarea><p class="helper-text">Combine your goals into one clear sentence.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(3)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">â† Back</button><button onclick="p1_showStep(5)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Review & Export â†’</button></div></div>
+                    <div id="p1-step2" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-amber-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 02: Arousal Volume Control</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">The Inverted-U</h3><p class="text-sm text-slate-300 leading-relaxed">Performance peaks at moderate arousal. You must 'down-regulate' to discharge tension or 'up-regulate' to wake the nervous system.</p></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Down-Regulation (Relaxation)</label><p class="text-[10px] text-slate-400 italic mb-2"><strong>PMR (Progressive Muscle Relaxation)</strong> is a technique where you systematically tense and then relax specific muscle groups to release physical tension.</p><textarea id="p1_relax_plan" oninput="p1_saveData()" placeholder="List muscle groups for your PMR routine..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Describe your routine to discharge somatic tension.</p></div><div><label class="block text-[10px] font-bold uppercase text-rose-500 mb-2 mono">Up-Regulation (Activation)</label><p class="text-[10px] text-slate-400 italic mb-2"><strong>Up-Regulation</strong> involves using physical actions or environmental triggers to increase heart rate and alertness when energy is too low.</p><textarea id="p1_active_plan" oninput="p1_saveData()" placeholder="List your 'Psych-Up' triggers (Music, Cues, Physical actions)..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Triggers used to discharge apathy and enter the zone.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(1)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">← Back</button><button onclick="p1_showStep(3)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station →</button></div></div></div>
+                    <div id="p1-step3" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 03: The Focus Filter</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">Attentional Narrowing</h3><p class="text-sm text-slate-300 leading-relaxed">Under high stress, your peripheral vision and mental focus shrink—often called <strong>"Tunnel Vision."</strong> You lose the big picture. Cue words act as "Decoder Keys" that force the system to lock back onto task-relevant targets.</p><div class="bg-emerald-500/10 p-3 rounded border border-emerald-500/30"><span class="text-[9px] text-emerald-300 font-bold uppercase">The Goal:</span><p class="text-[10px] text-emerald-200">Shift from internal worry (Emotion) to external cues (Action).</p></div></div><div class="space-y-6"><div><label class="block text-[10px] font-bold uppercase text-sky-400 mb-2 mono">Instructional Decoder</label><input type="text" id="p1_cue_inst" oninput="p1_saveData()" placeholder="e.g., 'Elbows in', 'Smooth'..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">Create a 1-2 word key specifically to FIX sloppy mechanics or technical errors.</p></div><div><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Motivational Decoder</label><input type="text" id="p1_cue_mot" oninput="p1_saveData()" placeholder="e.g., 'Power', 'Explode'..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">Create a 1-2 word key specifically to FIX low energy or effort when drive is fading.</p></div><div><label class="block text-[10px] font-bold uppercase text-slate-400 mb-2 mono italic underline">Radar Jamming Scenario</label><textarea id="p1_jam_scenario" oninput="p1_saveData()" placeholder="Describe a specific high-pressure moment where you lose focus..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none"></textarea><p class="helper-text">Identify the exact moment panic sets in and which cue breaks the jam.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(2)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">← Back</button><button onclick="p1_showStep(4)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Next Station →</button></div></div></div>
+                    <div id="p1-step4" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-sky-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Station 04: Confidence Builder</h2></div><div class="p-8 space-y-8"><div class="grid grid-cols-1 md:grid-cols-2 gap-10"><div class="space-y-4"><h3 class="text-[10px] font-bold text-slate-500 uppercase mono italic underline tracking-widest">Certainty Logic</h3><p class="text-sm text-slate-300 leading-relaxed">Uncertainty generates anxiety; Certainty generates confidence. You cannot control the outcome (Winning), but you can control the process (Mechanics). By shifting your focus to what you control, you build a "High Confidence" state.</p><div class="bg-slate-900 p-4 border border-slate-700 rounded-xl space-y-2"><h4 class="text-[10px] font-black text-white uppercase">S.M.A.R.T. Definition</h4><ul class="text-[9px] text-slate-400 space-y-1 font-mono"><li><strong class="text-sky-400">S</strong>PECIFIC: Clear and defined.</li><li><strong class="text-sky-400">M</strong>EASURABLE: Can be tracked.</li><li><strong class="text-sky-400">A</strong>CHIEVABLE: Realistic to your skill.</li><li><strong class="text-sky-400">R</strong>ELEVANT: Matters to your sport.</li><li><strong class="text-sky-400">T</strong>IME-BOUND: Has a deadline.</li></ul></div></div><div class="space-y-6"><div class="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl"><label class="block text-[10px] font-bold uppercase text-emerald-400 mb-2 mono underline italic">Process Goal (100% Control)</label><input type="text" id="p1_goal_proc" oninput="p1_saveData()" placeholder="Specific form or mechanics goal..." class="w-full rounded-lg p-3 text-xs font-black italic"><p class="helper-text">This goal builds high confidence because it is entirely under your power.</p></div><div class="grid grid-cols-2 gap-4"><div class="p-4 bg-slate-900 border border-slate-800 rounded-xl"><label class="block text-[10px] font-bold uppercase text-amber-500 mb-2 mono">Performance Goal</label><input type="text" id="p1_goal_perf" oninput="p1_saveData()" placeholder="e.g. 80% accuracy..." class="w-full rounded-lg p-2 text-xs italic"><p class="helper-text">Partial Control.</p></div><div class="p-4 bg-slate-900 border border-slate-800 rounded-xl"><label class="block text-[10px] font-bold uppercase text-rose-500 mb-2 mono">Outcome Goal</label><input type="text" id="p1_goal_out" oninput="p1_saveData()" placeholder="e.g. Winning..." class="w-full rounded-lg p-2 text-xs italic"><p class="helper-text">Low Control.</p></div></div><div><label class="block text-[10px] font-bold uppercase text-white mb-2 mono italic underline leading-none">Final S.M.A.R.T. Goal Statement</label><textarea id="p1_smart_final" oninput="p1_saveData()" placeholder="Write out your full goal statement here using the SMART criteria above..." class="w-full h-24 rounded-lg p-3 text-xs italic resize-none border-2 border-slate-700 focus:border-sky-500"></textarea><p class="helper-text">Combine your goals into one clear sentence.</p></div></div></div><div class="flex justify-between pt-4"><button onclick="p1_showStep(3)" class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">← Back</button><button onclick="p1_showStep(5)" class="bg-sky-600 px-8 py-3 rounded-lg text-white font-bold uppercase text-[10px] tracking-widest">Review & Export →</button></div></div>
                     </div>
-                    <div id="p1-step5" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Final Review & Rubric</h2></div><div class="p-8 space-y-12"><div class="grid grid-cols-1 lg:grid-cols-2 gap-8"><div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-4 tracking-widest mono italic underline underline-offset-2">Mental Fitness Assessment</label><div id="sc-container" class="space-y-4"></div><div class="border-t border-slate-800 mt-6 pt-6 flex justify-between items-center"><span class="text-[10px] uppercase font-bold text-slate-500 tracking-[0.2em]">Readiness Score</span><div class="text-4xl font-black italic text-emerald-500 leading-none"><span id="p1-total-score">00</span><span class="text-xl text-slate-700 font-normal not-italic">/25</span></div></div></div><div class="space-y-6"><label class="block text-[10px] font-bold uppercase text-sky-400 mb-2 tracking-widest mono italic underline leading-none underline-offset-4">Integration Narrative (Required)</label><textarea id="p1_final_narrative" oninput="p1_saveData()" placeholder="Explain how you will use these four stations to monitor your indicators and regulate your performance state..." class="w-full h-[240px] rounded-xl p-4 text-sm resize-none text-slate-200 border-2 border-sky-500/20 focus:border-sky-500 transition-all"></textarea><p class="helper-text">Prove your understanding: How do these tools prevent the "Crash"?</p></div></div><div class="border-t border-slate-800 pt-8"><label class="block text-[10px] font-bold uppercase text-emerald-500 mb-4 tracking-widest mono italic underline underline-offset-4">Tactical Rubric</label><div class="overflow-x-auto glass rounded-2xl border border-slate-800 shadow-xl"><table class="w-full text-left text-[10px] border-collapse min-w-[700px]"><thead><tr class="bg-slate-900 border-b border-slate-800"><th class="p-4 text-slate-500 uppercase font-black">Criteria</th><th class="p-4 text-emerald-400 uppercase font-black tracking-widest">Proficient (4-5)</th><th class="p-4 text-amber-400 uppercase font-black tracking-widest">Developing (2-3)</th><th class="p-4 text-rose-400 uppercase font-black tracking-widest">Emerging (0-1)</th></tr></thead><tbody class="text-[10px] leading-relaxed italic text-slate-400"><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Stress Reset</td><td onclick="p1_setScore('reset', 5)" id="reset-5" class="rubric-cell p-4">Centering action is clearly defined (diaphragm) with a specific time trigger. Breath anchor logic is clear.</td><td onclick="p1_setScore('reset', 3)" id="reset-3" class="rubric-cell p-4">Breathing technique mentioned but lacks specific trigger or physiological detail.</td><td onclick="p1_setScore('reset', 1)" id="reset-1" class="rubric-cell p-4">Missing centering action or trigger.</td></tr><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Arousal Tuning</td><td onclick="p1_setScore('tune', 5)" id="tune-5" class="rubric-cell p-4">Clear distinction between Up/Down regulation. PMR definition is accurate. Tools are actionable.</td><td onclick="p1_setScore('tune', 3)" id="tune-3" class="rubric-cell p-4">Tools identified but generic. Lacks personal specificity or clear definition of PMR.</td><td onclick="p1_setScore('tune', 1)" id="tune-1" class="rubric-cell p-4">Incomplete tuning strategies.</td></tr><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Targeting (Cues)</td><td onclick="p1_setScore('focus', 5)" id="focus-5" class="rubric-cell p-4">Instructional (Technical) & Motivational (Energy) cues are distinct. Scenario breaks the 'jam'.</td><td onclick="p1_setScore('focus', 3)" id="focus-3" class="rubric-cell p-4">Cues are too long or vague. No distinction between instructional/motivational function.</td><td onclick="p1_setScore('focus', 1)" id="focus-1" class="rubric-cell p-4">Missing cues or scenario.</td></tr><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Confidence</td><td onclick="p1_setScore('goals', 5)" id="goals-5" class="rubric-cell p-4">Full SMART statement is written. Process goal is 100% controllable.</td><td onclick="p1_setScore('goals', 3)" id="goals-3" class="rubric-cell p-4">Process goal relies on partial external factors. SMART statement missing or incomplete.</td><td onclick="p1_setScore('goals', 1)" id="goals-1" class="rubric-cell p-4">Goals are confused (e.g. Outcome listed as Process).</td></tr><tr><td class="p-4 font-bold uppercase text-white mono">Integration</td><td onclick="p1_setScore('intel', 5)" id="intel-5" class="rubric-cell p-4">Narrative demonstrates understanding of the Dashboard (Somatic/Cognitive) and Regulation.</td><td onclick="p1_setScore('intel', 3)" id="intel-3" class="rubric-cell p-4">Restates definitions without demonstrating personal application or logic.</td><td onclick="p1_setScore('intel', 1)" id="intel-1" class="rubric-cell p-4">Incomplete narrative.</td></tr></tbody></table></div></div><div class="flex flex-col md:flex-row gap-4 pt-8"><button onclick="p1_showStep(1)" class="flex-1 text-slate-500 font-bold uppercase text-[10px] tracking-widest hover:text-white transition-colors border border-slate-800 rounded-xl py-4">â† Start Over</button><button onclick="p1_generatePDF()" class="flex-[2] bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest py-4 rounded-xl shadow-lg active:scale-95">Generate Tactical Report</button></div></div></div>
+                    <div id="p1-step5" class="step-content"><div class="relative px-6 py-4 border-b border-slate-800 bg-slate-900/50"><div class="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div><h2 class="text-xl font-bold text-white uppercase italic tracking-tight">Final Review & Rubric</h2></div><div class="p-8 space-y-12"><div class="grid grid-cols-1 lg:grid-cols-2 gap-8"><div><label class="block text-[10px] font-bold uppercase text-slate-500 mb-4 tracking-widest mono italic underline underline-offset-2">Mental Fitness Assessment</label><div id="sc-container" class="space-y-4"></div><div class="border-t border-slate-800 mt-6 pt-6 flex justify-between items-center"><span class="text-[10px] uppercase font-bold text-slate-500 tracking-[0.2em]">Readiness Score</span><div class="text-4xl font-black italic text-emerald-500 leading-none"><span id="p1-total-score">00</span><span class="text-xl text-slate-700 font-normal not-italic">/25</span></div></div></div><div class="space-y-6"><label class="block text-[10px] font-bold uppercase text-sky-400 mb-2 tracking-widest mono italic underline leading-none underline-offset-4">Integration Narrative (Required)</label><textarea id="p1_final_narrative" oninput="p1_saveData()" placeholder="Explain how you will use these four stations to monitor your indicators and regulate your performance state..." class="w-full h-[240px] rounded-xl p-4 text-sm resize-none text-slate-200 border-2 border-sky-500/20 focus:border-sky-500 transition-all"></textarea><p class="helper-text">Prove your understanding: How do these tools prevent the "Crash"?</p></div></div><div class="border-t border-slate-800 pt-8"><label class="block text-[10px] font-bold uppercase text-emerald-500 mb-4 tracking-widest mono italic underline underline-offset-4">Tactical Rubric</label><div class="overflow-x-auto glass rounded-2xl border border-slate-800 shadow-xl"><table class="w-full text-left text-[10px] border-collapse min-w-[700px]"><thead><tr class="bg-slate-900 border-b border-slate-800"><th class="p-4 text-slate-500 uppercase font-black">Criteria</th><th class="p-4 text-emerald-400 uppercase font-black tracking-widest">Proficient (4-5)</th><th class="p-4 text-amber-400 uppercase font-black tracking-widest">Developing (2-3)</th><th class="p-4 text-rose-400 uppercase font-black tracking-widest">Emerging (0-1)</th></tr></thead><tbody class="text-[10px] leading-relaxed italic text-slate-400"><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Stress Reset</td><td onclick="p1_setScore('reset', 5)" id="reset-5" class="rubric-cell p-4">Centering action is clearly defined (diaphragm) with a specific time trigger. Breath anchor logic is clear.</td><td onclick="p1_setScore('reset', 3)" id="reset-3" class="rubric-cell p-4">Breathing technique mentioned but lacks specific trigger or physiological detail.</td><td onclick="p1_setScore('reset', 1)" id="reset-1" class="rubric-cell p-4">Missing centering action or trigger.</td></tr><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Arousal Tuning</td><td onclick="p1_setScore('tune', 5)" id="tune-5" class="rubric-cell p-4">Clear distinction between Up/Down regulation. PMR definition is accurate. Tools are actionable.</td><td onclick="p1_setScore('tune', 3)" id="tune-3" class="rubric-cell p-4">Tools identified but generic. Lacks personal specificity or clear definition of PMR.</td><td onclick="p1_setScore('tune', 1)" id="tune-1" class="rubric-cell p-4">Incomplete tuning strategies.</td></tr><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Targeting (Cues)</td><td onclick="p1_setScore('focus', 5)" id="focus-5" class="rubric-cell p-4">Instructional (Technical) & Motivational (Energy) cues are distinct. Scenario breaks the 'jam'.</td><td onclick="p1_setScore('focus', 3)" id="focus-3" class="rubric-cell p-4">Cues are too long or vague. No distinction between instructional/motivational function.</td><td onclick="p1_setScore('focus', 1)" id="focus-1" class="rubric-cell p-4">Missing cues or scenario.</td></tr><tr class="border-b border-slate-800/50"><td class="p-4 font-bold uppercase text-white mono">Confidence</td><td onclick="p1_setScore('goals', 5)" id="goals-5" class="rubric-cell p-4">Full SMART statement is written. Process goal is 100% controllable.</td><td onclick="p1_setScore('goals', 3)" id="goals-3" class="rubric-cell p-4">Process goal relies on partial external factors. SMART statement missing or incomplete.</td><td onclick="p1_setScore('goals', 1)" id="goals-1" class="rubric-cell p-4">Goals are confused (e.g. Outcome listed as Process).</td></tr><tr><td class="p-4 font-bold uppercase text-white mono">Integration</td><td onclick="p1_setScore('intel', 5)" id="intel-5" class="rubric-cell p-4">Narrative demonstrates understanding of the Dashboard (Somatic/Cognitive) and Regulation.</td><td onclick="p1_setScore('intel', 3)" id="intel-3" class="rubric-cell p-4">Restates definitions without demonstrating personal application or logic.</td><td onclick="p1_setScore('intel', 1)" id="intel-1" class="rubric-cell p-4">Incomplete narrative.</td></tr></tbody></table></div></div><div class="flex flex-col md:flex-row gap-4 pt-8"><button onclick="p1_showStep(1)" class="flex-1 text-slate-500 font-bold uppercase text-[10px] tracking-widest hover:text-white transition-colors border border-slate-800 rounded-xl py-4">← Start Over</button><button onclick="p1_generatePDF()" class="flex-[2] bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest py-4 rounded-xl shadow-lg active:scale-95">Generate Tactical Report</button></div></div></div>
                 </div>
             </div>
         </div>`,
@@ -411,11 +411,11 @@ const PROJECT_DATA = {
               <button onclick="calcInput('4')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">4</button>
               <button onclick="calcInput('5')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">5</button>
               <button onclick="calcInput('6')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">6</button>
-              <button onclick="calcInput('*')" class="p-2 bg-blue-600 hover:bg-blue-500 rounded text-white">Ã—</button>
+              <button onclick="calcInput('*')" class="p-2 bg-blue-600 hover:bg-blue-500 rounded text-white">×</button>
               <button onclick="calcInput('1')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">1</button>
               <button onclick="calcInput('2')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">2</button>
               <button onclick="calcInput('3')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">3</button>
-              <button onclick="calcInput('-')" class="p-2 bg-blue-600 hover:bg-blue-500 rounded text-white">âˆ’</button>
+              <button onclick="calcInput('-')" class="p-2 bg-blue-600 hover:bg-blue-500 rounded text-white">−</button>
               <button onclick="calcInput('0')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">0</button>
               <button onclick="calcInput('.')" class="p-2 bg-slate-700 hover:bg-slate-600 rounded text-white">.</button>
               <button onclick="calcEquals()" class="p-2 bg-emerald-600 hover:bg-emerald-500 rounded text-white">=</button>
@@ -504,7 +504,7 @@ const PROJECT_DATA = {
         description: "Adds print button to toolbar",
         code: {
           id: "tool-print",
-          html: `<button onclick="window.print()" class="fixed top-4 right-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg z-50">ðŸ–¨ï¸ Print</button>`,
+          html: `<button onclick="window.print()" class="fixed top-4 right-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg z-50">🖨️ Print</button>`,
           script: ``
         }
       }
@@ -512,7 +512,7 @@ const PROJECT_DATA = {
 };
 
 // ==========================================
-// ðŸŸ¡ MASTER SHELL TEMPLATE
+// 🟡 MASTER SHELL TEMPLATE
 // ==========================================
 // Canvas Instructions: To update the default template, replace the string below.
 // ==========================================
@@ -799,7 +799,7 @@ ${sidebarFooterHtml}
     </div>`
     : '';
   const topNavHtml = useTopNav
-    ? `    <header class="w-full border-b border-slate-800 bg-slate-900/80 backdrop-blur-sm">
+    ? `    <header class="w-full border-b border-slate-800 backdrop-blur-sm" style="background: ${bgHex}; background-color: ${bgHex};">
         <div class="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between gap-4">
             <div>
                 <h1 class="text-lg font-bold flex items-center gap-2 text-white"><span class="text-${accentColor}-500">${courseName}</span></h1>
@@ -814,7 +814,7 @@ ${sidebarFooterHtml}
     </header>`
     : '';
   const footerHtml = showFooter && (useTopNav || !showSidebar)
-    ? `    <footer class="w-full border-t border-slate-800 bg-slate-900/80 backdrop-blur-sm">
+    ? `    <footer class="w-full border-t border-slate-800 backdrop-blur-sm" style="background: ${bgHex}; background-color: ${bgHex};">
         <div class="max-w-[1800px] mx-auto px-6 py-4 text-[10px] text-slate-500 uppercase tracking-widest text-center">
             Master Console v2.0
         </div>
@@ -920,7 +920,7 @@ ${footerHtml}
         
         // --- CORE NAVIGATION LOGIC ---
         function switchView(view) {
-            console.log('ðŸ”„ [switchView] Switching to view:', view);
+            console.log('🔄 [switchView] Switching to view:', view);
             
             // 1. Close sidebar on mobile after selecting a view
             if (window.innerWidth <= 768) {
@@ -940,16 +940,16 @@ ${footerHtml}
             
             // 3. Hide All Views (both native divs and iframe containers)
             const allViews = document.querySelectorAll('[id^="view-"]');
-            console.log('ðŸ”„ [switchView] Hiding', allViews.length, 'views');
+            console.log('🔄 [switchView] Hiding', allViews.length, 'views');
             allViews.forEach(v => v.classList.add('hidden'));
 
             // 4. Show Target View
             const target = document.getElementById('view-' + view);
             if(target) {
                 target.classList.remove('hidden');
-                console.log('âœ… [switchView] Showing view:', 'view-' + view);
+                console.log('✅ [switchView] Showing view:', 'view-' + view);
             } else {
-                console.error('âŒ [switchView] View not found:', 'view-' + view);
+                console.error('❌ [switchView] View not found:', 'view-' + view);
             }
             
             // Backward compatibility: Call module init if available
@@ -1038,7 +1038,7 @@ ${footerHtml}
                             course: '${courseName}',
                             state: state
                         }));
-                        console.log('ðŸ’¾ [Autosave] Saved', Object.keys(state).length, 'fields');
+                        console.log('💾 [Autosave] Saved', Object.keys(state).length, 'fields');
                     }
                 } catch(e) {
                     console.warn('Autosave failed:', e);
@@ -1060,7 +1060,7 @@ ${footerHtml}
                         if (state) {
                             restoreInputState(state);
                             const savedDate = new Date(timestamp);
-                            console.log('ðŸ“‚ [Autosave] Restored from', savedDate.toLocaleString());
+                            console.log('📂 [Autosave] Restored from', savedDate.toLocaleString());
                         }
                     }
                 } catch(e) {
@@ -1071,7 +1071,7 @@ ${footerHtml}
             // Mark work as exported (disables unsaved warning)
             window.markWorkSaved = function() {
                 hasExported = true;
-                console.log('âœ… [Autosave] Work marked as saved/exported');
+                console.log('✅ [Autosave] Work marked as saved/exported');
             };
             
             // Initialize on DOM ready
@@ -1099,7 +1099,7 @@ ${footerHtml}
                     }
                 });
                 
-                console.log('ðŸ”§ [Autosave] Initialized for course: ${courseName}');
+                console.log('🔧 [Autosave] Initialized for course: ${courseName}');
             }
             
             if (document.readyState === 'loading') {
@@ -1227,7 +1227,7 @@ const MASTER_SHELL = `<!DOCTYPE html>
         
         // --- CORE NAVIGATION LOGIC ---
         function switchView(view) {
-            console.log('ðŸ”„ [switchView] Switching to view:', view);
+            console.log('🔄 [switchView] Switching to view:', view);
             
             // 1. Handle Mobile Nav
             if (window.innerWidth <= 768) {
@@ -1246,16 +1246,16 @@ const MASTER_SHELL = `<!DOCTYPE html>
             
             // 3. Hide All Views (both native divs and iframe containers)
             const allViews = document.querySelectorAll('[id^="view-"]');
-            console.log('ðŸ”„ [switchView] Hiding', allViews.length, 'views');
+            console.log('🔄 [switchView] Hiding', allViews.length, 'views');
             allViews.forEach(v => v.classList.add('hidden'));
 
             // 4. Show Target View
             const target = document.getElementById('view-' + view);
             if(target) {
                 target.classList.remove('hidden');
-                console.log('âœ… [switchView] Showing view:', 'view-' + view);
+                console.log('✅ [switchView] Showing view:', 'view-' + view);
             } else {
-                console.error('âŒ [switchView] View not found:', 'view-' + view);
+                console.error('❌ [switchView] View not found:', 'view-' + view);
             }
         }
 
@@ -1349,7 +1349,7 @@ const Toggle = ({ active, labelA, labelB, labelC, onToggle, iconA: IconA, iconB:
 );
 
 // ==========================================
-// ðŸ”§ MODULE UTILITY FUNCTIONS (Unified)
+// 🔧 MODULE UTILITY FUNCTIONS (Unified)
 // ==========================================
 
 /**
@@ -1677,6 +1677,633 @@ function validateProject(projectData) {
   };
 }
 
+// ==========================================
+// MODULE FRAME BUILDER (Single Source of Truth)
+// ==========================================
+const buildModuleFrameHTML = (module, courseSettings) => {
+  if (!module) return null;
+
+  const settings = courseSettings || {};
+  const courseName = settings.courseName || settings.__courseName || "Course";
+  const accentColor = settings.accentColor || "sky";
+  const backgroundColor = settings.backgroundColor || "slate-900";
+  const fontFamily = settings.fontFamily || "inter";
+  const customCSS = settings.customCSS || "";
+  const enabledTools = (settings.__toolkit || []).filter(t => t.enabled);
+  const courseMaterials = Array.isArray(settings.__materials)
+    ? settings.__materials
+    : (module.materials || []);
+
+  const font = getFontFamilyGlobal(fontFamily);
+
+  const bgColorMap = {
+    'slate-900': '#0f172a',
+    'slate-950': '#020617',
+    'zinc-900': '#18181b',
+    'neutral-900': '#171717',
+    'stone-900': '#1c1917',
+    'gray-900': '#111827',
+    'slate-50': '#f8fafc',
+    'zinc-50': '#fafafa',
+    'neutral-50': '#fafafa',
+    'stone-50': '#fafaf9',
+    'gray-50': '#f9fafb',
+    'white': '#ffffff'
+  };
+  const bgHex = bgColorMap[backgroundColor] || bgColorMap['slate-900'];
+  const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
+  const textColor = isLightBg ? 'text-slate-900' : 'text-white';
+  const textColorSecondary = isLightBg ? 'text-slate-600' : 'text-slate-400';
+  const textColorTertiary = isLightBg ? 'text-slate-500' : 'text-slate-500';
+  const cardBorder = isLightBg ? 'border-slate-300' : 'border-slate-700';
+  const headingTextColor = settings.headingTextColor || (isLightBg ? 'slate-900' : 'white');
+  const secondaryTextColor = settings.secondaryTextColor || (isLightBg ? 'slate-600' : 'slate-400');
+  const buttonColor = settings.buttonColor || `${accentColor}-600`;
+  const containerColor = settings.containerColor || (isLightBg ? 'white/80' : 'slate-900/80');
+
+  const toTextClass = (value) => value.startsWith('text-') ? value : `text-${value}`;
+  const toBgBase = (value) => value.startsWith('bg-') ? value.slice(3) : value;
+  const hexToRgba = (hex, alpha = 1) => {
+    if (!hex) return `rgba(15, 23, 42, ${alpha})`;
+    const clean = hex.replace('#', '');
+    if (clean.length !== 6) return `rgba(15, 23, 42, ${alpha})`;
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+  const parseColorToken = (value) => {
+    const raw = (value || '').toString().trim();
+    if (!raw) return { base: isLightBg ? 'white' : 'slate-900', alpha: 0.8, alphaRaw: '80' };
+    let token = raw;
+    if (token.startsWith('bg-')) token = token.slice(3);
+    if (token.startsWith('text-')) token = token.slice(5);
+    const parts = token.split('/');
+    const base = parts[0] || (isLightBg ? 'white' : 'slate-900');
+    const alphaRaw = parts[1] || null;
+    const alpha = alphaRaw ? Math.max(0, Math.min(1, parseInt(alphaRaw, 10) / 100)) : 1;
+    return { base, alpha, alphaRaw };
+  };
+  const colorHexMap = {
+    ...bgColorMap,
+    'slate-800': '#1e293b',
+    'slate-700': '#334155',
+    'slate-600': '#475569',
+    'slate-500': '#64748b',
+    'gray-800': '#1f2937',
+    'gray-700': '#374151',
+    'gray-600': '#4b5563',
+    'zinc-800': '#27272a'
+  };
+
+  const headingTextClass = toTextClass(headingTextColor);
+  const secondaryTextClass = toTextClass(secondaryTextColor);
+  const buttonBgBase = toBgBase(buttonColor);
+  const buttonBgClass = `bg-${buttonBgBase}`;
+  const buttonHoverClass = buttonBgBase.endsWith('-600') ? `hover:bg-${buttonBgBase.replace(/-600$/, '-500')}` : `hover:bg-${buttonBgBase}`;
+  const buttonTextClass = secondaryTextClass;
+  const containerToken = parseColorToken(containerColor);
+  const containerBgClass = containerToken.alphaRaw ? `bg-${containerToken.base}/${containerToken.alphaRaw}` : `bg-${containerToken.base}`;
+  const containerHex = colorHexMap[containerToken.base] || (isLightBg ? '#ffffff' : '#0f172a');
+  const containerBgRgba = hexToRgba(containerHex, containerToken.alpha);
+
+  if (module.type === 'external') {
+    const urlValidation = validateUrl(module.url || '');
+    const safeUrl = urlValidation.safeUrl;
+    const safeTitle = escapeHtml(module.title || 'External Module');
+
+    if (module.linkType === 'iframe') {
+      return `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { margin: 0; padding: 0; background: ${bgHex}; ${font.css} }
+    iframe { width: 100%; height: 100vh; border: none; }
+  </style>
+</head>
+<body>
+  <iframe src="${safeUrl}" width="100%" height="100%" style="border:none;"></iframe>
+</body>
+</html>`;
+    }
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { background: ${bgHex}; color: ${isLightBg ? '#0f172a' : '#e2e8f0'}; ${font.css}; padding: 40px; text-align: center; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    a { color: #0ea5e9; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">${safeTitle}</h2>
+  <p style="margin-bottom: 1.5rem; color: #94a3b8;">This module opens in a new tab.</p>
+  <a href="${safeUrl}" target="_blank" rel="noopener noreferrer">Open ${safeTitle} -></a>
+</body>
+</html>`;
+  }
+
+  let itemCode = module.code || {};
+  if (typeof itemCode === 'string') {
+    try { itemCode = JSON.parse(itemCode); } catch (e) {}
+  }
+  const isMaterialsModule = itemCode.id === "view-materials";
+  const isAssessmentsModule = module.id === "item-assessments" || module.title === "Assessments";
+
+  let moduleContentHTML = '';
+  let moduleCSS = '';
+  let moduleScript = '';
+
+  if (isMaterialsModule) {
+    const materials = courseMaterials.filter(m => !m.hidden).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const digitalMaterials = materials.filter(m => m.digitalContent);
+    const digitalContentData = {};
+    digitalMaterials.forEach(dm => {
+      digitalContentData[dm.id] = dm.digitalContent;
+    });
+    const digitalContentJSON = JSON.stringify(digitalContentData)
+      .replace(/`/g, '\\`')
+      .replace(/\$\{/g, '\\${')
+      .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e');
+
+    const defaultMaterialTheme = settings.defaultMaterialTheme || 'dark';
+    const materialThemeMap = {
+      dark: { cardBg: 'bg-slate-900', cardBorder: 'border-slate-700', heading: 'text-white', body: 'text-slate-400' },
+      light: { cardBg: 'bg-white', cardBorder: 'border-slate-300', heading: 'text-slate-900', body: 'text-slate-600' },
+      muted: { cardBg: 'bg-slate-800', cardBorder: 'border-slate-700', heading: 'text-slate-200', body: 'text-slate-500' },
+      'high-contrast-light': { cardBg: 'bg-white', cardBorder: 'border-slate-300', heading: 'text-black', body: 'text-slate-800' },
+      'high-contrast-dark': { cardBg: 'bg-black', cardBorder: 'border-slate-600', heading: 'text-white', body: 'text-slate-300' }
+    };
+
+    const materialCards = materials.map(mat => {
+      const themeKey = (mat.themeOverride != null && mat.themeOverride !== '') ? mat.themeOverride : defaultMaterialTheme;
+      const theme = materialThemeMap[themeKey] || materialThemeMap.dark;
+      const colorClass = mat.color || 'slate';
+      const borderClass = colorClass !== 'slate' ? `border-l-4 border-l-${colorClass}-500` : '';
+      const bgClass = colorClass !== 'slate' ? `bg-${colorClass}-500/10` : 'bg-slate-800';
+      const borderColorClass = colorClass !== 'slate' ? `border-${colorClass}-500/20` : 'border-slate-700';
+      const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : theme.body;
+      const buttonColorClass = `${buttonBgClass} ${buttonHoverClass}`;
+      const badgeLabel = getMaterialBadgeLabel(mat) || mat.number || '';
+      const badgeTextClass = mat.mediaType && mat.mediaType !== 'number'
+        ? 'text-[9px] font-black uppercase tracking-widest'
+        : 'font-black italic text-xl';
+
+      const escapedViewUrl = (mat.viewUrl || '').replace(/'/g, "\\'");
+      const escapedTitle = (mat.title || '').replace(/'/g, "\\'");
+      const matId = mat.id || `mat-${Date.now()}`;
+
+      let buttonsHTML = '';
+      if (mat.viewUrl) {
+        buttonsHTML += `<button onclick="openPDF('${escapedViewUrl}', '${escapedTitle}')" class="flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>`;
+      }
+      if (mat.downloadUrl) {
+        buttonsHTML += `<a href="${mat.downloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`;
+      }
+      if (mat.digitalContent) {
+        buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">Read</button>`;
+      }
+
+      return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 p-6 ${theme.cardBg} rounded-xl border ${theme.cardBorder} ${borderClass}">
+        <div class="flex items-center gap-6">
+          <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center ${textColorClass} ${badgeTextClass} border ${borderColorClass}">${badgeLabel}</div>
+          <div>
+            <h3 class="text-lg font-bold ${theme.heading} uppercase italic">${mat.title}</h3>
+            <p class="text-xs ${theme.body} font-mono">${mat.description || ''}</p>
+          </div>
+        </div>
+        <div class="flex gap-3 w-full md:w-auto">${buttonsHTML}</div>
+      </div>`;
+    }).join('\n');
+
+    moduleContentHTML = `
+      <div class="space-y-8">
+        <div class="mb-8">
+          <h2 class="text-3xl font-black ${headingTextClass} italic uppercase tracking-tighter">Course Materials</h2>
+          <p class="text-xs ${secondaryTextClass} font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
+        </div>
+        <div id="pdf-viewer-container" class="hidden mb-8 ${isLightBg ? 'bg-white' : 'bg-black'} rounded-xl border ${cardBorder} overflow-hidden shadow-2xl">
+          <div class="flex justify-between items-center p-3 ${isLightBg ? 'bg-slate-100' : 'bg-slate-800'} border-b ${cardBorder}">
+            <span id="viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Document Viewer</span>
+            <button onclick="closeViewer()" class="text-xs text-rose-400 hover:${isLightBg ? 'text-slate-900' : 'text-white'} font-bold uppercase tracking-widest px-2">Close X</button>
+          </div>
+          <iframe id="pdf-frame" src="" width="100%" height="600" style="border:none;"></iframe>
+        </div>
+        <div id="digital-reader-container" class="hidden mb-8 ${isLightBg ? 'bg-white' : 'bg-slate-900'} rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">
+          <div class="flex justify-between items-center p-3 ${isLightBg ? 'bg-slate-100' : 'bg-slate-800'} border-b border-emerald-500/30">
+            <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">Digital Resource</span>
+            <button onclick="closeDigitalReader()" class="text-xs text-rose-400 hover:${isLightBg ? 'text-slate-900' : 'text-white'} font-bold uppercase tracking-widest px-2">Close X</button>
+          </div>
+          <div class="flex" style="height: 600px;">
+            <div id="reader-toc" class="w-64 ${isLightBg ? 'bg-slate-50' : 'bg-slate-950'} border-r ${cardBorder} p-4 overflow-y-auto hidden md:block">
+              <h4 class="text-xs font-bold ${textColorSecondary} uppercase tracking-wider mb-4">Contents</h4>
+              <div id="reader-toc-items" class="space-y-1"></div>
+            </div>
+            <div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">
+              <div id="reader-body" class="prose ${isLightBg ? 'prose-slate' : 'prose-invert'} max-w-none"></div>
+              <div class="flex justify-between items-center mt-8 pt-4 border-t ${cardBorder}">
+                <button id="prev-btn" onclick="prevChapter()" class="px-4 py-2 ${isLightBg ? 'bg-slate-200 hover:bg-slate-300 text-slate-900' : 'bg-slate-800 hover:bg-slate-700 text-white'} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Previous</button>
+                <span id="reader-progress" class="text-xs ${textColorSecondary}"></span>
+                <button id="next-btn" onclick="nextChapter()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="materials-list" class="grid grid-cols-1 gap-4">
+          ${materials.length > 0 ? materialCards : `<p class="text-center ${secondaryTextClass} italic py-8">No materials available.</p>`}
+        </div>
+      </div>`;
+
+    let digitalReaderScript = '';
+    if (digitalMaterials.length > 0) {
+      digitalReaderScript = `
+      var DIGITAL_CONTENT = ${digitalContentJSON};
+      var currentReader = { matId: null, chapterIdx: 0, data: null };
+
+      function openDigitalReader(matId) {
+        var content = DIGITAL_CONTENT[matId];
+        if (!content) { console.error('No digital content for', matId); return; }
+
+        currentReader = { matId: matId, chapterIdx: 0, data: content };
+
+        document.getElementById('reader-title').innerText = (content.title || 'Digital Resource');
+
+        var tocHTML = '';
+        (content.chapters || []).forEach(function(ch, idx) {
+          tocHTML += '<button onclick="goToChapter(' + idx + ')" class="toc-item w-full text-left px-3 py-2 rounded text-xs hover:bg-slate-800 transition-colors ' + (idx === 0 ? 'bg-emerald-900/50 text-emerald-400' : 'text-slate-400') + '">' +
+            '<span class="font-bold">' + (ch.number || (idx + 1)) + '.</span> ' + ch.title +
+          '</button>';
+        });
+        document.getElementById('reader-toc-items').innerHTML = tocHTML;
+
+        renderChapter(0);
+
+        document.getElementById('digital-reader-container').classList.remove('hidden');
+        document.getElementById('materials-list').classList.add('hidden');
+        document.getElementById('pdf-viewer-container').classList.add('hidden');
+      }
+
+      function closeDigitalReader() {
+        document.getElementById('digital-reader-container').classList.add('hidden');
+        document.getElementById('materials-list').classList.remove('hidden');
+        currentReader = { matId: null, chapterIdx: 0, data: null };
+      }
+
+      function renderChapter(idx) {
+        if (!currentReader.data || !currentReader.data.chapters) return;
+        var chapters = currentReader.data.chapters;
+        if (idx < 0 || idx >= chapters.length) return;
+
+        currentReader.chapterIdx = idx;
+        var chapter = chapters[idx];
+
+        var html = '<h2 class="text-2xl font-bold text-white mb-2">' + (chapter.number || (idx + 1)) + '. ' + chapter.title + '</h2>';
+
+        (chapter.sections || []).forEach(function(sec) {
+          html += '<div class="mt-6">';
+          if (sec.heading) {
+            html += '<h3 class="text-lg font-bold text-emerald-400 mb-3">' + sec.heading + '</h3>';
+          }
+          var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, '- ');
+          html += '<div class="text-slate-300 leading-relaxed whitespace-pre-line">' + content + '</div>';
+          html += '</div>';
+        });
+
+        document.getElementById('reader-body').innerHTML = html;
+
+        document.querySelectorAll('.toc-item').forEach(function(btn, i) {
+          if (i === idx) {
+            btn.classList.add('bg-emerald-900/50', 'text-emerald-400');
+            btn.classList.remove('text-slate-400');
+          } else {
+            btn.classList.remove('bg-emerald-900/50', 'text-emerald-400');
+            btn.classList.add('text-slate-400');
+          }
+        });
+
+        document.getElementById('prev-btn').disabled = idx === 0;
+        document.getElementById('next-btn').disabled = idx === chapters.length - 1;
+        document.getElementById('reader-progress').textContent = 'Chapter ' + (idx + 1) + ' of ' + chapters.length;
+
+        document.getElementById('reader-content').scrollTop = 0;
+      }
+
+      function goToChapter(idx) {
+        renderChapter(idx);
+      }
+
+      function prevChapter() {
+        if (currentReader.chapterIdx > 0) {
+          renderChapter(currentReader.chapterIdx - 1);
+        }
+      }
+
+      function nextChapter() {
+        if (currentReader.data && currentReader.data.chapters && currentReader.chapterIdx < currentReader.data.chapters.length - 1) {
+          renderChapter(currentReader.chapterIdx + 1);
+        }
+      }
+
+      document.addEventListener('click', function(e) {
+        var readerBtn = e.target.closest('[data-digital-reader]');
+        if (readerBtn) {
+          e.preventDefault();
+          openDigitalReader(readerBtn.getAttribute('data-digital-reader'));
+          return;
+        }
+      });`;
+    }
+
+    moduleScript = `
+      function openPDF(url, title) {
+        var container = document.getElementById('pdf-viewer-container');
+        var previewUrl = url.replace('/view', '/preview');
+        document.getElementById('pdf-frame').src = previewUrl;
+        document.getElementById('viewer-title').innerText = "VIEWING: " + title;
+        container.classList.remove('hidden');
+        container.scrollIntoView({ behavior: 'smooth' });
+      }
+      function closeViewer() {
+        document.getElementById('pdf-viewer-container').classList.add('hidden');
+        document.getElementById('pdf-frame').src = "";
+      }
+      ${digitalReaderScript}`;
+  } else if (isAssessmentsModule) {
+    const assessments = (module.assessments || []).filter(a => !a.hidden).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const cardBg = containerBgClass;
+
+    const assessmentListHTML = assessments.map((assess, idx) => {
+      const typeLabel = assess.type === 'quiz' ? 'Multiple Choice' : assess.type === 'longanswer' ? 'Long Answer' : assess.type === 'print' ? 'Print & Submit' : 'Mixed Assessment';
+      const typeBadge = assess.type === 'quiz' ? 'MC' : assess.type === 'longanswer' ? 'LA' : assess.type === 'print' ? 'PRINT' : 'MIX';
+
+      return `<div class="assessment-card p-6 ${cardBg} rounded-xl border ${cardBorder} hover:border-${accentColor}-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
+        <div class="flex items-center justify-between">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-[10px] font-black uppercase tracking-widest ${secondaryTextClass}">${typeBadge}</span>
+              <div>
+                <h3 class="text-xl font-bold ${headingTextClass} group-hover:text-${accentColor}-400 transition-colors">${assess.title}</h3>
+                <p class="text-xs ${secondaryTextClass} uppercase tracking-wider">${typeLabel}</p>
+              </div>
+            </div>
+          </div>
+          <div class="text-${accentColor}-400 group-hover:translate-x-1 transition-transform">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </div>
+        </div>
+      </div>`;
+    }).join('\n');
+
+    const assessmentContainersHTML = assessments.map((assess, idx) => {
+      return `<div id="assessment-${idx}" class="assessment-container hidden">
+        <button onclick="backToAssessmentList()" class="mb-6 inline-flex items-center gap-2 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+          Back to Assessments
+        </button>
+        ${assess.html || ''}
+      </div>`;
+    }).join('\n');
+
+    const assessmentScripts = assessments.map(assess => assess.script || '').filter(s => s).join('\n');
+    const defaultTextColor = settings.assessmentTextColor || 'white';
+    const defaultBoxColor = settings.assessmentBoxColor || 'slate-900';
+    const overrideHexMap = {
+      'white': '#ffffff', 'black': '#000000',
+      'slate-950': '#020617', 'slate-900': '#0f172a', 'slate-800': '#1e293b', 'slate-700': '#334155',
+      'slate-600': '#475569', 'slate-500': '#64748b', 'slate-400': '#94a3b8', 'slate-300': '#cbd5e1',
+      'slate-200': '#e2e8f0', 'slate-100': '#f1f5f9', 'slate-50': '#f8fafc',
+      'gray-900': '#111827', 'gray-800': '#1f2937', 'gray-700': '#374151', 'gray-600': '#4b5563',
+      'gray-500': '#6b7280', 'gray-400': '#9ca3af', 'gray-300': '#d1d5db', 'gray-200': '#e5e7eb', 'gray-100': '#f3f4f6', 'gray-50': '#f9fafb'
+    };
+    const assessmentOverrideCSS = assessments.map((assess) => {
+      const textColor = assess.textColorOverride != null && assess.textColorOverride !== '' ? assess.textColorOverride : defaultTextColor;
+      const boxColor = assess.boxColorOverride != null && assess.boxColorOverride !== '' ? assess.boxColorOverride : defaultBoxColor;
+      let genId = assess.generatedId;
+      if (!genId && (assess.html || '').match(/id="(quiz_|mixed_)\\d+"/)) {
+        const m = (assess.html || '').match(/id="((?:quiz_|mixed_)\\d+)"/);
+        genId = m ? m[1] : null;
+      }
+      if (!genId) return '';
+      const textHex = overrideHexMap[textColor] || overrideHexMap['white'];
+      const boxHex = overrideHexMap[boxColor] || overrideHexMap['slate-900'];
+      const isLightBox = ['white','slate-50','slate-100','slate-200','slate-300','slate-400','gray-50','gray-100','gray-200','gray-300','gray-400'].includes(boxColor);
+      const borderHex = isLightBox ? '#cbd5e1' : '#334155';
+      return `#${genId} .assessment-input,#${genId} textarea.assessment-input,#${genId} input.assessment-input{color:${textHex} !important;background-color:${boxHex} !important;border-color:${borderHex} !important;}`;
+    }).filter(Boolean).join('\n');
+
+    moduleContentHTML = `
+      <div class="space-y-8">
+        ${assessmentOverrideCSS ? `<style>/* per-assessment overrides */\n${assessmentOverrideCSS}</style>` : ''}
+        <div class="mb-8">
+          <h2 class="text-3xl font-black ${headingTextClass} italic uppercase tracking-tighter">Assessment Center</h2>
+          <p class="text-xs ${secondaryTextClass} font-mono uppercase tracking-widest mt-2">Quizzes, tests, and reflection exercises.</p>
+        </div>
+        <div id="assessment-list" class="grid grid-cols-1 gap-4">
+          ${assessments.length > 0 ? assessmentListHTML : `<p class="text-center ${secondaryTextClass} italic py-8">No assessments available.</p>`}
+        </div>
+        ${assessmentContainersHTML}
+      </div>`;
+
+    moduleScript = `
+      function showAssessment(index) {
+        document.getElementById('assessment-list').classList.add('hidden');
+        document.querySelectorAll('.assessment-container').forEach(function(c) { c.classList.add('hidden'); });
+        var target = document.getElementById('assessment-' + index);
+        if (target) target.classList.remove('hidden');
+        window.scrollTo(0, 0);
+      }
+      function backToAssessmentList() {
+        document.querySelectorAll('.assessment-container').forEach(function(c) { c.classList.add('hidden'); });
+        document.getElementById('assessment-list').classList.remove('hidden');
+        window.scrollTo(0, 0);
+      }
+      ${assessmentScripts}`;
+  } else if (module.rawHtml) {
+    const escapedRawHtml = module.rawHtml
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+    moduleContentHTML = `<div class="w-full rounded-xl overflow-hidden border border-slate-700 shadow-2xl">
+      <iframe srcdoc="${escapedRawHtml}" class="w-full border-0" style="min-height: 80vh; height: 100%;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"></iframe>
+    </div>`;
+  } else {
+    const html = module.html || (module.code && module.code.html) || '';
+    const css = module.css || (module.code && module.code.css) || '';
+    const script = module.script || (module.code && module.code.script) || '';
+    moduleContentHTML = html;
+    moduleCSS = css;
+    moduleScript = script;
+  }
+
+  let toolkitScripts = '';
+  let toolkitHTML = '';
+  enabledTools.forEach(tool => {
+    if (tool.code) {
+      if (tool.code.script) toolkitScripts += tool.code.script + '\n';
+      if (tool.code.html && tool.includeUi) toolkitHTML += tool.code.html + '\n';
+    }
+  });
+
+  const moduleTitleSafe = (module.title || module.id || 'module').replace(/[^a-zA-Z0-9]/g, '_');
+  const autosaveScript = `
+(function() {
+  var MODULE_KEY = 'CF_Module_${moduleTitleSafe}_v1';
+  var saveTimeout = null;
+  function getAllInputState() {
+    var state = {};
+    document.querySelectorAll('input, textarea, select').forEach(function(el, i) {
+      var key = el.id || el.name || ('field_' + i);
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        if (el.checked) state[key] = el.type === 'radio' ? el.value : true;
+      } else {
+        if (el.value) state[key] = el.value;
+      }
+    });
+    return state;
+  }
+  function restoreInputState(state) {
+    if (!state || typeof state !== 'object') return;
+    document.querySelectorAll('input, textarea, select').forEach(function(el, i) {
+      var key = el.id || el.name || ('field_' + i);
+      var savedValue = state[key];
+      if (savedValue !== undefined) {
+        if (el.type === 'checkbox') {
+          el.checked = !!savedValue;
+        } else if (el.type === 'radio') {
+          el.checked = (el.value === savedValue);
+        } else {
+          el.value = savedValue;
+        }
+      }
+    });
+  }
+  function saveNow() {
+    try {
+      var state = getAllInputState();
+      if (Object.keys(state).length > 0) {
+        localStorage.setItem(MODULE_KEY, JSON.stringify({
+          timestamp: Date.now(),
+          state: state
+        }));
+      }
+    } catch (e) {}
+  }
+  function debouncedSave() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(saveNow, 800);
+  }
+  function loadSaved() {
+    try {
+      var raw = localStorage.getItem(MODULE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && parsed.state) restoreInputState(parsed.state);
+      }
+    } catch (e) {}
+  }
+  function init() {
+    loadSaved();
+    document.addEventListener('input', debouncedSave);
+    document.addEventListener('change', debouncedSave);
+    window.addEventListener('pagehide', saveNow);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();`;
+
+  return `<!DOCTYPE html>
+<html lang="en" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${module.title} | ${courseName}</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <link href="${font.url}" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      background: ${bgHex} !important;
+      background-color: ${bgHex} !important;
+      ${font.css}
+    }
+    body {
+      min-height: 100vh;
+    }
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: ${isLightBg ? '#e2e8f0' : '#1e293b'}; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: ${isLightBg ? '#94a3b8' : '#475569'}; border-radius: 3px; }
+    .glass { background: ${isLightBg ? 'rgba(255, 255, 255, 0.8)' : 'rgba(15, 23, 42, 0.8)'}; backdrop-filter: blur(10px); }
+    .material-card { transition: all 0.2s; }
+    .material-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+    .assessment-container [class*="bg-slate-9"],
+    .assessment-container [class*="bg-slate-8"],
+    .assessment-container [class*="bg-slate-7"],
+    .assessment-container [class*="bg-slate-6"],
+    .assessment-container [class*="bg-gray-9"],
+    .assessment-container [class*="bg-gray-8"],
+    .assessment-container [class*="bg-gray-7"] {
+      background: var(--cf-container-bg) !important;
+    }
+    :root { --cf-container-bg: ${containerBgRgba}; }
+    ${moduleCSS}
+    ${customCSS ? `\n    /* Custom CSS from Settings */\n    ${customCSS}` : ''}
+  </style>
+  <script>
+    (function() {
+      function setBackground() {
+        document.documentElement.style.backgroundColor = '${bgHex}';
+        document.documentElement.style.background = '${bgHex}';
+        document.body.style.backgroundColor = '${bgHex}';
+        document.body.style.background = '${bgHex}';
+      }
+      setBackground();
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setBackground);
+      }
+      setTimeout(setBackground, 100);
+      setTimeout(setBackground, 500);
+    })();
+  <\/script>
+</head>
+<body class="${textColor} custom-scroll" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
+  <header class="sticky top-0 z-50 ${isLightBg ? 'bg-white/95' : 'bg-slate-900/95'} backdrop-blur border-b ${cardBorder}">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="../index.html" class="flex items-center gap-2 ${textColorSecondary} hover:text-${accentColor}-400 transition-colors text-sm font-bold">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        Back to Course
+      </a>
+      <h1 class="text-sm font-bold ${textColor} uppercase tracking-wider">${module.title}</h1>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+    ${moduleContentHTML}
+  </main>
+
+  ${toolkitHTML}
+
+  <script>
+    ${toolkitScripts}
+    ${moduleScript}
+    ${autosaveScript}
+  <\/script>
+</body>
+</html>`;
+};
+
 // --- Phases ---
 
 const Phase0 = ({ projectData, setProjectData }) => {
@@ -1933,7 +2560,7 @@ const BatchHarvester = ({ onImport }) => {
   );
 };
 
-// ðŸ›¡ï¸ THE BULLETPROOF VEST: Cleans up messy AI output or raw text input
+// 🛡️ THE BULLETPROOF VEST: Cleans up messy AI output or raw text input
 const sanitizeImportData = (input) => {
   let cleanData = [];
   try {
@@ -2033,7 +2660,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   // NEW: AI Studio Module Creator State
   const [aiDescription, setAiDescription] = useState("");
 
-  // Assessment override colors (Phase 1 Edit modal) — "Use course default" + common colors
+  // Assessment override colors (Phase 1 Edit modal) � "Use course default" + common colors
   const assessmentOverrideOptions = [
     { value: '', label: 'Use course default' },
     { value: 'white', label: 'White', swatch: 'bg-white border-slate-300', text: 'text-slate-900' },
@@ -2189,10 +2816,10 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         <!-- Action Buttons -->
         <div class="flex flex-wrap gap-3 mt-8 no-print">
           <button type="button" onclick="${quizId}_reset()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-            ðŸ”„ Reset
+            🔄 Reset
           </button>
           <button type="button" onclick="${quizId}_generateReport()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-            ðŸ–¨ï¸ Print & Submit
+            🖨️ Print & Submit
           </button>
         </div>
         
@@ -2783,7 +3410,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       setModuleManagerID('');
       setModuleManagerTitle('');
       setModuleManagerStatus('success');
-      setModuleManagerMessage(`âœ… Module "${title}" added successfully! It will run in an isolated iframe.`);
+      setModuleManagerMessage(`✅ Module "${title}" added successfully! It will run in an isolated iframe.`);
       
       setTimeout(() => {
         setModuleManagerStatus(null);
@@ -2879,7 +3506,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       setModuleManagerID('');
       setModuleManagerTitle('');
       setModuleManagerStatus('success');
-      setModuleManagerMessage(`âœ… External link module "${newModule.title}" added successfully!`);
+      setModuleManagerMessage(`✅ External link module "${newModule.title}" added successfully!`);
       
       setTimeout(() => {
         setModuleManagerStatus(null);
@@ -2991,10 +3618,10 @@ I need to extract ONE specific ${harvestType.toLowerCase()} from it to create a 
      // Force script execution in sandboxed environments
      if (document.readyState === 'loading') {
          document.addEventListener('DOMContentLoaded', function() {
-             console.log('âœ… ${divId} module loaded');
+             console.log('✅ ${divId} module loaded');
          });
      } else {
-         console.log('âœ… ${divId} module loaded');
+         console.log('✅ ${divId} module loaded');
      }
      \`\`\`
 
@@ -3191,7 +3818,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                     options: currentQuestion.options,
                                                     correct: currentQuestion.correct
                                                 });
-                                                alert("âœ… Question added to Master Assessment!");
+                                                alert("✅ Question added to Master Assessment!");
                                             }}
                                             className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded flex items-center justify-center gap-2"
                                         >
@@ -3226,7 +3853,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                     type: 'long-answer',
                                                     question: currentQuestion.question
                                                 });
-                                                alert("âœ… Question added to Master Assessment!");
+                                                alert("✅ Question added to Master Assessment!");
                                             }}
                                             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded flex items-center justify-center gap-2"
                                         >
@@ -3238,7 +3865,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                 {/* Quick Info */}
                                 <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg">
                                     <p className="text-purple-300 text-xs">
-                                        ðŸ’¡ <strong>Tip:</strong> Add all your questions here, then go to the "Master Assessment" tab to organize them and generate the final assessment.
+                                        💡 <strong>Tip:</strong> Add all your questions here, then go to the "Master Assessment" tab to organize them and generate the final assessment.
                                     </p>
                  </div>
              </div>
@@ -3416,7 +4043,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                     setQuizQuestions([{ question: '', options: ['', '', '', ''], correct: 0 }]);
                                                     setMode('MANAGE'); // Switch to Manage tab to see it
                                                 } catch(e) {
-                                                    alert("âŒ Error adding assessment. Please try again.");
+                                                    alert("❌ Error adding assessment. Please try again.");
                                                     console.error(e);
                                                 }
                                             }}
@@ -3573,7 +4200,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                     setMasterQuestions([]);
                                                     setMode('MANAGE');
                                                 } catch(e) {
-                                                    alert("âŒ Error adding assessment. Please try again.");
+                                                    alert("❌ Error adding assessment. Please try again.");
                                                     console.error(e);
                                                 }
                                             }}
@@ -4052,8 +4679,8 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         </p>
                                         <button 
                                             onClick={() => {
-                                                if (window.confirm('âš ï¸ WARNING: This will permanently delete ALL your course data including:\n\nâ€¢ Course settings\nâ€¢ All modules\nâ€¢ All assessments\nâ€¢ All materials\n\nAre you sure you want to continue?')) {
-                                                    if (window.confirm('ðŸš¨ FINAL CONFIRMATION: Type "DELETE" in the next prompt to confirm.\n\nClick OK to proceed with deletion.')) {
+                                                if (window.confirm('⚠️ WARNING: This will permanently delete ALL your course data including:\n\n• Course settings\n• All modules\n• All assessments\n• All materials\n\nAre you sure you want to continue?')) {
+                                                    if (window.confirm('🚨 FINAL CONFIRMATION: Type "DELETE" in the next prompt to confirm.\n\nClick OK to proceed with deletion.')) {
                                                         const userInput = window.prompt('Type DELETE to confirm:');
                                                         if (userInput === 'DELETE') {
                                                             localStorage.removeItem('course_factory_v2_data');
@@ -4064,7 +4691,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                     localStorage.removeItem(key);
                                                                 }
                                                             });
-                                                            alert('âœ… All data cleared! The page will now reload.');
+                                                            alert('✅ All data cleared! The page will now reload.');
                                                             window.location.reload();
                                                         } else {
                                                             alert('Deletion cancelled. Your data is safe.');
@@ -4119,7 +4746,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             </div>
                                         </div>
                                         <div>
-                                            <p className="text-xs font-bold text-amber-300 mb-1">â­ For Mixed Types (Recommended):</p>
+                                            <p className="text-xs font-bold text-amber-300 mb-1">⭐ For Mixed Types (Recommended):</p>
                                             <div className="bg-black p-2 rounded border border-amber-700 relative group">
                                                 <code className="text-[10px] text-amber-400 font-mono block break-words">
                                                     Convert this mixed assessment into JSON. Multiple-choice: [{"{"} "question": "...", "options": ["A","B","C","D"], "correct": 0 {"}"}]. Long-answer: [{"{"} "question": "...", "options": [] {"}"}]. Include ALL questions in order. Output JSON ONLY.
@@ -4207,7 +4834,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                         return (
                                                                             <div key={oIdx} className={`flex items-center gap-2 ${q.correct === oIdx ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
                                                                                 <span>{String.fromCharCode(65+oIdx)}.</span> <span>{optionText}</span>
-                                                                                {q.correct === oIdx && <span className="text-[10px] text-emerald-400">âœ“</span>}
+                                                                                {q.correct === oIdx && <span className="text-[10px] text-emerald-400">✓</span>}
                                                                             </div>
                                                                         );
                                                                     })
@@ -4235,7 +4862,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             formattedQuestions.forEach(q => addQuestionToMaster(q));
                                             const mcCount = formattedQuestions.filter(q => q.type === 'multiple-choice').length;
                                             const laCount = formattedQuestions.filter(q => q.type === 'long-answer').length;
-                                            alert(`âœ… Imported ${formattedQuestions.length} questions! (${mcCount} multiple-choice, ${laCount} long-answer)`);
+                                            alert(`✅ Imported ${formattedQuestions.length} questions! (${mcCount} multiple-choice, ${laCount} long-answer)`);
                                             setImportInput("");
                                             setImportPreview([]);
                                             setMode('MASTER');
@@ -4787,7 +5414,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-indigo-100 text-xs font-mono h-64 resize-y focus:border-indigo-500 outline-none"
                                         />
                                         <p className="text-[10px] text-emerald-400 mt-1 font-bold">
-                                            âœ“ Your code runs AS-IS in an isolated iframe - no modifications needed!
+                                            ✓ Your code runs AS-IS in an isolated iframe - no modifications needed!
                                         </p>
                                     </div>
                                     
@@ -4841,7 +5468,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     : 'bg-rose-900/30 text-rose-400 border-rose-500/30'
                                             }`}>
                                                 <div className="flex items-start gap-2">
-                                                    <span className="font-bold">{linkTestResult.success ? 'âœ“' : 'âœ—'}</span>
+                                                    <span className="font-bold">{linkTestResult.success ? '✓' : '✗'}</span>
                                                     <span>{linkTestResult.message}</span>
                                                 </div>
                                             </div>
@@ -4902,13 +5529,13 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                             
                             {/* Help Section */}
                             <div className="p-4 bg-sky-900/10 border border-sky-500/20 rounded-lg">
-                                <h4 className="text-xs font-bold text-sky-400 uppercase mb-2">ðŸ’¡ Module Types</h4>
+                                <h4 className="text-xs font-bold text-sky-400 uppercase mb-2">💡 Module Types</h4>
                                 <ul className="text-[10px] text-slate-400 space-y-1 leading-relaxed">
                                     <li><strong className="text-sky-300">Standalone HTML:</strong> Complete HTML file (like HSS3020). CSS auto-scoped, wrapped in view container.</li>
                                     <li><strong className="text-sky-300">External Link:</strong> Link to hosted module. Choose iframe (embedded) or new tab (external).</li>
-                                    <li>âœ… Modules appear in sidebar navigation</li>
-                                    <li>âœ… Can be hidden/shown in Phase 2</li>
-                                    <li>âœ… Included in compiled site</li>
+                                    <li>✅ Modules appear in sidebar navigation</li>
+                                    <li>✅ Can be hidden/shown in Phase 2</li>
+                                    <li>✅ Included in compiled site</li>
                                 </ul>
                             </div>
                         </div>
@@ -4999,10 +5626,10 @@ Return ONLY valid JSON. No markdown. Single-line strings.
    // Force script execution
    if (document.readyState === 'loading') {
        document.addEventListener('DOMContentLoaded', function() {
-           console.log('âœ… [feature-name] loaded');
+           console.log('✅ [feature-name] loaded');
        });
    } else {
-       console.log('âœ… [feature-name] loaded');
+       console.log('✅ [feature-name] loaded');
    }
    \`\`\`
    If your code has state to restore from localStorage, call your populate/init function here instead.
@@ -5213,7 +5840,7 @@ ${aiDescription}
 
                         <input type="text" value={stagingTitle} onChange={(e) => setStagingTitle(e.target.value)} placeholder="Title (e.g. Save System)" className="w-full mb-2 bg-slate-950 border border-emerald-900 rounded p-2 text-white text-sm"/>
                         <textarea value={stagingJson} onChange={(e) => setStagingJson(e.target.value)} className="w-full bg-slate-950 border border-emerald-900 rounded-lg p-3 text-xs text-emerald-100 font-mono h-24 focus:border-emerald-500 outline-none resize-y mb-2" placeholder='Paste output JSON here...' />
-                            <div className="flex gap-2 mb-6"><button onClick={() => handleSessionSave()} disabled={!stagingJson || !stagingTitle} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-xs shadow-lg"><Zap size={14} /> âš¡ Add to Session (Instant)</button></div>
+                            <div className="flex gap-2 mb-6"><button onClick={() => handleSessionSave()} disabled={!stagingJson || !stagingTitle} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-xs shadow-lg"><Zap size={14} /> ⚡ Add to Session (Instant)</button></div>
                         <div className="pt-4 border-t border-emerald-800/50"><div className="flex items-center justify-between mb-2"><p className="text-[10px] text-emerald-400/60 uppercase font-bold">Optional: Hard Save</p><span className="text-[9px] text-emerald-600 bg-emerald-950/50 px-2 py-0.5 rounded">Only do this once at the end</span></div><CodeBlock label="Permanent Save Prompt (Use Sparingly)" code={saveToDocPrompt} height="h-24" /></div>
                     </div>
                 </div>
@@ -5307,7 +5934,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
     
     // Prevent deletion of protected modules
     if (isProtectedModule(item)) {
-      alert('âš ï¸ Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle.');
+      alert('⚠️ Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle.');
       return;
     }
     
@@ -5681,9 +6308,9 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                             <div className="flex items-center gap-2 mb-3 text-xs text-slate-400">
                                 <FileCode size={12} />
                                 <span>{(stats.total / 1024).toFixed(1)} KB</span>
-                                <span className="text-slate-700">â€¢</span>
+                                <span className="text-slate-700">•</span>
                                 <span>{stats.htmlLength > 0 ? 'Has HTML' : 'No HTML'}</span>
-                                <span className="text-slate-700">â€¢</span>
+                                <span className="text-slate-700">•</span>
                                 <span>{stats.scriptLength > 0 ? 'Has Script' : 'No Script'}</span>
                             </div>
 
@@ -6155,7 +6782,7 @@ const Phase3 = ({ onGoToMaster, projectData, setProjectData }) => {
       try {
         const restored = JSON.parse(e.target.result);
         setProjectData(restored);
-        // alert("âœ… Project Restored Successfully!"); // Removed Alert
+        // alert("✅ Project Restored Successfully!"); // Removed Alert
       } catch (error) {
         console.error("Invalid backup file", error);
       }
@@ -6480,8 +7107,8 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       const materialsHTML = `<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
             <div class="max-w-5xl mx-auto space-y-8">
                 <div class="mb-12">
-                    <h2 class="text-3xl font-black ${chromeTheme.heading} italic uppercase tracking-tighter">Course Materials</h2>
-                    <p class="text-xs ${chromeTheme.body} font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
+                    <h2 class="text-3xl font-black ${headingTextClass} italic uppercase tracking-tighter">Course Materials</h2>
+                    <p class="text-xs ${secondaryTextClass} font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
                 </div>
                 <div id="pdf-viewer-container" class="hidden mb-12 ${chromeTheme.cardBg} rounded-xl border ${chromeTheme.cardBorder} overflow-hidden shadow-2xl">
                     <div class="flex justify-between items-center p-3 ${chromeTheme.inner} border-b ${chromeTheme.cardBorder}">
@@ -6695,7 +7322,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             }
         });
         
-        console.log('ðŸ“– Digital Reader initialized with event delegation');
+        console.log('📖 Digital Reader initialized with event delegation');
         `;
         scriptInjection += '\n        ' + digitalReaderScript + '\n';
       }
@@ -6800,10 +7427,10 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             <!-- INLINE ASSESSMENT NAVIGATION SCRIPTS -->
             <script>
             (function() {
-              console.log('ðŸ”§ [INLINE] Initializing assessment navigation functions...');
+              console.log('🔧 [INLINE] Initializing assessment navigation functions...');
               
               window.showAssessment = function(index) {
-                console.log('ðŸ“‹ [INLINE] Showing assessment:', index);
+                console.log('📋 [INLINE] Showing assessment:', index);
                 var listEl = document.getElementById('assessment-list');
                 var targetEl = document.getElementById('assessment-' + index);
                 
@@ -6814,13 +7441,13 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                 if (targetEl) {
                   targetEl.classList.remove('hidden');
                 } else {
-                  console.error('âŒ Assessment container not found:', 'assessment-' + index);
+                  console.error('❌ Assessment container not found:', 'assessment-' + index);
                 }
                 window.scrollTo(0, 0);
               };
               
               window.backToAssessmentList = function() {
-                console.log('â¬…ï¸ [INLINE] Returning to assessment list');
+                console.log('⬅️ [INLINE] Returning to assessment list');
                 document.querySelectorAll('.assessment-container').forEach(function(c) {
                   c.classList.add('hidden');
                 });
@@ -6831,7 +7458,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
               
               // Global Toolkit Menu Toggle
               window.toggleToolkitMenu = function() {
-                console.log('ðŸ”§ [INLINE] Toggling toolkit menu');
+                console.log('🔧 [INLINE] Toggling toolkit menu');
                 var dropdown = document.getElementById('toolkit-dropdown');
                 if (dropdown) {
                   dropdown.classList.toggle('hidden');
@@ -6842,8 +7469,8 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
               var toolkitState = JSON.parse(localStorage.getItem('mf_toolkit') || '{}');
               
               window.toggleTool = function(toolId) {
-                console.log('ðŸ”§ [INLINE] Toggling tool:', toolId);
-                console.log('ðŸ”§ [DEBUG] Looking for element ID:', 'feat-' + toolId);
+                console.log('🔧 [INLINE] Toggling tool:', toolId);
+                console.log('🔧 [DEBUG] Looking for element ID:', 'feat-' + toolId);
                 
                 toolkitState[toolId] = !toolkitState[toolId];
                 localStorage.setItem('mf_toolkit', JSON.stringify(toolkitState));
@@ -6851,17 +7478,17 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                 var toolElement = document.getElementById('feat-' + toolId);
                 var toggleButton = document.getElementById('toggle-' + toolId);
                 
-                console.log('ðŸ”§ [DEBUG] Tool element found:', !!toolElement);
-                console.log('ðŸ”§ [DEBUG] Toggle button found:', !!toggleButton);
-                console.log('ðŸ”§ [DEBUG] New state:', toolkitState[toolId]);
+                console.log('🔧 [DEBUG] Tool element found:', !!toolElement);
+                console.log('🔧 [DEBUG] Toggle button found:', !!toggleButton);
+                console.log('🔧 [DEBUG] New state:', toolkitState[toolId]);
                 
                 if (toolElement) {
                   if (toolkitState[toolId]) {
                     toolElement.classList.remove('hidden');
-                    console.log('ðŸ”§ [DEBUG] Showing tool');
+                    console.log('🔧 [DEBUG] Showing tool');
                   } else {
                     toolElement.classList.add('hidden');
-                    console.log('ðŸ”§ [DEBUG] Hiding tool');
+                    console.log('🔧 [DEBUG] Hiding tool');
                   }
                 }
                 
@@ -6871,20 +7498,20 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                     toggleButton.classList.add('bg-emerald-600');
                     var dot = toggleButton.querySelector('div');
                     if (dot) dot.classList.add('translate-x-4');
-                    console.log('ðŸ”§ [DEBUG] Toggle ON visual');
+                    console.log('🔧 [DEBUG] Toggle ON visual');
                   } else {
                     toggleButton.classList.remove('bg-emerald-600');
                     toggleButton.classList.add('bg-slate-600');
                     var dot = toggleButton.querySelector('div');
                     if (dot) dot.classList.remove('translate-x-4');
-                    console.log('ðŸ”§ [DEBUG] Toggle OFF visual');
+                    console.log('🔧 [DEBUG] Toggle OFF visual');
                   }
                 }
               };
               
               // Initialize toolkit state on load
               window.initializeToolkit = function() {
-                console.log('ðŸ”§ [INLINE] Initializing toolkit state');
+                console.log('🔧 [INLINE] Initializing toolkit state');
                 Object.keys(toolkitState).forEach(function(toolId) {
                   if (toolkitState[toolId]) {
                     var toolElement = document.getElementById('feat-' + toolId);
@@ -6907,7 +7534,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                 window.initializeToolkit();
               }
               
-              console.log('âœ… [INLINE] Assessment navigation + toolkit functions ready!');
+              console.log('✅ [INLINE] Assessment navigation + toolkit functions ready!');
             })();
             </script>
         </div>`;
@@ -6918,10 +7545,10 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
       // Add navigation functions (attached to window for onclick access)
       const navScripts = `
         (function() {
-          console.log('ðŸ”§ Initializing assessment navigation functions...');
+          console.log('🔧 Initializing assessment navigation functions...');
           
           window.showAssessment = function(index) {
-            console.log('ðŸ“‹ Showing assessment:', index);
+            console.log('📋 Showing assessment:', index);
             var listEl = document.getElementById('assessment-list');
             var targetEl = document.getElementById('assessment-' + index);
             
@@ -6938,7 +7565,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
           };
           
           window.backToAssessmentList = function() {
-            console.log('â¬…ï¸ Returning to assessment list');
+            console.log('⬅️ Returning to assessment list');
             document.querySelectorAll('.assessment-container').forEach(function(c) {
               c.classList.add('hidden');
             });
@@ -6947,7 +7574,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             window.scrollTo(0, 0);
           };
           
-          console.log('âœ… Assessment navigation functions ready!');
+          console.log('✅ Assessment navigation functions ready!');
         })();
         `;
       
@@ -7111,7 +7738,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
         <div id="toolkit-dropdown" class="hidden fixed top-16 left-4 bg-slate-800 border border-slate-700 rounded-xl p-3 shadow-2xl z-50 w-64">
             <div class="flex items-center justify-between mb-3">
                 <h3 class="text-sm font-bold text-white">Global Toolkit</h3>
-                <button onclick="toggleToolkitMenu()" class="text-slate-400 hover:text-white">âœ•</button>
+                <button onclick="toggleToolkitMenu()" class="text-slate-400 hover:text-white">✕</button>
             </div>
             <div class="space-y-1">
                 ${dropdownItems}
@@ -7204,9 +7831,9 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
             if (moduleProgress[moduleId]) {
               // Add checkmark indicator
               if (moduleProgress[moduleId].completed && !btn.querySelector('.progress-check')) {
-                btn.insertAdjacentHTML('beforeend', '<span class="progress-check ml-2 text-emerald-400">âœ“</span>');
+                btn.insertAdjacentHTML('beforeend', '<span class="progress-check ml-2 text-emerald-400">✓</span>');
               } else if (moduleProgress[moduleId].viewed && !moduleProgress[moduleId].completed && !btn.querySelector('.progress-dot')) {
-                btn.insertAdjacentHTML('beforeend', '<span class="progress-dot ml-2 text-amber-400">â—</span>');
+                btn.insertAdjacentHTML('beforeend', '<span class="progress-dot ml-2 text-amber-400">●</span>');
               }
             }
           });
@@ -7519,540 +8146,12 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     if (!mod) return null;
 
     const courseSettings = projectData["Course Settings"] || {};
-    const courseName = courseSettings.courseName || projectData["Current Course"]?.name || "Course";
-    const accentColor = courseSettings.accentColor || "sky";
-    const backgroundColor = courseSettings.backgroundColor || "slate-900";
-    const fontFamily = courseSettings.fontFamily || "inter";
-    const customCSS = courseSettings.customCSS || "";
-    const enabledTools = (projectData["Global Toolkit"] || []).filter(t => t.enabled);
-    
-    const font = getFontFamily(fontFamily);
-    
-    // Map Tailwind color names to hex values for background
-    const bgColorMap = {
-      'slate-900': '#0f172a',
-      'slate-950': '#020617',
-      'zinc-900': '#18181b',
-      'neutral-900': '#171717',
-      'stone-900': '#1c1917',
-      'gray-900': '#111827',
-      'slate-50': '#f8fafc',
-      'zinc-50': '#fafafa',
-      'neutral-50': '#fafafa',
-      'stone-50': '#fafaf9',
-      'gray-50': '#f9fafb',
-      'white': '#ffffff'
-    };
-    const bgHex = bgColorMap[backgroundColor] || bgColorMap['slate-900'];
-    
-    // Determine if background is light (for text color)
-    const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
-    const textColor = isLightBg ? 'text-slate-900' : 'text-white';
-    const textColorSecondary = isLightBg ? 'text-slate-600' : 'text-slate-400';
-    const textColorTertiary = isLightBg ? 'text-slate-500' : 'text-slate-500';
-    const cardBorder = isLightBg ? 'border-slate-300' : 'border-slate-700';
-    const headingTextColor = courseSettings.headingTextColor || (isLightBg ? 'slate-900' : 'white');
-    const secondaryTextColor = courseSettings.secondaryTextColor || (isLightBg ? 'slate-600' : 'slate-400');
-    const buttonColor = courseSettings.buttonColor || `${accentColor}-600`;
-    const containerColor = courseSettings.containerColor || (isLightBg ? 'white/80' : 'slate-900/80');
-    
-    const toTextClass = (value) => value.startsWith('text-') ? value : `text-${value}`;
-    const toBgBase = (value) => value.startsWith('bg-') ? value.slice(3) : value;
-    const hexToRgba = (hex, alpha = 1) => {
-      if (!hex) return `rgba(15, 23, 42, ${alpha})`;
-      const clean = hex.replace('#', '');
-      if (clean.length !== 6) return `rgba(15, 23, 42, ${alpha})`;
-      const r = parseInt(clean.slice(0, 2), 16);
-      const g = parseInt(clean.slice(2, 4), 16);
-      const b = parseInt(clean.slice(4, 6), 16);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    };
-    const parseColorToken = (value) => {
-      const raw = (value || '').toString().trim();
-      if (!raw) return { base: isLightBg ? 'white' : 'slate-900', alpha: 0.8, alphaRaw: '80' };
-      let token = raw;
-      if (token.startsWith('bg-')) token = token.slice(3);
-      if (token.startsWith('text-')) token = token.slice(5);
-      const parts = token.split('/');
-      const base = parts[0] || (isLightBg ? 'white' : 'slate-900');
-      const alphaRaw = parts[1] || null;
-      const alpha = alphaRaw ? Math.max(0, Math.min(1, parseInt(alphaRaw, 10) / 100)) : 1;
-      return { base, alpha, alphaRaw };
-    };
-    const colorHexMap = {
-      ...bgColorMap,
-      'slate-800': '#1e293b',
-      'slate-700': '#334155',
-      'slate-600': '#475569',
-      'slate-500': '#64748b',
-      'gray-800': '#1f2937',
-      'gray-700': '#374151',
-      'gray-600': '#4b5563',
-      'zinc-800': '#27272a',
-      'white': '#ffffff'
-    };
-    
-    const headingTextClass = toTextClass(headingTextColor);
-    const secondaryTextClass = toTextClass(secondaryTextColor);
-    const buttonBgBase = toBgBase(buttonColor);
-    const buttonBgClass = `bg-${buttonBgBase}`;
-    const buttonHoverClass = buttonBgBase.endsWith('-600') ? `hover:bg-${buttonBgBase.replace(/-600$/, '-500')}` : `hover:bg-${buttonBgBase}`;
-    const buttonTextClass = secondaryTextClass;
-    const containerToken = parseColorToken(containerColor);
-    const containerBgClass = containerToken.alphaRaw ? `bg-${containerToken.base}/${containerToken.alphaRaw}` : `bg-${containerToken.base}`;
-    const containerHex = colorHexMap[containerToken.base] || (isLightBg ? '#ffffff' : '#0f172a');
-    const containerBgRgba = hexToRgba(containerHex, containerToken.alpha);
-
-    // Check module type
-    let itemCode = mod.code || {};
-    if (typeof itemCode === 'string') {
-      try { itemCode = JSON.parse(itemCode); } catch(e) {}
-    }
-    const isMaterialsModule = itemCode.id === "view-materials";
-    const isAssessmentsModule = mod.id === "item-assessments" || mod.title === "Assessments";
-
-    // Extract module content
-    let moduleContentHTML = '';
-    let moduleCSS = '';
-    let moduleScript = '';
-
-    // Special handling for Course Materials module
-    if (isMaterialsModule) {
-      const courseMaterials = projectData["Current Course"]?.materials || [];
-      const materials = courseMaterials.filter(m => !m.hidden).sort((a, b) => (a.order || 0) - (b.order || 0));
-      
-      // Collect digital content for materials that have it
-      const digitalMaterials = materials.filter(m => m.digitalContent);
-      const digitalContentData = {};
-      digitalMaterials.forEach(dm => {
-        digitalContentData[dm.id] = dm.digitalContent;
-      });
-      const digitalContentJSON = JSON.stringify(digitalContentData)
-        .replace(/`/g, '\\`')
-        .replace(/\$\{/g, '\\${')
-        .replace(/</g, '\\u003c')
-        .replace(/>/g, '\\u003e');
-      
-      const defaultMaterialTheme = courseSettings.defaultMaterialTheme || 'dark';
-      const materialThemeMap = {
-        dark: { cardBg: 'bg-slate-900', cardBorder: 'border-slate-700', heading: 'text-white', body: 'text-slate-400' },
-        light: { cardBg: 'bg-white', cardBorder: 'border-slate-300', heading: 'text-slate-900', body: 'text-slate-600' },
-        muted: { cardBg: 'bg-slate-800', cardBorder: 'border-slate-700', heading: 'text-slate-200', body: 'text-slate-500' },
-        'high-contrast-light': { cardBg: 'bg-white', cardBorder: 'border-slate-300', heading: 'text-black', body: 'text-slate-800' },
-        'high-contrast-dark': { cardBg: 'bg-black', cardBorder: 'border-slate-600', heading: 'text-white', body: 'text-slate-300' }
-      };
-      
-      const materialCards = materials.map(mat => {
-        const themeKey = (mat.themeOverride != null && mat.themeOverride !== '') ? mat.themeOverride : defaultMaterialTheme;
-        const theme = materialThemeMap[themeKey] || materialThemeMap.dark;
-        const colorClass = mat.color || 'slate';
-        const borderClass = colorClass !== 'slate' ? `border-l-4 border-l-${colorClass}-500` : '';
-        const bgClass = colorClass !== 'slate' ? `bg-${colorClass}-500/10` : 'bg-slate-800';
-        const borderColorClass = colorClass !== 'slate' ? `border-${colorClass}-500/20` : 'border-slate-700';
-        const textColorClass = colorClass !== 'slate' ? `text-${colorClass}-500` : theme.body;
-        const buttonColorClass = `${buttonBgClass} ${buttonHoverClass}`;
-        const badgeLabel = getMaterialBadgeLabel(mat) || mat.number || '';
-        const badgeTextClass = mat.mediaType && mat.mediaType !== 'number'
-          ? 'text-[9px] font-black uppercase tracking-widest'
-          : 'font-black italic text-xl';
-        
-        const escapedViewUrl = (mat.viewUrl || '').replace(/'/g, "\\'");
-        const escapedTitle = (mat.title || '').replace(/'/g, "\\'");
-        const matId = mat.id || `mat-${Date.now()}`;
-        
-        let buttonsHTML = '';
-        if (mat.viewUrl) {
-          buttonsHTML += `<button onclick="openPDF('${escapedViewUrl}', '${escapedTitle}')" class="flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>`;
-        }
-        if (mat.downloadUrl) {
-          buttonsHTML += `<a href="${mat.downloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`;
-        }
-        if (mat.digitalContent) {
-          buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">Read</button>`;
-        }
-        
-        return `<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 p-6 ${theme.cardBg} rounded-xl border ${theme.cardBorder} ${borderClass}">
-          <div class="flex items-center gap-6">
-            <div class="w-12 h-12 rounded-lg ${bgClass} flex items-center justify-center ${textColorClass} ${badgeTextClass} border ${borderColorClass}">${badgeLabel}</div>
-            <div>
-              <h3 class="text-lg font-bold ${theme.heading} uppercase italic">${mat.title}</h3>
-              <p class="text-xs ${theme.body} font-mono">${mat.description || ''}</p>
-            </div>
-          </div>
-          <div class="flex gap-3 w-full md:w-auto">${buttonsHTML}</div>
-        </div>`;
-      }).join('\n');
-
-      moduleContentHTML = `
-        <div class="space-y-8">
-          <div class="mb-8">
-            <h2 class="text-3xl font-black ${headingTextClass} italic uppercase tracking-tighter">Course Materials</h2>
-            <p class="text-xs ${secondaryTextClass} font-mono uppercase tracking-widest mt-2">Access lectures, presentations, and briefing documents.</p>
-          </div>
-          <div id="pdf-viewer-container" class="hidden mb-8 ${isLightBg ? 'bg-white' : 'bg-black'} rounded-xl border ${cardBorder} overflow-hidden shadow-2xl">
-            <div class="flex justify-between items-center p-3 ${isLightBg ? 'bg-slate-100' : 'bg-slate-800'} border-b ${cardBorder}">
-              <span id="viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Document Viewer</span>
-              <button onclick="closeViewer()" class="text-xs text-rose-400 hover:${isLightBg ? 'text-slate-900' : 'text-white'} font-bold uppercase tracking-widest px-2">Close X</button>
-            </div>
-            <iframe id="pdf-frame" src="" width="100%" height="600" style="border:none;"></iframe>
-          </div>
-          <div id="digital-reader-container" class="hidden mb-8 ${isLightBg ? 'bg-white' : 'bg-slate-900'} rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">
-            <div class="flex justify-between items-center p-3 ${isLightBg ? 'bg-slate-100' : 'bg-slate-800'} border-b border-emerald-500/30">
-              <span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">Digital Resource</span>
-              <button onclick="closeDigitalReader()" class="text-xs text-rose-400 hover:${isLightBg ? 'text-slate-900' : 'text-white'} font-bold uppercase tracking-widest px-2">Close X</button>
-            </div>
-            <div class="flex" style="height: 600px;">
-              <div id="reader-toc" class="w-64 ${isLightBg ? 'bg-slate-50' : 'bg-slate-950'} border-r ${cardBorder} p-4 overflow-y-auto hidden md:block">
-                <h4 class="text-xs font-bold ${textColorSecondary} uppercase tracking-wider mb-4">Contents</h4>
-                <div id="reader-toc-items" class="space-y-1"></div>
-              </div>
-              <div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">
-                <div id="reader-body" class="prose ${isLightBg ? 'prose-slate' : 'prose-invert'} max-w-none"></div>
-                <div class="flex justify-between items-center mt-8 pt-4 border-t ${cardBorder}">
-                  <button id="prev-btn" onclick="prevChapter()" class="px-4 py-2 ${isLightBg ? 'bg-slate-200 hover:bg-slate-300 text-slate-900' : 'bg-slate-800 hover:bg-slate-700 text-white'} text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Previous</button>
-                  <span id="reader-progress" class="text-xs ${textColorSecondary}"></span>
-                  <button id="next-btn" onclick="nextChapter()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next</button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div id="materials-list" class="grid grid-cols-1 gap-4">
-            ${materials.length > 0 ? materialCards : `<p class="text-center ${secondaryTextClass} italic py-8">No materials available.</p>`}
-          </div>
-        </div>`;
-      
-      // Build digital reader script if there are digital materials
-      let digitalReaderScript = '';
-      if (digitalMaterials.length > 0) {
-        digitalReaderScript = `
-        var DIGITAL_CONTENT = ${digitalContentJSON};
-        var currentReader = { matId: null, chapterIdx: 0, data: null };
-        
-        function openDigitalReader(matId) {
-          var content = DIGITAL_CONTENT[matId];
-          if (!content) { console.error('No digital content for', matId); return; }
-          
-          currentReader = { matId: matId, chapterIdx: 0, data: content };
-          
-          document.getElementById('reader-title').innerText = (content.title || 'Digital Resource');
-          
-          var tocHTML = '';
-          (content.chapters || []).forEach(function(ch, idx) {
-            tocHTML += '<button onclick="goToChapter(' + idx + ')" class="toc-item w-full text-left px-3 py-2 rounded text-xs hover:bg-slate-800 transition-colors ' + (idx === 0 ? 'bg-emerald-900/50 text-emerald-400' : 'text-slate-400') + '">' +
-              '<span class="font-bold">' + (ch.number || (idx + 1)) + '.</span> ' + ch.title +
-            '</button>';
-          });
-          document.getElementById('reader-toc-items').innerHTML = tocHTML;
-          
-          renderChapter(0);
-          
-          document.getElementById('digital-reader-container').classList.remove('hidden');
-          document.getElementById('materials-list').classList.add('hidden');
-          document.getElementById('pdf-viewer-container').classList.add('hidden');
-        }
-        
-        function closeDigitalReader() {
-          document.getElementById('digital-reader-container').classList.add('hidden');
-          document.getElementById('materials-list').classList.remove('hidden');
-          currentReader = { matId: null, chapterIdx: 0, data: null };
-        }
-        
-        function renderChapter(idx) {
-          if (!currentReader.data || !currentReader.data.chapters) return;
-          var chapters = currentReader.data.chapters;
-          if (idx < 0 || idx >= chapters.length) return;
-          
-          currentReader.chapterIdx = idx;
-          var chapter = chapters[idx];
-          
-          var html = '<h2 class="text-2xl font-bold text-white mb-2">' + (chapter.number || (idx + 1)) + '. ' + chapter.title + '</h2>';
-          
-          (chapter.sections || []).forEach(function(sec) {
-            html += '<div class="mt-6">';
-            if (sec.heading) {
-              html += '<h3 class="text-lg font-bold text-emerald-400 mb-3">' + sec.heading + '</h3>';
-            }
-            var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, '- ');
-            html += '<div class="text-slate-300 leading-relaxed whitespace-pre-line">' + content + '</div>';
-            html += '</div>';
-          });
-          
-          document.getElementById('reader-body').innerHTML = html;
-          
-          document.querySelectorAll('.toc-item').forEach(function(btn, i) {
-            if (i === idx) {
-              btn.classList.add('bg-emerald-900/50', 'text-emerald-400');
-              btn.classList.remove('text-slate-400');
-            } else {
-              btn.classList.remove('bg-emerald-900/50', 'text-emerald-400');
-              btn.classList.add('text-slate-400');
-            }
-          });
-          
-          document.getElementById('prev-btn').disabled = idx === 0;
-          document.getElementById('next-btn').disabled = idx === chapters.length - 1;
-          document.getElementById('reader-progress').textContent = 'Chapter ' + (idx + 1) + ' of ' + chapters.length;
-          
-          document.getElementById('reader-content').scrollTop = 0;
-        }
-        
-        function goToChapter(idx) {
-          renderChapter(idx);
-        }
-        
-        function prevChapter() {
-          if (currentReader.chapterIdx > 0) {
-            renderChapter(currentReader.chapterIdx - 1);
-          }
-        }
-        
-        function nextChapter() {
-          if (currentReader.data && currentReader.data.chapters && currentReader.chapterIdx < currentReader.data.chapters.length - 1) {
-            renderChapter(currentReader.chapterIdx + 1);
-          }
-        }
-        
-        // Event delegation for digital reader buttons
-        document.addEventListener('click', function(e) {
-          var readerBtn = e.target.closest('[data-digital-reader]');
-          if (readerBtn) {
-            e.preventDefault();
-            openDigitalReader(readerBtn.getAttribute('data-digital-reader'));
-            return;
-          }
-        });`;
-      }
-      
-      moduleScript = `
-        function openPDF(url, title) {
-          var container = document.getElementById('pdf-viewer-container');
-          var previewUrl = url.replace('/view', '/preview');
-          document.getElementById('pdf-frame').src = previewUrl;
-          document.getElementById('viewer-title').innerText = "VIEWING: " + title;
-          container.classList.remove('hidden');
-          container.scrollIntoView({ behavior: 'smooth' });
-        }
-        function closeViewer() {
-          document.getElementById('pdf-viewer-container').classList.add('hidden');
-          document.getElementById('pdf-frame').src = "";
-        }
-        ${digitalReaderScript}`;
-    }
-    // Special handling for Assessments module
-    else if (isAssessmentsModule) {
-      const assessments = (mod.assessments || []).filter(a => !a.hidden).sort((a, b) => (a.order || 0) - (b.order || 0));
-      
-      const cardBg = containerBgClass;
-      
-      // Generate assessment list
-      const assessmentListHTML = assessments.map((assess, idx) => {
-        const typeLabel = assess.type === 'quiz' ? 'Multiple Choice' : assess.type === 'longanswer' ? 'Long Answer' : assess.type === 'print' ? 'Print & Submit' : 'Mixed Assessment';
-        const typeBadge = assess.type === 'quiz' ? 'MC' : assess.type === 'longanswer' ? 'LA' : assess.type === 'print' ? 'PRINT' : 'MIX';
-        
-        return `<div class="assessment-card p-6 ${cardBg} rounded-xl border ${cardBorder} hover:border-${accentColor}-500 transition-all cursor-pointer group" onclick="showAssessment(${idx})">
-          <div class="flex items-center justify-between">
-            <div class="flex-1">
-              <div class="flex items-center gap-3 mb-2">
-                <span class="text-[10px] font-black uppercase tracking-widest ${secondaryTextClass}">${typeBadge}</span>
-                <div>
-                  <h3 class="text-xl font-bold ${headingTextClass} group-hover:text-${accentColor}-400 transition-colors">${assess.title}</h3>
-                  <p class="text-xs ${secondaryTextClass} uppercase tracking-wider">${typeLabel}</p>
-                </div>
-              </div>
-            </div>
-            <div class="text-${accentColor}-400 group-hover:translate-x-1 transition-transform">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-              </svg>
-            </div>
-          </div>
-        </div>`;
-      }).join('\n');
-
-      // Generate individual assessment containers
-      const assessmentContainersHTML = assessments.map((assess, idx) => {
-        return `<div id="assessment-${idx}" class="assessment-container hidden">
-          <button onclick="backToAssessmentList()" class="mb-6 inline-flex items-center gap-2 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-            Back to Assessments
-          </button>
-          ${assess.html || ''}
-        </div>`;
-      }).join('\n');
-
-      // Collect assessment scripts
-      const assessmentScripts = assessments.map(assess => assess.script || '').filter(s => s).join('\n');
-
-      // Per-assessment text/box color overrides (Phase 1 Edit; Phase 5 defaults)
-      const defaultTextColor = courseSettings.assessmentTextColor || 'white';
-      const defaultBoxColor = courseSettings.assessmentBoxColor || 'slate-900';
-      const overrideHexMap = {
-        'white': '#ffffff', 'black': '#000000',
-        'slate-950': '#020617', 'slate-900': '#0f172a', 'slate-800': '#1e293b', 'slate-700': '#334155',
-        'slate-600': '#475569', 'slate-500': '#64748b', 'slate-400': '#94a3b8', 'slate-300': '#cbd5e1',
-        'slate-200': '#e2e8f0', 'slate-100': '#f1f5f9', 'slate-50': '#f8fafc',
-        'gray-900': '#111827', 'gray-800': '#1f2937', 'gray-700': '#374151', 'gray-600': '#4b5563',
-        'gray-500': '#6b7280', 'gray-400': '#9ca3af', 'gray-300': '#d1d5db', 'gray-200': '#e5e7eb', 'gray-100': '#f3f4f6', 'gray-50': '#f9fafb'
-      };
-      const assessmentOverrideCSS = assessments.map((assess) => {
-        const textColor = assess.textColorOverride != null && assess.textColorOverride !== '' ? assess.textColorOverride : defaultTextColor;
-        const boxColor = assess.boxColorOverride != null && assess.boxColorOverride !== '' ? assess.boxColorOverride : defaultBoxColor;
-        let genId = assess.generatedId;
-        if (!genId && (assess.html || '').match(/id="(quiz_|mixed_)\d+"/)) {
-          const m = (assess.html || '').match(/id="((?:quiz_|mixed_)\d+)"/);
-          genId = m ? m[1] : null;
-        }
-        if (!genId) return '';
-        const textHex = overrideHexMap[textColor] || overrideHexMap['white'];
-        const boxHex = overrideHexMap[boxColor] || overrideHexMap['slate-900'];
-        const isLightBox = ['white','slate-50','slate-100','slate-200','slate-300','slate-400','gray-50','gray-100','gray-200','gray-300','gray-400'].includes(boxColor);
-        const borderHex = isLightBox ? '#cbd5e1' : '#334155';
-        return `#${genId} .assessment-input,#${genId} textarea.assessment-input,#${genId} input.assessment-input{color:${textHex} !important;background-color:${boxHex} !important;border-color:${borderHex} !important;}`;
-      }).filter(Boolean).join('\n');
-
-      moduleContentHTML = `
-        <div class="space-y-8">
-          ${assessmentOverrideCSS ? `<style>/* per-assessment overrides */\n${assessmentOverrideCSS}</style>` : ''}
-          <div class="mb-8">
-            <h2 class="text-3xl font-black ${headingTextClass} italic uppercase tracking-tighter">Assessment Center</h2>
-            <p class="text-xs ${secondaryTextClass} font-mono uppercase tracking-widest mt-2">Quizzes, tests, and reflection exercises.</p>
-          </div>
-          <div id="assessment-list" class="grid grid-cols-1 gap-4">
-            ${assessments.length > 0 ? assessmentListHTML : `<p class="text-center ${secondaryTextClass} italic py-8">No assessments available.</p>`}
-          </div>
-          ${assessmentContainersHTML}
-        </div>`;
-      
-      moduleScript = `
-        function showAssessment(index) {
-          document.getElementById('assessment-list').classList.add('hidden');
-          document.querySelectorAll('.assessment-container').forEach(function(c) { c.classList.add('hidden'); });
-          var target = document.getElementById('assessment-' + index);
-          if (target) target.classList.remove('hidden');
-          window.scrollTo(0, 0);
-        }
-        function backToAssessmentList() {
-          document.querySelectorAll('.assessment-container').forEach(function(c) { c.classList.add('hidden'); });
-          document.getElementById('assessment-list').classList.remove('hidden');
-          window.scrollTo(0, 0);
-        }
-        ${assessmentScripts}`;
-    }
-    // Regular module handling
-    else if (mod.rawHtml) {
-      // New format: rawHtml - render in iframe
-      const escapedRawHtml = mod.rawHtml
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-      moduleContentHTML = `<div class="w-full rounded-xl overflow-hidden border border-slate-700 shadow-2xl">
-        <iframe srcdoc="${escapedRawHtml}" class="w-full border-0" style="min-height: 80vh; height: 100%;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"></iframe>
-      </div>`;
-    } else {
-      // Legacy format
-      const html = mod.html || (mod.code && mod.code.html) || '';
-      const css = mod.css || (mod.code && mod.code.css) || '';
-      const script = mod.script || (mod.code && mod.code.script) || '';
-      
-      moduleContentHTML = html;
-      moduleCSS = css;
-      moduleScript = script;
-    }
-
-    // Build toolkit scripts
-    let toolkitScripts = '';
-    let toolkitHTML = '';
-    enabledTools.forEach(tool => {
-      if (tool.code) {
-        if (tool.code.script) toolkitScripts += tool.code.script + '\n';
-        if (tool.code.html && tool.includeUi) toolkitHTML += tool.code.html + '\n';
-      }
+    return buildModuleFrameHTML(mod, {
+      ...courseSettings,
+      __courseName: courseSettings.courseName || projectData["Current Course"]?.name || "Course",
+      __toolkit: projectData["Global Toolkit"] || [],
+      __materials: projectData["Current Course"]?.materials || []
     });
-
-    return `<!DOCTYPE html>
-<html lang="en" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${mod.title} | ${courseName}</title>
-  <script src="https://cdn.tailwindcss.com"><\/script>
-  <link href="${font.url}" rel="stylesheet">
-  <style>
-    * { 
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    html, body { 
-      background: ${bgHex} !important;
-      background-color: ${bgHex} !important;
-      ${font.css}
-    }
-    body { 
-      min-height: 100vh;
-    }
-    .custom-scroll::-webkit-scrollbar { width: 6px; }
-    .custom-scroll::-webkit-scrollbar-track { background: ${isLightBg ? '#e2e8f0' : '#1e293b'}; }
-    .custom-scroll::-webkit-scrollbar-thumb { background: ${isLightBg ? '#94a3b8' : '#475569'}; border-radius: 3px; }
-    .glass { background: ${isLightBg ? 'rgba(255, 255, 255, 0.8)' : 'rgba(15, 23, 42, 0.8)'}; backdrop-filter: blur(10px); }
-    .material-card { transition: all 0.2s; }
-    .material-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
-    .assessment-container [class*="bg-slate-9"],
-    .assessment-container [class*="bg-slate-8"],
-    .assessment-container [class*="bg-slate-7"],
-    .assessment-container [class*="bg-slate-6"],
-    .assessment-container [class*="bg-gray-9"],
-    .assessment-container [class*="bg-gray-8"],
-    .assessment-container [class*="bg-gray-7"] {
-      background: var(--cf-container-bg) !important;
-    }
-    ${moduleCSS}
-    ${customCSS ? `\n    /* Custom CSS from Settings */\n    ${customCSS}` : ''}
-  </style>
-  <script>
-    // Force background color after Tailwind loads
-    (function() {
-      function setBackground() {
-        document.documentElement.style.backgroundColor = '${bgHex}';
-        document.documentElement.style.background = '${bgHex}';
-        document.body.style.backgroundColor = '${bgHex}';
-        document.body.style.background = '${bgHex}';
-      }
-      setBackground();
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setBackground);
-      }
-      setTimeout(setBackground, 100);
-      setTimeout(setBackground, 500);
-    })();
-  <\/script>
-</head>
-<body class="${textColor} custom-scroll" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
-  <header class="sticky top-0 z-50 ${isLightBg ? 'bg-white/95' : 'bg-slate-900/95'} backdrop-blur border-b ${cardBorder}">
-    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-      <a href="../index.html" class="flex items-center gap-2 ${textColorSecondary} hover:text-${accentColor}-400 transition-colors text-sm font-bold">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-        </svg>
-        Back to Course
-      </a>
-      <h1 class="text-sm font-bold ${textColor} uppercase tracking-wider">${mod.title}</h1>
-    </div>
-  </header>
-  
-  <main class="max-w-6xl mx-auto px-6 py-8">
-    ${moduleContentHTML}
-  </main>
-
-  ${toolkitHTML}
-  
-  <script>
-    ${toolkitScripts}
-    ${moduleScript}
-  <\/script>
-</body>
-</html>`;
   };
 
   // Build single-page app (with sidebar) for beta publish
@@ -8245,596 +8344,14 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       }
 
       const courseSettings = projectData["Course Settings"] || {};
-      const accentColor = courseSettings.accentColor || "sky";
-      const backgroundColor = courseSettings.backgroundColor || "slate-900";
-      const fontFamily = courseSettings.fontFamily || "inter";
-      const font = getFontFamilyGlobal(fontFamily);
-      const fontNameMatch = font.css.match(/'([^']+)'/);
-      const fontName = fontNameMatch ? fontNameMatch[1] : 'Inter';
-      const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
-      const headingTextColor = courseSettings.headingTextColor || (isLightBg ? 'slate-900' : 'white');
-      const secondaryTextColor = courseSettings.secondaryTextColor || (isLightBg ? 'slate-600' : 'slate-400');
-      const buttonColor = courseSettings.buttonColor || `${accentColor}-600`;
-      const containerColor = courseSettings.containerColor || (isLightBg ? 'white/80' : 'slate-900/80');
-      const toTextClass = (value) => value.startsWith('text-') ? value : `text-${value}`;
-      const toBgBase = (value) => value.startsWith('bg-') ? value.slice(3) : value;
-      const hexToRgba = (hex, alpha = 1) => {
-        if (!hex) return `rgba(15, 23, 42, ${alpha})`;
-        const clean = hex.replace('#', '');
-        if (clean.length !== 6) return `rgba(15, 23, 42, ${alpha})`;
-        const r = parseInt(clean.slice(0, 2), 16);
-        const g = parseInt(clean.slice(2, 4), 16);
-        const b = parseInt(clean.slice(4, 6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-      };
-      const parseColorToken = (value) => {
-        const raw = (value || '').toString().trim();
-        if (!raw) return { base: isLightBg ? 'white' : 'slate-900', alpha: 0.8, alphaRaw: '80' };
-        let token = raw;
-        if (token.startsWith('bg-')) token = token.slice(3);
-        if (token.startsWith('text-')) token = token.slice(5);
-        const parts = token.split('/');
-        const base = parts[0] || (isLightBg ? 'white' : 'slate-900');
-        const alphaRaw = parts[1] || null;
-        const alpha = alphaRaw ? Math.max(0, Math.min(1, parseInt(alphaRaw, 10) / 100)) : 1;
-        return { base, alpha, alphaRaw };
-      };
-      const bgColorMap = {
-        'slate-900': '#0f172a',
-        'slate-950': '#020617',
-        'zinc-900': '#18181b',
-        'neutral-900': '#171717',
-        'stone-900': '#1c1917',
-        'gray-900': '#111827',
-        'slate-50': '#f8fafc',
-        'zinc-50': '#fafafa',
-        'neutral-50': '#fafafa',
-        'stone-50': '#fafaf9',
-        'gray-50': '#f9fafb',
-        'white': '#ffffff',
-        'slate-800': '#1e293b',
-        'slate-700': '#334155',
-        'slate-600': '#475569',
-        'slate-500': '#64748b',
-        'gray-800': '#1f2937',
-        'gray-700': '#374151',
-        'gray-600': '#4b5563',
-        'zinc-800': '#27272a'
-      };
-      const bgHex = bgColorMap[backgroundColor] || bgColorMap['slate-900'];
-      const headingTextClass = toTextClass(headingTextColor);
-      const secondaryTextClass = toTextClass(secondaryTextColor);
-      const buttonBgBase = toBgBase(buttonColor);
-      const buttonBgClass = `bg-${buttonBgBase}`;
-      const buttonHoverClass = buttonBgBase.endsWith('-600') ? `hover:bg-${buttonBgBase.replace(/-600$/, '-500')}` : `hover:bg-${buttonBgBase}`;
-      const buttonTextClass = secondaryTextClass;
-      const containerToken = parseColorToken(containerColor);
-      const containerBgClass = containerToken.alphaRaw ? `bg-${containerToken.base}/${containerToken.alphaRaw}` : `bg-${containerToken.base}`;
-      const containerHex = bgColorMap[containerToken.base] || (isLightBg ? '#ffffff' : '#0f172a');
-      const containerBgRgba = hexToRgba(containerHex, containerToken.alpha);
+      const finalHTML = buildModuleFrameHTML(selectedMod, {
+        ...courseSettings,
+        __courseName: courseSettings.courseName || projectData["Current Course"]?.name || "Course",
+        __toolkit: projectData["Global Toolkit"] || [],
+        __materials: projectData["Current Course"]?.materials || []
+      });
 
-    const allAssessments = modules.flatMap(m => m.assessments || []);
-    const selectedAssessments = allAssessments.filter(a => exportAssessments.includes(a.id));
-    const selectedTools = toolkit.filter(t => exportTools.includes(t.id));
-
-    let sectionsHTML = '';
-    let combinedScripts = '';
-
-    // Add navigation/viewer functions FIRST (before module scripts) to ensure they're available immediately
-    // Wrap in IIFE to ensure they're always defined, not conditionally
-    combinedScripts += '// --- NAVIGATION FUNCTIONS (Always Defined) ---\n' +
-        '(function() {\n' +
-        '  window.showAssessment = function(index) {\n' +
-        '    var listEl = document.getElementById("assessment-list");\n' +
-        '    if (listEl) listEl.classList.add("hidden");\n' +
-        '    document.querySelectorAll(".assessment-container").forEach(function(c) { c.classList.add("hidden"); });\n' +
-        '    var targetEl = document.getElementById("assessment-" + index);\n' +
-        '    if (targetEl) targetEl.classList.remove("hidden");\n' +
-        '    window.scrollTo(0, 0);\n' +
-        '  };\n' +
-        '  window.backToAssessmentList = function() {\n' +
-        '    document.querySelectorAll(".assessment-container").forEach(function(c) { c.classList.add("hidden"); });\n' +
-        '    var listEl = document.getElementById("assessment-list");\n' +
-        '    if (listEl) listEl.classList.remove("hidden");\n' +
-        '    window.scrollTo(0, 0);\n' +
-        '  };\n' +
-        '  window.openMaterialViewer = function(url, title) {\n' +
-        '    var viewer = document.getElementById("material-viewer");\n' +
-        '    var frame = document.getElementById("material-frame");\n' +
-        '    var titleEl = document.getElementById("material-viewer-title");\n' +
-        '    if (viewer && frame && titleEl) {\n' +
-        '      frame.src = url;\n' +
-        '      titleEl.textContent = title;\n' +
-        '      viewer.classList.remove("hidden");\n' +
-        '      viewer.scrollIntoView({ behavior: "smooth", block: "start" });\n' +
-        '    }\n' +
-        '  };\n' +
-        '  window.closeMaterialViewer = function() {\n' +
-        '    var viewer = document.getElementById("material-viewer");\n' +
-        '    var frame = document.getElementById("material-frame");\n' +
-        '    if (viewer && frame) {\n' +
-        '      viewer.classList.add("hidden");\n' +
-        '      frame.src = "";\n' +
-        '    }\n' +
-        '  };\n' +
-        '})();\n\n';
-
-    // Module Content - Check for rawHtml first (new format), then legacy format
-    if (selectedMod.rawHtml) {
-      // NEW FORMAT: rawHtml - embed in iframe for isolation
-      // Escape for srcdoc attribute
-      const escapedRawHtml = selectedMod.rawHtml
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-      
-      sectionsHTML += '<section id="module-content" class="mb-12">' +
-        '<div class="w-full rounded-xl overflow-hidden border border-slate-700 shadow-2xl">' +
-        '<iframe srcdoc="' + escapedRawHtml + '" ' +
-        'class="w-full border-0" ' +
-        'style="min-height: 80vh; height: 100%;" ' +
-        'sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads">' +
-        '</iframe>' +
-        '</div>' +
-        '</section>';
-    } else {
-      // LEGACY FORMAT: separate html/css/script
-      const moduleContent = extractModuleContent(selectedMod);
-      let moduleHTML = moduleContent.html;
-      let moduleCSS = moduleContent.css;
-      let moduleScript = moduleContent.script;
-
-      // Process HTML if found
-      if (moduleHTML) {
-          const cleanHTML = cleanModuleHTML(moduleHTML);
-          sectionsHTML += '<section id="module-content" class="mb-12">' + cleanHTML + '</section>';
-      }
-
-      // Inject CSS if found (standalone modules only)
-      if (moduleCSS) {
-          sectionsHTML = '<style id="module-styles">' + moduleCSS + '</style>' + sectionsHTML;
-      }
-
-      // Process script if found
-      if (moduleScript) {
-          const cleanScript = cleanModuleScript(moduleScript);
-          combinedScripts += '// --- MODULE SCRIPT ---\n' + cleanScript + '\n\n';
-      }
-    }
-
-    // Assessments with Selection UI
-    if (selectedAssessments.length > 0) {
-        sectionsHTML += '<section id="assessments" class="mb-12"><h2 class="text-2xl font-bold ' + headingTextClass + ' mb-6 border-b border-slate-700 pb-2">Assessments</h2>';
-        
-        // Assessment List (Selection Page)
-        sectionsHTML += '<div id="assessment-list"><div class="grid grid-cols-1 gap-4">';
-        selectedAssessments.forEach((assess, idx) => {
-            const qCount = assess.questions ? assess.questions.length : 'Multiple';
-            sectionsHTML += '<div class="assessment-card p-6 ' + containerBgClass + ' rounded-xl border border-slate-700 hover:border-' + accentColor + '-500 transition-all cursor-pointer group" onclick="showAssessment(' + idx + ')">' +
-                '<div class="flex items-center justify-between">' +
-                '<div class="flex-1"><div class="flex items-center gap-3 mb-2">' +
-                '<span class="text-[10px] font-black uppercase tracking-widest ' + secondaryTextClass + '">MIX</span><div>' +
-                '<h3 class="text-xl font-bold ' + headingTextClass + ' group-hover:text-' + accentColor + '-400 transition-colors">' + assess.title + '</h3>' +
-                '<p class="text-xs ' + secondaryTextClass + ' uppercase tracking-wider">Mixed Assessment | ' + qCount + ' Questions</p>' +
-                '</div></div></div>' +
-                '<div class="text-' + accentColor + '-400 group-hover:translate-x-1 transition-transform">' +
-                '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></div></div></div>';
-        });
-        sectionsHTML += '</div></div>';
-        
-        // Individual Assessment Containers
-        selectedAssessments.forEach((assess, idx) => {
-            sectionsHTML += '<div id="assessment-' + idx + '" class="assessment-container hidden">' +
-                '<button onclick="backToAssessmentList()" class="mb-6 inline-flex items-center gap-2 ' + buttonBgClass + ' ' + buttonHoverClass + ' ' + buttonTextClass + ' font-bold text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg transition-colors">' +
-                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>' +
-                'Back to Assessments</button>' +
-                assess.html + '</div>';
-            if (assess.script) combinedScripts += '// --- ASSESSMENT: ' + assess.title + ' ---\n' + assess.script + '\n\n';
-        });
-        
-        sectionsHTML += '</section>';
-    }
-
-    // Materials (selected by user)
-    const selectedMaterials = materials.filter(mat => exportMaterials.includes(mat.id));
-    if (selectedMaterials.length > 0) {
-        // Check for digital materials
-        const digitalMats = selectedMaterials.filter(m => m.digitalContent);
-        const digitalContentData = {};
-        digitalMats.forEach(dm => { digitalContentData[dm.id] = dm.digitalContent; });
-        const digitalContentJSON = JSON.stringify(digitalContentData)
-            .replace(/`/g, '\\`')             // Escape backticks for template literals
-            .replace(/\$\{/g, '\\${')         // Escape template expressions
-            .replace(/</g, '\\u003c')         // Escape < for HTML safety
-            .replace(/>/g, '\\u003e');        // Escape > for HTML safety
-        
-        sectionsHTML += '<section id="materials" class="mb-12"><h2 class="text-2xl font-bold ' + headingTextClass + ' mb-6 border-b border-slate-700 pb-2">Materials</h2>';
-        
-        // Material viewer container
-        sectionsHTML += '<div id="material-viewer" class="hidden mb-8 bg-black rounded-xl border border-slate-700 overflow-hidden shadow-2xl">' +
-            '<div class="flex justify-between items-center p-3 bg-slate-800 border-b border-slate-700">' +
-            '<span id="material-viewer-title" class="text-xs font-bold text-white uppercase tracking-widest px-2">Material Viewer</span>' +
-            '<button data-close-material-viewer class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>' +
-            '</div>' +
-            '<iframe id="material-frame" src="" width="100%" height="600" style="border:none;"></iframe>' +
-            '</div>';
-        
-        // Digital reader container (for single module export)
-        if (digitalMats.length > 0) {
-            sectionsHTML += '<div id="digital-reader-container" class="hidden mb-8 bg-slate-900 rounded-xl border border-emerald-500/30 overflow-hidden shadow-2xl">' +
-                '<div class="flex justify-between items-center p-3 bg-slate-800 border-b border-emerald-500/30">' +
-                '<span id="reader-title" class="text-xs font-bold text-emerald-400 uppercase tracking-widest px-2 flex items-center gap-2">Digital Resource</span>' +
-                '<button data-close-digital-reader class="text-xs text-rose-400 hover:text-white font-bold uppercase tracking-widest px-2">Close X</button>' +
-                '</div>' +
-                '<div class="flex" style="height: 600px;">' +
-                '<div id="reader-toc" class="w-64 bg-slate-950 border-r border-slate-700 p-4 overflow-y-auto hidden md:block">' +
-                '<h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Contents</h4>' +
-                '<div id="reader-toc-items" class="space-y-1"></div>' +
-                '</div>' +
-                '<div id="reader-content" class="flex-1 p-6 md:p-8 overflow-y-auto">' +
-                '<div id="reader-body" class="prose prose-invert max-w-none"></div>' +
-                '<div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-700">' +
-                '<button data-prev-chapter id="prev-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Previous</button>' +
-                '<span id="reader-progress" class="text-xs text-slate-500"></span>' +
-                '<button data-next-chapter id="next-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase rounded-lg transition-all disabled:opacity-30">Next</button>' +
-                '</div></div></div></div>';
-        }
-        
-        const defaultMaterialTheme = courseSettings.defaultMaterialTheme || 'dark';
-        const materialThemeMap = {
-            dark: { cardBg: 'bg-slate-900', cardBorder: 'border-slate-700', heading: 'text-white', body: 'text-slate-400' },
-            light: { cardBg: 'bg-white', cardBorder: 'border-slate-300', heading: 'text-slate-900', body: 'text-slate-600' },
-            muted: { cardBg: 'bg-slate-800', cardBorder: 'border-slate-700', heading: 'text-slate-200', body: 'text-slate-500' },
-            'high-contrast-light': { cardBg: 'bg-white', cardBorder: 'border-slate-300', heading: 'text-black', body: 'text-slate-800' },
-            'high-contrast-dark': { cardBg: 'bg-black', cardBorder: 'border-slate-600', heading: 'text-white', body: 'text-slate-300' }
-        };
-        
-        sectionsHTML += '<div id="materials-list" class="space-y-4">';
-        selectedMaterials.forEach((mat, idx) => {
-            const themeKey = (mat.themeOverride != null && mat.themeOverride !== '') ? mat.themeOverride : defaultMaterialTheme;
-            const theme = materialThemeMap[themeKey] || materialThemeMap.dark;
-            const colorClass = mat.color || 'slate';
-            const borderClass = colorClass !== 'slate' ? 'border-l-4 border-l-' + colorClass + '-500' : '';
-            const textColorClass = colorClass !== 'slate' ? 'text-' + colorClass + '-500' : theme.body;
-            const buttonColorClass = buttonBgClass + ' ' + buttonHoverClass;
-            const badgeLabel = getMaterialBadgeLabel(mat) || mat.number || '';
-            const badgeTextClass = mat.mediaType && mat.mediaType !== 'number'
-              ? 'text-[9px] font-black uppercase tracking-widest'
-              : 'font-black text-xl';
-            
-            const previewUrl = mat.viewUrl ? mat.viewUrl.replace('/view', '/preview') : '';
-            let buttonsHTML = '';
-            if (mat.viewUrl) {
-                const escapedPreviewUrl = previewUrl.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-                const escapedTitle = mat.title.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-                buttonsHTML += '<button data-material-viewer-url="' + escapedPreviewUrl + '" data-material-viewer-title="' + escapedTitle + '" class="material-viewer-btn flex-1 ' + buttonColorClass + ' ' + buttonTextClass + ' text-xs font-bold uppercase px-6 py-3 rounded-lg border border-slate-600 transition-all text-center">View Inline</button>';
-            }
-            if (mat.downloadUrl) {
-                buttonsHTML += '<a href="' + mat.downloadUrl + '" target="_blank" class="flex-1 ' + buttonColorClass + ' ' + buttonTextClass + ' text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center">Download</a>';
-            }
-            if (mat.digitalContent) {
-                buttonsHTML += '<button data-digital-reader="' + mat.id + '" class="digital-reader-btn flex-1 ' + buttonColorClass + ' ' + buttonTextClass + ' text-xs font-bold uppercase px-6 py-3 rounded-lg transition-all text-center flex items-center justify-center gap-2">Read</button>';
-            }
-            
-            sectionsHTML += '<div class="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-xl border ' + theme.cardBorder + ' ' + theme.cardBg + ' ' + borderClass + '">' +
-                '<div class="flex items-center gap-4">' +
-                '<div class="w-12 h-12 rounded-lg flex items-center justify-center ' + textColorClass + ' ' + badgeTextClass + ' border border-slate-700">' + badgeLabel + '</div>' +
-                '<div>' +
-                '<h3 class="text-lg font-bold ' + theme.heading + ' uppercase italic">' + mat.title + '</h3>' +
-                '<p class="text-xs ' + theme.body + '">' + (mat.description || '') + '</p>' +
-                '</div></div>' +
-                '<div class="flex gap-3 w-full md:w-auto">' + buttonsHTML + '</div></div>';
-        });
-        sectionsHTML += '</div></section>';
-        
-        // Add event delegation for Material Viewer buttons (always needed for materials)
-        combinedScripts += `
-// Material Viewer Event Delegation
-document.addEventListener('click', function(e) {
-    // Material Viewer button
-    var materialBtn = e.target.closest('[data-material-viewer-url]');
-    if (materialBtn) {
-        e.preventDefault();
-        var url = materialBtn.getAttribute('data-material-viewer-url');
-        var title = materialBtn.getAttribute('data-material-viewer-title');
-        if (typeof window.openMaterialViewer === 'function') {
-            window.openMaterialViewer(url, title);
-        } else {
-            // Fallback
-            var viewer = document.getElementById('material-viewer');
-            var frame = document.getElementById('material-frame');
-            var titleEl = document.getElementById('material-viewer-title');
-            if (viewer && frame && titleEl) {
-                frame.src = url;
-                titleEl.textContent = title;
-                viewer.classList.remove('hidden');
-                viewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-    }
-    
-    // Close Material Viewer button
-    if (e.target.closest('#material-viewer') && e.target.hasAttribute('data-close-material-viewer')) {
-        if (typeof window.closeMaterialViewer === 'function') {
-            window.closeMaterialViewer();
-        } else {
-            // Fallback
-            var viewer = document.getElementById('material-viewer');
-            var frame = document.getElementById('material-frame');
-            if (viewer && frame) {
-                viewer.classList.add('hidden');
-                frame.src = '';
-            }
-        }
-    }
-});
-`;
-        
-        // Add digital reader scripts if needed
-        if (digitalMats.length > 0) {
-            combinedScripts += `
-// Digital Reader System - Using Event Delegation for Google Sites compatibility
-var DIGITAL_CONTENT = ${digitalContentJSON};
-var currentReader = { matId: null, chapterIdx: 0, data: null };
-
-function openDigitalReaderFn(matId) {
-    var content = DIGITAL_CONTENT[matId];
-    if (!content) { console.error('No digital content for', matId); return; }
-    
-    currentReader = { matId: matId, chapterIdx: 0, data: content };
-    
-document.getElementById('reader-title').innerText = (content.title || 'Digital Resource');
-    
-    // Build table of contents (using data attributes, not onclick)
-    var tocHTML = '';
-    (content.chapters || []).forEach(function(ch, idx) {
-        tocHTML += '<button data-toc-chapter="' + idx + '" class="toc-item w-full text-left px-3 py-2 rounded text-xs hover:bg-slate-800 transition-colors ' + (idx === 0 ? 'bg-emerald-900/50 text-emerald-400' : 'text-slate-400') + '" data-chapter="' + idx + '">' +
-            '<span class="font-bold">' + (ch.number || (idx + 1)) + '.</span> ' + ch.title +
-        '</button>';
-    });
-    document.getElementById('reader-toc-items').innerHTML = tocHTML;
-    
-    renderChapterFn(0);
-    
-    document.getElementById('digital-reader-container').classList.remove('hidden');
-    document.getElementById('materials-list').classList.add('hidden');
-    document.getElementById('material-viewer').classList.add('hidden');
-}
-
-function closeDigitalReaderFn() {
-    document.getElementById('digital-reader-container').classList.add('hidden');
-    document.getElementById('materials-list').classList.remove('hidden');
-    currentReader = { matId: null, chapterIdx: 0, data: null };
-}
-
-function renderChapterFn(idx) {
-    if (!currentReader.data || !currentReader.data.chapters) return;
-    var chapters = currentReader.data.chapters;
-    if (idx < 0 || idx >= chapters.length) return;
-    
-    currentReader.chapterIdx = idx;
-    var chapter = chapters[idx];
-    
-    var html = '<h2 class="text-2xl font-bold text-white mb-2">' + (chapter.number || (idx + 1)) + '. ' + chapter.title + '</h2>';
-    
-    (chapter.sections || []).forEach(function(sec) {
-        html += '<div class="mt-6">';
-        if (sec.heading) {
-            html += '<h3 class="text-lg font-bold text-emerald-400 mb-3">' + sec.heading + '</h3>';
-        }
-        var content = (sec.content || '').replace(/\\n/g, '<br>').replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>').replace(/\\*(.+?)\\*/g, '<em>$1</em>').replace(/^- /gm, '- ');
-        html += '<div class="text-slate-300 leading-relaxed whitespace-pre-line">' + content + '</div>';
-        html += '</div>';
-    });
-    
-    document.getElementById('reader-body').innerHTML = html;
-    
-    document.querySelectorAll('.toc-item').forEach(function(btn) {
-        var chIdx = parseInt(btn.getAttribute('data-chapter'));
-        if (chIdx === idx) {
-            btn.classList.add('bg-emerald-900/50', 'text-emerald-400');
-            btn.classList.remove('text-slate-400');
-        } else {
-            btn.classList.remove('bg-emerald-900/50', 'text-emerald-400');
-            btn.classList.add('text-slate-400');
-        }
-    });
-    
-    document.getElementById('prev-btn').disabled = idx === 0;
-    document.getElementById('next-btn').disabled = idx === chapters.length - 1;
-    document.getElementById('reader-progress').textContent = 'Chapter ' + (idx + 1) + ' of ' + chapters.length;
-    
-    document.getElementById('reader-content').scrollTop = 0;
-}
-
-// EVENT DELEGATION for Digital Reader - More reliable in sandboxed environments like Google Sites
-document.addEventListener('click', function(e) {
-    // Digital Reader button
-    var readerBtn = e.target.closest('[data-digital-reader]');
-    if (readerBtn) {
-        e.preventDefault();
-        openDigitalReaderFn(readerBtn.getAttribute('data-digital-reader'));
-        return;
-    }
-    
-    // Close Digital Reader button
-    if (e.target.closest('#digital-reader-container') && e.target.hasAttribute('data-close-digital-reader')) {
-        closeDigitalReaderFn();
-        return;
-    }
-    
-    // TOC chapter buttons
-    var tocBtn = e.target.closest('[data-toc-chapter]');
-    if (tocBtn) {
-        renderChapterFn(parseInt(tocBtn.getAttribute('data-toc-chapter')));
-        return;
-    }
-    
-    // Prev/Next buttons
-    if (e.target.closest('#prev-btn') || e.target.closest('[data-prev-chapter]')) {
-        renderChapterFn(currentReader.chapterIdx - 1);
-        return;
-    }
-    if (e.target.closest('#next-btn') || e.target.closest('[data-next-chapter]')) {
-        renderChapterFn(currentReader.chapterIdx + 1);
-        return;
-    }
-});
-
-console.log('ðŸ“– Digital Reader initialized with event delegation (Single Module)');
-`;
-        }
-    }
-
-    // Tools
-    if (selectedTools.length > 0) {
-        sectionsHTML += '<section id="toolkit" class="mb-12"><h2 class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-2">ðŸ› ï¸ Tools</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
-        selectedTools.forEach(tool => {
-            let toolCode = tool.code;
-            if (typeof toolCode === 'string') { try { toolCode = JSON.parse(toolCode); } catch(e){} }
-            
-            if (toolCode.html) {
-                const visibleHTML = toolCode.html.replace(/hidden fixed/g, 'relative block bg-slate-800 p-4 rounded-xl border border-slate-700').replace(/fixed bottom-4/g, 'relative');
-                sectionsHTML += '<div>' + visibleHTML + '</div>';
-            }
-            if (toolCode.script) combinedScripts += '// --- TOOL: ' + tool.title + ' ---\n' + toolCode.script + '\n\n';
-        });
-        sectionsHTML += '</div></section>';
-    }
-
-    // Build autosave script for single module export
-    const moduleTitle = selectedMod.title.replace(/[^a-zA-Z0-9]/g, '_');
-    const autosaveScript = `
-// ========================================
-// GLOBAL AUTOSAVE SYSTEM (Single Module)
-// ========================================
-(function() {
-    var COURSE_KEY = 'CF_Module_' + '${moduleTitle}' + '_v1';
-    var hasExported = false;
-    var saveTimeout = null;
-    
-    function getAllInputState() {
-        var state = {};
-        document.querySelectorAll('input, textarea, select').forEach(function(el, i) {
-            var key = el.id || el.name || ('field_' + i);
-            if (el.type === 'checkbox' || el.type === 'radio') {
-                if (el.checked) state[key] = el.type === 'radio' ? el.value : true;
-            } else {
-                if (el.value) state[key] = el.value;
-            }
-        });
-        return state;
-    }
-    
-    function restoreInputState(state) {
-        if (!state) return;
-        document.querySelectorAll('input, textarea, select').forEach(function(el, i) {
-            var key = el.id || el.name || ('field_' + i);
-            var savedValue = state[key];
-            if (savedValue !== undefined) {
-                if (el.type === 'checkbox') {
-                    el.checked = !!savedValue;
-                } else if (el.type === 'radio') {
-                    el.checked = (el.value === savedValue);
-                } else {
-                    el.value = savedValue;
-                }
-            }
-        });
-    }
-    
-    function saveNow() {
-        try {
-            var state = getAllInputState();
-            if (Object.keys(state).length > 0) {
-                localStorage.setItem(COURSE_KEY, JSON.stringify({ t: Date.now(), state: state }));
-            }
-        } catch(e) {}
-    }
-    
-    function debouncedSave() {
-        clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(saveNow, 1000);
-    }
-    
-    function loadSaved() {
-        try {
-            var raw = localStorage.getItem(COURSE_KEY);
-            if (raw) {
-                var data = JSON.parse(raw);
-                if (data.state) restoreInputState(data.state);
-            }
-        } catch(e) {}
-    }
-    
-    window.markWorkSaved = function() { hasExported = true; };
-    
-    setTimeout(loadSaved, 100);
-    document.addEventListener('input', debouncedSave);
-    document.addEventListener('change', debouncedSave);
-    window.addEventListener('pagehide', saveNow);
-    window.addEventListener('beforeunload', function(e) {
-        saveNow();
-        if (!hasExported) {
-            var state = getAllInputState();
-            if (Object.keys(state).length > 0) {
-                e.preventDefault();
-                e.returnValue = 'You have unsaved work. Are you sure you want to leave?';
-            }
-        }
-    });
-})();
-`;
-
-    const finalHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${selectedMod.title}</title>
-  <script src="https://cdn.tailwindcss.com"><\/script>
-  <link href="${font.url}" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css?family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-  <script>tailwind.config = { darkMode: "class", theme: { extend: { fontFamily: { sans: ["${fontName}", "sans-serif"], mono: ["JetBrains Mono", "monospace"] } } } }<\/script>
-  <style>
-    body { ${font.css} background-color: ${bgHex}; color: ${isLightBg ? '#0f172a' : '#e2e8f0'}; min-height: 100vh; overflow-x: hidden; }
-    .mono { font-family: "JetBrains Mono", monospace; }
-    .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
-    input:not(.assessment-input), textarea:not(.assessment-input), select:not(.assessment-input) { background: #0f172a !important; border: 1px solid #1e293b !important; color: #e2e8f0; }
-    input:not(.assessment-input):focus, textarea:not(.assessment-input):focus, select:not(.assessment-input):focus { border-color: #0ea5e9 !important; outline: none; box-shadow: 0 0 0 1px #0ea5e9; }
-    .score-btn, .mod-nav-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; }
-    .score-btn:hover, .mod-nav-btn:hover { border-color: #0ea5e9; color: white; }
-    .score-btn.active, .mod-nav-btn.active { background: #0ea5e9; color: #000; font-weight: 900; border-color: #0ea5e9; }
-    .step-content { display: none; }
-    .step-content.active { display: block; }
-    .assessment-container.hidden { display: none; }
-    #assessment-list.hidden { display: none; }
-    .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
-    .rubric-cell:hover { background: rgba(255,255,255,0.05); }
-    .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
-    .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
-    .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; }
-    .helper-text { font-size: 8px; color: #64748b; font-style: italic; margin-top: 4px; }
-    :root { --cf-container-bg: ${containerBgRgba}; }
-    .assessment-container [class*="bg-slate-9"],
-    .assessment-container [class*="bg-slate-8"],
-    .assessment-container [class*="bg-slate-7"],
-    .assessment-container [class*="bg-slate-6"],
-    .assessment-container [class*="bg-gray-9"],
-    .assessment-container [class*="bg-gray-8"],
-    .assessment-container [class*="bg-gray-7"] {
-      background: var(--cf-container-bg) !important;
-    }
-  </style>
-</head>
-<body class="p-4 md:p-8 max-w-6xl mx-auto">
-  ${sectionsHTML}
-  <script>${combinedScripts}${autosaveScript}<\/script>
-</body>
-</html>`;
-
-      setExportedHTML(finalHTML);
+      if (finalHTML) setExportedHTML(finalHTML);
     } catch (error) {
       if (onError) {
         onError('compile', `Failed to generate module page HTML: ${error.message}`, error.stack);
@@ -9238,9 +8755,9 @@ console.log('ðŸ“– Digital Reader initialized with event delegation (Single
               </div>
               <div className="mt-3 text-xs text-slate-500">
                 {betaStructureMode === 'multi-file' ? (
-                  <span>âœ… Separate HTML files per module â€¢ Bookmarkable URLs â€¢ Delta publish support</span>
+                  <span>✅ Separate HTML files per module • Bookmarkable URLs • Delta publish support</span>
                 ) : (
-                  <span>âœ… Single HTML file â€¢ Sidebar navigation â€¢ Instant switching â€¢ State preserved</span>
+                  <span>✅ Single HTML file • Sidebar navigation • Instant switching • State preserved</span>
                 )}
               </div>
             </div>
@@ -9485,7 +9002,7 @@ console.log('ðŸ“– Digital Reader initialized with event delegation (Single
                 {exportedHTML && (
                     <div className="animate-in fade-in slide-in-from-top-2">
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs font-bold text-emerald-400">âœ… Successfully Generated!</span>
+                            <span className="text-xs font-bold text-emerald-400">✅ Successfully Generated!</span>
                             <button onClick={() => navigator.clipboard.writeText(exportedHTML)} className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded flex items-center gap-1"><Copy size={12}/> Copy Code</button>
                         </div>
                         <textarea readOnly value={exportedHTML} className="w-full h-32 bg-black border border-emerald-900/50 rounded-lg p-3 text-[10px] font-mono text-emerald-500/80 focus:outline-none resize-y" />
@@ -9604,7 +9121,7 @@ console.log('ðŸ“– Digital Reader initialized with event delegation (Single
                       <>
                         <div className="flex items-center gap-2 text-rose-300 font-bold mb-2">
                           <AlertTriangle size={18} />
-                          {compileValidation.errors.length} validation error{compileValidation.errors.length !== 1 ? 's' : ''} â€” fix before compiling
+                          {compileValidation.errors.length} validation error{compileValidation.errors.length !== 1 ? 's' : ''} — fix before compiling
                         </div>
                         <ul className="list-disc list-inside space-y-1 text-sm text-rose-200/90">
                           {compileValidation.errors.map((e, i) => (
@@ -9758,19 +9275,19 @@ const Phase5Settings = ({ projectData, setProjectData, applyVisualDefaults }) =>
         const imported = JSON.parse(e.target.result);
         if (imported && imported["Current Course"]) {
           setProjectData(imported);
-          alert('âœ… Project imported successfully!');
+          alert('✅ Project imported successfully!');
         } else {
-          alert('âŒ Invalid project file');
+          alert('❌ Invalid project file');
         }
       } catch (error) {
-        alert('âŒ Failed to import: ' + error.message);
+        alert('❌ Failed to import: ' + error.message);
       }
     };
     reader.readAsText(file);
   };
   
   const resetProject = () => {
-    if (window.confirm('âš ï¸ This will delete all your course data! Are you sure?')) {
+    if (window.confirm('⚠️ This will delete all your course data! Are you sure?')) {
       localStorage.removeItem('course_factory_v2_data');
       window.location.reload();
     }
@@ -10338,7 +9855,7 @@ const Phase5Settings = ({ projectData, setProjectData, applyVisualDefaults }) =>
                   if (projectBackup) {
                     localStorage.setItem('course_factory_v2_data', projectBackup);
                   }
-                  alert('âœ… Cache cleared');
+                  alert('✅ Cache cleared');
                 }
               }}
               className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all"
@@ -10348,7 +9865,7 @@ const Phase5Settings = ({ projectData, setProjectData, applyVisualDefaults }) =>
 
             <button
               onClick={async () => {
-                if (window.confirm('ðŸ”„ Force Refresh?\n\nThis will:\nâ€¢ Clear browser cache for this site\nâ€¢ Clear any service workers\nâ€¢ Reload with fresh code\n\nYour project data will be preserved.')) {
+                if (window.confirm('🔄 Force Refresh?\n\nThis will:\n• Clear browser cache for this site\n• Clear any service workers\n• Reload with fresh code\n\nYour project data will be preserved.')) {
                   try {
                     // Clear service worker caches
                     if ('caches' in window) {
@@ -10381,7 +9898,7 @@ const Phase5Settings = ({ projectData, setProjectData, applyVisualDefaults }) =>
               </p>
               <button
                 onClick={() => {
-                  if (window.confirm('âš ï¸ FULL RESET WARNING!\n\nThis will permanently delete:\nâ€¢ All your materials (but keep Materials module)\nâ€¢ All your assessments (but keep Assessments module)\nâ€¢ All other custom modules\nâ€¢ All toolkit items\n\nThe Course Materials and Assessments containers will remain empty.\n\nContinue?')) {
+                  if (window.confirm('⚠️ FULL RESET WARNING!\n\nThis will permanently delete:\n• All your materials (but keep Materials module)\n• All your assessments (but keep Assessments module)\n• All other custom modules\n• All toolkit items\n\nThe Course Materials and Assessments containers will remain empty.\n\nContinue?')) {
                     const userInput = window.prompt('Type RESET to confirm full data wipe:');
                     if (userInput === 'RESET') {
                       // Get the current Course Materials and Assessments modules from PROJECT_DATA defaults
@@ -10491,7 +10008,7 @@ const Phase5Settings = ({ projectData, setProjectData, applyVisualDefaults }) =>
                         });
                       }
                       
-                      alert('âœ… Reset complete! Course Materials and Assessments modules preserved (but emptied). All other content cleared.');
+                      alert('✅ Reset complete! Course Materials and Assessments modules preserved (but emptied). All other content cleared.');
                     } else {
                       alert('Reset cancelled. Your data is safe.');
                     }
@@ -10685,7 +10202,7 @@ const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies 
             <div className={`bg-slate-900 border rounded-xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto ${hasDeps ? 'border-amber-900' : 'border-rose-900'}`} onClick={e => e.stopPropagation()}>
                 <div className={`flex items-center gap-3 mb-4 ${hasDeps ? 'text-amber-500' : 'text-rose-500'}`}>
                     <AlertOctagon size={24} />
-                    <h3 className="text-lg font-bold">{hasDeps ? 'âš ï¸ Dependencies Found' : 'Delete Item?'}</h3>
+                    <h3 className="text-lg font-bold">{hasDeps ? '⚠️ Dependencies Found' : 'Delete Item?'}</h3>
                 </div>
                 
                 {hasDeps ? (
@@ -10700,7 +10217,7 @@ const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies 
                                     <p className="text-xs font-bold text-amber-400 uppercase mb-1">Modules ({dependencies.dependencies.modules.length}):</p>
                                     <ul className="text-xs text-amber-200 space-y-1 ml-4">
                                         {dependencies.dependencies.modules.map(dep => (
-                                            <li key={dep.id}>â€¢ {dep.title} <span className="text-amber-500">({dep.type})</span></li>
+                                            <li key={dep.id}>• {dep.title} <span className="text-amber-500">({dep.type})</span></li>
                                         ))}
                                     </ul>
                                 </div>
@@ -10711,7 +10228,7 @@ const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies 
                                     <p className="text-xs font-bold text-amber-400 uppercase mb-1">Assessments ({dependencies.dependencies.assessments.length}):</p>
                                     <ul className="text-xs text-amber-200 space-y-1 ml-4">
                                         {dependencies.dependencies.assessments.map(dep => (
-                                            <li key={dep.id}>â€¢ {dep.title} <span className="text-amber-500">(in {dep.moduleTitle})</span></li>
+                                            <li key={dep.id}>• {dep.title} <span className="text-amber-500">(in {dep.moduleTitle})</span></li>
                                         ))}
                                     </ul>
                                 </div>
@@ -10722,7 +10239,7 @@ const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies 
                                     <p className="text-xs font-bold text-amber-400 uppercase mb-1">Toolkit Items ({dependencies.dependencies.toolkit.length}):</p>
                                     <ul className="text-xs text-amber-200 space-y-1 ml-4">
                                         {dependencies.dependencies.toolkit.map(dep => (
-                                            <li key={dep.id}>â€¢ {dep.title}</li>
+                                            <li key={dep.id}>• {dep.title}</li>
                                         ))}
                                     </ul>
                                 </div>
@@ -10733,7 +10250,7 @@ const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies 
                                     <p className="text-xs font-bold text-amber-400 uppercase mb-1">Materials ({dependencies.dependencies.materials.length}):</p>
                                     <ul className="text-xs text-amber-200 space-y-1 ml-4">
                                         {dependencies.dependencies.materials.map(dep => (
-                                            <li key={dep.id}>â€¢ {dep.title}</li>
+                                            <li key={dep.id}>• {dep.title}</li>
                                         ))}
                                     </ul>
                                 </div>
@@ -10751,7 +10268,7 @@ const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies 
                 <div className="flex gap-3">
                     <button onClick={onCancel} className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition-colors">Cancel</button>
                     <button onClick={onConfirm} className={`flex-1 py-2 rounded-lg text-sm font-bold shadow-lg transition-colors ${hasDeps ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-900/20' : 'bg-rose-600 hover:bg-rose-500 shadow-rose-900/20'}`}>
-                        {hasDeps ? 'âš ï¸ Delete Anyway' : 'Delete Forever'}
+                        {hasDeps ? '⚠️ Delete Anyway' : 'Delete Forever'}
                     </button>
                 </div>
       </div>
@@ -10812,7 +10329,7 @@ export default function App() {
   
   const dismissError = () => setAppError(null);
 
-  // ðŸ’¾ AUTO-LOAD: Runs once on mount
+  // 💾 AUTO-LOAD: Runs once on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -10827,12 +10344,12 @@ export default function App() {
       setIsAutoLoaded(true); // Allow saving to start
     } catch (error) {
       showToast('Failed to load project data. Starting fresh.', 'error');
-      console.error("âŒ Load failed:", error);
+      console.error("❌ Load failed:", error);
       setIsAutoLoaded(true);
     }
   }, []);
 
-  // ðŸ’¾ AUTO-SAVE: Runs when projectData changes
+  // 💾 AUTO-SAVE: Runs when projectData changes
   useEffect(() => {
     if (!isAutoLoaded) return; // Safety Lock: Don't save empty defaults
 
@@ -10854,7 +10371,7 @@ export default function App() {
         } else {
           showToast('Failed to save project. Check console for details.', 'error');
         }
-        console.error("âŒ Save failed:", error);
+        console.error("❌ Save failed:", error);
       }
     }, 1000); // 1-second debounce
 
@@ -11210,7 +10727,7 @@ export default function App() {
   const deleteModule = (item) => {
     // Prevent deletion of protected modules
     if (isProtectedModule(item)) {
-      alert('âš ï¸ Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle in Phase 2.');
+      alert('⚠️ Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle in Phase 2.');
       return;
     }
     
@@ -11237,7 +10754,7 @@ export default function App() {
       // Safety check: prevent deletion of protected modules
       const moduleToDelete = projectData["Current Course"]?.modules?.find(m => m.id === deleteConfirmation.id);
       if (moduleToDelete && isProtectedModule(moduleToDelete)) {
-        alert('âš ï¸ Course Materials and Assessments are core modules and cannot be deleted.');
+        alert('⚠️ Course Materials and Assessments are core modules and cannot be deleted.');
         setDeleteConfirmation(null);
         return;
       }
@@ -12041,7 +11558,7 @@ export default function App() {
               Course Factory Dashboard
             </h1>
             <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-1 font-mono">
-              LIVING DOC â€¢ SAVED {lastSaved ? lastSaved.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }).toUpperCase() : '---'}
+              LIVING DOC • SAVED {lastSaved ? lastSaved.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }).toUpperCase() : '---'}
             </p>
           </div>
           
@@ -12482,88 +11999,7 @@ export default function App() {
             
             <div className="p-0 overflow-hidden max-h-[calc(90vh-80px)]">
               <iframe 
-                srcDoc={(() => {
-                  // ========================================
-                  // SIMPLIFIED PREVIEW: Use rawHtml directly when available
-                  // ========================================
-                  
-                  // PRIORITY 1: If module has rawHtml, use it directly (new simplified format)
-                  // This shows the module EXACTLY as the user pasted it
-                  if (previewModule.rawHtml) {
-                    return previewModule.rawHtml;
-                  }
-                  
-                  // PRIORITY 2: Handle external modules (links to other sites)
-                  if (previewModule.type === 'external') {
-                    const urlValidation = validateUrl(previewModule.url || '');
-                    const safeUrl = urlValidation.safeUrl;
-                    const safeTitle = escapeHtml(previewModule.title || 'External Module');
-                    
-                    if (previewModule.linkType === 'iframe') {
-                      return `<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { margin: 0; padding: 0; background: #020617; }
-    iframe { width: 100%; height: 100vh; border: none; }
-  </style>
-</head>
-<body>
-  <iframe src="${safeUrl}" width="100%" height="100%" style="border:none;"></iframe>
-</body>
-</html>`;
-                    } else {
-                      return `<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { background: #020617; color: #e2e8f0; font-family: 'Inter', sans-serif; padding: 40px; text-align: center; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    a { color: #0ea5e9; text-decoration: underline; }
-  </style>
-</head>
-<body>
-  <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">${safeTitle}</h2>
-  <p style="margin-bottom: 1.5rem; color: #94a3b8;">This module opens in a new tab.</p>
-  <a href="${safeUrl}" target="_blank" rel="noopener noreferrer">Open ${safeTitle} â†’</a>
-</body>
-</html>`;
-                    }
-                  }
-                  
-                  // PRIORITY 3: Fallback for legacy modules (parsed html/css/script)
-                  // Build a complete HTML document for preview
-                  const moduleContent = extractModuleContent(previewModule);
-                  if (moduleContent.html) {
-                    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.tailwindcss.com"><\/script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,700;1,400;1,900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-  <style>
-    body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
-    ${moduleContent.css || ''}
-  </style>
-</head>
-<body class="min-h-screen p-4 md:p-8">
-  ${moduleContent.html}
-  <script>
-    (function() {
-      ${moduleContent.script || ''}
-    })();
-  <\/script>
-</body>
-</html>`;
-                  }
-                  
-                  // No content available
-                  return `<!DOCTYPE html>
-<html>
-<head><style>body { background: #020617; color: #e2e8f0; font-family: sans-serif; padding: 40px; text-align: center; }</style></head>
-<body><h2>No Preview Available</h2><p>This module has no content to preview.</p></body>
-</html>`;
-                })()}
+                srcDoc={buildModuleFrameHTML(previewModule, projectData["Course Settings"]) || ""}
                 key={previewModule.id || previewModule.title}
                 className="w-full h-full border-0"
                 style={{ minHeight: 'calc(90vh - 80px)' }}
@@ -12600,6 +12036,10 @@ const Section = ({ title, icon: Icon, isActive, onClick, badge, badgeColor }) =>
     )}
   </button>
 );
+
+
+
+
 
 
 
