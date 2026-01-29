@@ -18,7 +18,8 @@
 
 ## 4. Operational Efficiency
 - **Memory Sync:** Read `LOG.md` before starting. Update `LOG.md` before finishing.
-- **Token Economy:** Use SEARCH/REPLACE blocks instead of reprinting large files. Chain multiple steps together without asking permission for every line.
+- **Token Economy:** Use SEARCH/REPLACE blocks. Chain steps.
+- **Confidence Check:** If unsure (<90%), STOP. Propose a safe test before breaking core logic.
 
 ---
 **Note to AI:** This file is the "Master Source of Truth" for non-Cursor agents.
