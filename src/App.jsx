@@ -190,6 +190,9 @@ const PROJECT_DATA = {
                     const textColorClass = colorClass !== 'slate' ? 'text-' + colorClass + '-500' : 'text-slate-500';
                     const buttonColorClass = colorClass !== 'slate' ? 'bg-' + colorClass + '-600 hover:bg-' + colorClass + '-500' : 'bg-sky-600 hover:bg-sky-500';
                     
+                    const viewBtn = mat.viewUrl ? '<button data-pdf-url="' + (mat.viewUrl || '').replace(/"/g, '&quot;') + '" data-pdf-title="' + (mat.title || '').replace(/"/g, '&quot;') + '" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View</button>' : '';
+                    const downloadBtn = mat.downloadUrl ? '<a href="' + mat.downloadUrl + '" target="_blank" class="flex-1 ' + buttonColorClass + ' text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>' : '';
+                    
                     return '<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 ' + borderClass + '">' +
                         '<div class="flex items-center gap-6">' +
                             '<div class="w-12 h-12 rounded-lg ' + bgClass + ' flex items-center justify-center ' + textColorClass + ' font-black italic text-xl border ' + borderColorClass + '">' + mat.number + '</div>' +
@@ -199,8 +202,8 @@ const PROJECT_DATA = {
                             '</div>' +
                         '</div>' +
                         '<div class="flex gap-3 w-full md:w-auto">' +
-                            '<button data-pdf-url="' + (mat.viewUrl || '').replace(/"/g, '&quot;') + '" data-pdf-title="' + (mat.title || '').replace(/"/g, '&quot;') + '" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>' +
-                            '<a href="' + mat.downloadUrl + '" target="_blank" class="flex-1 ' + buttonColorClass + ' text-white text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>' +
+                            viewBtn +
+                            downloadBtn +
                         '</div>' +
                     '</div>';
                 }).join('');
@@ -4961,7 +4964,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                     type="text"
                                     value={materialForm.viewUrl}
                                     onChange={(e) => setMaterialForm({...materialForm, viewUrl: e.target.value})}
-                                    placeholder="View/Embed URL (Google Drive /preview link)"
+                                    placeholder="View URL"
                                     className="flex-1 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
                                 />
                                 {materialForm.mediaType !== 'video' && (
@@ -7110,7 +7113,7 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
         
         let buttonsHTML = '';
         if (mat.viewUrl) {
-          buttonsHTML += `<button data-pdf-url="${escapedViewUrl}" data-pdf-title="${escapedTitle}" class="pdf-viewer-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>`;
+          buttonsHTML += `<button data-pdf-url="${escapedViewUrl}" data-pdf-title="${escapedTitle}" class="pdf-viewer-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View</button>`;
         }
         if (mat.downloadUrl) {
           buttonsHTML += `<a href="${escapedDownloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`;
