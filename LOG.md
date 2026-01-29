@@ -80,3 +80,8 @@
 
 ## Next Step
 - Begin extracting the **"Phase 1: Harvest"** (Content Ingestor/AI Studio Creator) logic from `App.jsx` into a separate file.
+
+## Update (Jan 29, 2026)
+- Fixed Master Shell header/brand text color on light backgrounds by deriving heading text from background brightness in `generateMasterShell`. (`src/App.jsx`)
+- Added Google Sites-safe PDF embed handling (Docs Viewer fallback when inside iframes) to prevent Edge iframe blocking. (`src/App.jsx`)
+- Switched PDF iframe fallback to `docs.google.com/viewer` for wider embed compatibility in Google Sites. (`src/App.jsx`)

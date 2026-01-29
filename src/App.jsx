@@ -210,11 +210,25 @@ const PROJECT_DATA = {
             }
         }
         
+        function getPdfEmbedUrl(url) {
+            if (!url) return url;
+            if (url.indexOf('docs.google.com/viewer') !== -1) return url;
+            var isDrive = url.indexOf('drive.google.com') !== -1;
+            var isIframe = false;
+            try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
+            if (isIframe && !isDrive) {
+                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
+            }
+            if (isDrive && url.indexOf('/view') !== -1) {
+                return url.replace('/view', '/preview');
+            }
+            return url;
+        }
+
         function openPDF(url, title) {
             const container = document.getElementById('pdf-viewer-container');
-            // Convert /view to /preview for iframe embedding
-            const previewUrl = url.replace('/view', '/preview');
-            document.getElementById('pdf-frame').src = previewUrl;
+            const previewUrl = getPdfEmbedUrl(url);
+            document.getElementById('pdf-frame').src = previewUrl || '';
             document.getElementById('viewer-title').innerText = "VIEWING: " + title;
             container.classList.remove('hidden');
             container.scrollIntoView({ behavior: 'smooth' });
@@ -627,6 +641,7 @@ const generateMasterShell = (data) => {
   const sidebarBorder = isLightBg ? 'rgba(15, 23, 42, 0.12)' : 'rgba(51, 65, 85, 0.5)';
   const sidebarHoverBg = isLightBg ? hexToRgba(bgHex, 0.98) : 'rgba(30, 41, 59, 0.95)';
   const containerBgVar = containerBgRgba || hexToRgba(isLightBg ? '#ffffff' : '#0f172a', 0.8);
+  const headingTextClass = isLightBg ? 'text-slate-900' : 'text-white';
   
   const showSidebar = layoutSettings?.showSidebar !== false;
   const showFooter = layoutSettings?.showFooter !== false;
@@ -792,7 +807,7 @@ const generateMasterShell = (data) => {
   const sidebarHtml = showSidebar && !useTopNav
     ? `    <div id="sidebar-nav" class="w-64 glass-panel flex flex-col h-full z-50">
         <div class="p-8 border-b border-slate-800">
-            <h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none"><span class="text-${accentColor}-500">${courseName}</span></h1>
+            <h1 class="text-xl font-black italic ${headingTextClass} tracking-tighter uppercase leading-none"><span class="text-${accentColor}-500">${courseName}</span></h1>
             <p class="text-[10px] text-slate-500 mt-2 mono uppercase tracking-widest">Master Console v2.0</p>${courseInfo}
         </div>
         <nav class="flex-1 overflow-y-auto py-4 space-y-1" id="main-nav">
@@ -806,7 +821,7 @@ ${sidebarFooterHtml}
     ? `    <header class="w-full border-b border-slate-800 backdrop-blur-sm" style="background: ${bgHex}; background-color: ${bgHex};">
         <div class="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between gap-4">
             <div>
-                <h1 class="text-lg font-bold flex items-center gap-2 text-white"><span class="text-${accentColor}-500">${courseName}</span></h1>
+                <h1 class="text-lg font-bold flex items-center gap-2 ${headingTextClass}"><span class="text-${accentColor}-500">${courseName}</span></h1>
                 <p class="text-[10px] text-slate-500 uppercase tracking-wider mt-1 font-mono">MASTER CONSOLE</p>
             </div>
             <nav class="flex-1 overflow-x-auto">
@@ -966,11 +981,25 @@ ${footerHtml}
             }
         }
 
+        function getPdfEmbedUrl(url) {
+            if (!url) return url;
+            if (url.indexOf('docs.google.com/viewer') !== -1) return url;
+            var isDrive = url.indexOf('drive.google.com') !== -1;
+            var isIframe = false;
+            try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
+            if (isIframe && !isDrive) {
+                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
+            }
+            if (isDrive && url.indexOf('/view') !== -1) {
+                return url.replace('/view', '/preview');
+            }
+            return url;
+        }
+
         function openPDF(url, title) {
             const container = document.getElementById('pdf-viewer-container');
-            // Convert /view to /preview for iframe embedding
-            const previewUrl = url.replace('/view', '/preview');
-            document.getElementById('pdf-frame').src = previewUrl;
+            const previewUrl = getPdfEmbedUrl(url);
+            document.getElementById('pdf-frame').src = previewUrl || '';
             document.getElementById('viewer-title').innerText = "VIEWING: " + title;
             container.classList.remove('hidden');
             container.scrollIntoView({ behavior: 'smooth' });
@@ -1263,11 +1292,25 @@ const MASTER_SHELL = `<!DOCTYPE html>
             }
         }
 
+        function getPdfEmbedUrl(url) {
+            if (!url) return url;
+            if (url.indexOf('docs.google.com/viewer') !== -1) return url;
+            var isDrive = url.indexOf('drive.google.com') !== -1;
+            var isIframe = false;
+            try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
+            if (isIframe && !isDrive) {
+                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
+            }
+            if (isDrive && url.indexOf('/view') !== -1) {
+                return url.replace('/view', '/preview');
+            }
+            return url;
+        }
+
         function openPDF(url, title) {
             const container = document.getElementById('pdf-viewer-container');
-            // Convert /view to /preview for iframe embedding
-            const previewUrl = url.replace('/view', '/preview');
-            document.getElementById('pdf-frame').src = previewUrl;
+            const previewUrl = getPdfEmbedUrl(url);
+            document.getElementById('pdf-frame').src = previewUrl || '';
             document.getElementById('viewer-title').innerText = "VIEWING: " + title;
             container.classList.remove('hidden');
             container.scrollIntoView({ behavior: 'smooth' });
@@ -2052,10 +2095,24 @@ const buildModuleFrameHTML = (module, courseSettings) => {
     }
 
     moduleScript = `
+      function getPdfEmbedUrl(url) {
+        if (!url) return url;
+        if (url.indexOf('docs.google.com/viewer') !== -1) return url;
+        var isDrive = url.indexOf('drive.google.com') !== -1;
+        var isIframe = false;
+        try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
+        if (isIframe && !isDrive) {
+          return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
+        }
+        if (isDrive && url.indexOf('/view') !== -1) {
+          return url.replace('/view', '/preview');
+        }
+        return url;
+      }
       function openPDF(url, title) {
         var container = document.getElementById('pdf-viewer-container');
-        var previewUrl = url.replace('/view', '/preview');
-        document.getElementById('pdf-frame').src = previewUrl;
+        var previewUrl = getPdfEmbedUrl(url);
+        document.getElementById('pdf-frame').src = previewUrl || '';
         document.getElementById('viewer-title').innerText = "VIEWING: " + title;
         container.classList.remove('hidden');
         container.scrollIntoView({ behavior: 'smooth' });
@@ -7277,7 +7334,23 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                     // Fallback
                     var container = document.getElementById('pdf-viewer-container');
                     if (container) {
-                        document.getElementById('pdf-frame').src = url.replace('/view', '/preview');
+                        var embedUrl = (typeof getPdfEmbedUrl === 'function')
+                          ? getPdfEmbedUrl(url)
+                          : (function(u) {
+                              if (!u) return u;
+                              if (u.indexOf('docs.google.com/viewer') !== -1) return u;
+                              var isDrive = u.indexOf('drive.google.com') !== -1;
+                              var isIframe = false;
+                              try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
+                              if (isIframe && !isDrive) {
+                                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(u);
+                              }
+                              if (isDrive && u.indexOf('/view') !== -1) {
+                                return u.replace('/view', '/preview');
+                              }
+                              return u;
+                            })(url);
+                        document.getElementById('pdf-frame').src = embedUrl || '';
                         document.getElementById('viewer-title').innerText = 'VIEWING: ' + title;
                         container.classList.remove('hidden');
                         container.scrollIntoView({ behavior: 'smooth' });
