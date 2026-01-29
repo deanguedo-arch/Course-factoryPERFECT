@@ -44,6 +44,10 @@
 
 ## Project History (Archaeology)
 ### Recent Milestones (Jan 2026)
+- [x] **Vault Architecture:** Adopted "Smart Vault" strategy (Hybrid Repo/External) to solve link rot.
+- [x] **Vault Infrastructure:** Created `scan-vault.js` and `SCAN_VAULT.bat` for local asset indexing.
+- [x] **Vault UI Component:** Built `VaultBrowser.jsx` for browsing local assets.
+- [x] **Safety Protocol:** Implemented "Confidence Check" rule (Rule 000 & Universal) to prevent AI from making risky changes without a safe test.
 - [x] **Cursor Rule System v2.0:** Upgraded from a single `.cursorrules` file to a 7-rule specialized `.cursor/rules/` system (Architect Mode, Token Economy, Parser Protection).
 - [x] **Beta ZIP Export:** Completed the multi-file static publish system with ZIP generation.
 - [x] **Phase 1 Parser Refinement:** Updated AI Studio prompt generation for better JSON accuracy.
@@ -61,9 +65,10 @@
 - **Encoding:** Special character encoding is a persistent challenge; refer to `ENCODING_FIX_GUIDE.md`.
 - **Sandbox Rules:** Google Sites iframes *require* event delegation and window-global functions.
 - **Scaling:** `App.jsx` at 12k lines is approaching the limit of efficient AI processing; modularization is now a priority.
+- **Vault Rules:** Videos stay external (YouTube/Vimeo); Docs/PDFs go to Repo (Vault).
 
 ## Active Goal
-- Phase 1 Modularization: Peeling logic out of the 12k line `App.jsx` monolith into `src/utils/` to improve performance and AI reliability.
+- **Smart Vault Implementation:** Building the "Asset Vault" system for offline/repository-based file management to eliminate link rot.
 
 ## Next Step
-- Identify specific sections of `App.jsx` for extraction into `src/utils/` or separate components to reduce the 12k line monolith.
+- Integrate `VaultBrowser` into `App.jsx` Material Manager and test the full flow.

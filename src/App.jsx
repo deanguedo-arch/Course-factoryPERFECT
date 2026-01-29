@@ -3,6 +3,7 @@ import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, 
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
+import VaultBrowser from './components/VaultBrowser';
 
 const { useState, useEffect, useRef } = React;
 
@@ -2628,7 +2629,7 @@ const sanitizeImportData = (input) => {
   }
 };
 
-const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, assessmentType, setAssessmentType, assessmentTitle, setAssessmentTitle, quizQuestions, setQuizQuestions, printInstructions, setPrintInstructions, editingAssessment, setEditingAssessment, migrateCode, setMigrateCode, migratePrompt, setMigratePrompt, migrateOutput, setMigrateOutput }) => {
+const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, assessmentType, setAssessmentType, assessmentTitle, setAssessmentTitle, quizQuestions, setQuizQuestions, printInstructions, setPrintInstructions, editingAssessment, setEditingAssessment, migrateCode, setMigrateCode, migratePrompt, setMigratePrompt, migrateOutput, setMigrateOutput, isVaultOpen, setIsVaultOpen, setVaultTargetField, vaultTargetField }) => {
   const [harvestType, setHarvestType] = useState('MODULE_MANAGER'); // 'FEATURE', 'ASSET', 'ASSESSMENT', 'AI_MODULE', 'MODULE_MANAGER'
   const [mode, setMode] = useState('B');
   const [importInput, setImportInput] = useState("");
@@ -2735,6 +2736,16 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   };
 
   // Assessment Generator Functions
+  const handleVaultSelect = (file) => {
+    if (vaultTargetField === 'view') {
+        setMaterialForm(prev => ({ ...prev, viewUrl: file.path }));
+    } else if (vaultTargetField === 'download') {
+        setMaterialForm(prev => ({ ...prev, downloadUrl: file.path }));
+    }
+    setIsVaultOpen(false);
+    setVaultTargetField(null);
+  };
+
   const addQuizQuestion = () => {
     setQuizQuestions([...quizQuestions, { question: '', options: ['', '', '', ''], correct: 0 }]);
   };
@@ -4945,20 +4956,42 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 placeholder="Description"
                                 className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs mb-2"
                             />
-                            <input 
-                                type="text"
-                                value={materialForm.viewUrl}
-                                onChange={(e) => setMaterialForm({...materialForm, viewUrl: e.target.value})}
-                                placeholder="View/Embed URL (Google Drive /preview link)"
-                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs mb-2"
-                            />
-                            <input 
-                                type="text"
-                                value={materialForm.downloadUrl}
-                                onChange={(e) => setMaterialForm({...materialForm, downloadUrl: e.target.value})}
-                                placeholder="Download URL (Google Drive /view link)"
-                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs mb-3"
-                            />
+                            <div className="flex gap-2 mb-2">
+                                <input 
+                                    type="text"
+                                    value={materialForm.viewUrl}
+                                    onChange={(e) => setMaterialForm({...materialForm, viewUrl: e.target.value})}
+                                    placeholder="View/Embed URL (Google Drive /preview link)"
+                                    className="flex-1 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                />
+                                {materialForm.mediaType !== 'video' && (
+                                    <button 
+                                        onClick={() => { setVaultTargetField('view'); setIsVaultOpen(true); }}
+                                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded px-3"
+                                        title="Browse Local Vault"
+                                    >
+                                        <FolderOpen size={14} />
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex gap-2 mb-3">
+                                <input 
+                                    type="text"
+                                    value={materialForm.downloadUrl}
+                                    onChange={(e) => setMaterialForm({...materialForm, downloadUrl: e.target.value})}
+                                    placeholder="Download URL (Google Drive /view link)"
+                                    className="flex-1 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                />
+                                {materialForm.mediaType !== 'video' && (
+                                    <button 
+                                        onClick={() => { setVaultTargetField('download'); setIsVaultOpen(true); }}
+                                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded px-3"
+                                        title="Browse Local Vault"
+                                    >
+                                        <FolderOpen size={14} />
+                                    </button>
+                                )}
+                            </div>
                             
                             {/* Digital Content Import */}
                             <div className="mb-3 p-3 bg-slate-900 rounded border border-slate-700">
@@ -5850,6 +5883,14 @@ ${aiDescription}
         </>
         )}
       </div>
+      
+      {/* VAULT BROWSER MODAL */}
+      {isVaultOpen && (
+        <VaultBrowser 
+            onSelect={handleVaultSelect} 
+            onClose={() => { setIsVaultOpen(false); setVaultTargetField(null); }} 
+        />
+      )}
     </div>
   );
 };
@@ -10281,6 +10322,8 @@ export default function App() {
   const [scannerNotes, setScannerNotes] = useState("");
   // Initialize state with PROJECT_DATA constant
   const [projectData, setProjectData] = useState(PROJECT_DATA);
+  const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [vaultTargetField, setVaultTargetField] = useState(null); // 'view' or 'download'
 
   // CSS AUTO-SCOPING FUNCTION (moved here to be accessible to all App functions)
   const scopeCSS = (css, viewId) => {
@@ -10972,6 +11015,16 @@ export default function App() {
         materials: updated
       }
     });
+  };
+
+  const handleVaultSelect = (file) => {
+    if (vaultTargetField === 'view') {
+        setMaterialForm(prev => ({ ...prev, viewUrl: file.path }));
+    } else if (vaultTargetField === 'download') {
+        setMaterialForm(prev => ({ ...prev, downloadUrl: file.path }));
+    }
+    setIsVaultOpen(false);
+    setVaultTargetField(null);
   };
 
   const addAssessment = (assessment) => {
@@ -11734,7 +11787,60 @@ export default function App() {
         {/* Main Content */}
         <main className="flex-grow min-h-[600px]">
           {activePhase === 0 && <Phase0 projectData={projectData} setProjectData={setProjectData} />}
-          {activePhase === 1 && <Phase1 projectData={projectData} setProjectData={setProjectData} scannerNotes={scannerNotes} setScannerNotes={setScannerNotes} addMaterial={addMaterial} editMaterial={editMaterial} deleteMaterial={deleteMaterial} moveMaterial={moveMaterial} toggleMaterialHidden={toggleMaterialHidden} addAssessment={addAssessment} editAssessment={editAssessment} deleteAssessment={deleteAssessment} moveAssessment={moveAssessment} toggleAssessmentHidden={toggleAssessmentHidden} addQuestionToMaster={addQuestionToMaster} moveQuestion={moveQuestion} deleteQuestion={deleteQuestion} updateQuestion={updateQuestion} clearMasterAssessment={clearMasterAssessment} masterQuestions={masterQuestions} setMasterQuestions={setMasterQuestions} masterAssessmentTitle={masterAssessmentTitle} setMasterAssessmentTitle={setMasterAssessmentTitle} currentQuestionType={currentQuestionType} setCurrentQuestionType={setCurrentQuestionType} currentQuestion={currentQuestion} setCurrentQuestion={setCurrentQuestion} editingQuestion={editingQuestion} setEditingQuestion={setEditingQuestion} generateMixedAssessment={generateMixedAssessment} generatedAssessment={generatedAssessment} setGeneratedAssessment={setGeneratedAssessment} assessmentType={assessmentType} setAssessmentType={setAssessmentType} assessmentTitle={assessmentTitle} setAssessmentTitle={setAssessmentTitle} quizQuestions={quizQuestions} setQuizQuestions={setQuizQuestions} printInstructions={printInstructions} setPrintInstructions={setPrintInstructions} editingAssessment={editingAssessment} setEditingAssessment={setEditingAssessment} migrateCode={migrateCode} setMigrateCode={setMigrateCode} migratePrompt={migratePrompt} setMigratePrompt={setMigratePrompt} migrateOutput={migrateOutput} setMigrateOutput={setMigrateOutput} />}
+          {activePhase === 1 && <Phase1 
+            projectData={projectData} 
+            setProjectData={setProjectData} 
+            scannerNotes={scannerNotes} 
+            setScannerNotes={setScannerNotes} 
+            addMaterial={addMaterial} 
+            editMaterial={editMaterial} 
+            deleteMaterial={deleteMaterial} 
+            moveMaterial={moveMaterial} 
+            toggleMaterialHidden={toggleMaterialHidden} 
+            addAssessment={addAssessment} 
+            editAssessment={editAssessment} 
+            deleteAssessment={deleteAssessment} 
+            moveAssessment={moveAssessment} 
+            toggleAssessmentHidden={toggleAssessmentHidden} 
+            addQuestionToMaster={addQuestionToMaster} 
+            moveQuestion={moveQuestion} 
+            deleteQuestion={deleteQuestion} 
+            updateQuestion={updateQuestion} 
+            clearMasterAssessment={clearMasterAssessment} 
+            masterQuestions={masterQuestions} 
+            setMasterQuestions={setMasterQuestions} 
+            masterAssessmentTitle={masterAssessmentTitle} 
+            setMasterAssessmentTitle={setMasterAssessmentTitle} 
+            currentQuestionType={currentQuestionType} 
+            setCurrentQuestionType={setCurrentQuestionType} 
+            currentQuestion={currentQuestion} 
+            setCurrentQuestion={setCurrentQuestion} 
+            editingQuestion={editingQuestion} 
+            setEditingQuestion={setEditingQuestion} 
+            generateMixedAssessment={generateMixedAssessment} 
+            generatedAssessment={generatedAssessment} 
+            setGeneratedAssessment={setGeneratedAssessment} 
+            assessmentType={assessmentType} 
+            setAssessmentType={setAssessmentType} 
+            assessmentTitle={assessmentTitle} 
+            setAssessmentTitle={setAssessmentTitle} 
+            quizQuestions={quizQuestions} 
+            setQuizQuestions={setQuizQuestions} 
+            printInstructions={printInstructions} 
+            setPrintInstructions={setPrintInstructions} 
+            editingAssessment={editingAssessment} 
+            setEditingAssessment={setEditingAssessment} 
+            migrateCode={migrateCode} 
+            setMigrateCode={setMigrateCode} 
+            migratePrompt={migratePrompt} 
+            setMigratePrompt={setMigratePrompt} 
+            migrateOutput={migrateOutput} 
+            setMigrateOutput={setMigrateOutput} 
+            isVaultOpen={isVaultOpen}
+            setIsVaultOpen={setIsVaultOpen}
+            setVaultTargetField={setVaultTargetField}
+            vaultTargetField={vaultTargetField}
+          />}
           {activePhase === 2 && <Phase2 projectData={projectData} setProjectData={setProjectData} editMaterial={editMaterial} onEdit={openEditModule} onPreview={openPreview} onDelete={deleteModule} onToggleHidden={toggleModuleHidden} deleteMaterial={deleteMaterial} deleteAssessment={deleteAssessment} toggleMaterialHidden={toggleMaterialHidden} toggleAssessmentHidden={toggleAssessmentHidden} />}
           {activePhase === 3 && <Phase3 onGoToMaster={() => setActivePhase(0)} projectData={projectData} setProjectData={setProjectData} />}
           {activePhase === 4 && <Phase4 projectData={projectData} setProjectData={setProjectData} excludedIds={excludedIds} toggleModule={toggleModuleExclusion} onToggleHidden={toggleModuleHidden} onError={handleError} />}
@@ -12011,6 +12117,7 @@ export default function App() {
       
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
+      
     </div>
   );
 }

@@ -1,0 +1,24 @@
+{
+  "lastUpdated": "2026-01-29T20:15:13.042Z",
+  "count": 2,
+  "files": [
+    {
+      "id": "vault-1769717713041-203",
+      "filename": "README.txt",
+      "path": "/Course-factoryPERFECT/materials/README.txt",
+      "title": "README",
+      "type": "txt",
+      "size": "0.2 KB",
+      "date": "2026-01-29"
+    },
+    {
+      "id": "vault-1769717713042-121",
+      "filename": "test-vault-doc.pdf",
+      "path": "/Course-factoryPERFECT/materials/test-vault-doc.pdf",
+      "title": "Test Vault Doc",
+      "type": "pdf",
+      "size": "0.6 KB",
+      "date": "2026-01-29"
+    }
+  ]
+}
