@@ -1,9 +1,45 @@
 {
-  "lastUpdated": "2026-01-29T20:15:13.042Z",
-  "count": 2,
+  "lastUpdated": "2026-01-29T21:25:38.905Z",
+  "count": 7,
   "files": [
     {
-      "id": "vault-1769717713041-203",
+      "id": "vault-1769721938903-472",
+      "filename": "PHASE 1 THE ENGINE.pdf",
+      "path": "/Course-factoryPERFECT/materials/PHASE 1 THE ENGINE.pdf",
+      "title": "PHASE 1 THE ENGINE",
+      "type": "pdf",
+      "size": "1682.7 KB",
+      "date": "2026-01-28"
+    },
+    {
+      "id": "vault-1769721938904-429",
+      "filename": "PHASE 2 THE DRIVE.pdf",
+      "path": "/Course-factoryPERFECT/materials/PHASE 2 THE DRIVE.pdf",
+      "title": "PHASE 2 THE DRIVE",
+      "type": "pdf",
+      "size": "4277.5 KB",
+      "date": "2026-01-28"
+    },
+    {
+      "id": "vault-1769721938904-852",
+      "filename": "PHASE 3 THE FOCUS.pdf",
+      "path": "/Course-factoryPERFECT/materials/PHASE 3 THE FOCUS.pdf",
+      "title": "PHASE 3 THE FOCUS",
+      "type": "pdf",
+      "size": "2676.6 KB",
+      "date": "2026-01-28"
+    },
+    {
+      "id": "vault-1769721938905-931",
+      "filename": "PHASE 4 THE TOOLKIT.pdf",
+      "path": "/Course-factoryPERFECT/materials/PHASE 4 THE TOOLKIT.pdf",
+      "title": "PHASE 4 THE TOOLKIT",
+      "type": "pdf",
+      "size": "5613.4 KB",
+      "date": "2026-01-28"
+    },
+    {
+      "id": "vault-1769721938905-400",
       "filename": "README.txt",
       "path": "/Course-factoryPERFECT/materials/README.txt",
       "title": "README",
@@ -12,13 +48,22 @@
       "date": "2026-01-29"
     },
     {
-      "id": "vault-1769717713042-121",
+      "id": "vault-1769721938905-230",
       "filename": "test-vault-doc.pdf",
       "path": "/Course-factoryPERFECT/materials/test-vault-doc.pdf",
       "title": "Test Vault Doc",
       "type": "pdf",
       "size": "0.6 KB",
       "date": "2026-01-29"
+    },
+    {
+      "id": "vault-1769721938905-330",
+      "filename": "What is sports psychology.pdf",
+      "path": "/Course-factoryPERFECT/materials/What is sports psychology.pdf",
+      "title": "What Is Sports Psychology",
+      "type": "pdf",
+      "size": "4983.2 KB",
+      "date": "2026-01-28"
     }
   ]
 }

@@ -102,8 +102,8 @@ const PROJECT_DATA = {
             number: "00",
             title: "What is Sports Psychology?",
             description: "The Diagnostic & Baseline Protocol.",
-            viewUrl: "https://drive.google.com/file/d/1my_sOJYdOLcvvQi4TQdkDJNUz6P7MvYY/preview",
-            downloadUrl: "https://drive.google.com/file/d/1my_sOJYdOLcvvQi4TQdkDJNUz6P7MvYY/view?usp=sharing",
+            viewUrl: "/Course-factoryPERFECT/materials/What is sports psychology.pdf",
+            downloadUrl: "/Course-factoryPERFECT/materials/What is sports psychology.pdf",
             color: "slate",
             hidden: false,
             order: 0
@@ -113,8 +113,8 @@ const PROJECT_DATA = {
             number: "01",
             title: "The Engine",
             description: "Values, Identity & Foundation.",
-            viewUrl: "https://drive.google.com/file/d/1DQvItijEudKroqUieRBKaJAqJJnzEa2x/preview",
-            downloadUrl: "https://drive.google.com/file/d/1DQvItijEudKroqUieRBKaJAqJJnzEa2x/view?usp=sharing",
+            viewUrl: "/Course-factoryPERFECT/materials/PHASE 1 THE ENGINE.pdf",
+            downloadUrl: "/Course-factoryPERFECT/materials/PHASE 1 THE ENGINE.pdf",
             color: "rose",
             hidden: false,
             order: 1
@@ -124,8 +124,8 @@ const PROJECT_DATA = {
             number: "02",
             title: "The Drive",
             description: "Motivation, 7/10 Task & Maintenance.",
-            viewUrl: "https://drive.google.com/file/d/1XWwy8F27_0jupo8xdXO3oi2E4l9R4Rot/preview",
-            downloadUrl: "https://drive.google.com/file/d/1XWwy8F27_0jupo8xdXO3oi2E4l9R4Rot/view?usp=sharing",
+            viewUrl: "/Course-factoryPERFECT/materials/PHASE 2 THE DRIVE.pdf",
+            downloadUrl: "/Course-factoryPERFECT/materials/PHASE 2 THE DRIVE.pdf",
             color: "amber",
             hidden: false,
             order: 2
@@ -135,8 +135,8 @@ const PROJECT_DATA = {
             number: "03",
             title: "The Focus",
             description: "Spotlight, Cues & The Fortress.",
-            viewUrl: "https://drive.google.com/file/d/1kUq790zE4VP73THdysuNKVR3cE6EG3X2/preview",
-            downloadUrl: "https://drive.google.com/file/d/1kUq790zE4VP73THdysuNKVR3cE6EG3X2/view?usp=sharing",
+            viewUrl: "/Course-factoryPERFECT/materials/PHASE 3 THE FOCUS.pdf",
+            downloadUrl: "/Course-factoryPERFECT/materials/PHASE 3 THE FOCUS.pdf",
             color: "emerald",
             hidden: false,
             order: 3
@@ -146,8 +146,8 @@ const PROJECT_DATA = {
             number: "04",
             title: "The Toolkit",
             description: "Confidence & Visualization Protocols.",
-            viewUrl: "https://drive.google.com/file/d/1GueN1ikd982jYVZVf7GkEDG18NHQ9YpW/preview",
-            downloadUrl: "https://drive.google.com/file/d/1GueN1ikd982jYVZVf7GkEDG18NHQ9YpW/view?usp=sharing",
+            viewUrl: "/Course-factoryPERFECT/materials/PHASE 4 THE TOOLKIT.pdf",
+            downloadUrl: "/Course-factoryPERFECT/materials/PHASE 4 THE TOOLKIT.pdf",
             color: "sky",
             hidden: false,
             order: 4
@@ -1771,6 +1771,9 @@ const buildModuleFrameHTML = (module, courseSettings) => {
   const containerHex = colorHexMap[containerToken.base] || (isLightBg ? '#ffffff' : '#0f172a');
   const containerBgRgba = hexToRgba(containerHex, containerToken.alpha);
 
+  // Asset Base URL (Ignore for Beta/ZIP exports to keep links relative)
+  const assetBaseUrl = settings.ignoreAssetBaseUrl ? "" : (settings.assetBaseUrl || "").replace(/\/$/, '');
+
   if (module.type === 'external') {
     const urlValidation = validateUrl(module.url || '');
     const safeUrl = urlValidation.safeUrl;
@@ -1853,8 +1856,37 @@ const buildModuleFrameHTML = (module, courseSettings) => {
       const badgeTextClass = mat.mediaType && mat.mediaType !== 'number'
         ? 'text-[9px] font-black uppercase tracking-widest'
         : 'font-black italic text-xl';
+      
+      // Apply Asset Base URL logic (Smart Join)
+      let finalViewUrl = mat.viewUrl || '';
+      let finalDownloadUrl = mat.downloadUrl || '';
 
-      const escapedViewUrl = (mat.viewUrl || '').replace(/'/g, "\\'");
+      if (assetBaseUrl) {
+          try {
+              const baseUrlObj = new URL(assetBaseUrl);
+              const basePath = baseUrlObj.pathname.replace(/\/$/, '');
+              
+              if (finalViewUrl.startsWith('/')) {
+                  if (basePath && basePath !== '/' && finalViewUrl.startsWith(basePath)) {
+                      finalViewUrl = baseUrlObj.origin + finalViewUrl;
+                  } else {
+                      finalViewUrl = assetBaseUrl + finalViewUrl;
+                  }
+              }
+              if (finalDownloadUrl.startsWith('/')) {
+                  if (basePath && basePath !== '/' && finalDownloadUrl.startsWith(basePath)) {
+                      finalDownloadUrl = baseUrlObj.origin + finalDownloadUrl;
+                  } else {
+                      finalDownloadUrl = assetBaseUrl + finalDownloadUrl;
+                  }
+              }
+          } catch(e) {
+              if (finalViewUrl.startsWith('/')) finalViewUrl = assetBaseUrl + finalViewUrl;
+              if (finalDownloadUrl.startsWith('/')) finalDownloadUrl = assetBaseUrl + finalDownloadUrl;
+          }
+      }
+
+      const escapedViewUrl = finalViewUrl.replace(/'/g, "\\'");
       const escapedTitle = (mat.title || '').replace(/'/g, "\\'");
       const matId = mat.id || `mat-${Date.now()}`;
 
@@ -1863,7 +1895,7 @@ const buildModuleFrameHTML = (module, courseSettings) => {
         buttonsHTML += `<button onclick="openPDF('${escapedViewUrl}', '${escapedTitle}')" class="flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View Slides</button>`;
       }
       if (mat.downloadUrl) {
-        buttonsHTML += `<a href="${mat.downloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`;
+        buttonsHTML += `<a href="${finalDownloadUrl}" target="_blank" class="flex-1 ${buttonColorClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`;
       }
       if (mat.digitalContent) {
         buttonsHTML += `<button data-digital-reader="${matId}" class="digital-reader-btn flex-1 ${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">Read</button>`;
@@ -6942,7 +6974,7 @@ const PROJECT_DATA = {
 };
 
 // Pure function to build site HTML - used by both Phase 2 preview and Phase 4 compile
-const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = null, projectData }) => {
+const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = null, projectData, ignoreAssetBaseUrl = false }) => {
   // ========================================
   // PHASE 5 SETTINGS APPLICATION
   // ========================================
@@ -7015,6 +7047,9 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
   const containerHex = colorHexMap[containerToken.base] || (isLightBg ? '#ffffff' : '#0f172a');
   const containerBgRgba = hexToRgba(containerHex, containerToken.alpha);
   
+  // Asset Base URL for Google Sites/CDN
+  const assetBaseUrl = ignoreAssetBaseUrl ? "" : (courseSettings.assetBaseUrl || "").replace(/\/$/, '');
+
   // Build course info HTML
   const courseInfoParts = [];
   if (courseCode) courseInfoParts.push(courseCode);
@@ -7106,9 +7141,38 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
           ? `border border-${colorClass}-500/30`
           : 'border border-slate-600';
         
-        const escapedViewUrl = (mat.viewUrl || '').replace(/'/g, "\\'");
+        // Apply Asset Base URL logic (Smart Join to prevent repo name duplication)
+        let finalViewUrl = mat.viewUrl || '';
+        let finalDownloadUrl = mat.downloadUrl || '';
+
+        // Helper to smart join URLs
+        const smartJoin = (base, path) => {
+            if (!base || !path.startsWith('/')) return base + path;
+            
+            // Remove trailing slash from base
+            const baseClean = base.endsWith('/') ? base.slice(0, -1) : base;
+            
+            // Check if the path starts with the last segment of the base URL
+            // Example: Base ends in "/Course-factoryPERFECT" and Path starts with "/Course-factoryPERFECT"
+            const baseParts = baseClean.split('/');
+            const lastBaseSegment = baseParts[baseParts.length - 1];
+            
+            if (lastBaseSegment && path.startsWith('/' + lastBaseSegment + '/')) {
+                // Remove the duplicate segment from the start of the path
+                return baseClean + path.substring(lastBaseSegment.length + 1);
+            }
+            
+            return baseClean + path;
+        };
+
+        if (assetBaseUrl) {
+            finalViewUrl = smartJoin(assetBaseUrl, finalViewUrl);
+            finalDownloadUrl = smartJoin(assetBaseUrl, finalDownloadUrl);
+        }
+
+        const escapedViewUrl = finalViewUrl.replace(/'/g, "\\'");
         const escapedTitle = (mat.title || '').replace(/'/g, "\\'");
-        const escapedDownloadUrl = (mat.downloadUrl || '').replace(/'/g, "\\'");
+        const escapedDownloadUrl = finalDownloadUrl.replace(/'/g, "\\'");
         const matId = mat.id || `mat-${Date.now()}`;
         
         let buttonsHTML = '';
@@ -8194,7 +8258,8 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       ...courseSettings,
       __courseName: courseSettings.courseName || projectData["Current Course"]?.name || "Course",
       __toolkit: projectData["Global Toolkit"] || [],
-      __materials: projectData["Current Course"]?.materials || []
+      __materials: projectData["Current Course"]?.materials || [],
+      ignoreAssetBaseUrl: true // Force relative links for ZIP export
     });
   };
 
@@ -8210,7 +8275,8 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       toolkit,
       excludedIds,
       initialViewKey: null,
-      projectData
+      projectData,
+      ignoreAssetBaseUrl: true // Force relative links for ZIP export
     });
     
     // Add index.html (single-page app)
@@ -8732,6 +8798,28 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
           <Package className="text-purple-400" /> Phase 4: Compile & Export
         </h2>
+
+        {/* ASSET BASE URL CONFIG */}
+        <div className="mb-6 p-4 bg-slate-900/50 rounded-xl border border-slate-700">
+            <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-xs font-bold text-slate-400 uppercase">Asset Base URL (CDN)</h3>
+                <span className="text-[10px] bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded border border-blue-800">Required for Google Sites</span>
+            </div>
+            <p className="text-[10px] text-slate-500 mb-3">
+                If your PDFs/files are in a local folder (e.g. <code>/materials/doc.pdf</code>), Google Sites cannot see them. 
+                Enter your GitHub Pages URL here to convert them to absolute links.
+            </p>
+            <input 
+                type="text" 
+                value={projectData["Course Settings"]?.assetBaseUrl || ""}
+                onChange={(e) => setProjectData(prev => ({
+                    ...prev,
+                    "Course Settings": { ...prev["Course Settings"], assetBaseUrl: e.target.value }
+                }))}
+                placeholder="https://username.github.io/repo-name"
+                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm font-mono focus:border-blue-500 outline-none"
+            />
+        </div>
 
         {/* --- PUBLISHING MODE SELECTOR --- */}
         <div className="mb-6 p-4 bg-slate-900/50 rounded-xl border border-slate-700">
@@ -10320,7 +10408,7 @@ const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies 
   );
 };
 
-export default function App() {
+export function App() {
   const [activePhase, setActivePhase] = useState(0);
   const [scannerNotes, setScannerNotes] = useState("");
   // Initialize state with PROJECT_DATA constant
@@ -12146,12 +12234,3 @@ const Section = ({ title, icon: Icon, isActive, onClick, badge, badgeColor }) =>
     )}
   </button>
 );
-
-
-
-
-
-
-
-
-

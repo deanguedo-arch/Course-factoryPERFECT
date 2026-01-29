@@ -44,9 +44,13 @@
 
 ## Project History (Archaeology)
 ### Recent Milestones (Jan 2026)
+- [x] **Smart Vault Full Integration:** Completed end-to-end integration of the "Smart Vault" system.
+  - **Infrastructure:** `public/materials/` folder, `scripts/scan-vault.cjs`, and `SCAN_VAULT.bat` operational.
+  - **UI Component:** `VaultBrowser.jsx` integrated into `Phase1` via `App.jsx` props.
+  - **Logic:** Fixed React wiring issues (`handleVaultSelect` scope, state prop drilling).
+  - **UX Polish:** Materials renderer now smart-checks for URLs (no more duplicate buttons) and uses clear "View" labels.
+  - **Compiler Update:** Exported site now respects the smart button logic and "View" label.
 - [x] **Vault Architecture:** Adopted "Smart Vault" strategy (Hybrid Repo/External) to solve link rot.
-- [x] **Vault Infrastructure:** Created `scan-vault.js` and `SCAN_VAULT.bat` for local asset indexing.
-- [x] **Vault UI Component:** Built `VaultBrowser.jsx` for browsing local assets.
 - [x] **Safety Protocol:** Implemented "Confidence Check" rule (Rule 000 & Universal) to prevent AI from making risky changes without a safe test.
 - [x] **Cursor Rule System v2.0:** Upgraded from a single `.cursorrules` file to a 7-rule specialized `.cursor/rules/` system (Architect Mode, Token Economy, Parser Protection).
 - [x] **Beta ZIP Export:** Completed the multi-file static publish system with ZIP generation.
@@ -54,6 +58,9 @@
 - [x] **Assessment Edit Logic:** Fixed deep-editing bugs in the Assessment Center.
 - [x] **Master Shell Visuals:** Added centralized control for fonts and material colors.
 - [x] **Validation Suite:** Implemented "Broken Thing" detection and link testers for materials.
+- [x] **Google Sites Export Fix:** Added "Asset Base URL" configuration to Phase 4 to support absolute linking for local assets (PDFs) when embedded in Google Sites.
+- [x] **Export Logic Refinement:** Implemented "Smart Join" to prevent URL duplication and ensured Beta/ZIP exports ignore the Base URL to maintain portability (relative links).
+- [x] **App Entry Point Fix:** Resolved default export/import mismatch between `App.jsx` and `main.jsx`.
 
 ### Earlier Development (2025)
 - [x] **Auto-Save Monolith:** Implemented persistent state saving to prevent data loss.
@@ -66,9 +73,10 @@
 - **Sandbox Rules:** Google Sites iframes *require* event delegation and window-global functions.
 - **Scaling:** `App.jsx` at 12k lines is approaching the limit of efficient AI processing; modularization is now a priority.
 - **Vault Rules:** Videos stay external (YouTube/Vimeo); Docs/PDFs go to Repo (Vault).
+- **Vite Base URL:** When using `base: '/RepoName/'`, file paths in code must respect this prefix (e.g., in `scan-vault.cjs`).
 
 ## Active Goal
-- **Smart Vault Implementation:** Building the "Asset Vault" system for offline/repository-based file management to eliminate link rot.
+- **Modularization:** Break down the 12k+ line `App.jsx` monolith into smaller, manageable components now that the Vault feature is complete.
 
 ## Next Step
-- Integrate `VaultBrowser` into `App.jsx` Material Manager and test the full flow.
+- Begin extracting the **"Phase 1: Harvest"** (Content Ingestor/AI Studio Creator) logic from `App.jsx` into a separate file.
