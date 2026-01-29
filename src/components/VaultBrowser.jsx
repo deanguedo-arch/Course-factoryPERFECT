@@ -20,7 +20,7 @@ const VaultBrowser = ({ onSelect, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white border-4 border-black w-full max-w-2xl max-h-[80vh] flex flex-col shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] animate-in fade-in zoom-in duration-200">
+      <div className="bg-white text-black border-4 border-black w-full max-w-2xl max-h-[80vh] flex flex-col shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] animate-in fade-in zoom-in duration-200">
         
         {/* Header */}
         <div className="bg-yellow-400 border-b-4 border-black p-4 flex justify-between items-center">
