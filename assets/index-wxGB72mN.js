@@ -70,11 +70,25 @@ Error generating stack: `+e.message+`
             }
         }
         
+        function getPdfEmbedUrl(url) {
+            if (!url) return url;
+            if (url.indexOf('docs.google.com/viewer') !== -1) return url;
+            var isDrive = url.indexOf('drive.google.com') !== -1;
+            var isIframe = false;
+            try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
+            if (isIframe && !isDrive) {
+                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
+            }
+            if (isDrive && url.indexOf('/view') !== -1) {
+                return url.replace('/view', '/preview');
+            }
+            return url;
+        }
+
         function openPDF(url, title) {
             const container = document.getElementById('pdf-viewer-container');
-            // Convert /view to /preview for iframe embedding
-            const previewUrl = url.replace('/view', '/preview');
-            document.getElementById('pdf-frame').src = previewUrl;
+            const previewUrl = getPdfEmbedUrl(url);
+            document.getElementById('pdf-frame').src = previewUrl || '';
             document.getElementById('viewer-title').innerText = "VIEWING: " + title;
             container.classList.remove('hidden');
             container.scrollIntoView({ behavior: 'smooth' });
@@ -249,7 +263,7 @@ Error generating stack: `+e.message+`
             timerInterval = null;
             timerSeconds = 300;
             document.getElementById('timer-display').textContent = '05:00';
-          }`}},{id:`feat-print`,title:`Print Page`,enabled:!0,hiddenFromUser:!1,userToggleable:!1,includeUi:!1,category:`utility`,description:`Adds print button to toolbar`,code:{id:`tool-print`,html:`<button onclick="window.print()" class="fixed top-4 right-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg z-50">ðŸ–¨ï¸ Print</button>`,script:``}}]},vf=e=>{let t={sky:{hex:`#0ea5e9`,dark:`#0284c7`,light:`#38bdf8`},rose:{hex:`#f43f5e`,dark:`#e11d48`,light:`#fb7185`},emerald:{hex:`#10b981`,dark:`#059669`,light:`#34d399`},amber:{hex:`#f59e0b`,dark:`#d97706`,light:`#fbbf24`},purple:{hex:`#a855f7`,dark:`#9333ea`,light:`#c084fc`},indigo:{hex:`#6366f1`,dark:`#4f46e5`,light:`#818cf8`},pink:{hex:`#ec4899`,dark:`#db2777`,light:`#f472b6`},teal:{hex:`#14b8a6`,dark:`#0d9488`,light:`#2dd4bf`}};return t[e]||t.sky},yf=e=>{let t={inter:{url:`https://fonts.googleapis.com/css?family=Inter:ital,wght@0,400;0,700;1,400;1,900&display=swap`,css:`font-family: 'Inter', sans-serif;`},roboto:{url:`https://fonts.googleapis.com/css?family=Roboto:ital,wght@0,400;0,700;1,400;1,900&display=swap`,css:`font-family: 'Roboto', sans-serif;`},opensans:{url:`https://fonts.googleapis.com/css?family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap`,css:`font-family: 'Open Sans', sans-serif;`},lato:{url:`https://fonts.googleapis.com/css?family=Lato:ital,wght@0,400;0,700;1,400;1,700&display=swap`,css:`font-family: 'Lato', sans-serif;`},montserrat:{url:`https://fonts.googleapis.com/css?family=Montserrat:ital,wght@0,400;0,700;1,400;1,700&display=swap`,css:`font-family: 'Montserrat', sans-serif;`},poppins:{url:`https://fonts.googleapis.com/css?family=Poppins:ital,wght@0,400;0,700;1,400;1,700&display=swap`,css:`font-family: 'Poppins', sans-serif;`},raleway:{url:`https://fonts.googleapis.com/css?family=Raleway:ital,wght@0,400;0,700;1,400;1,700&display=swap`,css:`font-family: 'Raleway', sans-serif;`},nunito:{url:`https://fonts.googleapis.com/css?family=Nunito:ital,wght@0,400;0,700;1,400;1,700&display=swap`,css:`font-family: 'Nunito', sans-serif;`}};return t[e]||t.inter},bf=e=>{let{courseName:t=`Course Factory`,courseNameUpper:n=`COURSE FACTORY`,accentColor:r=`sky`,backgroundColor:i=`slate-900`,fontFamily:a=`inter`,customCSS:o=``,courseInfo:s=``,navItems:c=``,content:l=``,scripts:u=``,progressTracking:d=``,containerBgRgba:f=null,layoutSettings:p={showSidebar:!0,showFooter:!0,navPosition:`side`}}=e,m=vf(r),h=yf(a),g={"slate-900":`#0f172a`,"slate-950":`#020617`,"zinc-900":`#18181b`,"neutral-900":`#171717`,"stone-900":`#1c1917`,"gray-900":`#111827`,"slate-50":`#f8fafc`,"zinc-50":`#fafafa`,"neutral-50":`#fafafa`,"stone-50":`#fafaf9`,"gray-50":`#f9fafb`,white:`#ffffff`},_=g[i]||g[`slate-900`],v=[`slate-50`,`zinc-50`,`neutral-50`,`stone-50`,`gray-50`,`white`].includes(i),y=v?`#0f172a`:`#e2e8f0`,b=(e,t=1)=>{if(!e)return`rgba(15, 23, 42, ${t})`;let n=e.replace(`#`,``);return n.length===6?`rgba(${parseInt(n.slice(0,2),16)}, ${parseInt(n.slice(2,4),16)}, ${parseInt(n.slice(4,6),16)}, ${t})`:`rgba(15, 23, 42, ${t})`},x=b(_,v?.92:.95),S=v?`rgba(15, 23, 42, 0.12)`:`rgba(51, 65, 85, 0.5)`,C=v?b(_,.98):`rgba(30, 41, 59, 0.95)`,w=f||b(v?`#ffffff`:`#0f172a`,.8),T=p?.showSidebar!==!1,E=p?.showFooter!==!1,D=(p?.navPosition||`side`)===`top`,O=`        /* --- GLOBAL & SHARED STYLES --- */
+          }`}},{id:`feat-print`,title:`Print Page`,enabled:!0,hiddenFromUser:!1,userToggleable:!1,includeUi:!1,category:`utility`,description:`Adds print button to toolbar`,code:{id:`tool-print`,html:`<button onclick="window.print()" class="fixed top-4 right-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg z-50">ðŸ–¨ï¸ Print</button>`,script:``}}]},vf=e=>{let t={sky:{hex:`#0ea5e9`,dark:`#0284c7`,light:`#38bdf8`},rose:{hex:`#f43f5e`,dark:`#e11d48`,light:`#fb7185`},emerald:{hex:`#10b981`,dark:`#059669`,light:`#34d399`},amber:{hex:`#f59e0b`,dark:`#d97706`,light:`#fbbf24`},purple:{hex:`#a855f7`,dark:`#9333ea`,light:`#c084fc`},indigo:{hex:`#6366f1`,dark:`#4f46e5`,light:`#818cf8`},pink:{hex:`#ec4899`,dark:`#db2777`,light:`#f472b6`},teal:{hex:`#14b8a6`,dark:`#0d9488`,light:`#2dd4bf`}};return t[e]||t.sky},yf=e=>{let t={inter:{url:`https://fonts.googleapis.com/css?family=Inter:ital,wght@0,400;0,700;1,400;1,900&display=swap`,css:`font-family: 'Inter', sans-serif;`},roboto:{url:`https://fonts.googleapis.com/css?family=Roboto:ital,wght@0,400;0,700;1,400;1,900&display=swap`,css:`font-family: 'Roboto', sans-serif;`},opensans:{url:`https://fonts.googleapis.com/css?family=Open+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap`,css:`font-family: 'Open Sans', sans-serif;`},lato:{url:`https://fonts.googleapis.com/css?family=Lato:ital,wght@0,400;0,700;1,400;1,700&display=swap`,css:`font-family: 'Lato', sans-serif;`},montserrat:{url:`https://fonts.googleapis.com/css?family=Montserrat:ital,wght@0,400;0,700;1,400;1,700&display=swap`,css:`font-family: 'Montserrat', sans-serif;`},poppins:{url:`https://fonts.googleapis.com/css?family=Poppins:ital,wght@0,400;0,700;1,400;1,700&display=swap`,css:`font-family: 'Poppins', sans-serif;`},raleway:{url:`https://fonts.googleapis.com/css?family=Raleway:ital,wght@0,400;0,700;1,400;1,700&display=swap`,css:`font-family: 'Raleway', sans-serif;`},nunito:{url:`https://fonts.googleapis.com/css?family=Nunito:ital,wght@0,400;0,700;1,400;1,700&display=swap`,css:`font-family: 'Nunito', sans-serif;`}};return t[e]||t.inter},bf=e=>{let{courseName:t=`Course Factory`,courseNameUpper:n=`COURSE FACTORY`,accentColor:r=`sky`,backgroundColor:i=`slate-900`,fontFamily:a=`inter`,customCSS:o=``,courseInfo:s=``,navItems:c=``,content:l=``,scripts:u=``,progressTracking:d=``,containerBgRgba:f=null,layoutSettings:p={showSidebar:!0,showFooter:!0,navPosition:`side`}}=e,m=vf(r),h=yf(a),g={"slate-900":`#0f172a`,"slate-950":`#020617`,"zinc-900":`#18181b`,"neutral-900":`#171717`,"stone-900":`#1c1917`,"gray-900":`#111827`,"slate-50":`#f8fafc`,"zinc-50":`#fafafa`,"neutral-50":`#fafafa`,"stone-50":`#fafaf9`,"gray-50":`#f9fafb`,white:`#ffffff`},_=g[i]||g[`slate-900`],v=[`slate-50`,`zinc-50`,`neutral-50`,`stone-50`,`gray-50`,`white`].includes(i),y=v?`#0f172a`:`#e2e8f0`,b=(e,t=1)=>{if(!e)return`rgba(15, 23, 42, ${t})`;let n=e.replace(`#`,``);return n.length===6?`rgba(${parseInt(n.slice(0,2),16)}, ${parseInt(n.slice(2,4),16)}, ${parseInt(n.slice(4,6),16)}, ${t})`:`rgba(15, 23, 42, ${t})`},x=b(_,v?.92:.95),S=v?`rgba(15, 23, 42, 0.12)`:`rgba(51, 65, 85, 0.5)`,C=v?b(_,.98):`rgba(30, 41, 59, 0.95)`,w=f||b(v?`#ffffff`:`#0f172a`,.8),T=v?`text-slate-900`:`text-white`,E=p?.showSidebar!==!1,D=p?.showFooter!==!1,O=(p?.navPosition||`side`)===`top`,k=`        /* --- GLOBAL & SHARED STYLES --- */
         html, body { background-color: ${_} !important; }
         body { ${h.css} color: ${y}; margin: 0; height: 100vh; overflow: hidden; }
         :root { --cf-container-bg: ${w}; }
@@ -394,21 +408,21 @@ Error generating stack: `+e.message+`
             #content-container {
                 width: 100% !important;
             }
-        }`,k=D?`flex flex-col`:`flex`,A=T&&!D?`    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation" title="Toggle Menu">&#9776;</button>
-    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>`:``,j=T&&!D?`    <div id="sidebar-nav" class="w-64 glass-panel flex flex-col h-full z-50">
+        }`,A=O?`flex flex-col`:`flex`,j=E&&!O?`    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation" title="Toggle Menu">&#9776;</button>
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>`:``,M=E&&!O?`    <div id="sidebar-nav" class="w-64 glass-panel flex flex-col h-full z-50">
         <div class="p-8 border-b border-slate-800">
-            <h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none"><span class="text-${r}-500">${t}</span></h1>
+            <h1 class="text-xl font-black italic ${T} tracking-tighter uppercase leading-none"><span class="text-${r}-500">${t}</span></h1>
             <p class="text-[10px] text-slate-500 mt-2 mono uppercase tracking-widest">Master Console v2.0</p>${s}
         </div>
         <nav class="flex-1 overflow-y-auto py-4 space-y-1" id="main-nav">
             <div class="px-4 py-2 mt-4 text-[9px] font-bold text-slate-600 uppercase tracking-widest mono">System Modules</div>
             ${c}
         </nav>
-${E?`        <div class="p-6 border-t border-slate-800 text-center"><p class="text-[9px] text-slate-600 italic">"Recognition is the trigger for regulation."</p></div>`:``}
-    </div>`:``,M=D?`    <header class="w-full border-b border-slate-800 backdrop-blur-sm" style="background: ${_}; background-color: ${_};">
+${D?`        <div class="p-6 border-t border-slate-800 text-center"><p class="text-[9px] text-slate-600 italic">"Recognition is the trigger for regulation."</p></div>`:``}
+    </div>`:``,ee=O?`    <header class="w-full border-b border-slate-800 backdrop-blur-sm" style="background: ${_}; background-color: ${_};">
         <div class="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between gap-4">
             <div>
-                <h1 class="text-lg font-bold flex items-center gap-2 text-white"><span class="text-${r}-500">${t}</span></h1>
+                <h1 class="text-lg font-bold flex items-center gap-2 ${T}"><span class="text-${r}-500">${t}</span></h1>
                 <p class="text-[10px] text-slate-500 uppercase tracking-wider mt-1 font-mono">MASTER CONSOLE</p>
             </div>
             <nav class="flex-1 overflow-x-auto">
@@ -417,7 +431,7 @@ ${E?`        <div class="p-6 border-t border-slate-800 text-center"><p class="te
                 </div>
             </nav>
         </div>
-    </header>`:``,ee=E&&(D||!T)?`    <footer class="w-full border-t border-slate-800 backdrop-blur-sm" style="background: ${_}; background-color: ${_};">
+    </header>`:``,te=D&&(O||!E)?`    <footer class="w-full border-t border-slate-800 backdrop-blur-sm" style="background: ${_}; background-color: ${_};">
         <div class="max-w-[1800px] mx-auto px-6 py-4 text-[10px] text-slate-500 uppercase tracking-widest text-center">
             Master Console v2.0
         </div>
@@ -431,7 +445,7 @@ ${E?`        <div class="p-6 border-t border-slate-800 text-center"><p class="te
     <link href="${h.url}" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <style>
-        ${O}${o?`\n        /* Custom CSS from Settings */\n        ${o}`:``}
+        ${k}${o?`\n        /* Custom CSS from Settings */\n        ${o}`:``}
     </style>
     <script>
         // Force background color after Tailwind loads
@@ -451,19 +465,19 @@ ${E?`        <div class="p-6 border-t border-slate-800 text-center"><p class="te
         })();
     <\/script>
 </head>
-<body class="${k}" style="background: ${_} !important; background-color: ${_} !important;">
+<body class="${A}" style="background: ${_} !important; background-color: ${_} !important;">
     <!-- Sidebar Toggle Button (Works on ALL screen sizes) -->
-${A}
-
-${M}
 ${j}
+
+${ee}
+${M}
 
     <div class="flex-1 relative h-full overflow-hidden" id="content-container">
         ${l}
         <iframe id="view-external" class="w-full h-full hidden" src=""></iframe>
     </div>
 
-${ee}
+${te}
 
     <!-- MODULE SCRIPTS CONTAINER -->
     <script id="module-scripts">
@@ -563,11 +577,25 @@ ${ee}
             }
         }
 
+        function getPdfEmbedUrl(url) {
+            if (!url) return url;
+            if (url.indexOf('docs.google.com/viewer') !== -1) return url;
+            var isDrive = url.indexOf('drive.google.com') !== -1;
+            var isIframe = false;
+            try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
+            if (isIframe && !isDrive) {
+                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
+            }
+            if (isDrive && url.indexOf('/view') !== -1) {
+                return url.replace('/view', '/preview');
+            }
+            return url;
+        }
+
         function openPDF(url, title) {
             const container = document.getElementById('pdf-viewer-container');
-            // Convert /view to /preview for iframe embedding
-            const previewUrl = url.replace('/view', '/preview');
-            document.getElementById('pdf-frame').src = previewUrl;
+            const previewUrl = getPdfEmbedUrl(url);
+            document.getElementById('pdf-frame').src = previewUrl || '';
             document.getElementById('viewer-title').innerText = "VIEWING: " + title;
             container.classList.remove('hidden');
             container.scrollIntoView({ behavior: 'smooth' });
@@ -886,10 +914,24 @@ ${ee}
           return;
         }
       });`),oe=`
+      function getPdfEmbedUrl(url) {
+        if (!url) return url;
+        if (url.indexOf('docs.google.com/viewer') !== -1) return url;
+        var isDrive = url.indexOf('drive.google.com') !== -1;
+        var isIframe = false;
+        try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
+        if (isIframe && !isDrive) {
+          return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
+        }
+        if (isDrive && url.indexOf('/view') !== -1) {
+          return url.replace('/view', '/preview');
+        }
+        return url;
+      }
       function openPDF(url, title) {
         var container = document.getElementById('pdf-viewer-container');
-        var previewUrl = url.replace('/view', '/preview');
-        document.getElementById('pdf-frame').src = previewUrl;
+        var previewUrl = getPdfEmbedUrl(url);
+        document.getElementById('pdf-frame').src = previewUrl || '';
         document.getElementById('viewer-title').innerText = "VIEWING: " + title;
         container.classList.remove('hidden');
         container.scrollIntoView({ behavior: 'smooth' });
@@ -1701,7 +1743,7 @@ const PROJECT_DATA = {
   "Global Toolkit": [
     ... // Kept intact
   ]
-};`,height:`h-40`})]})]})]})]})})},Rf=({modules:e,toolkit:t,excludedIds:n=[],initialViewKey:r=null,projectData:i,ignoreAssetBaseUrl:a=!1})=>{let o=i[`Course Settings`]||{},s=o.courseName||i[`Current Course`]?.name||`Course Factory`,c=s.toUpperCase(),l=o.courseCode||``,u=o.instructor||``,d=o.academicYear||``,f=o.accentColor||`sky`,p=o.backgroundColor||`slate-900`,m=o.fontFamily||`inter`,h=o.customCSS||``,g=o.compilationDefaults||{},_=[`slate-50`,`zinc-50`,`neutral-50`,`stone-50`,`gray-50`,`white`].includes(p),v=o.headingTextColor||(_?`slate-900`:`white`),y=o.secondaryTextColor||(_?`slate-600`:`slate-400`),b=o.buttonColor||`${f}-600`,x=o.containerColor||(_?`white/80`:`slate-900/80`),S=e=>e.startsWith(`text-`)?e:`text-${e}`,C=e=>e.startsWith(`bg-`)?e.slice(3):e,w=(e,t=1)=>{if(!e)return`rgba(15, 23, 42, ${t})`;let n=e.replace(`#`,``);return n.length===6?`rgba(${parseInt(n.slice(0,2),16)}, ${parseInt(n.slice(2,4),16)}, ${parseInt(n.slice(4,6),16)}, ${t})`:`rgba(15, 23, 42, ${t})`},T=e=>{let t=(e||``).toString().trim();if(!t)return{base:_?`white`:`slate-900`,alpha:.8,alphaRaw:`80`};let n=t;n.startsWith(`bg-`)&&(n=n.slice(3)),n.startsWith(`text-`)&&(n=n.slice(5));let r=n.split(`/`),i=r[0]||(_?`white`:`slate-900`),a=r[1]||null;return{base:i,alpha:a?Math.max(0,Math.min(1,parseInt(a,10)/100)):1,alphaRaw:a}},E={"slate-900":`#0f172a`,"slate-800":`#1e293b`,"slate-700":`#334155`,"slate-600":`#475569`,"slate-500":`#64748b`,"slate-950":`#020617`,"gray-900":`#111827`,"gray-800":`#1f2937`,"gray-700":`#374151`,"gray-600":`#4b5563`,"zinc-900":`#18181b`,"zinc-800":`#27272a`,"neutral-900":`#171717`,"stone-900":`#1c1917`,white:`#ffffff`},D=S(v),O=S(y),k=C(b),A=`bg-${k}`,j=k.endsWith(`-600`)?`hover:bg-${k.replace(/-600$/,`-500`)}`:`hover:bg-${k}`,M=O,ee=T(x),te=ee.alphaRaw?`bg-${ee.base}/${ee.alphaRaw}`:`bg-${ee.base}`,ne=w(E[ee.base]||(_?`#ffffff`:`#0f172a`),ee.alpha),N=a?``:(o.assetBaseUrl||``).replace(/\/$/,``),P=[];l&&P.push(l),u&&P.push(u),d&&P.push(d);let re=P.length>0?`\n            <p class="text-[9px] text-slate-600 uppercase tracking-widest mono mt-1">${P.join(` | `)}</p>`:``,ie=e.filter(e=>!n.includes(e.id)&&!e.hidden);g.includeMaterials===!1&&(ie=ie.filter(e=>{let t=e.code||{};if(typeof t==`string`)try{t=JSON.parse(t)}catch{}return t.id!==`view-materials`})),g.includeAssessments===!1&&(ie=ie.filter(e=>e.id!==`item-assessments`&&e.title!==`Assessments`));let ae=t.filter(e=>e.enabled);g.includeToolkit===!1&&(ae=[]);let oe=ae.filter(e=>e.hiddenFromUser),se=ae.filter(e=>!e.hiddenFromUser),F=``,ce=``,le=``;if(ie.forEach(e=>{let t=e.code||{};if(typeof t==`string`)try{t=JSON.parse(t)}catch{}if(t.id===`view-materials`){let n=(i[`Current Course`]?.materials||[]).filter(e=>!e.hidden).sort((e,t)=>e.order-t.order),r=n.filter(e=>e.digitalContent),a=o.defaultMaterialTheme||`dark`,s={dark:{cardBg:`bg-slate-900`,cardBorder:`border-slate-700`,heading:`text-white`,body:`text-slate-400`,inner:`bg-slate-800`,proseClass:`prose-invert`,tocHover:`hover:bg-slate-700`},light:{cardBg:`bg-white`,cardBorder:`border-slate-300`,heading:`text-slate-900`,body:`text-slate-600`,inner:`bg-slate-100`,proseClass:`prose`,tocHover:`hover:bg-slate-200`},muted:{cardBg:`bg-slate-800`,cardBorder:`border-slate-700`,heading:`text-slate-200`,body:`text-slate-500`,inner:`bg-slate-800`,proseClass:`prose-invert`,tocHover:`hover:bg-slate-700`},"high-contrast-light":{cardBg:`bg-white`,cardBorder:`border-slate-300`,heading:`text-black`,body:`text-slate-800`,inner:`bg-slate-100`,proseClass:`prose`,tocHover:`hover:bg-slate-200`},"high-contrast-dark":{cardBg:`bg-black`,cardBorder:`border-slate-600`,heading:`text-white`,body:`text-slate-300`,inner:`bg-slate-900`,proseClass:`prose-invert`,tocHover:`hover:bg-slate-800`}},c=s[a]||s.dark,l=c.inner+` `+c.heading,u=n.map(e=>{let t=s[e.themeOverride!=null&&e.themeOverride!==``?e.themeOverride:a]||s.dark,n=e.color||`slate`,r=n===`slate`?``:`border-l-4 border-l-${n}-500`,i=n===`slate`?`bg-slate-800`:`bg-${n}-500/10`,o=n===`slate`?`border-slate-700`:`border-${n}-500/20`,c=n===`slate`?t.body:`text-${n}-500`,l=`${A} ${j}`,u=Ef(e)||`00`,d=e.mediaType&&e.mediaType!==`number`?`text-[9px] font-black uppercase tracking-widest`:`font-black italic text-xl`,f=n!==`slate`;f?`${n}${n}`:`${A}${j}${M}`,f&&`${n}`;let p=e.viewUrl||``,m=e.downloadUrl||``;if(N)try{let e=new URL(N),t=e.pathname.replace(/\/$/,``);p.startsWith(`/`)&&(p=t&&t!==`/`&&p.startsWith(t)?e.origin+p:N+p),m.startsWith(`/`)&&(m=t&&t!==`/`&&m.startsWith(t)?e.origin+m:N+m)}catch{p.startsWith(`/`)&&(p=N+p),m.startsWith(`/`)&&(m=N+m)}let h=p.replace(/'/g,`\\'`),g=(e.title||``).replace(/'/g,`\\'`),_=m.replace(/'/g,`\\'`),v=e.id||`mat-${Date.now()}`,y=``;return e.viewUrl&&(y+=`<button data-pdf-url="${h}" data-pdf-title="${g}" class="pdf-viewer-btn flex-1 ${A} ${j} ${M} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View</button>`),e.downloadUrl&&(y+=`<a href="${_}" target="_blank" class="flex-1 ${l} ${M} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`),e.digitalContent&&(y+=`<button data-digital-reader="${v}" class="digital-reader-btn flex-1 ${A} ${j} ${M} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">Read</button>`),`<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 ${t.cardBg} rounded-xl border ${t.cardBorder} p-6 ${r}">
+};`,height:`h-40`})]})]})]})]})})},Rf=({modules:e,toolkit:t,excludedIds:n=[],initialViewKey:r=null,projectData:i,ignoreAssetBaseUrl:a=!1})=>{let o=i[`Course Settings`]||{},s=o.courseName||i[`Current Course`]?.name||`Course Factory`,c=s.toUpperCase(),l=o.courseCode||``,u=o.instructor||``,d=o.academicYear||``,f=o.accentColor||`sky`,p=o.backgroundColor||`slate-900`,m=o.fontFamily||`inter`,h=o.customCSS||``,g=o.compilationDefaults||{},_=[`slate-50`,`zinc-50`,`neutral-50`,`stone-50`,`gray-50`,`white`].includes(p),v=o.headingTextColor||(_?`slate-900`:`white`),y=o.secondaryTextColor||(_?`slate-600`:`slate-400`),b=o.buttonColor||`${f}-600`,x=o.containerColor||(_?`white/80`:`slate-900/80`),S=e=>e.startsWith(`text-`)?e:`text-${e}`,C=e=>e.startsWith(`bg-`)?e.slice(3):e,w=(e,t=1)=>{if(!e)return`rgba(15, 23, 42, ${t})`;let n=e.replace(`#`,``);return n.length===6?`rgba(${parseInt(n.slice(0,2),16)}, ${parseInt(n.slice(2,4),16)}, ${parseInt(n.slice(4,6),16)}, ${t})`:`rgba(15, 23, 42, ${t})`},T=e=>{let t=(e||``).toString().trim();if(!t)return{base:_?`white`:`slate-900`,alpha:.8,alphaRaw:`80`};let n=t;n.startsWith(`bg-`)&&(n=n.slice(3)),n.startsWith(`text-`)&&(n=n.slice(5));let r=n.split(`/`),i=r[0]||(_?`white`:`slate-900`),a=r[1]||null;return{base:i,alpha:a?Math.max(0,Math.min(1,parseInt(a,10)/100)):1,alphaRaw:a}},E={"slate-900":`#0f172a`,"slate-800":`#1e293b`,"slate-700":`#334155`,"slate-600":`#475569`,"slate-500":`#64748b`,"slate-950":`#020617`,"gray-900":`#111827`,"gray-800":`#1f2937`,"gray-700":`#374151`,"gray-600":`#4b5563`,"zinc-900":`#18181b`,"zinc-800":`#27272a`,"neutral-900":`#171717`,"stone-900":`#1c1917`,white:`#ffffff`},D=S(v),O=S(y),k=C(b),A=`bg-${k}`,j=k.endsWith(`-600`)?`hover:bg-${k.replace(/-600$/,`-500`)}`:`hover:bg-${k}`,M=O,ee=T(x),te=ee.alphaRaw?`bg-${ee.base}/${ee.alphaRaw}`:`bg-${ee.base}`,ne=w(E[ee.base]||(_?`#ffffff`:`#0f172a`),ee.alpha),N=a?``:(o.assetBaseUrl||``).replace(/\/$/,``),P=[];l&&P.push(l),u&&P.push(u),d&&P.push(d);let re=P.length>0?`\n            <p class="text-[9px] text-slate-600 uppercase tracking-widest mono mt-1">${P.join(` | `)}</p>`:``,ie=e.filter(e=>!n.includes(e.id)&&!e.hidden);g.includeMaterials===!1&&(ie=ie.filter(e=>{let t=e.code||{};if(typeof t==`string`)try{t=JSON.parse(t)}catch{}return t.id!==`view-materials`})),g.includeAssessments===!1&&(ie=ie.filter(e=>e.id!==`item-assessments`&&e.title!==`Assessments`));let ae=t.filter(e=>e.enabled);g.includeToolkit===!1&&(ae=[]);let oe=ae.filter(e=>e.hiddenFromUser),se=ae.filter(e=>!e.hiddenFromUser),F=``,ce=``,le=``;if(ie.forEach(e=>{let t=e.code||{};if(typeof t==`string`)try{t=JSON.parse(t)}catch{}if(t.id===`view-materials`){let n=(i[`Current Course`]?.materials||[]).filter(e=>!e.hidden).sort((e,t)=>e.order-t.order),r=n.filter(e=>e.digitalContent),a=o.defaultMaterialTheme||`dark`,s={dark:{cardBg:`bg-slate-900`,cardBorder:`border-slate-700`,heading:`text-white`,body:`text-slate-400`,inner:`bg-slate-800`,proseClass:`prose-invert`,tocHover:`hover:bg-slate-700`},light:{cardBg:`bg-white`,cardBorder:`border-slate-300`,heading:`text-slate-900`,body:`text-slate-600`,inner:`bg-slate-100`,proseClass:`prose`,tocHover:`hover:bg-slate-200`},muted:{cardBg:`bg-slate-800`,cardBorder:`border-slate-700`,heading:`text-slate-200`,body:`text-slate-500`,inner:`bg-slate-800`,proseClass:`prose-invert`,tocHover:`hover:bg-slate-700`},"high-contrast-light":{cardBg:`bg-white`,cardBorder:`border-slate-300`,heading:`text-black`,body:`text-slate-800`,inner:`bg-slate-100`,proseClass:`prose`,tocHover:`hover:bg-slate-200`},"high-contrast-dark":{cardBg:`bg-black`,cardBorder:`border-slate-600`,heading:`text-white`,body:`text-slate-300`,inner:`bg-slate-900`,proseClass:`prose-invert`,tocHover:`hover:bg-slate-800`}},c=s[a]||s.dark,l=c.inner+` `+c.heading,u=n.map(e=>{let t=s[e.themeOverride!=null&&e.themeOverride!==``?e.themeOverride:a]||s.dark,n=e.color||`slate`,r=n===`slate`?``:`border-l-4 border-l-${n}-500`,i=n===`slate`?`bg-slate-800`:`bg-${n}-500/10`,o=n===`slate`?`border-slate-700`:`border-${n}-500/20`,c=n===`slate`?t.body:`text-${n}-500`,l=`${A} ${j}`,u=Ef(e)||`00`,d=e.mediaType&&e.mediaType!==`number`?`text-[9px] font-black uppercase tracking-widest`:`font-black italic text-xl`,f=n!==`slate`;f?`${n}${n}`:`${A}${j}${M}`,f&&`${n}`;let p=e.viewUrl||``,m=e.downloadUrl||``,h=(e,t)=>{if(!e||!t.startsWith(`/`))return e+t;let n=e.endsWith(`/`)?e.slice(0,-1):e,r=n.split(`/`),i=r[r.length-1];return i&&t.startsWith(`/`+i+`/`)?n+t.substring(i.length+1):n+t};N&&(p=h(N,p),m=h(N,m));let g=p.replace(/'/g,`\\'`),_=(e.title||``).replace(/'/g,`\\'`),v=m.replace(/'/g,`\\'`),y=e.id||`mat-${Date.now()}`,b=``;return e.viewUrl&&(b+=`<button data-pdf-url="${g}" data-pdf-title="${_}" class="pdf-viewer-btn flex-1 ${A} ${j} ${M} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg border border-slate-600 transition-all">View</button>`),e.downloadUrl&&(b+=`<a href="${v}" target="_blank" class="flex-1 ${l} ${M} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all text-center flex items-center justify-center">Download</a>`),e.digitalContent&&(b+=`<button data-digital-reader="${y}" class="digital-reader-btn flex-1 ${A} ${j} ${M} text-[10px] font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">Read</button>`),`<div class="material-card flex flex-col md:flex-row items-center justify-between gap-6 ${t.cardBg} rounded-xl border ${t.cardBorder} p-6 ${r}">
     <div class="flex items-center gap-6">
         <div class="w-12 h-12 rounded-lg ${i} flex items-center justify-center ${c} ${d} border ${o}">${u}</div>
         <div>
@@ -1710,7 +1752,7 @@ const PROJECT_DATA = {
         </div>
     </div>
     <div class="flex gap-3 w-full md:w-auto">
-        ${y}
+        ${b}
     </div>
 </div>`}).join(`
                     `),d={};r.forEach(e=>{d[e.id]=e.digitalContent});let f=JSON.stringify(d).replace(/`/g,"\\`").replace(/\$\{/g,"\\${").replace(/</g,`\\u003c`).replace(/>/g,`\\u003e`),p=`<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
@@ -1770,7 +1812,23 @@ const PROJECT_DATA = {
                     // Fallback
                     var container = document.getElementById('pdf-viewer-container');
                     if (container) {
-                        document.getElementById('pdf-frame').src = url.replace('/view', '/preview');
+                        var embedUrl = (typeof getPdfEmbedUrl === 'function')
+                          ? getPdfEmbedUrl(url)
+                          : (function(u) {
+                              if (!u) return u;
+                              if (u.indexOf('docs.google.com/viewer') !== -1) return u;
+                              var isDrive = u.indexOf('drive.google.com') !== -1;
+                              var isIframe = false;
+                              try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
+                              if (isIframe && !isDrive) {
+                                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(u);
+                              }
+                              if (isDrive && u.indexOf('/view') !== -1) {
+                                return u.replace('/view', '/preview');
+                              }
+                              return u;
+                            })(url);
+                        document.getElementById('pdf-frame').src = embedUrl || '';
                         document.getElementById('viewer-title').innerText = 'VIEWING: ' + title;
                         container.classList.remove('hidden');
                         container.scrollIntoView({ behavior: 'smooth' });
