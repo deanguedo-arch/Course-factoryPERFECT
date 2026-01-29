@@ -210,13 +210,20 @@ const PROJECT_DATA = {
             }
         }
         
+        function isGoogleSitesHost() {
+            var ref = '';
+            try { ref = document.referrer || ''; } catch (e) { ref = ''; }
+            if (/sites\.google\.com/i.test(ref)) return true;
+            try { return /sites\.google\.com/i.test(window.top.location.host || ''); } catch (e) { return /sites\.google\.com/i.test(ref); }
+        }
         function getPdfEmbedUrl(url) {
             if (!url) return url;
             if (url.indexOf('docs.google.com/viewer') !== -1) return url;
             var isDrive = url.indexOf('drive.google.com') !== -1;
             var isIframe = false;
             try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
-            if (isIframe && !isDrive) {
+            var forceViewer = isIframe || isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
+            if (forceViewer && !isDrive) {
                 return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
             }
             if (isDrive && url.indexOf('/view') !== -1) {
@@ -981,13 +988,20 @@ ${footerHtml}
             }
         }
 
+        function isGoogleSitesHost() {
+            var ref = '';
+            try { ref = document.referrer || ''; } catch (e) { ref = ''; }
+            if (/sites\.google\.com/i.test(ref)) return true;
+            try { return /sites\.google\.com/i.test(window.top.location.host || ''); } catch (e) { return /sites\.google\.com/i.test(ref); }
+        }
         function getPdfEmbedUrl(url) {
             if (!url) return url;
             if (url.indexOf('docs.google.com/viewer') !== -1) return url;
             var isDrive = url.indexOf('drive.google.com') !== -1;
             var isIframe = false;
             try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
-            if (isIframe && !isDrive) {
+            var forceViewer = isIframe || isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
+            if (forceViewer && !isDrive) {
                 return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
             }
             if (isDrive && url.indexOf('/view') !== -1) {
@@ -1292,13 +1306,20 @@ const MASTER_SHELL = `<!DOCTYPE html>
             }
         }
 
+        function isGoogleSitesHost() {
+            var ref = '';
+            try { ref = document.referrer || ''; } catch (e) { ref = ''; }
+            if (/sites\.google\.com/i.test(ref)) return true;
+            try { return /sites\.google\.com/i.test(window.top.location.host || ''); } catch (e) { return /sites\.google\.com/i.test(ref); }
+        }
         function getPdfEmbedUrl(url) {
             if (!url) return url;
             if (url.indexOf('docs.google.com/viewer') !== -1) return url;
             var isDrive = url.indexOf('drive.google.com') !== -1;
             var isIframe = false;
             try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
-            if (isIframe && !isDrive) {
+            var forceViewer = isIframe || isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
+            if (forceViewer && !isDrive) {
                 return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
             }
             if (isDrive && url.indexOf('/view') !== -1) {
@@ -2095,13 +2116,20 @@ const buildModuleFrameHTML = (module, courseSettings) => {
     }
 
     moduleScript = `
+      function isGoogleSitesHost() {
+        var ref = '';
+        try { ref = document.referrer || ''; } catch (e) { ref = ''; }
+        if (/sites\\.google\\.com/i.test(ref)) return true;
+        try { return /sites\\.google\\.com/i.test(window.top.location.host || ''); } catch (e) { return /sites\\.google\\.com/i.test(ref); }
+      }
       function getPdfEmbedUrl(url) {
         if (!url) return url;
         if (url.indexOf('docs.google.com/viewer') !== -1) return url;
         var isDrive = url.indexOf('drive.google.com') !== -1;
         var isIframe = false;
         try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
-        if (isIframe && !isDrive) {
+        var forceViewer = isIframe || isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
+        if (forceViewer && !isDrive) {
           return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
         }
         if (isDrive && url.indexOf('/view') !== -1) {
@@ -7342,7 +7370,12 @@ const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewKey = nu
                               var isDrive = u.indexOf('drive.google.com') !== -1;
                               var isIframe = false;
                               try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
-                              if (isIframe && !isDrive) {
+                              var ref = '';
+                              try { ref = document.referrer || ''; } catch (e) { ref = ''; }
+                              var isSites = /sites\\.google\\.com/i.test(ref);
+                              try { isSites = isSites || /sites\\.google\\.com/i.test(window.top.location.host || ''); } catch (e) {}
+                              var forceViewer = isIframe || isSites || window.CF_FORCE_PDF_VIEWER === true;
+                              if (forceViewer && !isDrive) {
                                 return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(u);
                               }
                               if (isDrive && u.indexOf('/view') !== -1) {

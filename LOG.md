@@ -85,3 +85,4 @@
 - Fixed Master Shell header/brand text color on light backgrounds by deriving heading text from background brightness in `generateMasterShell`. (`src/App.jsx`)
 - Added Google Sites-safe PDF embed handling (Docs Viewer fallback when inside iframes) to prevent Edge iframe blocking. (`src/App.jsx`)
 - Switched PDF iframe fallback to `docs.google.com/viewer` for wider embed compatibility in Google Sites. (`src/App.jsx`)
+- Forced Google Docs Viewer for PDFs when embedded in Google Sites or when `window.CF_FORCE_PDF_VIEWER` is set. (`src/App.jsx`)
