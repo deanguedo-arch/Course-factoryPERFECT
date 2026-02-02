@@ -54,6 +54,10 @@ export async function renderExports({ baselineJsonPath = BASELINE_JSON_PATH, exc
   return { outDir: OUT_DIR, legacyPath: OUT_LEGACY_PATH, betaDir: OUT_BETA_DIR };
 }
 
-if (import.meta.url === pathToFileURL(__filename).toString()) {
-  renderExports().then(() => console.log("✅ Render Complete")).catch(e => { console.error(e); process.exit(1); });
+// Only run when executed directly, not when imported (e.g. by verify_exports.mjs).
+const entryHref = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : null;
+if (entryHref && import.meta.url === entryHref) {
+  renderExports()
+    .then(() => console.log("✅ Render Complete"))
+    .catch(e => { console.error(e); process.exit(1); });
 }

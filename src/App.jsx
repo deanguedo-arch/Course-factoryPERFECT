@@ -24,6 +24,8 @@ import {
   generateModuleHtmlBeta as generateModuleHtmlBetaGen,
   buildStaticFilesBeta as buildStaticFilesBetaGen,
 } from './utils/generators.js';
+import { useToast, ToastContainer, CodeBlock, Toggle } from './components/Shared.jsx';
+// Shared UI (useToast/ToastContainer/CodeBlock/Toggle) moved to src/components/Shared.jsx
 import { PROJECT_DATA, MASTER_SHELL } from './data/constants.js';
 
 const { useState, useEffect, useRef } = React;
@@ -31,69 +33,7 @@ const { useState, useEffect, useRef } = React;
 // ==========================================
 // Ã°Å¸Å¸Â¢ TOAST NOTIFICATION SYSTEM
 // ==========================================
-const useToast = () => {
-  const [toasts, setToasts] = useState([]);
-
-  const showToast = (message, type = 'info', duration = 4000) => {
-    const id = Date.now() + Math.random();
-    const toast = { id, message, type, duration };
-    setToasts(prev => [...prev, toast]);
-    
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, duration);
-    
-    return id;
-  };
-
-  const removeToast = (id) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  };
-
-  return { toasts, showToast, removeToast };
-};
-
-const ToastContainer = ({ toasts, removeToast }) => {
-  if (toasts.length === 0) return null;
-
-  return (
-    <div className="fixed top-4 right-4 z-[9999] space-y-2 max-w-md">
-      {toasts.map(toast => {
-        const colors = {
-          success: 'bg-emerald-600 border-emerald-500 text-white',
-          error: 'bg-rose-600 border-rose-500 text-white',
-          warning: 'bg-amber-600 border-amber-500 text-white',
-          info: 'bg-sky-600 border-sky-500 text-white'
-        };
-        const icons = {
-          success: CheckCircle,
-          error: AlertOctagon,
-          warning: AlertTriangle,
-          info: ShieldCheck
-        };
-        const Icon = icons[toast.type] || ShieldCheck;
-
-        return (
-          <div
-            key={toast.id}
-            className={`${colors[toast.type] || colors.info} border-2 rounded-lg p-4 shadow-2xl flex items-start gap-3 animate-in slide-in-from-right fade-in duration-300`}
-          >
-            <Icon size={20} className="flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold">{toast.message}</p>
-            </div>
-            <button
-              onClick={() => removeToast(toast.id)}
-              className="flex-shrink-0 hover:opacity-70 transition-opacity"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
+// (moved to src/components/Shared.jsx)
 
 // ==========================================
 // Ã°Å¸â€Â´ FIREBASE CONFIG & INIT (DISABLED LOCALLY)
@@ -111,76 +51,7 @@ const appId = 'course-factory-v1';
 
 // PROJECT_DATA and MASTER_SHELL moved to src/data/constants.js
 
-// ==========================================
-const CodeBlock = ({ label, code, height = "h-32" }) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    const textArea = document.createElement("textarea");
-    textArea.value = typeof code === 'string' ? code : JSON.stringify(code, null, 2);
-    textArea.style.position = "fixed";
-    textArea.style.left = "-9999px";
-    textArea.style.top = "0";
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    
-    try {
-      const successful = document.execCommand('copy');
-      if(successful) {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    } catch (err) {
-      console.error('Copy failed', err);
-    }
-    
-    document.body.removeChild(textArea);
-  };
-
-  return (
-    <div className="mt-4 border border-slate-700 rounded-lg overflow-hidden bg-slate-950">
-      <div className="flex justify-between items-center px-4 py-2 bg-slate-900 border-b border-slate-700">
-        <span className="text-xs font-mono text-slate-400 uppercase">{label}</span>
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
-        >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
-          {copied ? 'Copied!' : 'Copy Code'}
-        </button>
-      </div>
-      <pre className={`p-4 overflow-x-auto text-sm font-mono text-slate-300 leading-relaxed whitespace-pre-wrap ${height}`}>
-        {typeof code === 'string' ? code : JSON.stringify(code, null, 2)}
-      </pre>
-    </div>
-  );
-};
-
-const Toggle = ({ active, labelA, labelB, labelC, onToggle, iconA: IconA, iconB: IconB, iconC: IconC }) => (
-    <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-700 mb-6">
-        <button 
-            onClick={() => onToggle('A')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-xs font-bold transition-all ${active === 'A' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-        >
-            <IconA size={14} /> {labelA}
-        </button>
-        <button 
-            onClick={() => onToggle('B')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-xs font-bold transition-all ${active === 'B' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-        >
-            <IconB size={14} /> {labelB}
-        </button>
-        {labelC && (
-             <button 
-                onClick={() => onToggle('C')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-xs font-bold transition-all ${active === 'C' ? 'bg-pink-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-                <IconC size={14} /> {labelC}
-            </button>
-        )}
-    </div>
-);
+// Shared UI moved to src/components/Shared.jsx
 
 // ==========================================
 // Ã°Å¸â€Â§ MODULE UTILITY FUNCTIONS (Unified)
@@ -219,52 +90,55 @@ const Phase0 = ({ projectData, setProjectData }) => {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
         <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Layers className="text-blue-400" /> Phase 0: Master Shell
-            </h2>
+          </h2>
         </div>
 
         <div className="space-y-4">
-            <div className="p-4 bg-slate-900/60 rounded-lg border border-slate-700 space-y-3">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-sm font-bold text-white">Show Sidebar</p>
-                        <p className="text-[10px] text-slate-500">Controls left navigation panel</p>
-                    </div>
-                    <button
-                        onClick={() => updateLayoutSetting('showSidebar', !layoutSettings.showSidebar)}
-                        className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${layoutSettings.showSidebar ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-slate-700 border-slate-600 text-slate-400'}`}
-                    >
-                        {layoutSettings.showSidebar ? 'On' : 'Off'}
-                    </button>
-                </div>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-sm font-bold text-white">Show Footer</p>
-                        <p className="text-[10px] text-slate-500">Controls global footer bar</p>
-                    </div>
-                    <button
-                        onClick={() => updateLayoutSetting('showFooter', !layoutSettings.showFooter)}
-                        className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${layoutSettings.showFooter ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-slate-700 border-slate-600 text-slate-400'}`}
-                    >
-                        {layoutSettings.showFooter ? 'On' : 'Off'}
-                    </button>
-                </div>
-                <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Navigation Style</label>
-                    <select
-                        value={layoutSettings.navPosition}
-                        onChange={(e) => updateLayoutSetting('navPosition', e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
-                    >
-                        <option value="side">Side (Left)</option>
-                        <option value="top">Top (Header)</option>
-                    </select>
-                </div>
+          <div className="p-4 bg-slate-900/60 rounded-lg border border-slate-700 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-white">Show Sidebar</p>
+                <p className="text-[10px] text-slate-500">Controls left navigation panel</p>
+              </div>
+              <button
+                onClick={() => updateLayoutSetting('showSidebar', !layoutSettings.showSidebar)}
+                className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${layoutSettings.showSidebar ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-slate-700 border-slate-600 text-slate-400'}`}
+              >
+                {layoutSettings.showSidebar ? 'On' : 'Off'}
+              </button>
             </div>
-            <p className="text-[10px] text-slate-500 italic">
-                Changes here update the Master Shell layout without touching raw HTML.
-            </p>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-white">Show Footer</p>
+                <p className="text-[10px] text-slate-500">Controls global footer bar</p>
+              </div>
+              <button
+                onClick={() => updateLayoutSetting('showFooter', !layoutSettings.showFooter)}
+                className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${layoutSettings.showFooter ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-slate-700 border-slate-600 text-slate-400'}`}
+              >
+                {layoutSettings.showFooter ? 'On' : 'Off'}
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Navigation Style</label>
+              <select
+                value={layoutSettings.navPosition}
+                onChange={(e) => updateLayoutSetting('navPosition', e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+              >
+                <option value="side">Side (Left)</option>
+                <option value="top">Top (Header)</option>
+              </select>
+            </div>
+          </div>
+
+          <p className="text-[10px] text-slate-500 italic">
+            Changes here update the Master Shell layout without touching raw HTML.
+          </p>
         </div>
       </div>
     </div>
