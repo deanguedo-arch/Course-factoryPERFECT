@@ -6981,6 +6981,8 @@ export function App() {
   const [editingModule, setEditingModule] = useState(null); 
   const [editForm, setEditForm] = useState({ title: '', html: '', script: '', id: '', section: '', moduleType: '', url: '', linkType: 'iframe', fullDocument: '' });
   const [previewModule, setPreviewModule] = useState(null);
+  const [enablePreviewScripts, setEnablePreviewScripts] = useState(false);
+  const [previewFrameNonce, setPreviewFrameNonce] = useState(0);
   const [moduleHistory, setModuleHistory] = useState(null); // { moduleId, history: [...] }
   
   // Custom Confirmation State to replace window.confirm
@@ -7016,6 +7018,12 @@ export function App() {
 
   // Note: Preview scripts execute inside the iframe, not in the parent window
   // The iframe's srcDoc includes the script, so it runs in the iframe's scope
+  const previewIdentity = previewModule?.id || previewModule?.title || '';
+  useEffect(() => {
+    if (!previewIdentity) return;
+    setEnablePreviewScripts(false);
+    setPreviewFrameNonce((n) => n + 1);
+  }, [previewIdentity]);
 
   const currentCourse = projectData["Current Course"] || { name: "Error", modules: [] };
   const toolkit = projectData["Global Toolkit"] || [];
@@ -8654,15 +8662,39 @@ export function App() {
                 <Eye size={20} className="text-purple-400" />
                 Preview: {previewModule.title || 'Untitled Module'}
               </h3>
-              <button onClick={() => setPreviewModule(null)} className="text-slate-400 hover:text-white">
-                <X size={24} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPreviewFrameNonce((n) => n + 1)}
+                  className="bg-slate-900 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                  title="Forces the iframe to remount"
+                >
+                  Reset Preview
+                </button>
+                <button
+                  onClick={() => {
+                    setEnablePreviewScripts((v) => !v);
+                    setPreviewFrameNonce((n) => n + 1);
+                  }}
+                  className={`border px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                    enablePreviewScripts
+                      ? 'bg-rose-600 hover:bg-rose-500 border-rose-500 text-white'
+                      : 'bg-slate-900 hover:bg-slate-700 border-slate-700 text-amber-300'
+                  }`}
+                  title="Off by default. Enabling scripts can execute untrusted code."
+                >
+                  ⚠️ Enable Scripts (Unsafe): {enablePreviewScripts ? 'ON' : 'OFF'}
+                </button>
+                <button onClick={() => setPreviewModule(null)} className="text-slate-400 hover:text-white">
+                  <X size={24} />
+                </button>
+              </div>
             </div>
             
             <div className="p-0 overflow-hidden max-h-[calc(90vh-80px)]">
               <iframe 
                 srcDoc={buildModuleFrameHTML(previewModule, projectData["Course Settings"]) || ""}
-                key={previewModule.id || previewModule.title}
+                sandbox={enablePreviewScripts ? "allow-scripts allow-same-origin allow-forms" : "allow-same-origin allow-forms"}
+                key={`${previewModule.id || previewModule.title || 'preview'}-${previewFrameNonce}-${enablePreviewScripts ? 'scripts' : 'noscripts'}`}
                 className="w-full h-full border-0"
                 style={{ minHeight: 'calc(90vh - 80px)' }}
               />

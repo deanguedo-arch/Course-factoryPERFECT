@@ -96,3 +96,4 @@
 - Extracted `PROJECT_DATA` + `MASTER_SHELL` into constants module and rewired `App.jsx` imports. (`src/data/constants.js`, `src/App.jsx`)
 - Extracted shared UI (`useToast`, `ToastContainer`, `CodeBlock`, `Toggle`) into a reusable component module. (`src/components/Shared.jsx`, `src/App.jsx`)
 - Fixed a race condition in the headless export harness by preventing `render_exports.mjs` from auto-running when imported. (`scripts/render_exports.mjs`)
+- Hardened Phase 2 Preview: scripts disabled by default with an explicit “Enable Scripts (Unsafe)” toggle, plus “Reset Preview” to force iframe remount; sandbox is now conditional. (`src/App.jsx`)
