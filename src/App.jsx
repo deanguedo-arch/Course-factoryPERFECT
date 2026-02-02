@@ -32,6 +32,8 @@ import Phase3 from './components/Phase3.jsx';
 import Phase2 from './components/Phase2.jsx';
 import Phase1 from './components/Phase1.jsx';
 import Phase0 from './components/Phase0.jsx';
+import ErrorDisplay from './components/ErrorDisplay.jsx';
+import ConfirmationModal from './components/ConfirmationModal.jsx';
 
 const { useState, useEffect, useRef } = React;
 
@@ -95,71 +97,9 @@ const appId = 'course-factory-v1';
 
 
 // --- UNIFIED ERROR DISPLAY COMPONENT ---
-const ErrorDisplay = ({ error, onDismiss }) => {
-  if (!error) return null;
-  
-  const getErrorIcon = () => {
-    switch (error.type) {
-      case 'compile': return <FileCode size={20} />;
-      case 'preview': return <Eye size={20} />;
-      case 'module': return <Box size={20} />;
-      default: return <AlertTriangle size={20} />;
-    }
-  };
-  
-  const getErrorColor = () => {
-    switch (error.type) {
-      case 'compile': return 'rose';
-      case 'preview': return 'amber';
-      case 'module': return 'purple';
-      default: return 'rose';
-    }
-  };
-  
-  const color = getErrorColor();
-  const colorClasses = {
-    rose: { bg: 'bg-rose-900/20', border: 'border-rose-500/50', text: 'text-rose-400', icon: 'text-rose-500' },
-    amber: { bg: 'bg-amber-900/20', border: 'border-amber-500/50', text: 'text-amber-400', icon: 'text-amber-500' },
-    purple: { bg: 'bg-purple-900/20', border: 'border-purple-500/50', text: 'text-purple-400', icon: 'text-purple-500' }
-  };
-  const colors = colorClasses[color];
-  
-  return (
-    <div className={`fixed top-4 right-4 z-[100] max-w-md animate-in slide-in-from-top-4 fade-in duration-300 ${colors.bg} ${colors.border} border rounded-xl p-4 shadow-2xl backdrop-blur-sm`}>
-      <div className="flex items-start gap-3">
-        <div className={`${colors.icon} flex-shrink-0 mt-0.5`}>
-          {getErrorIcon()}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <h3 className={`${colors.text} font-bold text-sm uppercase tracking-wider`}>
-              {error.type === 'compile' ? 'Compilation Error' : 
-               error.type === 'preview' ? 'Preview Error' : 
-               error.type === 'module' ? 'Module Error' : 'Error'}
-            </h3>
-            <button
-              onClick={onDismiss}
-              className={`${colors.text} hover:text-white transition-colors flex-shrink-0`}
-            >
-              <X size={16} />
-            </button>
-          </div>
-          <p className="text-white text-sm mb-2">{error.message}</p>
-          {error.details && (
-            <details className="mt-2">
-              <summary className={`${colors.text} text-xs cursor-pointer hover:text-white transition-colors`}>
-                Technical Details
-              </summary>
-              <pre className="mt-2 text-xs text-slate-300 bg-slate-950/50 p-2 rounded border border-slate-700 overflow-auto max-h-32 font-mono">
-                {error.details}
-              </pre>
-            </details>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
+
+// ErrorDisplay extracted to src/components/ErrorDisplay.jsx
+
 
 // --- DEPENDENCY TRACKING UTILITY ---
 const checkModuleDependencies = (moduleId, projectData) => {
@@ -260,89 +200,9 @@ const checkModuleDependencies = (moduleId, projectData) => {
 };
 
 // --- CONFIRMATION MODAL HELPER (Enhanced with Dependencies) ---
-const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel, dependencies }) => {
-    if (!isOpen) return null;
-    
-    const hasDeps = dependencies && dependencies.hasDependencies;
-    
-    return (
-        <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={onCancel}>
-            <div className={`bg-slate-900 border rounded-xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto ${hasDeps ? 'border-amber-900' : 'border-rose-900'}`} onClick={e => e.stopPropagation()}>
-                <div className={`flex items-center gap-3 mb-4 ${hasDeps ? 'text-amber-500' : 'text-rose-500'}`}>
-                    <AlertOctagon size={24} />
-                    <h3 className="text-lg font-bold">{hasDeps ? 'Ã¢Å¡Â Ã¯Â¸Â Dependencies Found' : 'Delete Item?'}</h3>
-                </div>
-                
-                {hasDeps ? (
-                    <>
-                        <div className="mb-4 p-4 bg-amber-900/20 border border-amber-700/50 rounded-lg">
-                            <p className="text-amber-200 text-sm mb-3">
-                                <strong>"{dependencies.moduleTitle}"</strong> is referenced in {dependencies.totalCount} place{dependencies.totalCount !== 1 ? 's' : ''}:
-                            </p>
-                            
-                            {dependencies.dependencies.modules.length > 0 && (
-                                <div className="mb-3">
-                                    <p className="text-xs font-bold text-amber-400 uppercase mb-1">Modules ({dependencies.dependencies.modules.length}):</p>
-                                    <ul className="text-xs text-amber-200 space-y-1 ml-4">
-                                        {dependencies.dependencies.modules.map(dep => (
-                                            <li key={dep.id}>Ã¢â‚¬Â¢ {dep.title} <span className="text-amber-500">({dep.type})</span></li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                            
-                            {dependencies.dependencies.assessments.length > 0 && (
-                                <div className="mb-3">
-                                    <p className="text-xs font-bold text-amber-400 uppercase mb-1">Assessments ({dependencies.dependencies.assessments.length}):</p>
-                                    <ul className="text-xs text-amber-200 space-y-1 ml-4">
-                                        {dependencies.dependencies.assessments.map(dep => (
-                                            <li key={dep.id}>Ã¢â‚¬Â¢ {dep.title} <span className="text-amber-500">(in {dep.moduleTitle})</span></li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                            
-                            {dependencies.dependencies.toolkit.length > 0 && (
-                                <div className="mb-3">
-                                    <p className="text-xs font-bold text-amber-400 uppercase mb-1">Toolkit Items ({dependencies.dependencies.toolkit.length}):</p>
-                                    <ul className="text-xs text-amber-200 space-y-1 ml-4">
-                                        {dependencies.dependencies.toolkit.map(dep => (
-                                            <li key={dep.id}>Ã¢â‚¬Â¢ {dep.title}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                            
-                            {dependencies.dependencies.materials.length > 0 && (
-                                <div className="mb-3">
-                                    <p className="text-xs font-bold text-amber-400 uppercase mb-1">Materials ({dependencies.dependencies.materials.length}):</p>
-                                    <ul className="text-xs text-amber-200 space-y-1 ml-4">
-                                        {dependencies.dependencies.materials.map(dep => (
-                                            <li key={dep.id}>Ã¢â‚¬Â¢ {dep.title}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                            
-                            <p className="text-xs text-amber-300 mt-3 italic">
-                                Deleting this module may break these items. Proceed with caution.
-                            </p>
-                        </div>
-                    </>
-                ) : (
-                    <p className="text-slate-300 text-sm mb-6">{message}</p>
-                )}
-                
-                <div className="flex gap-3">
-                    <button onClick={onCancel} className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition-colors">Cancel</button>
-                    <button onClick={onConfirm} className={`flex-1 py-2 rounded-lg text-sm font-bold shadow-lg transition-colors ${hasDeps ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-900/20' : 'bg-rose-600 hover:bg-rose-500 shadow-rose-900/20'}`}>
-                        {hasDeps ? 'Ã¢Å¡Â Ã¯Â¸Â Delete Anyway' : 'Delete Forever'}
-                    </button>
-                </div>
-      </div>
-    </div>
-  );
-};
+
+// ConfirmationModal extracted to src/components/ConfirmationModal.jsx
+
 
 export function App() {
   const [activePhase, setActivePhase] = useState(0);

@@ -103,3 +103,5 @@
 - Extracted Phase 2 preview/test UI into a dedicated component and rewired the app to use it. (`src/components/Phase2.jsx`, `src/App.jsx`)
 - Extracted Phase 1 harvest UI into a dedicated component and rewired the app to use it. (`src/components/Phase1.jsx`, `src/App.jsx`)
 - Extracted Phase 0 master shell UI into a dedicated component and rewired the app to use it. (`src/components/Phase0.jsx`, `src/App.jsx`)
+- Extracted the unified error toast UI into its own component. (`src/components/ErrorDisplay.jsx`, `src/App.jsx`)
+- Extracted the delete confirmation modal into its own component. (`src/components/ConfirmationModal.jsx`, `src/App.jsx`)
