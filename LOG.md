@@ -93,3 +93,4 @@
 - Added refactor protocol rule note. (`.cursor/rules/REFACTOR_PROTOCOL.md`)
 - Extracted Phase 4 export generators into a Node-safe module and rewired `App.jsx` to import them. (`src/utils/generators.js`, `src/App.jsx`)
 - Added headless render/verify harness scripts and npm commands for output drift detection. (`scripts/render_exports.mjs`, `scripts/verify_exports.mjs`, `package.json`)
+- Extracted `PROJECT_DATA` + `MASTER_SHELL` into constants module and rewired `App.jsx` imports. (`src/data/constants.js`, `src/App.jsx`)

@@ -16,7 +16,7 @@ const GENERATORS_PATH = path.join(REPO_ROOT, "src", "utils", "generators.js");
 const generators = await import(pathToFileURL(GENERATORS_PATH).toString());
 
 async function ensureEmptyDir(dirPath) {
-  await fs.rm(dirPath, { recursive: true, force: true });
+  await fs.rm(dirPath, { recursive: true, force: true, maxRetries: 20, retryDelay: 200 });
   await fs.mkdir(dirPath, { recursive: true });
 }
 
@@ -57,4 +57,3 @@ export async function renderExports({ baselineJsonPath = BASELINE_JSON_PATH, exc
 if (import.meta.url === pathToFileURL(__filename).toString()) {
   renderExports().then(() => console.log("✅ Render Complete")).catch(e => { console.error(e); process.exit(1); });
 }
-
