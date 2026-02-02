@@ -27,6 +27,10 @@ import { checkModuleDependencies } from './utils/dependencies.js';
 import { useToast, ToastContainer, CodeBlock, Toggle } from './components/Shared.jsx';
 // Shared UI (useToast/ToastContainer/CodeBlock/Toggle) moved to src/components/Shared.jsx
 import { PROJECT_DATA, MASTER_SHELL } from './data/constants.js';
+import { useProjectPersistence } from './hooks/useProjectPersistence.js';
+import { useAppError } from './hooks/useAppError.js';
+import { usePreviewState } from './hooks/usePreviewState.js';
+import { useModuleEditor } from './hooks/useModuleEditor.js';
 import Phase5 from './components/Phase5.jsx';
 import Phase4 from './components/Phase4.jsx';
 import Phase3 from './components/Phase3.jsx';
@@ -123,82 +127,46 @@ export function App() {
 
   // --- AUTO-SAVE STATE ---
   const STORAGE_KEY = 'course_factory_v2_data';
-  const [isAutoLoaded, setIsAutoLoaded] = useState(false);
-  const [lastSaved, setLastSaved] = useState(null);
   
   // --- TOAST NOTIFICATIONS ---
   const { toasts, showToast, removeToast } = useToast();
-  
-  // --- UNIFIED ERROR HANDLING STATE ---
-  const [appError, setAppError] = useState(null); // { type: 'compile' | 'preview' | 'module' | 'general', message: string, details?: string }
-  
-  // --- ERROR HANDLING UTILITIES ---
-  const handleError = (type, message, details = null) => {
-    const error = { type, message, details };
-    setAppError(error);
-    console.error(`[${type.toUpperCase()}]`, message, details || '');
-    // Auto-dismiss after 10 seconds
-    setTimeout(() => setAppError(null), 10000);
-  };
-  
-  const dismissError = () => setAppError(null);
 
-  // Ã°Å¸â€™Â¾ AUTO-LOAD: Runs once on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Safety check: ensure it has the correct structure
-        if (parsed && parsed["Current Course"]) {
-          setProjectData(parsed);
-          showToast('Project restored from storage', 'success');
-        }
-      }
-      setIsAutoLoaded(true); // Allow saving to start
-    } catch (error) {
-      showToast('Failed to load project data. Starting fresh.', 'error');
-      console.error("Ã¢ÂÅ’ Load failed:", error);
-      setIsAutoLoaded(true);
-    }
-  }, []);
+  // --- AUTO-LOAD / AUTO-SAVE ---
+  const { isAutoLoaded, lastSaved } = useProjectPersistence({
+    projectData,
+    setProjectData,
+    showToast,
+    storageKey: STORAGE_KEY,
+  });
 
-  // Ã°Å¸â€™Â¾ AUTO-SAVE: Runs when projectData changes
-  useEffect(() => {
-    if (!isAutoLoaded) return; // Safety Lock: Don't save empty defaults
+  // --- UNIFIED ERROR HANDLING ---
+  const { appError, handleError, dismissError } = useAppError({ autoDismissMs: 10000 });
 
-    const timer = setTimeout(() => {
-      try {
-        const dataSize = JSON.stringify(projectData).length;
-        const sizeMB = (dataSize / 1024 / 1024).toFixed(2);
-        
-        // Warn if approaching storage limit (4MB warning threshold)
-        if (dataSize > 4 * 1024 * 1024) {
-          showToast(`Warning: Project is ${sizeMB}MB. Approaching storage limit.`, 'warning', 6000);
-        }
-        
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(projectData));
-        setLastSaved(new Date());
-      } catch (error) {
-        if (error.name === 'QuotaExceededError') {
-          showToast('Storage full! Project too large. Please export backup immediately.', 'error', 10000);
-        } else {
-          showToast('Failed to save project. Check console for details.', 'error');
-        }
-        console.error("Ã¢ÂÅ’ Save failed:", error);
-      }
-    }, 1000); // 1-second debounce
-
-    return () => clearTimeout(timer);
-  }, [projectData, isAutoLoaded, showToast]);
+  // (auto-load/auto-save moved to src/hooks/useProjectPersistence.js)
 
   const [excludedIds, setExcludedIds] = useState([]);
-  const [editingModule, setEditingModule] = useState(null); 
-  const [editForm, setEditForm] = useState({ title: '', html: '', script: '', id: '', section: '', moduleType: '', url: '', linkType: 'iframe', fullDocument: '' });
-  const [previewModule, setPreviewModule] = useState(null);
-  const [enablePreviewScripts, setEnablePreviewScripts] = useState(false);
-  const [previewFrameNonce, setPreviewFrameNonce] = useState(0);
-  const [moduleHistory, setModuleHistory] = useState(null); // { moduleId, history: [...] }
+  const {
+    previewModule,
+    enablePreviewScripts,
+    openPreview,
+    closePreview,
+    resetPreview,
+    togglePreviewScripts,
+    sandbox: previewSandbox,
+    iframeKey: previewIframeKey,
+  } = usePreviewState();
+
+  const {
+    editingModule,
+    setEditingModule,
+    editForm,
+    setEditForm,
+    moduleHistory,
+    setModuleHistory,
+    openEditModule,
+    saveEditModule,
+    revertModuleVersion,
+  } = useModuleEditor({ projectData, setProjectData });
   
   // Custom Confirmation State to replace window.confirm
   const [deleteConfirmation, setDeleteConfirmation] = useState(null); // { id, type: 'module' | 'tool', dependencies?: {...} }
@@ -233,12 +201,6 @@ export function App() {
 
   // Note: Preview scripts execute inside the iframe, not in the parent window
   // The iframe's srcDoc includes the script, so it runs in the iframe's scope
-  const previewIdentity = previewModule?.id || previewModule?.title || '';
-  useEffect(() => {
-    if (!previewIdentity) return;
-    setEnablePreviewScripts(false);
-    setPreviewFrameNonce((n) => n + 1);
-  }, [previewIdentity]);
 
   const currentCourse = projectData["Current Course"] || { name: "Error", modules: [] };
   const toolkit = projectData["Global Toolkit"] || [];
@@ -291,248 +253,6 @@ export function App() {
     } else {
       setExcludedIds(prev => prev.filter(id => id !== moduleId));
     }
-  };
-
-  const openEditModule = (item) => {
-    // Handle external link modules
-    if (item.type === 'external') {
-      setEditForm({
-        title: item.title,
-        url: item.url || '',
-        linkType: item.linkType || 'iframe',
-        id: item.id,
-        section: 'Current Course',
-        moduleType: 'external'
-      });
-      setEditingModule(item.id);
-      return;
-    }
-    
-    // Handle standalone HTML modules
-    if (item.type === 'standalone') {
-      // PRIORITY 1: Use rawHtml if available (new simplified format)
-      if (item.rawHtml) {
-        setEditForm({
-          title: item.title,
-          fullDocument: item.rawHtml,
-          id: item.id,
-          section: 'Current Course',
-          moduleType: 'standalone',
-          hasRawHtml: true  // Flag to indicate this uses rawHtml format
-        });
-        setEditingModule(item.id);
-        return;
-      }
-      
-      // FALLBACK: Reconstruct full document from parsed parts (legacy standalone)
-      let fullDocument = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>' + (item.title || 'Module') + '</title>\n';
-      fullDocument += '<script src="https://cdn.tailwindcss.com"><\/script>\n';
-      
-      if (item.css) {
-        fullDocument += '<style>\n' + item.css + '\n</style>\n';
-      }
-      
-      fullDocument += '</head>\n<body>\n';
-      
-      if (item.html) {
-        fullDocument += item.html + '\n';
-      }
-      
-      if (item.script) {
-        fullDocument += '<script>\n' + item.script + '\n</script>\n';
-      }
-      
-      fullDocument += '</body>\n</html>';
-      
-      setEditForm({
-        title: item.title,
-        fullDocument: fullDocument,
-        id: item.id,
-        section: 'Current Course',
-        moduleType: 'standalone',
-        hasRawHtml: false
-      });
-      setEditingModule(item.id);
-      return;
-    }
-    
-    // Legacy module format (old code structure)
-    let itemCode = item.code || {};
-    if (typeof itemCode === 'string') {
-      try { itemCode = JSON.parse(itemCode); } catch(e) {}
-    }
-    setEditForm({
-      title: item.title,
-      html: itemCode.html || '',
-      script: itemCode.script || '',
-      id: item.id,
-      section: 'Current Course',
-      moduleType: 'legacy'
-    });
-    setEditingModule(item.id);
-  };
-
-  const saveEditModule = () => {
-    const section = editForm.section;
-    let items = projectData[section]?.modules || [];
-    const idx = items.findIndex(m => m.id === editingModule);
-    if (idx === -1) return;
-
-    // Save current version to history before updating
-    const currentModule = { ...items[idx] }; // Create a copy to avoid mutation issues
-    const history = currentModule.history || [];
-    
-    // Create history snapshot (only save if content actually changed)
-    const newSnapshot = {
-      timestamp: new Date().toISOString(),
-      title: currentModule.title,
-      ...(currentModule.type === 'standalone' ? (
-        // Use rawHtml if available (new format), otherwise use legacy fields
-        currentModule.rawHtml ? { rawHtml: currentModule.rawHtml } : {
-          html: currentModule.html,
-          css: currentModule.css,
-          script: currentModule.script
-        }
-      ) : currentModule.type === 'external' ? {
-        url: currentModule.url,
-        linkType: currentModule.linkType
-      } : {
-        code: currentModule.code
-      })
-    };
-    
-    // Only add to history if it's different from the last snapshot (avoid duplicates)
-    const lastSnapshot = history[history.length - 1];
-    const hasChanged = !lastSnapshot || 
-      JSON.stringify(newSnapshot) !== JSON.stringify({...lastSnapshot, timestamp: newSnapshot.timestamp});
-    
-    // Calculate updated history
-    let updatedHistory = history;
-    if (hasChanged) {
-      // Keep only last 10 versions to prevent storage bloat
-      updatedHistory = [...history, newSnapshot].slice(-10);
-    }
-
-    // Handle external link modules
-    if (editForm.moduleType === 'external') {
-      items[idx] = {
-        ...items[idx],
-        title: editForm.title,
-        url: editForm.url,
-        linkType: editForm.linkType || 'iframe',
-        type: 'external',
-        history: updatedHistory
-      };
-    }
-    // Handle standalone HTML modules - SIMPLIFIED: store rawHtml directly
-    else if (editForm.moduleType === 'standalone') {
-      // Store the complete HTML document as-is - NO PARSING
-      // The iframe will handle everything
-      items[idx] = {
-        ...items[idx],
-        title: editForm.title,
-        rawHtml: editForm.fullDocument.trim(),  // Store complete document
-        // Clear legacy fields (not needed with rawHtml)
-        html: '',
-        css: '',
-        script: '',
-        type: 'standalone',
-        history: updatedHistory
-      };
-    }
-    // Legacy module format
-    else {
-      items[idx] = {
-        ...items[idx],
-        title: editForm.title,
-        code: {
-          id: items[idx].code?.id || editForm.id,
-          html: editForm.html,
-          script: editForm.script
-        },
-        history: updatedHistory
-      };
-    }
-    
-    setProjectData({
-      ...projectData,
-      [section]: {
-        ...projectData[section],
-        modules: items
-      }
-    });
-    setEditingModule(null);
-  };
-
-  // Revert module to a previous version
-  const revertModuleVersion = (moduleId, versionIndex) => {
-    const section = 'Current Course';
-    let items = projectData[section]?.modules || [];
-    const idx = items.findIndex(m => m.id === moduleId);
-    if (idx === -1) return;
-    
-    const module = items[idx];
-    const history = module.history || [];
-    if (versionIndex < 0 || versionIndex >= history.length) return;
-    
-    const version = history[versionIndex];
-    
-    // Restore the version based on module type
-    if (module.type === 'standalone') {
-      // Check if version has rawHtml (new format) or legacy fields
-      if (version.rawHtml) {
-        items[idx] = {
-          ...items[idx],
-          title: version.title,
-          rawHtml: version.rawHtml,
-          html: '',
-          css: '',
-          script: ''
-        };
-      } else {
-        items[idx] = {
-          ...items[idx],
-          title: version.title,
-          rawHtml: '',  // Clear rawHtml if reverting to legacy format
-          html: version.html || '',
-          css: version.css || '',
-          script: version.script || ''
-        };
-      }
-    } else if (module.type === 'external') {
-      items[idx] = {
-        ...items[idx],
-        title: version.title,
-        url: version.url || '',
-        linkType: version.linkType || 'iframe'
-      };
-    } else {
-      items[idx] = {
-        ...items[idx],
-        title: version.title,
-        code: version.code || {}
-      };
-    }
-    
-    setProjectData({
-      ...projectData,
-      [section]: {
-        ...projectData[section],
-        modules: items
-      }
-    });
-    
-    // Refresh edit form if module is currently being edited
-    if (editingModule === moduleId) {
-      const updatedModule = items[idx];
-      openEditModule(updatedModule);
-    }
-    
-    setModuleHistory(null);
-  };
-
-  const openPreview = (item) => {
-    setPreviewModule(item);
   };
 
   // Check if module is protected (Course Materials or Assessments)
@@ -1661,19 +1381,12 @@ export function App() {
       <PreviewModal
         previewModule={previewModule}
         enablePreviewScripts={enablePreviewScripts}
-        onReset={() => setPreviewFrameNonce((n) => n + 1)}
-        onToggleScripts={() => {
-          setEnablePreviewScripts((v) => !v);
-          setPreviewFrameNonce((n) => n + 1);
-        }}
-        onClose={() => setPreviewModule(null)}
+        onReset={resetPreview}
+        onToggleScripts={togglePreviewScripts}
+        onClose={closePreview}
         srcDoc={buildModuleFrameHTML(previewModule, projectData['Course Settings']) || ''}
-        sandbox={
-          enablePreviewScripts
-            ? 'allow-scripts allow-same-origin allow-forms'
-            : 'allow-same-origin allow-forms'
-        }
-        iframeKey={`${previewModule?.id || previewModule?.title || 'preview'}-${previewFrameNonce}-${enablePreviewScripts ? 'scripts' : 'noscripts'}`}
+        sandbox={previewSandbox}
+        iframeKey={previewIframeKey}
       />
       
       {/* Toast Notifications */}

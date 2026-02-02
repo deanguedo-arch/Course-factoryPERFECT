@@ -110,3 +110,7 @@
 - Extracted the preview modal into its own component. (`src/components/modals/PreviewModal.jsx`, `src/App.jsx`)
 - Extracted the edit + version history modals into their own component. (`src/components/modals/EditModal.jsx`, `src/App.jsx`)
 - Removed an unused duplicate `scopeCSS` helper from `App.jsx` (the canonical version already exists in `src/utils/cssHelpers.js`). (`src/App.jsx`)
+- Extracted auto-load/auto-save localStorage persistence into a dedicated hook. (`src/hooks/useProjectPersistence.js`, `src/App.jsx`)
+- Extracted unified error handling state/utilities into a dedicated hook. (`src/hooks/useAppError.js`, `src/App.jsx`)
+- Extracted preview modal state (preview selection, script toggle, iframe remount nonce) into a dedicated hook. (`src/hooks/usePreviewState.js`, `src/App.jsx`)
+- Extracted module editor state + save/revert logic into a dedicated hook and rewired the app to use it. (`src/hooks/useModuleEditor.js`, `src/App.jsx`)
