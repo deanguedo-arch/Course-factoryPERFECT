@@ -77,6 +77,7 @@
 
 ## Active Goal
 - **Modularization:** Break down the 12k+ line `App.jsx` monolith into smaller, manageable components now that the Vault feature is complete.
+- **Refactor:** Headless Verification, Preview Hardening, & Modularization.
 
 ## Next Step
 - Begin extracting the **"Phase 1: Harvest"** (Content Ingestor/AI Studio Creator) logic from `App.jsx` into a separate file.
@@ -87,3 +88,8 @@
 - Switched PDF iframe fallback to `docs.google.com/viewer` for wider embed compatibility in Google Sites. (`src/App.jsx`)
 - Forced Google Docs Viewer for PDFs when embedded in Google Sites or when `window.CF_FORCE_PDF_VIEWER` is set. (`src/App.jsx`)
 - Fixed Asset Vault text visibility on light background by setting modal text color to black. (`src/components/VaultBrowser.jsx`)
+
+## Update (Feb 2, 2026)
+- Added refactor protocol rule note. (`.cursor/rules/REFACTOR_PROTOCOL.md`)
+- Extracted Phase 4 export generators into a Node-safe module and rewired `App.jsx` to import them. (`src/utils/generators.js`, `src/App.jsx`)
+- Added headless render/verify harness scripts and npm commands for output drift detection. (`scripts/render_exports.mjs`, `scripts/verify_exports.mjs`, `package.json`)

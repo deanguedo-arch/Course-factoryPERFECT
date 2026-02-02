@@ -8,7 +8,10 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "vite build && gh-pages -d dist"
+    "deploy": "vite build && gh-pages -d dist",
+    "exports:render": "node scripts/render_exports.mjs",
+    "exports:baseline": "node scripts/verify_exports.mjs baseline",
+    "exports:verify": "node scripts/verify_exports.mjs verify"
   },
   "dependencies": {
     "autoprefixer": "^10.4.23",
