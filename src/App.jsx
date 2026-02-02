@@ -23,6 +23,7 @@ import {
   generateModuleHtmlBeta as generateModuleHtmlBetaGen,
   buildStaticFilesBeta as buildStaticFilesBetaGen,
 } from './utils/generators.js';
+import { checkModuleDependencies } from './utils/dependencies.js';
 import { useToast, ToastContainer, CodeBlock, Toggle } from './components/Shared.jsx';
 // Shared UI (useToast/ToastContainer/CodeBlock/Toggle) moved to src/components/Shared.jsx
 import { PROJECT_DATA, MASTER_SHELL } from './data/constants.js';
@@ -34,6 +35,7 @@ import Phase1 from './components/Phase1.jsx';
 import Phase0 from './components/Phase0.jsx';
 import ErrorDisplay from './components/ErrorDisplay.jsx';
 import ConfirmationModal from './components/ConfirmationModal.jsx';
+import Section from './components/Section.jsx';
 
 const { useState, useEffect, useRef } = React;
 
@@ -102,102 +104,7 @@ const appId = 'course-factory-v1';
 
 
 // --- DEPENDENCY TRACKING UTILITY ---
-const checkModuleDependencies = (moduleId, projectData) => {
-  const dependencies = {
-    modules: [],
-    assessments: [],
-    toolkit: [],
-    materials: []
-  };
-  
-  const moduleTitle = projectData["Current Course"]?.modules?.find(m => m.id === moduleId)?.title || moduleId;
-  const shortId = moduleId.replace('view-', '').replace('item-', '');
-  
-  // Check all modules for references
-  const allModules = projectData["Current Course"]?.modules || [];
-  allModules.forEach(mod => {
-    if (mod.id === moduleId) return; // Skip self
-    
-    // Check HTML content (including rawHtml for new format)
-    const moduleContent = mod.rawHtml || mod.html || mod.code?.html || '';
-    if (moduleContent.includes(moduleId) || moduleContent.includes(shortId)) {
-      dependencies.modules.push({
-        id: mod.id,
-        title: mod.title,
-        type: 'HTML reference'
-      });
-    }
-    
-    // Check script content
-    const moduleScript = mod.script || mod.code?.script || '';
-    if (moduleScript.includes(moduleId) || moduleScript.includes(shortId)) {
-      const existing = dependencies.modules.find(d => d.id === mod.id);
-      if (existing) {
-        existing.type = 'HTML & Script reference';
-      } else {
-        dependencies.modules.push({
-          id: mod.id,
-          title: mod.title,
-          type: 'Script reference'
-        });
-      }
-    }
-  });
-  
-  // Check assessments
-  allModules.forEach(mod => {
-    const assessments = mod.assessments || [];
-    assessments.forEach(assess => {
-      const assessHTML = assess.html || '';
-      const assessScript = assess.script || '';
-      const content = assessHTML + assessScript;
-      
-      if (content.includes(moduleId) || content.includes(shortId)) {
-        dependencies.assessments.push({
-          id: assess.id,
-          title: assess.title,
-          moduleTitle: mod.title
-        });
-      }
-    });
-  });
-  
-  // Check toolkit items
-  const toolkit = projectData["Global Toolkit"] || [];
-  toolkit.forEach(tool => {
-    const toolCode = typeof tool.code === 'string' ? JSON.parse(tool.code || '{}') : (tool.code || {});
-    const toolContent = (toolCode.html || '') + (toolCode.script || '');
-    
-    if (toolContent.includes(moduleId) || toolContent.includes(shortId)) {
-      dependencies.toolkit.push({
-        id: tool.id,
-        title: tool.title
-      });
-    }
-  });
-  
-  // Check materials (less common, but possible)
-  const materials = projectData["Current Course"]?.materials || [];
-  materials.forEach(mat => {
-    const matContent = (mat.title || '') + (mat.description || '') + (mat.viewUrl || '');
-    if (matContent.includes(moduleId) || matContent.includes(shortId)) {
-      dependencies.materials.push({
-        id: mat.id,
-        title: mat.title
-      });
-    }
-  });
-  
-  const totalDeps = dependencies.modules.length + dependencies.assessments.length + 
-                    dependencies.toolkit.length + dependencies.materials.length;
-  
-  return {
-    hasDependencies: totalDeps > 0,
-    dependencies,
-    totalCount: totalDeps,
-    moduleTitle
-  };
-};
+// checkModuleDependencies moved to src/utils/dependencies.js
 
 // --- CONFIRMATION MODAL HELPER (Enhanced with Dependencies) ---
 
@@ -2042,23 +1949,6 @@ export function App() {
 }
 
 // Helper Section Component
-const Section = ({ title, icon: Icon, isActive, onClick, badge, badgeColor }) => (
-  <button
-    onClick={onClick}
-    className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-all ${
-      isActive
-        ? 'bg-blue-600 text-white shadow-lg'
-        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-    }`}
-  >
-    <div className="flex items-center gap-2">
-      <Icon size={16} />
-      <span>{title}</span>
-    </div>
-    {badge !== undefined && (
-      <span className={`${badgeColor || 'bg-slate-700'} text-white text-[10px] font-bold px-2 py-0.5 rounded-full`}>
-        {badge}
-      </span>
-    )}
-  </button>
-);
+
+// Section extracted to src/components/Section.jsx
+

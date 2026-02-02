@@ -105,3 +105,5 @@
 - Extracted Phase 0 master shell UI into a dedicated component and rewired the app to use it. (`src/components/Phase0.jsx`, `src/App.jsx`)
 - Extracted the unified error toast UI into its own component. (`src/components/ErrorDisplay.jsx`, `src/App.jsx`)
 - Extracted the delete confirmation modal into its own component. (`src/components/ConfirmationModal.jsx`, `src/App.jsx`)
+- Extracted the sidebar phase selector button into its own component. (`src/components/Section.jsx`, `src/App.jsx`)
+- Extracted dependency-tracking helper into a dedicated utils module. (`src/utils/dependencies.js`, `src/App.jsx`)
