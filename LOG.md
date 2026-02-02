@@ -107,3 +107,6 @@
 - Extracted the delete confirmation modal into its own component. (`src/components/ConfirmationModal.jsx`, `src/App.jsx`)
 - Extracted the sidebar phase selector button into its own component. (`src/components/Section.jsx`, `src/App.jsx`)
 - Extracted dependency-tracking helper into a dedicated utils module. (`src/utils/dependencies.js`, `src/App.jsx`)
+- Extracted the preview modal into its own component. (`src/components/modals/PreviewModal.jsx`, `src/App.jsx`)
+- Extracted the edit + version history modals into their own component. (`src/components/modals/EditModal.jsx`, `src/App.jsx`)
+- Removed an unused duplicate `scopeCSS` helper from `App.jsx` (the canonical version already exists in `src/utils/cssHelpers.js`). (`src/App.jsx`)
