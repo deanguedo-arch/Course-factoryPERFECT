@@ -601,6 +601,19 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
                 <div className="text-xs text-slate-500">Track student progress in localStorage</div>
               </div>
             </label>
+
+            <label className="flex items-center gap-3 p-3 bg-slate-950 rounded-lg cursor-pointer hover:bg-slate-900 transition-colors">
+              <input
+                type="checkbox"
+                checked={settings.compilationDefaults?.enableComposer || false}
+                onChange={(e) => updateCompilationDefaults({ enableComposer: e.target.checked })}
+                className="w-5 h-5 rounded border-slate-700 bg-slate-900 text-sky-600"
+              />
+              <div>
+                <div className="text-sm font-bold text-white">Enable Composer (MVP)</div>
+                <div className="text-xs text-slate-500">Expose activity-based module editing in the module editor</div>
+              </div>
+            </label>
           </div>
         </div>
         

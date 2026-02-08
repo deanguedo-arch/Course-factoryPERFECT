@@ -124,3 +124,6 @@
 - Routed course-module preview rendering through the canonical Beta module compiler path; retained fallback preview behavior for non-course items. (`src/App.jsx`, `src/utils/compiler.js`)
 - Added a parity command to compare preview-compiled module HTML against export-compiled module HTML. (`scripts/exports_parity.mjs`, `package.json`)
 - Added project schema versioning + migration pipeline with module defaults (`mode`, `activities`) during persistence load/save. (`src/utils/migrations.js`, `src/hooks/useProjectPersistence.js`, `src/data/constants.js`)
+- Added Composer feature-flag defaults (`enableComposer`) plus module mode/activity persistence plumbing across module creation and edit/revert history. (`src/components/Phase1.jsx`, `src/hooks/useModuleEditor.js`, `src/utils/migrations.js`, `src/data/constants.js`)
+- Added a Composer activity registry and compiler path; standalone modules in `mode: composer` now compile activities into module HTML for preview/export without altering existing custom HTML modules. (`src/composer/activityRegistry.js`, `src/composer/compileModuleHtml.js`, `src/utils/generators.js`)
+- Added Composer toggle in Phase 5 settings and integrated a Composer editor mode in the module edit modal (activity add/remove/reorder/edit) behind the feature flag. (`src/components/Phase5.jsx`, `src/components/modals/EditModal.jsx`)
