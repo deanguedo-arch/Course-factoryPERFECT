@@ -114,3 +114,9 @@
 - Extracted unified error handling state/utilities into a dedicated hook. (`src/hooks/useAppError.js`, `src/App.jsx`)
 - Extracted preview modal state (preview selection, script toggle, iframe remount nonce) into a dedicated hook. (`src/hooks/usePreviewState.js`, `src/App.jsx`)
 - Extracted module editor state + save/revert logic into a dedicated hook and rewired the app to use it. (`src/hooks/useModuleEditor.js`, `src/App.jsx`)
+
+## Update (Feb 8, 2026)
+- Added an architecture map that documents canonical compile/export, preview, and verifier wiring paths. (`docs/ARCHITECTURE_MAP.md`)
+- Added a dedicated output safety rule for preview/export parity, generator drift discipline, and verify-before-commit workflow. (`.cursor/rules/COURSE_FACTOR_OUTPUT_SAFETY.md`)
+- Hardened export drift verification by switching manifest normalization to deep-stable JSON key sorting while preserving array order. (`scripts/verify_exports.mjs`)
+- Re-baselined export hashes to match the corrected manifest normalization behavior. (`baselines/exports_baseline.json`)
