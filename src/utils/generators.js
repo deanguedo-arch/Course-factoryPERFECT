@@ -1,5 +1,6 @@
 // Extracted generators (Headless Golden Baseline)
 // NOTE: Keep logic stable; edit with care.
+import { compileComposerModule } from '../composer/compileModuleHtml.js';
 
 export const getAccentColor = (accentColor) => {
   const colorMap = {
@@ -1407,6 +1408,11 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
         window.scrollTo(0, 0);
       }
       ${assessmentScripts}`;
+  } else if (module.mode === 'composer') {
+    const compiledComposer = compileComposerModule(module);
+    moduleContentHTML = compiledComposer.html || '';
+    moduleCSS = compiledComposer.css || '';
+    moduleScript = compiledComposer.script || '';
   } else if (module.rawHtml) {
     const escapedRawHtml = module.rawHtml
       .replace(/"/g, '&quot;')
