@@ -1,4 +1,9 @@
 import * as React from 'react';
+import {
+  CURRENT_PROJECT_SCHEMA_VERSION,
+  getProjectSchemaVersion,
+  migrateProjectData,
+} from '../utils/migrations.js';
 
 const { useEffect, useState } = React;
 
@@ -19,7 +24,17 @@ export function useProjectPersistence({
         const parsed = JSON.parse(saved);
         // Safety check: ensure it has the correct structure
         if (parsed && parsed['Current Course']) {
-          setProjectData(parsed);
+          const fromVersion = getProjectSchemaVersion(parsed);
+          const migrated = migrateProjectData(parsed);
+          if (migrated) {
+            setProjectData(migrated);
+            const toVersion = getProjectSchemaVersion(migrated);
+            if (toVersion > fromVersion) {
+              showToast(`Project schema upgraded to v${toVersion}`, 'success');
+            }
+          } else {
+            setProjectData(parsed);
+          }
           showToast('Project restored from storage', 'success');
         }
       }
@@ -37,7 +52,10 @@ export function useProjectPersistence({
 
     const timer = setTimeout(() => {
       try {
-        const dataSize = JSON.stringify(projectData).length;
+        const dataToPersist =
+          migrateProjectData(projectData, { targetVersion: CURRENT_PROJECT_SCHEMA_VERSION }) ||
+          projectData;
+        const dataSize = JSON.stringify(dataToPersist).length;
         const sizeMB = (dataSize / 1024 / 1024).toFixed(2);
 
         // Warn if approaching storage limit (4MB warning threshold)
@@ -45,7 +63,7 @@ export function useProjectPersistence({
           showToast(`Warning: Project is ${sizeMB}MB. Approaching storage limit.`, 'warning', 6000);
         }
 
-        localStorage.setItem(storageKey, JSON.stringify(projectData));
+        localStorage.setItem(storageKey, JSON.stringify(dataToPersist));
         setLastSaved(new Date());
       } catch (error) {
         if (error.name === 'QuotaExceededError') {
@@ -62,4 +80,3 @@ export function useProjectPersistence({
 
   return { isAutoLoaded, lastSaved };
 }
-

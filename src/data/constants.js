@@ -2,6 +2,7 @@
 // NOTE: Keep stable; changes affect defaults and legacy template display.
 
 export const PROJECT_DATA = {
+  projectSchemaVersion: 1,
   "Current Course": {
     name: "Mental Fitness",
     modules: [
@@ -633,4 +634,3 @@ export const MASTER_SHELL = `<!DOCTYPE html>
     </script>
 </body>
 </html>`;
-
