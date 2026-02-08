@@ -16,13 +16,30 @@ const FIXED_UPDATED_AT = "2000-01-01T00:00:00.000Z";
 
 function sha256(buf) { return crypto.createHash("sha256").update(buf).digest("hex"); }
 
+function stableStringify(value, space = 2) {
+  const seen = new WeakSet();
+  const normalize = (v) => {
+    if (Array.isArray(v)) return v.map(normalize);
+    if (v && typeof v === "object") {
+      if (seen.has(v)) throw new TypeError("Circular structure in manifest normalization");
+      seen.add(v);
+      const out = {};
+      for (const k of Object.keys(v).sort()) out[k] = normalize(v[k]);
+      seen.delete(v);
+      return out;
+    }
+    return v;
+  };
+  return JSON.stringify(normalize(value), null, space);
+}
+
 function normalizeForHash(relPath, buf) {
   const p = relPath.replaceAll("\\", "/");
   if (p.endsWith("manifest.json")) {
     try {
       const obj = JSON.parse(buf.toString("utf8"));
       if (obj && "updatedAt" in obj) obj.updatedAt = FIXED_UPDATED_AT;
-      return Buffer.from(JSON.stringify(obj, Object.keys(obj).sort(), 2) + "\n", "utf8");
+      return Buffer.from(stableStringify(obj, 2) + "\n", "utf8");
     } catch { return buf; }
   }
   if (p.endsWith("index.html")) {
@@ -81,4 +98,3 @@ async function main() {
   }
 }
 main();
-

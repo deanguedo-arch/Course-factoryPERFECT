@@ -1,9 +1,9 @@
 {
   "legacyHash": "b1f1a34f085a6ee29124ba460bc267626844ca8b5da4b0cdf3bd13baa7a510b7",
-  "betaAggregateHash": "a4176ea29d722f87ac951a4e8f53053200a594b99ec601571caab2d5a9af8890",
+  "betaAggregateHash": "b0f10a859da05f3b4815f93e3f25b8bd697bab4571e6927063234bdf0ee41a55",
   "perFile": {
     "beta/index.html": "207b919c73ede2c781c921454c655c82ec37b1eadc6bbc133df68ece9f5641e3",
-    "beta/manifest.json": "3b149c5c7e6e2529fd2a302c79ccd01ee663f6904b50223fc17e757ffd4b0f0b",
+    "beta/manifest.json": "2d522519265e8032f6ba42e97805f49c75adb67230816c016a07ff13ef6e50e3",
     "beta/modules/item-1768749223001.html": "b1e1afdeac3903e35faed59e73b8e09cb8a03a5df0a2fce5ce07a9ebb765070e",
     "beta/modules/item-assessments.html": "bf3f9fe525775ac508c4cd5db31d4f98d08e918b5f045041cca82946bf42a4fe",
     "beta/modules/view-1.html": "8477b4f446a1f689c1bde00533e434bfd455ec739319451c4c6397c0ef77ed8a",
