@@ -295,7 +295,8 @@ export const PROJECT_DATA = {
       includeMaterials: true,
       includeAssessments: true,
       includeToolkit: true,
-      enableProgressTracking: true
+      enableProgressTracking: true,
+      enableComposer: false
     },
     exportSettings: {
       filenamePattern: "{courseName}_compiled",

@@ -17,7 +17,8 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
       includeMaterials: true,
       includeAssessments: true,
       includeToolkit: true,
-      enableProgressTracking: true
+      enableProgressTracking: true,
+      enableComposer: false
     },
     exportSettings: {
       filenamePattern: "{courseName}_compiled",
@@ -707,6 +708,8 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
                               id: "item-1768749223001",
                               title: "Course Materials",
                               type: "standalone",
+                              mode: 'custom_html',
+                              activities: [],
                               code: { id: "view-materials" },
                               materials: [], // EMPTY
                               html: `<div id="view-materials" class="w-full h-full custom-scroll p-8 md:p-12">
@@ -746,6 +749,8 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
                               id: "item-assessments",
                               title: "Assessments",
                               type: "standalone",
+                              mode: 'custom_html',
+                              activities: [],
                               assessments: [], // EMPTY
                               html: `<div id="view-assessments" class="w-full h-full custom-scroll p-8 md:p-12">
                                 <div class="max-w-5xl mx-auto space-y-8">
@@ -822,4 +827,3 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
 };
 
 export default Phase5;
-

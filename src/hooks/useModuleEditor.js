@@ -9,6 +9,8 @@ const DEFAULT_EDIT_FORM = {
   id: '',
   section: '',
   moduleType: '',
+  moduleMode: 'custom_html',
+  activities: [],
   url: '',
   linkType: 'iframe',
   fullDocument: '',
@@ -29,6 +31,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         id: item.id,
         section: 'Current Course',
         moduleType: 'external',
+        moduleMode: item.mode || 'custom_html',
+        activities: Array.isArray(item.activities) ? item.activities : [],
       });
       setEditingModule(item.id);
       return;
@@ -44,6 +48,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           id: item.id,
           section: 'Current Course',
           moduleType: 'standalone',
+          moduleMode: item.mode || 'custom_html',
+          activities: Array.isArray(item.activities) ? item.activities : [],
           hasRawHtml: true, // Flag to indicate this uses rawHtml format
         });
         setEditingModule(item.id);
@@ -79,6 +85,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         id: item.id,
         section: 'Current Course',
         moduleType: 'standalone',
+        moduleMode: item.mode || 'custom_html',
+        activities: Array.isArray(item.activities) ? item.activities : [],
         hasRawHtml: false,
       });
       setEditingModule(item.id);
@@ -99,6 +107,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       id: item.id,
       section: 'Current Course',
       moduleType: 'legacy',
+      moduleMode: item.mode || 'custom_html',
+      activities: Array.isArray(item.activities) ? item.activities : [],
     });
     setEditingModule(item.id);
   }, []);
@@ -117,6 +127,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
     const newSnapshot = {
       timestamp: new Date().toISOString(),
       title: currentModule.title,
+      mode: currentModule.mode || 'custom_html',
+      activities: Array.isArray(currentModule.activities) ? currentModule.activities : [],
       ...(currentModule.type === 'standalone'
         ? // Use rawHtml if available (new format), otherwise use legacy fields
           currentModule.rawHtml
@@ -149,6 +161,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       items[idx] = {
         ...items[idx],
         title: editForm.title,
+        mode: editForm.moduleMode || 'custom_html',
+        activities: Array.isArray(editForm.activities) ? editForm.activities : [],
         url: editForm.url,
         linkType: editForm.linkType || 'iframe',
         type: 'external',
@@ -162,6 +176,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       items[idx] = {
         ...items[idx],
         title: editForm.title,
+        mode: editForm.moduleMode || 'custom_html',
+        activities: Array.isArray(editForm.activities) ? editForm.activities : [],
         rawHtml: editForm.fullDocument.trim(), // Store complete document
         // Clear legacy fields (not needed with rawHtml)
         html: '',
@@ -176,6 +192,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       items[idx] = {
         ...items[idx],
         title: editForm.title,
+        mode: editForm.moduleMode || 'custom_html',
+        activities: Array.isArray(editForm.activities) ? editForm.activities : [],
         code: {
           id: items[idx].code?.id || editForm.id,
           html: editForm.html,
@@ -216,6 +234,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           items[idx] = {
             ...items[idx],
             title: version.title,
+            mode: version.mode || items[idx].mode || 'custom_html',
+            activities: Array.isArray(version.activities) ? version.activities : (items[idx].activities || []),
             rawHtml: version.rawHtml,
             html: '',
             css: '',
@@ -225,6 +245,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           items[idx] = {
             ...items[idx],
             title: version.title,
+            mode: version.mode || items[idx].mode || 'custom_html',
+            activities: Array.isArray(version.activities) ? version.activities : (items[idx].activities || []),
             rawHtml: '', // Clear rawHtml if reverting to legacy format
             html: version.html || '',
             css: version.css || '',
@@ -235,6 +257,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         items[idx] = {
           ...items[idx],
           title: version.title,
+          mode: version.mode || items[idx].mode || 'custom_html',
+          activities: Array.isArray(version.activities) ? version.activities : (items[idx].activities || []),
           url: version.url || '',
           linkType: version.linkType || 'iframe',
         };
@@ -242,6 +266,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         items[idx] = {
           ...items[idx],
           title: version.title,
+          mode: version.mode || items[idx].mode || 'custom_html',
+          activities: Array.isArray(version.activities) ? version.activities : (items[idx].activities || []),
           code: version.code || {},
         };
       }

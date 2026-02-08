@@ -19,11 +19,22 @@ function withModuleDefaults(module) {
   return next;
 }
 
+function withCourseSettingsDefaults(settings) {
+  const next = { ...(settings || {}) };
+  const compilationDefaults = { ...(next.compilationDefaults || {}) };
+  if (typeof compilationDefaults.enableComposer !== 'boolean') {
+    compilationDefaults.enableComposer = false;
+  }
+  next.compilationDefaults = compilationDefaults;
+  return next;
+}
+
 function migrateToV1(projectData) {
   const next = { ...(projectData || {}) };
   const currentCourse = { ...(next['Current Course'] || {}) };
   const modules = Array.isArray(currentCourse.modules) ? currentCourse.modules.map(withModuleDefaults) : [];
   next['Current Course'] = { ...currentCourse, modules };
+  next['Course Settings'] = withCourseSettingsDefaults(next['Course Settings']);
   next.projectSchemaVersion = 1;
   return next;
 }

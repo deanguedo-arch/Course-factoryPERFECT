@@ -769,6 +769,8 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         id: moduleId,
         title: title,
         type: 'standalone',
+        mode: 'custom_html',
+        activities: [],
         // Store the COMPLETE raw HTML document - this is the key change
         rawHtml: rawHtml,
         // Keep these for backward compatibility (empty for new modules)
@@ -779,6 +781,8 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         history: [{
           timestamp: new Date().toISOString(),
           title: title,
+          mode: 'custom_html',
+          activities: [],
           rawHtml: rawHtml
         }]
       };
@@ -852,12 +856,16 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         id: moduleId,
         title: moduleManagerTitle || moduleId.replace('view-', '').replace(/-/g, ' '),
         type: 'external',
+        mode: 'custom_html',
+        activities: [],
         url: moduleManagerURL,
         linkType: moduleManagerLinkType,
         // Initialize history with version 1 (original state)
         history: [{
           timestamp: new Date().toISOString(),
           title: moduleManagerTitle || moduleId.replace('view-', '').replace(/-/g, ' '),
+          mode: 'custom_html',
+          activities: [],
           url: moduleManagerURL,
           linkType: moduleManagerLinkType
         }]
@@ -3274,4 +3282,3 @@ ${aiDescription}
 };
 
 export default Phase1;
-
