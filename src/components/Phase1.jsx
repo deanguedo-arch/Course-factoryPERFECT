@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowUpCircle, Box, CheckCircle, Clipboard, Copy, Databa
 import VaultBrowser from './VaultBrowser';
 import { CodeBlock, Toggle } from './Shared.jsx';
 import { getMaterialBadgeLabel } from '../utils/generators.js';
+import { getActivityDefinition, listActivityTypes } from '../composer/activityRegistry.js';
 
 const { useState } = React;
 
@@ -14,7 +15,8 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   const [importPreview, setImportPreview] = useState([]); 
   
   // MODULE MANAGER STATE
-  const [moduleManagerType, setModuleManagerType] = useState('standalone'); // 'standalone' | 'external'
+  const [moduleManagerType, setModuleManagerType] = useState('standalone'); // 'standalone' | 'composer' | 'external'
+  const [moduleManagerComposerStarterType, setModuleManagerComposerStarterType] = useState('content_block');
   const [moduleManagerHTML, setModuleManagerHTML] = useState('');
   const [moduleManagerURL, setModuleManagerURL] = useState('');
   const [moduleManagerID, setModuleManagerID] = useState('');
@@ -718,6 +720,18 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   // SIMPLIFIED HARVESTING: Store raw HTML as-is
   // The module runs in an iframe so no parsing/transformation needed
   // ========================================
+  const buildComposerStarterActivity = (type) => {
+    const selectedType = type || 'content_block';
+    const definition = getActivityDefinition(selectedType) || getActivityDefinition('content_block');
+    const resolvedType = definition?.type || 'content_block';
+    const defaultData = definition?.createDefaultData ? definition.createDefaultData() : {};
+    return {
+      id: `activity-${Date.now()}`,
+      type: resolvedType,
+      data: defaultData,
+    };
+  };
+
   const addStandaloneModule = () => {
     try {
       if (!moduleManagerID.trim()) {
@@ -814,6 +828,88 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       setModuleManagerStatus('error');
       setModuleManagerMessage('Error: ' + err.message);
       console.error('Module manager error:', err);
+    }
+  };
+
+  const addComposerModule = () => {
+    try {
+      if (!moduleManagerID.trim()) {
+        setModuleManagerStatus('error');
+        setModuleManagerMessage('Please provide a Module ID (e.g., view-focus-phase3)');
+        return;
+      }
+
+      // Ensure ID starts with 'view-'
+      const moduleId = moduleManagerID.startsWith('view-') ? moduleManagerID : `view-${moduleManagerID}`;
+
+      // Check for duplicate module ID
+      const existingModule = projectData["Current Course"].modules?.find(m => m.id === moduleId);
+      if (existingModule) {
+        setModuleManagerStatus('error');
+        setModuleManagerMessage(`Module ID "${moduleId}" already exists! Use a different ID.`);
+        return;
+      }
+
+      // Derive title from ID when omitted
+      const title = moduleManagerTitle.trim() || moduleId.replace('view-', '').replace(/-/g, ' ');
+      const starterActivity = buildComposerStarterActivity(moduleManagerComposerStarterType);
+
+      const newModule = {
+        id: moduleId,
+        title,
+        type: 'standalone',
+        mode: 'composer',
+        activities: [starterActivity],
+        rawHtml: '',
+        html: '',
+        css: '',
+        script: '',
+        history: [{
+          timestamp: new Date().toISOString(),
+          title,
+          mode: 'composer',
+          activities: [starterActivity],
+        }]
+      };
+
+      // Validate module before saving
+      const validation = validateModule(newModule, true);
+      if (!validation.isValid) {
+        setModuleManagerStatus('error');
+        setModuleManagerMessage('Validation failed: ' + validation.errors.join(', '));
+        if (validation.warnings.length > 0) {
+          console.warn('Module warnings:', validation.warnings);
+        }
+        return;
+      }
+
+      if (validation.warnings.length > 0) {
+        console.warn('Module warnings:', validation.warnings);
+      }
+
+      setProjectData(prev => {
+        const newData = { ...prev };
+        const currentModules = newData["Current Course"].modules || [];
+        newData["Current Course"] = {
+          ...newData["Current Course"],
+          modules: [...currentModules, newModule]
+        };
+        return newData;
+      });
+
+      setModuleManagerID('');
+      setModuleManagerTitle('');
+      setModuleManagerStatus('success');
+      setModuleManagerMessage(`✅ Composer module "${title}" added with starter activity.`);
+
+      setTimeout(() => {
+        setModuleManagerStatus(null);
+        setModuleManagerMessage('');
+      }, 3000);
+    } catch (err) {
+      setModuleManagerStatus('error');
+      setModuleManagerMessage('Error: ' + err.message);
+      console.error('Composer module manager error:', err);
     }
   };
   
@@ -2775,6 +2871,15 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                             </button>
                             <button
                                 onClick={() => {
+                                    setModuleManagerType('composer');
+                                    setLinkTestResult(null);
+                                }}
+                                className={`flex-1 py-2 px-4 rounded text-xs font-bold transition-all ${moduleManagerType === 'composer' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                            >
+                                Composer Module
+                            </button>
+                            <button
+                                onClick={() => {
                                     setModuleManagerType('external');
                                     setLinkTestResult(null);
                                 }}
@@ -2842,6 +2947,41 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         className="w-full bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                                     >
                                         <Plus size={16} /> Add Standalone Module
+                                    </button>
+                                </>
+                            )}
+
+                            {/* Composer Module Input */}
+                            {moduleManagerType === 'composer' && (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
+                                            Starter Activity Type
+                                        </label>
+                                        <select
+                                            value={moduleManagerComposerStarterType}
+                                            onChange={(e) => setModuleManagerComposerStarterType(e.target.value)}
+                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:border-indigo-500 outline-none"
+                                        >
+                                            {listActivityTypes().map((activityType) => {
+                                                const def = getActivityDefinition(activityType);
+                                                return (
+                                                    <option key={activityType} value={activityType}>
+                                                        {def?.label || activityType}
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                        <p className="text-[10px] text-slate-500 mt-1 italic">
+                                            Creates a new module pre-seeded with this activity.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        onClick={addComposerModule}
+                                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                                    >
+                                        <Plus size={16} /> Add Composer Module
                                     </button>
                                 </>
                             )}
@@ -2951,6 +3091,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 <h4 className="text-xs font-bold text-sky-400 uppercase mb-2">Ã°Å¸â€™Â¡ Module Types</h4>
                                 <ul className="text-[10px] text-slate-400 space-y-1 leading-relaxed">
                                     <li><strong className="text-sky-300">Standalone HTML:</strong> Complete HTML file (like HSS3020). CSS auto-scoped, wrapped in view container.</li>
+                                    <li><strong className="text-sky-300">Composer Module:</strong> Activity-based module using built-in blocks (content, embeds, resources, checks, submission).</li>
                                     <li><strong className="text-sky-300">External Link:</strong> Link to hosted module. Choose iframe (embedded) or new tab (external).</li>
                                     <li>Ã¢Å“â€¦ Modules appear in sidebar navigation</li>
                                     <li>Ã¢Å“â€¦ Can be hidden/shown in Phase 2</li>

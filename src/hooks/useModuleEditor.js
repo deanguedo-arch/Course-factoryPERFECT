@@ -16,6 +16,21 @@ const DEFAULT_EDIT_FORM = {
   fullDocument: '',
 };
 
+function ensureComposerActivities(activities) {
+  const normalized = Array.isArray(activities) ? activities : [];
+  if (normalized.length > 0) return normalized;
+  return [
+    {
+      id: `activity-${Date.now()}`,
+      type: 'content_block',
+      data: {
+        title: 'New Section',
+        body: 'Add your lesson content here.',
+      },
+    },
+  ];
+}
+
 export function useModuleEditor({ projectData, setProjectData } = {}) {
   const [editingModule, setEditingModule] = useState(null);
   const [editForm, setEditForm] = useState(DEFAULT_EDIT_FORM);
@@ -156,13 +171,21 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       updatedHistory = [...history, newSnapshot].slice(-10);
     }
 
+    const nextMode = editForm.moduleMode === 'composer' ? 'composer' : 'custom_html';
+    const nextActivities =
+      nextMode === 'composer'
+        ? ensureComposerActivities(editForm.activities)
+        : Array.isArray(editForm.activities)
+          ? editForm.activities
+          : [];
+
     // Handle external link modules
     if (editForm.moduleType === 'external') {
       items[idx] = {
         ...items[idx],
         title: editForm.title,
-        mode: editForm.moduleMode || 'custom_html',
-        activities: Array.isArray(editForm.activities) ? editForm.activities : [],
+        mode: nextMode,
+        activities: nextActivities,
         url: editForm.url,
         linkType: editForm.linkType || 'iframe',
         type: 'external',
@@ -176,8 +199,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       items[idx] = {
         ...items[idx],
         title: editForm.title,
-        mode: editForm.moduleMode || 'custom_html',
-        activities: Array.isArray(editForm.activities) ? editForm.activities : [],
+        mode: nextMode,
+        activities: nextActivities,
         rawHtml: editForm.fullDocument.trim(), // Store complete document
         // Clear legacy fields (not needed with rawHtml)
         html: '',
@@ -192,8 +215,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       items[idx] = {
         ...items[idx],
         title: editForm.title,
-        mode: editForm.moduleMode || 'custom_html',
-        activities: Array.isArray(editForm.activities) ? editForm.activities : [],
+        mode: nextMode,
+        activities: nextActivities,
         code: {
           id: items[idx].code?.id || editForm.id,
           html: editForm.html,

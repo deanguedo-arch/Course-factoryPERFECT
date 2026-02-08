@@ -12,7 +12,9 @@
     "exports:render": "node scripts/render_exports.mjs",
     "exports:baseline": "node scripts/verify_exports.mjs baseline",
     "exports:verify": "node scripts/verify_exports.mjs verify",
-    "exports:parity": "node scripts/exports_parity.mjs"
+    "exports:parity": "node scripts/exports_parity.mjs",
+    "exports:fixtures": "node scripts/verify_composer_fixtures.mjs",
+    "release:check": "node scripts/release_gate.mjs"
   },
   "dependencies": {
     "autoprefixer": "^10.4.23",

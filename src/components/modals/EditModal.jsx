@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ChevronDown, ChevronUp, Clock, Edit, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, Copy, Edit, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { getActivityDefinition, listActivityTypes } from '../../composer/activityRegistry.js';
 import { isComposerEnabled } from '../../utils/composer.js';
 
@@ -95,6 +95,21 @@ export default function EditModal({
     ];
     updateActivities(nextActivities);
     setSelectedActivityIndex(targetIndex);
+  };
+
+  const duplicateSelectedActivity = () => {
+    if (!selectedActivity) return;
+    const duplicate = {
+      ...selectedActivity,
+      id: `activity-${Date.now()}`,
+      data: {
+        ...(selectedActivity.data || {}),
+      },
+    };
+    const nextActivities = [...activities];
+    nextActivities.splice(selectedActivityIndex + 1, 0, duplicate);
+    updateActivities(nextActivities);
+    setSelectedActivityIndex(selectedActivityIndex + 1);
   };
 
   const setStandaloneMode = (mode) => {
@@ -501,6 +516,15 @@ export default function EditModal({
                               className="flex-1 px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
                             >
                               <ChevronDown size={12} /> Down
+                            </button>
+                            <button
+                              type="button"
+                              onClick={duplicateSelectedActivity}
+                              disabled={!selectedActivity}
+                              className="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center"
+                              title="Duplicate selected activity"
+                            >
+                              <Copy size={12} />
                             </button>
                             <button
                               type="button"

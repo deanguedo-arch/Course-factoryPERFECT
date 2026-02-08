@@ -797,10 +797,17 @@ export function validateModule(module, isNew = false) {
 
   // Type-specific validation
   if (module.type === 'standalone') {
-    // Check for rawHtml (new format) OR html (legacy format)
-    const hasContent = (module.rawHtml && module.rawHtml.trim()) || (module.html && module.html.trim());
-    if (!hasContent) {
-      errors.push('Standalone modules must have HTML content');
+    const moduleMode = module.mode === 'composer' ? 'composer' : 'custom_html';
+    if (moduleMode === 'composer') {
+      if (!Array.isArray(module.activities)) {
+        errors.push('Composer modules must have an activities array');
+      }
+    } else {
+      // Check for rawHtml (new format) OR html (legacy format)
+      const hasContent = (module.rawHtml && module.rawHtml.trim()) || (module.html && module.html.trim());
+      if (!hasContent) {
+        errors.push('Standalone modules must have HTML content');
+      }
     }
     // Note: We no longer require a root element with matching ID since modules run in iframes
   } else if (module.type === 'external') {
