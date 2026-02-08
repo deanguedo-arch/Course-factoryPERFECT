@@ -1,4 +1,4 @@
-import { buildStaticFilesBetaFromProject } from './generators.js';
+import { buildStaticFilesBetaFromProject, generateModuleHtmlBeta } from './generators.js';
 
 export const BETA_MULTI_FILE_TARGET = 'beta-multi-file';
 
@@ -30,5 +30,11 @@ export function getCompiledModuleHtml({
   const modulePath = getCompiledModulePath(moduleId);
   if (!modulePath) return null;
   const filesMap = compileProjectToFilesMap({ projectData, excludedIds, target });
-  return filesMap[modulePath] || null;
+  return filesMap[modulePath] || compileModuleToHtml({ projectData, moduleId });
+}
+
+export function compileModuleToHtml({ projectData, moduleId } = {}) {
+  if (!projectData || !moduleId) return null;
+  const modules = projectData?.["Current Course"]?.modules || [];
+  return generateModuleHtmlBeta({ projectData, modules, moduleId });
 }

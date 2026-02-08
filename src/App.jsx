@@ -23,6 +23,7 @@ import {
   generateModuleHtmlBeta as generateModuleHtmlBetaGen,
   buildStaticFilesBeta as buildStaticFilesBetaGen,
 } from './utils/generators.js';
+import { compileModuleToHtml } from './utils/compiler.js';
 import { checkModuleDependencies } from './utils/dependencies.js';
 import { useToast, ToastContainer, CodeBlock, Toggle } from './components/Shared.jsx';
 // Shared UI (useToast/ToastContainer/CodeBlock/Toggle) moved to src/components/Shared.jsx
@@ -204,6 +205,16 @@ export function App() {
 
   const currentCourse = projectData["Current Course"] || { name: "Error", modules: [] };
   const toolkit = projectData["Global Toolkit"] || [];
+  const previewSrcDoc = React.useMemo(() => {
+    if (!previewModule) return '';
+    const courseModules = projectData["Current Course"]?.modules || [];
+    const isCourseModule = courseModules.some((m) => m.id === previewModule.id);
+    if (isCourseModule) {
+      return compileModuleToHtml({ projectData, moduleId: previewModule.id }) || '';
+    }
+    // Keep fallback behavior for non-course items like toolkit previews.
+    return buildModuleFrameHTML(previewModule, projectData['Course Settings']) || '';
+  }, [previewModule, projectData]);
 
   // Rename Course Function
   const renameCourse = (newName) => {
@@ -1384,7 +1395,7 @@ export function App() {
         onReset={resetPreview}
         onToggleScripts={togglePreviewScripts}
         onClose={closePreview}
-        srcDoc={buildModuleFrameHTML(previewModule, projectData['Course Settings']) || ''}
+        srcDoc={previewSrcDoc}
         sandbox={previewSandbox}
         iframeKey={previewIframeKey}
       />
@@ -1399,4 +1410,3 @@ export function App() {
 // Helper Section Component
 
 // Section extracted to src/components/Section.jsx
-
