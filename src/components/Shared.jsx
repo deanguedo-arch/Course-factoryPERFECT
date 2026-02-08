@@ -94,7 +94,7 @@ export const CodeBlock = ({ label, code, height = "h-32" }) => {
   };
 
   return (
-    <div className="mt-4 border border-slate-700 rounded-lg overflow-hidden bg-slate-950">
+    <div className="mt-4 border border-slate-700 rounded-lg overflow-hidden bg-slate-950 max-w-full min-w-0">
       <div className="flex justify-between items-center px-4 py-2 bg-slate-900 border-b border-slate-700">
         <span className="text-xs font-mono text-slate-400 uppercase">{label}</span>
         <button
@@ -105,7 +105,7 @@ export const CodeBlock = ({ label, code, height = "h-32" }) => {
           {copied ? 'Copied!' : 'Copy Code'}
         </button>
       </div>
-      <pre className={`p-4 overflow-x-auto text-sm font-mono text-slate-300 leading-relaxed whitespace-pre-wrap ${height}`}>
+      <pre className={`p-4 w-full max-w-full overflow-x-auto text-sm font-mono text-slate-300 leading-relaxed whitespace-pre-wrap break-all ${height}`}>
         {typeof code === 'string' ? code : JSON.stringify(code, null, 2)}
       </pre>
     </div>
@@ -136,4 +136,3 @@ export const Toggle = ({ active, labelA, labelB, labelC, onToggle, iconA: IconA,
         )}
     </div>
 );
-

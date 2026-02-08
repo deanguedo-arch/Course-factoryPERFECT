@@ -350,6 +350,7 @@ ${footerHtml}
 
     <!-- MODULE SCRIPTS CONTAINER -->
     <script id="module-scripts">
+        window.CF_ASSET_BASE_URL = window.CF_ASSET_BASE_URL || '';
         ${scripts}${progressTracking ? '\n        ' + progressTracking : ''}
     </script>
 
@@ -684,7 +685,86 @@ export function getMaterialBadgeLabel(mat) {
   return mat.number || '';
 }
 
-export function extractModuleContent(module) {
+function normalizeMaterialPathForMatch(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const clean = raw.split('#')[0].split('?')[0];
+  const marker = '/materials/';
+  const idx = clean.indexOf(marker);
+  if (idx !== -1) return clean.substring(idx + marker.length).toLowerCase();
+  if (clean.startsWith('materials/')) return clean.substring('materials/'.length).toLowerCase();
+  return clean.toLowerCase();
+}
+
+function enrichComposerModuleResources(module, courseMaterials = []) {
+  if (module?.mode !== 'composer') return module;
+  const materials = Array.isArray(courseMaterials) ? courseMaterials : [];
+  if (!materials.length) return module;
+
+  const withDigital = materials.filter((mat) => mat && mat.digitalContent);
+  if (!withDigital.length) return module;
+
+  const findMaterialMatch = (item) => {
+    const itemTitle = String(item?.label || '').trim().toLowerCase();
+    const itemView = normalizeMaterialPathForMatch(item?.viewUrl || item?.url);
+    const itemDownload = normalizeMaterialPathForMatch(item?.downloadUrl || item?.url);
+
+    return withDigital.find((mat) => {
+      const matTitle = String(mat?.title || '').trim().toLowerCase();
+      const matNumber = String(mat?.number || '').trim().toLowerCase();
+      const matId = String(mat?.id || '').trim().toLowerCase();
+      const matView = normalizeMaterialPathForMatch(mat?.viewUrl);
+      const matDownload = normalizeMaterialPathForMatch(mat?.downloadUrl);
+
+      if (itemView && (itemView === matView || itemView === matDownload)) return true;
+      if (itemDownload && (itemDownload === matView || itemDownload === matDownload)) return true;
+      if (itemTitle && (itemTitle === matTitle || itemTitle === matNumber || itemTitle === matId)) return true;
+      return false;
+    });
+  };
+
+  const activities = Array.isArray(module?.activities) ? module.activities : [];
+  const nextActivities = activities.map((activity) => {
+    if (activity?.type !== 'resource_list') return activity;
+    const items = Array.isArray(activity?.data?.items) ? activity.data.items : [];
+    const nextItems = items.map((item) => {
+      if (!item || item.digitalContent) return item;
+      const matched = findMaterialMatch(item);
+      if (!matched || !matched.digitalContent) return item;
+      return {
+        ...item,
+        digitalContent: matched.digitalContent,
+        viewUrl: item.viewUrl || item.url || matched.viewUrl || matched.downloadUrl || '',
+        downloadUrl: item.downloadUrl || item.url || matched.downloadUrl || matched.viewUrl || '',
+      };
+    });
+    return {
+      ...activity,
+      data: {
+        ...(activity.data || {}),
+        items: nextItems,
+      },
+    };
+  });
+
+  return {
+    ...module,
+    activities: nextActivities,
+  };
+}
+
+export function extractModuleContent(module, courseMaterials = []) {
+  if (module?.mode === 'composer') {
+    const composerModule = enrichComposerModuleResources(module, courseMaterials);
+    const compiled = compileComposerModule(composerModule);
+    return {
+      html: compiled.html || '',
+      css: compiled.css || '',
+      script: compiled.script || '',
+      type: 'composer'
+    };
+  }
+
   const type = getModuleType(module);
   
   if (type === 'standalone') {
@@ -1416,7 +1496,8 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
       }
       ${assessmentScripts}`;
   } else if (module.mode === 'composer') {
-    const compiledComposer = compileComposerModule(module);
+    const composerModule = enrichComposerModuleResources(module, courseMaterials);
+    const compiledComposer = compileComposerModule(composerModule);
     moduleContentHTML = compiledComposer.html || '';
     moduleCSS = compiledComposer.css || '';
     moduleScript = compiledComposer.script || '';
@@ -1425,7 +1506,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
     moduleContentHTML = `<div class="w-full rounded-xl overflow-hidden border border-slate-700 shadow-2xl">
-      <iframe srcdoc="${escapedRawHtml}" class="w-full border-0" style="min-height: 80vh; height: 100%;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"></iframe>
+      <iframe srcdoc="${escapedRawHtml}" class="w-full border-0" style="min-height: 80vh; height: 100%;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-top-navigation-by-user-activation"></iframe>
     </div>`;
   } else {
     const html = module.html || (module.code && module.code.html) || '';
@@ -1593,6 +1674,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
   ${toolkitHTML}
 
   <script>
+    window.CF_ASSET_BASE_URL = ${JSON.stringify(assetBaseUrl || '')};
     ${toolkitScripts}
     ${moduleScript}
     ${autosaveScript}
@@ -1717,7 +1799,7 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
 
   let navInjection = "";
   let contentInjection = "";
-  let scriptInjection = "";
+  let scriptInjection = `window.CF_ASSET_BASE_URL = ${JSON.stringify(assetBaseUrl || '')};\n`;
 
   // Build Injections for Modules
   activeModules.forEach(item => {
@@ -2367,13 +2449,33 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
       // Skip content injection for external links that open in new tab
       if (item.type === 'external' && item.linkType === 'newtab') {
         // No content injection needed - handled by nav button onclick
+      } else if (item.mode === 'composer') {
+        // Render composer modules directly in the compiled legacy shell so report/download/print actions
+        // are not limited by iframe sandbox restrictions.
+        const moduleContent = extractModuleContent(item, projectData["Current Course"]?.materials || []);
+        if (!moduleContent.html) {
+          return;
+        }
+
+        const composerContainerHTML = `
+        <div id="view-${shortId}" class="w-full h-full hidden module-container custom-scroll p-6 md:p-8">
+            ${moduleContent.html}
+        </div>`;
+        contentInjection += '\n' + composerContainerHTML + '\n';
+
+        if (moduleContent.css) {
+          contentInjection += `\n<style>\n${moduleContent.css}\n</style>\n`;
+        }
+        if (moduleContent.script) {
+          scriptInjection += '\n' + moduleContent.script + '\n';
+        }
       } else {
         // Determine the iframe content
         let iframeDoc = '';
         
         // PRIORITY 1: Use rawHtml if available (new simplified format)
         // This is the complete HTML document as pasted by the user - no transformation
-        if (item.rawHtml) {
+        if (item.mode !== 'composer' && item.rawHtml) {
           iframeDoc = item.rawHtml;
         } 
         // PRIORITY 2: Fallback for legacy modules (parsed html/css/script)
@@ -2434,7 +2536,7 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
                 srcdoc="${escapedDoc}" 
                 class="w-full h-full border-0" 
                 style="min-height: 100vh;"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-top-navigation-by-user-activation"
             ></iframe>
         </div>`;
         

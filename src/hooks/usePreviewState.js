@@ -4,13 +4,13 @@ const { useCallback, useEffect, useMemo, useState } = React;
 
 export function usePreviewState() {
   const [previewModule, setPreviewModule] = useState(null);
-  const [enablePreviewScripts, setEnablePreviewScripts] = useState(false);
+  const [enablePreviewScripts, setEnablePreviewScripts] = useState(true);
   const [previewFrameNonce, setPreviewFrameNonce] = useState(0);
 
   const previewIdentity = previewModule?.id || previewModule?.title || '';
   useEffect(() => {
     if (!previewIdentity) return;
-    setEnablePreviewScripts(false);
+    setEnablePreviewScripts(true);
     setPreviewFrameNonce((n) => n + 1);
   }, [previewIdentity]);
 
@@ -27,7 +27,7 @@ export function usePreviewState() {
   }, []);
 
   const sandbox = enablePreviewScripts
-    ? 'allow-scripts allow-same-origin allow-forms'
+    ? 'allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-top-navigation-by-user-activation'
     : 'allow-same-origin allow-forms';
 
   const iframeKey = useMemo(
@@ -49,4 +49,3 @@ export function usePreviewState() {
     iframeKey,
   };
 }
-

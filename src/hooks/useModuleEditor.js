@@ -192,23 +192,38 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         history: updatedHistory,
       };
     }
-    // Handle standalone HTML modules - SIMPLIFIED: store rawHtml directly
+    // Handle standalone HTML modules
     else if (editForm.moduleType === 'standalone') {
-      // Store the complete HTML document as-is - NO PARSING
-      // The iframe will handle everything
-      items[idx] = {
-        ...items[idx],
-        title: editForm.title,
-        mode: nextMode,
-        activities: nextActivities,
-        rawHtml: editForm.fullDocument.trim(), // Store complete document
-        // Clear legacy fields (not needed with rawHtml)
-        html: '',
-        css: '',
-        script: '',
-        type: 'standalone',
-        history: updatedHistory,
-      };
+      if (nextMode === 'composer') {
+        // Composer modules must compile from structured activities.
+        // Keep rawHtml empty so export paths don't bypass composer compilation.
+        items[idx] = {
+          ...items[idx],
+          title: editForm.title,
+          mode: 'composer',
+          activities: nextActivities,
+          rawHtml: '',
+          html: '',
+          css: '',
+          script: '',
+          type: 'standalone',
+          history: updatedHistory,
+        };
+      } else {
+        // Store complete custom HTML document as-is.
+        items[idx] = {
+          ...items[idx],
+          title: editForm.title,
+          mode: 'custom_html',
+          activities: nextActivities,
+          rawHtml: editForm.fullDocument.trim(),
+          html: '',
+          css: '',
+          script: '',
+          type: 'standalone',
+          history: updatedHistory,
+        };
+      }
     }
     // Legacy module format
     else {

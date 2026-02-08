@@ -112,6 +112,88 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     return filesMap;
   };
 
+  const getLocalMaterialZipPath = (url) => {
+    const raw = String(url || '').trim();
+    if (!raw) return null;
+    if (/^(https?:|data:|blob:|mailto:)/i.test(raw)) return null;
+    const clean = raw.split('#')[0].split('?')[0];
+    const marker = '/materials/';
+    const idx = clean.indexOf(marker);
+    if (idx !== -1) {
+      return clean.substring(idx + 1); // materials/...
+    }
+    if (clean.startsWith('materials/')) return clean;
+    return null;
+  };
+
+  const collectLocalMaterialAssets = () => {
+    const assetMap = new Map();
+    const add = (rawUrl) => {
+      const zipPath = getLocalMaterialZipPath(rawUrl);
+      if (!zipPath) return;
+      if (!assetMap.has(zipPath)) {
+        assetMap.set(zipPath, String(rawUrl || '').trim());
+      }
+    };
+
+    const courseMaterials = projectData["Current Course"]?.materials || [];
+    courseMaterials.forEach((mat) => {
+      add(mat?.viewUrl);
+      add(mat?.downloadUrl);
+    });
+
+    modules.forEach((mod) => {
+      if (mod?.mode !== 'composer') return;
+      const activities = Array.isArray(mod?.activities) ? mod.activities : [];
+      activities.forEach((activity) => {
+        if (activity?.type !== 'resource_list') return;
+        const items = Array.isArray(activity?.data?.items) ? activity.data.items : [];
+        items.forEach((item) => {
+          add(item?.viewUrl || item?.url);
+          add(item?.downloadUrl || item?.url);
+        });
+      });
+    });
+
+    return Array.from(assetMap.entries()).map(([zipPath, rawUrl]) => ({ zipPath, rawUrl }));
+  };
+
+  const fetchLocalMaterialBlob = async (rawUrl, zipPath) => {
+    const candidates = [];
+    const rel = zipPath.startsWith('materials/') ? zipPath : null;
+
+    if (rel) {
+      // Relative candidate (works when app is hosted under a subpath like /Course-factoryPERFECT/).
+      candidates.push(rel);
+      // Root candidate.
+      candidates.push('/' + rel);
+    }
+
+    if (rawUrl) {
+      const raw = String(rawUrl).trim();
+      candidates.push(raw);
+      if (raw.includes('/Course-factoryPERFECT/materials/')) {
+        const tail = raw.split('/Course-factoryPERFECT/materials/')[1];
+        if (tail) candidates.push('/materials/' + tail);
+      }
+    }
+
+    const seen = new Set();
+    for (const candidate of candidates) {
+      if (!candidate || seen.has(candidate)) continue;
+      seen.add(candidate);
+      try {
+        const res = await fetch(candidate);
+        if (res.ok) {
+          return await res.blob();
+        }
+      } catch (e) {
+        // Try next candidate.
+      }
+    }
+    return null;
+  };
+
   // Download files as ZIP
   const downloadZipFromFilesMap = async (filesMap, zipName) => {
     try {
@@ -127,6 +209,19 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       Object.entries(filesMap).forEach(([path, content]) => {
         zip.file(path, content);
       });
+
+      // Include local /materials assets referenced by the project so exported links work offline.
+      const localAssets = collectLocalMaterialAssets();
+      if (localAssets.length > 0) {
+        setBetaPublishMessage(`Bundling ${localAssets.length} local material file(s)...`);
+        for (const asset of localAssets) {
+          if (zip.file(asset.zipPath)) continue;
+          const blob = await fetchLocalMaterialBlob(asset.rawUrl, asset.zipPath);
+          if (blob) {
+            zip.file(asset.zipPath, blob);
+          }
+        }
+      }
       
       setBetaPublishMessage('Generating download...');
       
@@ -214,6 +309,9 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
   };
   const materials = projectData["Current Course"]?.materials || [];
   const toolkit = projectData["Global Toolkit"] || [];
+  const localMaterialAssets = collectLocalMaterialAssets();
+  const hasAssetBaseUrl = Boolean((projectData["Course Settings"]?.assetBaseUrl || '').trim());
+  const legacyEmbedNeedsAssetBase = !hasAssetBaseUrl && localMaterialAssets.length > 0;
 
   // Toolkit toggle functions
   const toggleToolkitField = (index, field) => {
@@ -574,8 +672,8 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+    <div className="space-y-6 animate-in fade-in duration-500 min-w-0 overflow-x-hidden">
+      <div className="bg-slate-800 p-6 rounded-lg border border-slate-700 min-w-0">
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
           <Package className="text-purple-400" /> Phase 4: Compile & Export
         </h2>
@@ -1064,6 +1162,19 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                   </div>
                 )}
 
+                {legacyEmbedNeedsAssetBase && (
+                  <div className="mb-6 rounded-xl border border-amber-700 bg-amber-950/40 p-4 text-left">
+                    <div className="flex items-center gap-2 text-amber-300 font-bold mb-2">
+                      <AlertTriangle size={16} />
+                      Google Sites warning: local material files need Asset Base URL
+                    </div>
+                    <p className="text-sm text-amber-200/90">
+                      Found {localMaterialAssets.length} local material reference(s) (for example <code>/materials/file.pdf</code>).
+                      These paths will fail in Google Sites unless you set <strong>Asset Base URL</strong> above.
+                    </p>
+                  </div>
+                )}
+
                 <button 
                     onClick={handleCompileClick}
                     disabled={modules.length === 0}
@@ -1121,4 +1232,3 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
 };
 
 export default Phase4;
-

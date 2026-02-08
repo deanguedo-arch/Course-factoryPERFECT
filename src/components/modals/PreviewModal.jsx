@@ -37,7 +37,7 @@ export default function PreviewModal({
                   ? 'bg-rose-600 hover:bg-rose-500 border-rose-500 text-white'
                   : 'bg-slate-900 hover:bg-slate-700 border-slate-700 text-amber-300'
               }`}
-              title="Off by default. Enabling scripts can execute untrusted code."
+              title="Script execution can run untrusted code. Disable if you only need static preview."
               type="button"
             >
               ⚠️ Enable Scripts (Unsafe): {enablePreviewScripts ? 'ON' : 'OFF'}
@@ -65,4 +65,3 @@ export default function PreviewModal({
     </div>
   );
 }
-

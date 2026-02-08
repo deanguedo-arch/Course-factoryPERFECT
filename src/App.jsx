@@ -1163,7 +1163,7 @@ export function App() {
         </div>
       </header>
 
-      <div className="flex max-w-[1800px] mx-auto">
+      <div className="flex max-w-[1800px] mx-auto w-full min-w-0">
         {/* Left Sidebar */}
         <aside className="w-64 bg-slate-900 border-r border-slate-800 p-4 min-h-[calc(100vh-73px)] flex flex-col">
           <div className="flex-grow space-y-6">
@@ -1295,7 +1295,7 @@ export function App() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-grow min-h-[600px]">
+        <main className="flex-grow min-h-[600px] min-w-0 overflow-x-hidden">
           {activePhase === 0 && <Phase0 projectData={projectData} setProjectData={setProjectData} />}
           {activePhase === 1 && <Phase1 
             projectData={projectData} 

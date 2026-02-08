@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { ChevronDown, ChevronUp, Clock, Copy, Edit, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, Copy, Edit, Plus, RefreshCw, RotateCcw, Trash2, X } from 'lucide-react';
 import { getActivityDefinition, listActivityTypes } from '../../composer/activityRegistry.js';
 import { isComposerEnabled } from '../../utils/composer.js';
+import { buildModuleFrameHTML } from '../../utils/generators.js';
 
 const { useEffect, useMemo, useState } = React;
 
@@ -29,10 +30,29 @@ export default function EditModal({
   const composerEnabled = isComposerEnabled(projectData);
   const standaloneMode = editForm.moduleMode || 'custom_html';
   const canUseComposer = composerEnabled || standaloneMode === 'composer';
-  const activities = Array.isArray(editForm.activities) ? editForm.activities : [];
+  const activities = useMemo(
+    () => (Array.isArray(editForm.activities) ? editForm.activities : []),
+    [editForm.activities],
+  );
   const activityTypes = useMemo(() => listActivityTypes(), []);
+  const moduleBankMaterials = useMemo(
+    () =>
+      ((projectData?.['Current Course']?.materials || [])
+        .filter((mat) => !mat.hidden)
+        .sort((a, b) => (a.order || 0) - (b.order || 0))),
+    [projectData],
+  );
+  const availableAssessments = useMemo(() => {
+    const modules = projectData?.['Current Course']?.modules || [];
+    return modules
+      .flatMap((mod) => (mod.assessments || []).map((assessment) => ({ ...assessment, moduleId: mod.id, moduleTitle: mod.title })))
+      .filter((assessment) => !assessment.hidden);
+  }, [projectData]);
   const [selectedActivityIndex, setSelectedActivityIndex] = useState(0);
   const [newActivityType, setNewActivityType] = useState(activityTypes[0] || 'content_block');
+  const [selectedMaterialId, setSelectedMaterialId] = useState('');
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState('');
+  const [composerPreviewNonce, setComposerPreviewNonce] = useState(0);
 
   useEffect(() => {
     setSelectedActivityIndex(0);
@@ -44,7 +64,47 @@ export default function EditModal({
     }
   }, [activities.length, selectedActivityIndex]);
 
+  useEffect(() => {
+    if (!selectedMaterialId && moduleBankMaterials.length > 0) {
+      setSelectedMaterialId(moduleBankMaterials[0].id);
+    }
+  }, [moduleBankMaterials, selectedMaterialId]);
+
+  useEffect(() => {
+    if (!selectedAssessmentId && availableAssessments.length > 0) {
+      setSelectedAssessmentId(availableAssessments[0].id);
+    }
+  }, [availableAssessments, selectedAssessmentId]);
+
+  useEffect(() => {
+    if (standaloneMode !== 'composer') return;
+    setComposerPreviewNonce((n) => n + 1);
+  }, [editingModule, standaloneMode]);
+
   const selectedActivity = activities[selectedActivityIndex] || null;
+  const composerPreviewSrcDoc = useMemo(() => {
+    if (standaloneMode !== 'composer') return '';
+    const courseSettings = projectData?.['Course Settings'] || {};
+    const previewModule = {
+      id: editForm.id || 'view-composer-preview',
+      title: editForm.title || 'Composer Preview',
+      type: 'standalone',
+      mode: 'composer',
+      activities,
+      rawHtml: '',
+      html: '',
+      css: '',
+      script: '',
+    };
+    return (
+      buildModuleFrameHTML(previewModule, {
+        ...courseSettings,
+        __courseName: courseSettings.courseName || projectData?.['Current Course']?.name || 'Course',
+        __toolkit: projectData?.['Global Toolkit'] || [],
+        __materials: projectData?.['Current Course']?.materials || [],
+      }) || ''
+    );
+  }, [activities, editForm.id, editForm.title, projectData, standaloneMode]);
 
   const updateActivities = (nextActivities) => {
     setEditForm({
@@ -200,19 +260,19 @@ export default function EditModal({
                     nextItems[idx] = { ...(nextItems[idx] || {}), label: e.target.value };
                     updateSelectedActivityData({ items: nextItems });
                   }}
-                  className="col-span-4 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  className="col-span-3 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
                   placeholder="Label"
                 />
                 <input
                   type="text"
-                  value={item?.url || ''}
+                  value={item?.viewUrl || item?.url || ''}
                   onChange={(e) => {
                     const nextItems = [...items];
-                    nextItems[idx] = { ...(nextItems[idx] || {}), url: e.target.value };
+                    nextItems[idx] = { ...(nextItems[idx] || {}), viewUrl: e.target.value };
                     updateSelectedActivityData({ items: nextItems });
                   }}
-                  className="col-span-7 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
-                  placeholder="https://..."
+                  className="col-span-4 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  placeholder="View URL"
                 />
                 <button
                   onClick={() => {
@@ -225,15 +285,78 @@ export default function EditModal({
                 >
                   <Trash2 size={12} className="mx-auto" />
                 </button>
+                <input
+                  type="text"
+                  value={item?.downloadUrl || item?.url || ''}
+                  onChange={(e) => {
+                    const nextItems = [...items];
+                    nextItems[idx] = { ...(nextItems[idx] || {}), downloadUrl: e.target.value };
+                    updateSelectedActivityData({ items: nextItems });
+                  }}
+                  className="col-span-6 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  placeholder="Download URL"
+                />
+                <input
+                  type="text"
+                  value={item?.description || ''}
+                  onChange={(e) => {
+                    const nextItems = [...items];
+                    nextItems[idx] = { ...(nextItems[idx] || {}), description: e.target.value };
+                    updateSelectedActivityData({ items: nextItems });
+                  }}
+                  className="col-span-6 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  placeholder="Optional description"
+                />
               </div>
             ))}
             <button
               type="button"
-              onClick={() => updateSelectedActivityData({ items: [...items, { label: '', url: '' }] })}
+              onClick={() => updateSelectedActivityData({ items: [...items, { label: '', viewUrl: '', downloadUrl: '', description: '' }] })}
               className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
             >
               <Plus size={12} /> Add Resource
             </button>
+            <div className="pt-3 border-t border-slate-700">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-2">Add From Module Bank</label>
+              <div className="grid grid-cols-12 gap-2">
+                <select
+                  value={selectedMaterialId}
+                  onChange={(e) => setSelectedMaterialId(e.target.value)}
+                  className="col-span-9 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                >
+                  {moduleBankMaterials.length === 0 && <option value="">No stored materials</option>}
+                  {moduleBankMaterials.map((mat) => (
+                    <option key={mat.id} value={mat.id}>
+                      {mat.title || mat.number || mat.id}
+                    </option>
+                  ))}
+                </select>
+            <button
+              type="button"
+              onClick={() => {
+                const selected = moduleBankMaterials.find((mat) => mat.id === selectedMaterialId);
+                if (!selected) return;
+                const viewUrl = selected.viewUrl || selected.downloadUrl || '';
+                const downloadUrl = selected.downloadUrl || selected.viewUrl || '';
+                const nextItems = [
+                  ...items,
+                  {
+                    label: selected.title || selected.number || selected.id,
+                    viewUrl,
+                    downloadUrl,
+                    description: selected.description || '',
+                    digitalContent: selected.digitalContent || null,
+                  },
+                ];
+                updateSelectedActivityData({ items: nextItems });
+              }}
+                  disabled={!selectedMaterialId || moduleBankMaterials.length === 0}
+                  className="col-span-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded text-xs font-bold text-white"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       );
@@ -307,6 +430,126 @@ export default function EditModal({
               onChange={(e) => updateSelectedActivityData({ shortAnswerPrompt: e.target.value })}
               className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
             />
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedActivity.type === 'image_block') {
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Image URL</label>
+            <input
+              type="text"
+              value={data.url || ''}
+              onChange={(e) => updateSelectedActivityData({ url: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              placeholder="https://... or /assets/image.jpg"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Alt Text</label>
+            <input
+              type="text"
+              value={data.alt || ''}
+              onChange={(e) => updateSelectedActivityData({ alt: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Caption</label>
+            <input
+              type="text"
+              value={data.caption || ''}
+              onChange={(e) => updateSelectedActivityData({ caption: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Display Width</label>
+            <select
+              value={data.width || 'full'}
+              onChange={(e) => updateSelectedActivityData({ width: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            >
+              <option value="full">Full width</option>
+              <option value="wide">Wide</option>
+              <option value="medium">Medium</option>
+              <option value="small">Small</option>
+            </select>
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedActivity.type === 'assessment_embed') {
+      const items = Array.isArray(data.items) ? data.items : [];
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Block Title</label>
+            <input
+              type="text"
+              value={data.title || ''}
+              onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div className="space-y-2">
+            {items.map((item, idx) => (
+              <div key={`assessment-item-${item.id || idx}`} className="flex items-center justify-between gap-2 rounded border border-slate-700 bg-slate-900 p-2">
+                <div>
+                  <p className="text-xs font-bold text-white">{item.title || item.id || `Assessment ${idx + 1}`}</p>
+                  <p className="text-[10px] text-slate-500 font-mono">{item.id || 'no-id'}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateSelectedActivityData({ items: items.filter((_, itemIdx) => itemIdx !== idx) })}
+                  className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-xs"
+                  title="Remove assessment"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+            {items.length === 0 && <p className="text-xs text-slate-500">No assessments linked yet.</p>}
+          </div>
+          <div className="grid grid-cols-12 gap-2">
+            <select
+              value={selectedAssessmentId}
+              onChange={(e) => setSelectedAssessmentId(e.target.value)}
+              className="col-span-9 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+            >
+              {availableAssessments.length === 0 && <option value="">No saved assessments</option>}
+              {availableAssessments.map((assessment) => (
+                <option key={assessment.id} value={assessment.id}>
+                  {assessment.title || assessment.id}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => {
+                const selected = availableAssessments.find((assessment) => assessment.id === selectedAssessmentId);
+                if (!selected) return;
+                if (items.some((item) => item.id === selected.id)) return;
+                const nextItems = [
+                  ...items,
+                  {
+                    id: selected.id,
+                    title: selected.title || selected.id,
+                    html: selected.html || '',
+                    script: selected.script || '',
+                  },
+                ];
+                updateSelectedActivityData({ items: nextItems });
+              }}
+              disabled={!selectedAssessmentId || availableAssessments.length === 0}
+              className="col-span-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded text-xs font-bold text-white"
+            >
+              Add
+            </button>
           </div>
         </div>
       );
@@ -448,102 +691,136 @@ export default function EditModal({
                   )}
 
                   {standaloneMode === 'composer' ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                      <div className="lg:col-span-5 bg-slate-950 border border-slate-700 rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-sm font-bold text-white">Activities</h4>
-                          <span className="text-[11px] text-slate-500">{activities.length} total</span>
-                        </div>
-                        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                          {activities.map((activity, idx) => {
-                            const def = getActivityDefinition(activity.type);
-                            return (
-                              <button
-                                key={activity.id || `${activity.type}-${idx}`}
-                                type="button"
-                                onClick={() => setSelectedActivityIndex(idx)}
-                                className={`w-full text-left p-2 rounded border transition-colors ${
-                                  idx === selectedActivityIndex
-                                    ? 'bg-emerald-900/30 border-emerald-600 text-white'
-                                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
-                                }`}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                        <div className="lg:col-span-5 bg-slate-950 border border-slate-700 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-bold text-white">Activities</h4>
+                            <span className="text-[11px] text-slate-500">{activities.length} total</span>
+                          </div>
+                          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                            {activities.map((activity, idx) => {
+                              const def = getActivityDefinition(activity.type);
+                              return (
+                                <button
+                                  key={activity.id || `${activity.type}-${idx}`}
+                                  type="button"
+                                  onClick={() => setSelectedActivityIndex(idx)}
+                                  className={`w-full text-left p-2 rounded border transition-colors ${
+                                    idx === selectedActivityIndex
+                                      ? 'bg-emerald-900/30 border-emerald-600 text-white'
+                                      : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                                  }`}
+                                >
+                                  <p className="text-xs font-bold">{def?.label || activity.type}</p>
+                                  <p className="text-[10px] text-slate-500 font-mono">{activity.id || `activity-${idx + 1}`}</p>
+                                </button>
+                              );
+                            })}
+                            {activities.length === 0 && <p className="text-xs text-slate-500">No activities yet.</p>}
+                          </div>
+
+                          <div className="mt-4 pt-3 border-t border-slate-700">
+                            <div className="grid grid-cols-3 gap-2">
+                              <select
+                                value={newActivityType}
+                                onChange={(e) => setNewActivityType(e.target.value)}
+                                className="col-span-2 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
                               >
-                                <p className="text-xs font-bold">{def?.label || activity.type}</p>
-                                <p className="text-[10px] text-slate-500 font-mono">{activity.id || `activity-${idx + 1}`}</p>
+                                {activityTypes.map((type) => {
+                                  const def = getActivityDefinition(type);
+                                  return (
+                                    <option key={type} value={type}>
+                                      {def?.label || type}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={addActivity}
+                                className="bg-emerald-600 hover:bg-emerald-500 rounded text-xs font-bold text-white inline-flex items-center justify-center gap-1"
+                              >
+                                <Plus size={12} /> Add
                               </button>
-                            );
-                          })}
-                          {activities.length === 0 && <p className="text-xs text-slate-500">No activities yet.</p>}
+                            </div>
+                            <div className="flex gap-2 mt-2">
+                              <button
+                                type="button"
+                                onClick={() => moveSelectedActivity(-1)}
+                                disabled={!selectedActivity || selectedActivityIndex === 0}
+                                className="flex-1 px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                              >
+                                <ChevronUp size={12} /> Up
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveSelectedActivity(1)}
+                                disabled={!selectedActivity || selectedActivityIndex >= activities.length - 1}
+                                className="flex-1 px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                              >
+                                <ChevronDown size={12} /> Down
+                              </button>
+                              <button
+                                type="button"
+                                onClick={duplicateSelectedActivity}
+                                disabled={!selectedActivity}
+                                className="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center"
+                                title="Duplicate selected activity"
+                              >
+                                <Copy size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={removeSelectedActivity}
+                                disabled={!selectedActivity}
+                                className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center"
+                                title="Delete selected activity"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="mt-4 pt-3 border-t border-slate-700">
-                          <div className="grid grid-cols-3 gap-2">
-                            <select
-                              value={newActivityType}
-                              onChange={(e) => setNewActivityType(e.target.value)}
-                              className="col-span-2 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                            >
-                              {activityTypes.map((type) => {
-                                const def = getActivityDefinition(type);
-                                return (
-                                  <option key={type} value={type}>
-                                    {def?.label || type}
-                                  </option>
-                                );
-                              })}
-                            </select>
-                            <button
-                              type="button"
-                              onClick={addActivity}
-                              className="bg-emerald-600 hover:bg-emerald-500 rounded text-xs font-bold text-white inline-flex items-center justify-center gap-1"
-                            >
-                              <Plus size={12} /> Add
-                            </button>
-                          </div>
-                          <div className="flex gap-2 mt-2">
-                            <button
-                              type="button"
-                              onClick={() => moveSelectedActivity(-1)}
-                              disabled={!selectedActivity || selectedActivityIndex === 0}
-                              className="flex-1 px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
-                            >
-                              <ChevronUp size={12} /> Up
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => moveSelectedActivity(1)}
-                              disabled={!selectedActivity || selectedActivityIndex >= activities.length - 1}
-                              className="flex-1 px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
-                            >
-                              <ChevronDown size={12} /> Down
-                            </button>
-                            <button
-                              type="button"
-                              onClick={duplicateSelectedActivity}
-                              disabled={!selectedActivity}
-                              className="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center"
-                              title="Duplicate selected activity"
-                            >
-                              <Copy size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={removeSelectedActivity}
-                              disabled={!selectedActivity}
-                              className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center"
-                              title="Delete selected activity"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
+                        <div className="lg:col-span-7 bg-slate-950 border border-slate-700 rounded-lg p-4">
+                          <h4 className="text-sm font-bold text-white mb-3">
+                            {selectedActivity ? (getActivityDefinition(selectedActivity.type)?.label || selectedActivity.type) : 'Activity Editor'}
+                          </h4>
+                          {renderActivityEditor()}
                         </div>
                       </div>
 
-                      <div className="lg:col-span-7 bg-slate-950 border border-slate-700 rounded-lg p-4">
-                        <h4 className="text-sm font-bold text-white mb-3">
-                          {selectedActivity ? (getActivityDefinition(selectedActivity.type)?.label || selectedActivity.type) : 'Activity Editor'}
-                        </h4>
-                        {renderActivityEditor()}
+                      <div className="bg-slate-950 border border-slate-700 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-bold text-white">Live Module Preview</h4>
+                          <button
+                            type="button"
+                            onClick={() => setComposerPreviewNonce((n) => n + 1)}
+                            className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
+                            title="Remount preview iframe"
+                          >
+                            <RefreshCw size={12} />
+                            Reset
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mb-3">Preview updates while you edit activities.</p>
+                        <div className="rounded-lg overflow-hidden border border-slate-800 bg-black">
+                          {composerPreviewSrcDoc ? (
+                            <iframe
+                              key={`composer-edit-preview-${editForm.id || 'draft'}-${composerPreviewNonce}`}
+                              srcDoc={composerPreviewSrcDoc}
+                              className="w-full border-0"
+                              style={{ minHeight: '420px' }}
+                              sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-top-navigation-by-user-activation"
+                              title="Composer live preview"
+                            />
+                          ) : (
+                            <div className="h-48 flex items-center justify-center text-xs text-slate-500">
+                              Composer preview unavailable.
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ) : (

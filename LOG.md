@@ -131,3 +131,30 @@
 - Added Composer save hardening (auto-seed default activity if empty) and activity duplication control in the editor UX. (`src/hooks/useModuleEditor.js`, `src/components/modals/EditModal.jsx`)
 - Added composer fixture verification and a release gate script (`verify -> parity -> fixtures`) for safer incremental activity expansion. (`scripts/verify_composer_fixtures.mjs`, `scripts/release_gate.mjs`, `package.json`)
 - Removed accidental tracked generated artifacts with `* 2.html/json` suffix from `out/` so source history stays clean. (`out/beta/* 2.*`, `out/legacy_compiled 2.html`)
+- Fixed composer legacy compile path to prefer activity compilation for `mode: composer` (ignore `rawHtml` fallback), removing blank exported composer views in Google Sites/legacy compile. (`src/utils/generators.js`)
+- Hardened standalone module save behavior so composer-mode saves no longer persist `rawHtml` shells that bypass activity compilation. (`src/hooks/useModuleEditor.js`)
+- Expanded Module Manager Composer creation UX to support full activity authoring before module creation (add/remove/reorder/duplicate/edit), eliminating the required “create then edit” loop. (`src/components/Phase1.jsx`)
+- Expanded Composer activity system with:
+  - `Image` block support
+  - `Assessment Block` support (embed saved assessment HTML/script snapshots)
+  - `Generate Report` improvements (copy/download/print report actions)
+  - module-bank resource insertion from stored materials
+  in both create and edit composer flows. (`src/composer/activityRegistry.js`, `src/composer/compileModuleHtml.js`, `src/components/Phase1.jsx`, `src/components/modals/EditModal.jsx`)
+- Extended composer fixture verification to cover new activity types and guard against composer/rawHtml precedence regressions. (`scripts/verify_composer_fixtures.mjs`)
+
+## Update (Feb 8, 2026 — Compile/Embed Stabilization)
+- Fixed composer report actions in generated output by scoping runtime handlers to each submission block and preserving copy/download/print flows in compiled pages. (`src/composer/compileModuleHtml.js`, `src/composer/activityRegistry.js`)
+- Added composer resource list parity with Materials behavior:
+  - separate `viewUrl` + `downloadUrl`
+  - inline viewer support
+  - download button runtime handling
+  - digital `Read` support in resource items
+  (`src/composer/activityRegistry.js`, `src/composer/compileModuleHtml.js`)
+- Added vault picker support for composer resource rows (view/download fields) in module creation flow. (`src/components/Phase1.jsx`)
+- Extended edit modal resource rows to support `viewUrl`/`downloadUrl`/description + material-bank resource insertion parity. (`src/components/modals/EditModal.jsx`)
+- Hardened preview/compiled sandbox capabilities for popup/print/download actions. (`src/hooks/usePreviewState.js`, `src/utils/generators.js`)
+- Fixed legacy compile behavior so composer modules render directly in compiled shell instead of iframe fallback, preventing sandbox-related action failures. (`src/utils/generators.js`)
+- Added URL resolution hardening for embed contexts (Google Sites/Googleusercontent) and asset-base aware path resolution for resource links. (`src/composer/compileModuleHtml.js`, `src/utils/generators.js`)
+- Added composer resource digital-content enrichment from material bank matches (title/url match), including chapter-based reader support in compiled modules. (`src/utils/generators.js`, `src/composer/compileModuleHtml.js`)
+- Added ZIP export bundling of local `materials/*` assets referenced by course materials and composer resource lists. (`src/components/Phase4.jsx`)
+- Fixed Phase 4 dashboard overflow by hardening container width constraints and code block wrapping (`min-w-0`, `overflow-x-hidden`, `break-all`). (`src/App.jsx`, `src/components/Phase4.jsx`, `src/components/Shared.jsx`)

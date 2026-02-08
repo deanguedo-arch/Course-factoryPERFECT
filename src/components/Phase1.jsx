@@ -1,11 +1,11 @@
 ﻿import * as React from 'react';
-import { AlertTriangle, ArrowUpCircle, Box, CheckCircle, Clipboard, Copy, Database, Edit, Eye, EyeOff, FileJson, FolderOpen, Layers, PenTool, Plus, RefreshCw, RotateCcw, Save, Scissors, Search, Sparkles, Trash2, Wrench, X, Zap } from 'lucide-react';
+import { AlertTriangle, ArrowUpCircle, Box, CheckCircle, ChevronDown, ChevronUp, Clipboard, Copy, Database, Edit, Eye, EyeOff, FileJson, FolderOpen, Layers, PenTool, Plus, RefreshCw, RotateCcw, Save, Scissors, Search, Sparkles, Trash2, Wrench, X, Zap } from 'lucide-react';
 import VaultBrowser from './VaultBrowser';
 import { CodeBlock, Toggle } from './Shared.jsx';
-import { getMaterialBadgeLabel } from '../utils/generators.js';
+import { buildModuleFrameHTML, getMaterialBadgeLabel, validateModule } from '../utils/generators.js';
 import { getActivityDefinition, listActivityTypes } from '../composer/activityRegistry.js';
 
-const { useState } = React;
+const { useEffect, useMemo, useState } = React;
 
 // --- PHASE 1: HARVEST ---
 const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, assessmentType, setAssessmentType, assessmentTitle, setAssessmentTitle, quizQuestions, setQuizQuestions, printInstructions, setPrintInstructions, editingAssessment, setEditingAssessment, migrateCode, setMigrateCode, migratePrompt, setMigratePrompt, migrateOutput, setMigrateOutput, isVaultOpen, setIsVaultOpen, setVaultTargetField, vaultTargetField }) => {
@@ -17,6 +17,12 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   // MODULE MANAGER STATE
   const [moduleManagerType, setModuleManagerType] = useState('standalone'); // 'standalone' | 'composer' | 'external'
   const [moduleManagerComposerStarterType, setModuleManagerComposerStarterType] = useState('content_block');
+  const moduleManagerActivityTypes = useMemo(() => listActivityTypes(), []);
+  const [moduleManagerComposerActivities, setModuleManagerComposerActivities] = useState([]);
+  const [moduleManagerComposerSelectedIndex, setModuleManagerComposerSelectedIndex] = useState(0);
+  const [moduleManagerResourceMaterialId, setModuleManagerResourceMaterialId] = useState('');
+  const [moduleManagerAssessmentId, setModuleManagerAssessmentId] = useState('');
+  const [moduleManagerComposerPreviewNonce, setModuleManagerComposerPreviewNonce] = useState(0);
   const [moduleManagerHTML, setModuleManagerHTML] = useState('');
   const [moduleManagerURL, setModuleManagerURL] = useState('');
   const [moduleManagerID, setModuleManagerID] = useState('');
@@ -31,6 +37,20 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   const [stagingJson, setStagingJson] = useState("");
   const [stagingTitle, setStagingTitle] = useState("");
   const [saveStatus, setSaveStatus] = useState(null); // 'success'
+
+  const moduleBankMaterials = useMemo(
+    () =>
+      ((projectData?.["Current Course"]?.materials || [])
+        .filter((mat) => !mat.hidden)
+        .sort((a, b) => (a.order || 0) - (b.order || 0))),
+    [projectData],
+  );
+  const moduleBankAssessments = useMemo(() => {
+    const modules = projectData?.["Current Course"]?.modules || [];
+    return modules
+      .flatMap((mod) => (mod.assessments || []).map((assessment) => ({ ...assessment, moduleId: mod.id, moduleTitle: mod.title })))
+      .filter((assessment) => !assessment.hidden);
+  }, [projectData]);
 
   // NEW: Error State for manual imports
   const [importError, setImportError] = useState(null);
@@ -117,10 +137,21 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
 
   // Assessment Generator Functions
   const handleVaultSelect = (file) => {
-    if (vaultTargetField === 'view') {
-        setMaterialForm(prev => ({ ...prev, viewUrl: file.path }));
+    if (vaultTargetField && typeof vaultTargetField === 'object' && vaultTargetField.target === 'composer-resource') {
+      if (selectedComposerActivity?.type === 'resource_list') {
+        const items = Array.isArray(selectedComposerActivity.data?.items) ? selectedComposerActivity.data.items : [];
+        const itemIndex = Number(vaultTargetField.itemIndex);
+        if (Number.isInteger(itemIndex) && itemIndex >= 0 && itemIndex < items.length) {
+          const key = vaultTargetField.field === 'downloadUrl' ? 'downloadUrl' : 'viewUrl';
+          const nextItems = [...items];
+          nextItems[itemIndex] = { ...(nextItems[itemIndex] || {}), [key]: file.path };
+          updateSelectedComposerActivityData({ items: nextItems });
+        }
+      }
+    } else if (vaultTargetField === 'view') {
+      setMaterialForm(prev => ({ ...prev, viewUrl: file.path }));
     } else if (vaultTargetField === 'download') {
-        setMaterialForm(prev => ({ ...prev, downloadUrl: file.path }));
+      setMaterialForm(prev => ({ ...prev, downloadUrl: file.path }));
     }
     setIsVaultOpen(false);
     setVaultTargetField(null);
@@ -726,10 +757,554 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     const resolvedType = definition?.type || 'content_block';
     const defaultData = definition?.createDefaultData ? definition.createDefaultData() : {};
     return {
-      id: `activity-${Date.now()}`,
+      id: `activity-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       type: resolvedType,
       data: defaultData,
     };
+  };
+
+  useEffect(() => {
+    if (moduleManagerType !== 'composer') return;
+    if (moduleManagerComposerActivities.length > 0) return;
+    setModuleManagerComposerActivities([buildComposerStarterActivity(moduleManagerComposerStarterType)]);
+    setModuleManagerComposerSelectedIndex(0);
+  }, [moduleManagerType, moduleManagerComposerActivities.length, moduleManagerComposerStarterType]);
+
+  useEffect(() => {
+    if (moduleManagerComposerSelectedIndex > moduleManagerComposerActivities.length - 1) {
+      setModuleManagerComposerSelectedIndex(Math.max(moduleManagerComposerActivities.length - 1, 0));
+    }
+  }, [moduleManagerComposerActivities.length, moduleManagerComposerSelectedIndex]);
+
+  useEffect(() => {
+    if (!moduleManagerResourceMaterialId && moduleBankMaterials.length > 0) {
+      setModuleManagerResourceMaterialId(moduleBankMaterials[0].id);
+    }
+  }, [moduleBankMaterials, moduleManagerResourceMaterialId]);
+
+  useEffect(() => {
+    if (!moduleManagerAssessmentId && moduleBankAssessments.length > 0) {
+      setModuleManagerAssessmentId(moduleBankAssessments[0].id);
+    }
+  }, [moduleBankAssessments, moduleManagerAssessmentId]);
+
+  useEffect(() => {
+    if (moduleManagerType !== 'composer') return;
+    setModuleManagerComposerPreviewNonce((n) => n + 1);
+  }, [moduleManagerType]);
+
+  const selectedComposerActivity = moduleManagerComposerActivities[moduleManagerComposerSelectedIndex] || null;
+  const moduleManagerComposerPreviewDoc = useMemo(() => {
+    if (moduleManagerType !== 'composer') return '';
+    const courseSettings = projectData?.['Course Settings'] || {};
+    const rawId = moduleManagerID.trim();
+    const moduleId = rawId ? (rawId.startsWith('view-') ? rawId : `view-${rawId}`) : 'view-composer-preview';
+    const title = moduleManagerTitle.trim() || moduleId.replace('view-', '').replace(/-/g, ' ') || 'Composer Preview';
+    const previewModule = {
+      id: moduleId,
+      title,
+      type: 'standalone',
+      mode: 'composer',
+      activities: moduleManagerComposerActivities,
+      rawHtml: '',
+      html: '',
+      css: '',
+      script: '',
+    };
+    return (
+      buildModuleFrameHTML(previewModule, {
+        ...courseSettings,
+        __courseName: courseSettings.courseName || projectData?.['Current Course']?.name || 'Course',
+        __toolkit: projectData?.['Global Toolkit'] || [],
+        __materials: projectData?.['Current Course']?.materials || [],
+      }) || ''
+    );
+  }, [moduleManagerComposerActivities, moduleManagerID, moduleManagerTitle, moduleManagerType, projectData]);
+
+  const updateComposerActivities = (nextActivities) => {
+    setModuleManagerComposerActivities(nextActivities);
+  };
+
+  const updateSelectedComposerActivityData = (updates) => {
+    if (!selectedComposerActivity) return;
+    const nextActivities = moduleManagerComposerActivities.map((activity, idx) =>
+      idx === moduleManagerComposerSelectedIndex
+        ? {
+            ...activity,
+            data: {
+              ...(activity.data || {}),
+              ...updates,
+            },
+          }
+        : activity,
+    );
+    updateComposerActivities(nextActivities);
+  };
+
+  const addComposerActivityDraft = () => {
+    const nextActivity = buildComposerStarterActivity(moduleManagerComposerStarterType);
+    const nextActivities = [...moduleManagerComposerActivities, nextActivity];
+    updateComposerActivities(nextActivities);
+    setModuleManagerComposerSelectedIndex(nextActivities.length - 1);
+  };
+
+  const removeSelectedComposerActivityDraft = () => {
+    if (!selectedComposerActivity) return;
+    const nextActivities = moduleManagerComposerActivities.filter((_, idx) => idx !== moduleManagerComposerSelectedIndex);
+    updateComposerActivities(nextActivities);
+  };
+
+  const moveSelectedComposerActivityDraft = (direction) => {
+    if (!selectedComposerActivity) return;
+    const targetIndex = moduleManagerComposerSelectedIndex + direction;
+    if (targetIndex < 0 || targetIndex >= moduleManagerComposerActivities.length) return;
+    const nextActivities = [...moduleManagerComposerActivities];
+    [nextActivities[moduleManagerComposerSelectedIndex], nextActivities[targetIndex]] = [
+      nextActivities[targetIndex],
+      nextActivities[moduleManagerComposerSelectedIndex],
+    ];
+    updateComposerActivities(nextActivities);
+    setModuleManagerComposerSelectedIndex(targetIndex);
+  };
+
+  const duplicateSelectedComposerActivityDraft = () => {
+    if (!selectedComposerActivity) return;
+    const duplicate = {
+      ...selectedComposerActivity,
+      id: `activity-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      data: {
+        ...(selectedComposerActivity.data || {}),
+      },
+    };
+    const nextActivities = [...moduleManagerComposerActivities];
+    nextActivities.splice(moduleManagerComposerSelectedIndex + 1, 0, duplicate);
+    updateComposerActivities(nextActivities);
+    setModuleManagerComposerSelectedIndex(moduleManagerComposerSelectedIndex + 1);
+  };
+
+  const renderModuleManagerComposerActivityEditor = () => {
+    if (!selectedComposerActivity) {
+      return <p className="text-xs text-slate-500">Select an activity to edit.</p>;
+    }
+
+    const data = selectedComposerActivity.data || {};
+    if (selectedComposerActivity.type === 'content_block') {
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Section Title</label>
+            <input
+              type="text"
+              value={data.title || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Body</label>
+            <textarea
+              value={data.body || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ body: e.target.value })}
+              className="w-full h-40 bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedComposerActivity.type === 'embed_block') {
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Embed URL</label>
+            <input
+              type="text"
+              value={data.url || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ url: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              placeholder="https://..."
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Caption</label>
+            <input
+              type="text"
+              value={data.caption || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ caption: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedComposerActivity.type === 'resource_list') {
+      const items = Array.isArray(data.items) ? data.items : [];
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">List Title</label>
+            <input
+              type="text"
+              value={data.title || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div className="space-y-2">
+            {items.map((item, idx) => (
+              <div key={`resource-item-${idx}`} className="grid grid-cols-12 gap-2">
+                <input
+                  type="text"
+                  value={item?.label || ''}
+                  onChange={(e) => {
+                    const nextItems = [...items];
+                    nextItems[idx] = { ...(nextItems[idx] || {}), label: e.target.value };
+                    updateSelectedComposerActivityData({ items: nextItems });
+                  }}
+                  className="col-span-3 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  placeholder="Label"
+                />
+                <input
+                  type="text"
+                  value={item?.viewUrl || item?.url || ''}
+                  onChange={(e) => {
+                    const nextItems = [...items];
+                    nextItems[idx] = { ...(nextItems[idx] || {}), viewUrl: e.target.value };
+                    updateSelectedComposerActivityData({ items: nextItems });
+                  }}
+                  className="col-span-3 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  placeholder="View URL"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVaultTargetField({ target: 'composer-resource', itemIndex: idx, field: 'viewUrl' });
+                    setIsVaultOpen(true);
+                  }}
+                  className="col-span-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded p-2 text-slate-200 flex items-center justify-center"
+                  title="Select view URL from vault"
+                >
+                  <FolderOpen size={12} />
+                </button>
+                <input
+                  type="text"
+                  value={item?.downloadUrl || item?.url || ''}
+                  onChange={(e) => {
+                    const nextItems = [...items];
+                    nextItems[idx] = { ...(nextItems[idx] || {}), downloadUrl: e.target.value };
+                    updateSelectedComposerActivityData({ items: nextItems });
+                  }}
+                  className="col-span-3 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  placeholder="Download URL"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVaultTargetField({ target: 'composer-resource', itemIndex: idx, field: 'downloadUrl' });
+                    setIsVaultOpen(true);
+                  }}
+                  className="col-span-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded p-2 text-slate-200 flex items-center justify-center"
+                  title="Select download URL from vault"
+                >
+                  <FolderOpen size={12} />
+                </button>
+                <button
+                  onClick={() => {
+                    const nextItems = items.filter((_, itemIdx) => itemIdx !== idx);
+                    updateSelectedComposerActivityData({ items: nextItems });
+                  }}
+                  className="col-span-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs"
+                  type="button"
+                  title="Remove resource"
+                >
+                  <Trash2 size={12} className="mx-auto" />
+                </button>
+                <input
+                  type="text"
+                  value={item?.description || ''}
+                  onChange={(e) => {
+                    const nextItems = [...items];
+                    nextItems[idx] = { ...(nextItems[idx] || {}), description: e.target.value };
+                    updateSelectedComposerActivityData({ items: nextItems });
+                  }}
+                  className="col-span-12 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  placeholder="Optional description"
+                />
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => updateSelectedComposerActivityData({ items: [...items, { label: '', viewUrl: '', downloadUrl: '', description: '' }] })}
+              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
+            >
+              <Plus size={12} /> Add Resource
+            </button>
+            <div className="pt-3 border-t border-slate-700">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-2">Add From Module Bank</label>
+              <div className="grid grid-cols-12 gap-2">
+                <select
+                  value={moduleManagerResourceMaterialId}
+                  onChange={(e) => setModuleManagerResourceMaterialId(e.target.value)}
+                  className="col-span-9 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                >
+                  {moduleBankMaterials.length === 0 && <option value="">No stored materials</option>}
+                  {moduleBankMaterials.map((mat) => (
+                    <option key={mat.id} value={mat.id}>
+                      {mat.title || mat.number || mat.id}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const selected = moduleBankMaterials.find((mat) => mat.id === moduleManagerResourceMaterialId);
+                    if (!selected) return;
+                    const viewUrl = selected.viewUrl || selected.downloadUrl || '';
+                    const downloadUrl = selected.downloadUrl || selected.viewUrl || '';
+                    const nextItems = [
+                      ...items,
+                      {
+                        label: selected.title || selected.number || selected.id,
+                        viewUrl,
+                        downloadUrl,
+                        description: selected.description || '',
+                        digitalContent: selected.digitalContent || null,
+                      },
+                    ];
+                    updateSelectedComposerActivityData({ items: nextItems });
+                  }}
+                  disabled={!moduleManagerResourceMaterialId || moduleBankMaterials.length === 0}
+                  className="col-span-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded text-xs font-bold text-white"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedComposerActivity.type === 'knowledge_check') {
+      const options = Array.isArray(data.options) ? data.options : [];
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Prompt</label>
+            <textarea
+              value={data.prompt || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ prompt: e.target.value })}
+              className="w-full h-24 bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Options</label>
+            <div className="space-y-2">
+              {options.map((opt, idx) => (
+                <div key={`kc-option-${idx}`} className="grid grid-cols-12 gap-2">
+                  <input
+                    type="text"
+                    value={opt || ''}
+                    onChange={(e) => {
+                      const nextOptions = [...options];
+                      nextOptions[idx] = e.target.value;
+                      updateSelectedComposerActivityData({ options: nextOptions });
+                    }}
+                    className="col-span-10 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  />
+                  <input
+                    type="radio"
+                    name="builder-kc-correct"
+                    checked={(data.correctIndex || 0) === idx}
+                    onChange={() => updateSelectedComposerActivityData({ correctIndex: idx })}
+                    className="col-span-1 self-center"
+                    title="Correct answer"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextOptions = options.filter((_, optionIdx) => optionIdx !== idx);
+                      updateSelectedComposerActivityData({
+                        options: nextOptions,
+                        correctIndex: Math.max(0, Math.min(data.correctIndex || 0, nextOptions.length - 1)),
+                      });
+                    }}
+                    className="col-span-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs"
+                    title="Remove option"
+                  >
+                    <Trash2 size={12} className="mx-auto" />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => updateSelectedComposerActivityData({ options: [...options, ''] })}
+                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
+              >
+                <Plus size={12} /> Add Option
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Short Answer Prompt</label>
+            <input
+              type="text"
+              value={data.shortAnswerPrompt || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ shortAnswerPrompt: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedComposerActivity.type === 'image_block') {
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Image URL</label>
+            <input
+              type="text"
+              value={data.url || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ url: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              placeholder="https://... or /assets/image.jpg"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Alt Text</label>
+            <input
+              type="text"
+              value={data.alt || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ alt: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Caption</label>
+            <input
+              type="text"
+              value={data.caption || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ caption: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Display Width</label>
+            <select
+              value={data.width || 'full'}
+              onChange={(e) => updateSelectedComposerActivityData({ width: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            >
+              <option value="full">Full width</option>
+              <option value="wide">Wide</option>
+              <option value="medium">Medium</option>
+              <option value="small">Small</option>
+            </select>
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedComposerActivity.type === 'assessment_embed') {
+      const items = Array.isArray(data.items) ? data.items : [];
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Block Title</label>
+            <input
+              type="text"
+              value={data.title || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div className="space-y-2">
+            {items.map((item, idx) => (
+              <div key={`assessment-item-${item.id || idx}`} className="flex items-center justify-between gap-2 rounded border border-slate-700 bg-slate-900 p-2">
+                <div>
+                  <p className="text-xs font-bold text-white">{item.title || item.id || `Assessment ${idx + 1}`}</p>
+                  <p className="text-[10px] text-slate-500 font-mono">{item.id || 'no-id'}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateSelectedComposerActivityData({ items: items.filter((_, itemIdx) => itemIdx !== idx) })}
+                  className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-xs"
+                  title="Remove assessment"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+            {items.length === 0 && <p className="text-xs text-slate-500">No assessments linked yet.</p>}
+          </div>
+          <div className="grid grid-cols-12 gap-2">
+            <select
+              value={moduleManagerAssessmentId}
+              onChange={(e) => setModuleManagerAssessmentId(e.target.value)}
+              className="col-span-9 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+            >
+              {moduleBankAssessments.length === 0 && <option value="">No saved assessments</option>}
+              {moduleBankAssessments.map((assessment) => (
+                <option key={assessment.id} value={assessment.id}>
+                  {assessment.title || assessment.id}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => {
+                const selected = moduleBankAssessments.find((assessment) => assessment.id === moduleManagerAssessmentId);
+                if (!selected) return;
+                if (items.some((item) => item.id === selected.id)) return;
+                const nextItems = [
+                  ...items,
+                  {
+                    id: selected.id,
+                    title: selected.title || selected.id,
+                    html: selected.html || '',
+                    script: selected.script || '',
+                  },
+                ];
+                updateSelectedComposerActivityData({ items: nextItems });
+              }}
+              disabled={!moduleManagerAssessmentId || moduleBankAssessments.length === 0}
+              className="col-span-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded text-xs font-bold text-white"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedComposerActivity.type === 'submission_builder') {
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Section Title</label>
+            <input
+              type="text"
+              value={data.title || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Button Label</label>
+            <input
+              type="text"
+              value={data.buttonLabel || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ buttonLabel: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    return <p className="text-xs text-slate-500">No editor for this activity type.</p>;
   };
 
   const addStandaloneModule = () => {
@@ -852,14 +1427,17 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
 
       // Derive title from ID when omitted
       const title = moduleManagerTitle.trim() || moduleId.replace('view-', '').replace(/-/g, ' ');
-      const starterActivity = buildComposerStarterActivity(moduleManagerComposerStarterType);
+      const composerActivities =
+        moduleManagerComposerActivities.length > 0
+          ? moduleManagerComposerActivities
+          : [buildComposerStarterActivity(moduleManagerComposerStarterType)];
 
       const newModule = {
         id: moduleId,
         title,
         type: 'standalone',
         mode: 'composer',
-        activities: [starterActivity],
+        activities: composerActivities,
         rawHtml: '',
         html: '',
         css: '',
@@ -868,7 +1446,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
           timestamp: new Date().toISOString(),
           title,
           mode: 'composer',
-          activities: [starterActivity],
+          activities: composerActivities,
         }]
       };
 
@@ -899,8 +1477,10 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
 
       setModuleManagerID('');
       setModuleManagerTitle('');
+      setModuleManagerComposerActivities([buildComposerStarterActivity(moduleManagerComposerStarterType)]);
+      setModuleManagerComposerSelectedIndex(0);
       setModuleManagerStatus('success');
-      setModuleManagerMessage(`✅ Composer module "${title}" added with starter activity.`);
+      setModuleManagerMessage(`✅ Composer module "${title}" added with ${composerActivities.length} activities.`);
 
       setTimeout(() => {
         setModuleManagerStatus(null);
@@ -2954,27 +3534,135 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                             {/* Composer Module Input */}
                             {moduleManagerType === 'composer' && (
                                 <>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
-                                            Starter Activity Type
-                                        </label>
-                                        <select
-                                            value={moduleManagerComposerStarterType}
-                                            onChange={(e) => setModuleManagerComposerStarterType(e.target.value)}
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:border-indigo-500 outline-none"
-                                        >
-                                            {listActivityTypes().map((activityType) => {
-                                                const def = getActivityDefinition(activityType);
-                                                return (
-                                                    <option key={activityType} value={activityType}>
-                                                        {def?.label || activityType}
-                                                    </option>
-                                                );
-                                            })}
-                                        </select>
-                                        <p className="text-[10px] text-slate-500 mt-1 italic">
-                                            Creates a new module pre-seeded with this activity.
-                                        </p>
+                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                                        <div className="lg:col-span-5 bg-slate-950 border border-slate-700 rounded-lg p-3">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h4 className="text-sm font-bold text-white">Activities</h4>
+                                                <span className="text-[11px] text-slate-500">{moduleManagerComposerActivities.length} total</span>
+                                            </div>
+                                            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                                                {moduleManagerComposerActivities.map((activity, idx) => {
+                                                    const def = getActivityDefinition(activity.type);
+                                                    return (
+                                                        <button
+                                                            key={activity.id || `${activity.type}-${idx}`}
+                                                            type="button"
+                                                            onClick={() => setModuleManagerComposerSelectedIndex(idx)}
+                                                            className={`w-full text-left p-2 rounded border transition-colors ${
+                                                                idx === moduleManagerComposerSelectedIndex
+                                                                    ? 'bg-emerald-900/30 border-emerald-600 text-white'
+                                                                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                                                            }`}
+                                                        >
+                                                            <p className="text-xs font-bold">{def?.label || activity.type}</p>
+                                                            <p className="text-[10px] text-slate-500 font-mono">{activity.id || `activity-${idx + 1}`}</p>
+                                                        </button>
+                                                    );
+                                                })}
+                                                {moduleManagerComposerActivities.length === 0 && <p className="text-xs text-slate-500">No activities yet.</p>}
+                                            </div>
+
+                                            <div className="mt-4 pt-3 border-t border-slate-700">
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    <select
+                                                        value={moduleManagerComposerStarterType}
+                                                        onChange={(e) => setModuleManagerComposerStarterType(e.target.value)}
+                                                        className="col-span-2 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                    >
+                                                        {moduleManagerActivityTypes.map((activityType) => {
+                                                            const def = getActivityDefinition(activityType);
+                                                            return (
+                                                                <option key={activityType} value={activityType}>
+                                                                    {def?.label || activityType}
+                                                                </option>
+                                                            );
+                                                        })}
+                                                    </select>
+                                                    <button
+                                                        type="button"
+                                                        onClick={addComposerActivityDraft}
+                                                        className="bg-emerald-600 hover:bg-emerald-500 rounded text-xs font-bold text-white inline-flex items-center justify-center gap-1"
+                                                    >
+                                                        <Plus size={12} /> Add
+                                                    </button>
+                                                </div>
+                                                <div className="flex gap-2 mt-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => moveSelectedComposerActivityDraft(-1)}
+                                                        disabled={!selectedComposerActivity || moduleManagerComposerSelectedIndex === 0}
+                                                        className="flex-1 px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                                                    >
+                                                        <ChevronUp size={12} /> Up
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => moveSelectedComposerActivityDraft(1)}
+                                                        disabled={!selectedComposerActivity || moduleManagerComposerSelectedIndex >= moduleManagerComposerActivities.length - 1}
+                                                        className="flex-1 px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                                                    >
+                                                        <ChevronDown size={12} /> Down
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={duplicateSelectedComposerActivityDraft}
+                                                        disabled={!selectedComposerActivity}
+                                                        className="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center"
+                                                        title="Duplicate selected activity"
+                                                    >
+                                                        <Copy size={12} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={removeSelectedComposerActivityDraft}
+                                                        disabled={!selectedComposerActivity}
+                                                        className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center"
+                                                        title="Delete selected activity"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="lg:col-span-7 bg-slate-950 border border-slate-700 rounded-lg p-4">
+                                            <h4 className="text-sm font-bold text-white mb-3">
+                                                {selectedComposerActivity ? (getActivityDefinition(selectedComposerActivity.type)?.label || selectedComposerActivity.type) : 'Activity Editor'}
+                                            </h4>
+                                            {renderModuleManagerComposerActivityEditor()}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-slate-950 border border-slate-700 rounded-lg p-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h4 className="text-sm font-bold text-white">Live Module Preview</h4>
+                                            <button
+                                                type="button"
+                                                onClick={() => setModuleManagerComposerPreviewNonce((n) => n + 1)}
+                                                className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
+                                                title="Remount preview iframe"
+                                            >
+                                                <RefreshCw size={12} />
+                                                Reset
+                                            </button>
+                                        </div>
+                                        <p className="text-[11px] text-slate-500 mb-3">Preview updates while you build this composer module.</p>
+                                        <div className="rounded-lg overflow-hidden border border-slate-800 bg-black">
+                                            {moduleManagerComposerPreviewDoc ? (
+                                                <iframe
+                                                    key={`composer-create-preview-${moduleManagerComposerPreviewNonce}`}
+                                                    srcDoc={moduleManagerComposerPreviewDoc}
+                                                    className="w-full border-0"
+                                                    style={{ minHeight: '420px' }}
+                                                    sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-top-navigation-by-user-activation"
+                                                    title="Composer draft live preview"
+                                                />
+                                            ) : (
+                                                <div className="h-48 flex items-center justify-center text-xs text-slate-500">
+                                                    Composer preview unavailable.
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <button

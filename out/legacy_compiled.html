@@ -2256,7 +2256,7 @@
 </html>" 
                 class="w-full h-full border-0" 
                 style="min-height: 100vh;"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-top-navigation-by-user-activation"
             ></iframe>
         </div>
 
@@ -2627,7 +2627,7 @@
 </html>" 
                 class="w-full h-full border-0" 
                 style="min-height: 100vh;"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-top-navigation-by-user-activation"
             ></iframe>
         </div>
 
@@ -3096,7 +3096,7 @@
 </html>" 
                 class="w-full h-full border-0" 
                 style="min-height: 100vh;"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-top-navigation-by-user-activation"
             ></iframe>
         </div>
 
@@ -3787,7 +3787,7 @@
 </html>" 
                 class="w-full h-full border-0" 
                 style="min-height: 100vh;"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-top-navigation-by-user-activation"
             ></iframe>
         </div>
 
@@ -4345,7 +4345,7 @@
 </html>" 
                 class="w-full h-full border-0" 
                 style="min-height: 100vh;"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-top-navigation-by-user-activation"
             ></iframe>
         </div>
 
@@ -4927,7 +4927,7 @@
 </html>" 
                 class="w-full h-full border-0" 
                 style="min-height: 100vh;"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-top-navigation-by-user-activation"
             ></iframe>
         </div>
 
@@ -5292,7 +5292,7 @@
 </html>" 
                 class="w-full h-full border-0" 
                 style="min-height: 100vh;"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-top-navigation-by-user-activation"
             ></iframe>
         </div>
 
@@ -5604,7 +5604,7 @@
 </html>" 
                 class="w-full h-full border-0" 
                 style="min-height: 100vh;"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-top-navigation-by-user-activation"
             ></iframe>
         </div>
 
@@ -6055,7 +6055,7 @@
 </html>" 
                 class="w-full h-full border-0" 
                 style="min-height: 100vh;"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-top-navigation-by-user-activation"
             ></iframe>
         </div>
 
@@ -6066,7 +6066,9 @@
 
     <!-- MODULE SCRIPTS CONTAINER -->
     <script id="module-scripts">
-        
+        window.CF_ASSET_BASE_URL = window.CF_ASSET_BASE_URL || '';
+        window.CF_ASSET_BASE_URL = "";
+
         function renderMaterials() {
                                 const container = document.getElementById('materials-container');
                                 if (!container) return;

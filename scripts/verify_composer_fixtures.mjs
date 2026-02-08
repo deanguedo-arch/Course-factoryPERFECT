@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { compileProjectToFilesMap, compileModuleToHtml } from '../src/utils/compiler.js';
+import { buildLegacyCompiledHtml } from '../src/utils/generators.js';
 
 const activityFixtures = [
   {
@@ -9,13 +10,33 @@ const activityFixtures = [
   },
   {
     type: 'embed_block',
-    marker: '<iframe',
+    marker: 'Embed fixture',
     data: { url: 'https://example.com', caption: 'Embed fixture' },
+  },
+  {
+    type: 'image_block',
+    marker: 'Fixture Image',
+    data: { url: 'https://example.com/fixture.png', alt: 'Fixture image alt', caption: 'Fixture Image', width: 'medium' },
   },
   {
     type: 'resource_list',
     marker: 'Fixture Resource',
     data: { title: 'Resources', items: [{ label: 'Fixture Resource', url: 'https://example.com/docs' }] },
+  },
+  {
+    type: 'assessment_embed',
+    marker: 'Fixture Embedded Assessment',
+    data: {
+      title: 'Embedded Assessments',
+      items: [
+        {
+          id: 'assess-fixture-1',
+          title: 'Fixture Embedded Assessment',
+          html: '<div class="text-sm text-white">Fixture Embedded Assessment</div>',
+          script: 'window.__fixtureAssessmentExecuted = true;',
+        },
+      ],
+    },
   },
   {
     type: 'knowledge_check',
@@ -29,7 +50,7 @@ const activityFixtures = [
   },
   {
     type: 'submission_builder',
-    marker: 'data-submission-generate',
+    marker: 'data-submission-download',
     data: { title: 'Submit', buttonLabel: 'Generate Submission' },
   },
 ];
@@ -41,6 +62,10 @@ function buildProjectWithFixtures() {
     type: 'standalone',
     mode: 'composer',
     activities: [{ id: `activity-${idx + 1}`, type: fixture.type, data: fixture.data }],
+    rawHtml:
+      idx === 0
+        ? '<!DOCTYPE html><html><body><p>RAW_SHOULD_NOT_SHOW</p></body></html>'
+        : '',
     html: '',
     css: '',
     script: '',
@@ -91,6 +116,17 @@ function run() {
     const previewHtml = compileModuleToHtml({ projectData, moduleId });
     assert(typeof previewHtml === 'string' && previewHtml.length > 0, `Missing preview HTML for ${moduleId}`);
     assert(previewHtml.includes(fixture.marker), `Preview HTML missing marker for ${fixture.type}: ${fixture.marker}`);
+  }
+
+  const legacyHtml = buildLegacyCompiledHtml({ projectData });
+  assert(typeof legacyHtml === 'string' && legacyHtml.length > 0, 'Missing legacy compiled HTML');
+  assert(!legacyHtml.includes('RAW_SHOULD_NOT_SHOW'), 'Legacy HTML incorrectly used rawHtml for composer module');
+  for (let i = 0; i < activityFixtures.length; i += 1) {
+    const fixture = activityFixtures[i];
+    assert(
+      legacyHtml.includes(fixture.marker),
+      `Legacy HTML missing marker for ${fixture.type}: ${fixture.marker}`
+    );
   }
 
   console.log(`✅ COMPOSER FIXTURES OK (${activityFixtures.length} activity types)`);
