@@ -120,3 +120,7 @@
 - Added a dedicated output safety rule for preview/export parity, generator drift discipline, and verify-before-commit workflow. (`.cursor/rules/COURSE_FACTOR_OUTPUT_SAFETY.md`)
 - Hardened export drift verification by switching manifest normalization to deep-stable JSON key sorting while preserving array order. (`scripts/verify_exports.mjs`)
 - Re-baselined export hashes to match the corrected manifest normalization behavior. (`baselines/exports_baseline.json`)
+- Added a compiler facade (`compileProjectToFilesMap`) for canonical files-map compilation and module HTML resolution. (`src/utils/compiler.js`)
+- Routed course-module preview rendering through the canonical Beta module compiler path; retained fallback preview behavior for non-course items. (`src/App.jsx`, `src/utils/compiler.js`)
+- Added a parity command to compare preview-compiled module HTML against export-compiled module HTML. (`scripts/exports_parity.mjs`, `package.json`)
+- Added project schema versioning + migration pipeline with module defaults (`mode`, `activities`) during persistence load/save. (`src/utils/migrations.js`, `src/hooks/useProjectPersistence.js`, `src/data/constants.js`)
