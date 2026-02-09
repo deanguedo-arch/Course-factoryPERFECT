@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import VaultBrowser from './VaultBrowser';
 import { CodeBlock, Toggle } from './Shared.jsx';
+import GenericDataEditor from './GenericDataEditor.jsx';
 import { buildModuleFrameHTML, cleanModuleScript, getMaterialBadgeLabel, validateModule } from '../utils/generators.js';
 import { getActivityDefinition, listActivityTypes } from '../composer/activityRegistry.js';
 import {
@@ -80,7 +81,6 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   const [moduleManagerComposerPreviewNonce, setModuleManagerComposerPreviewNonce] = useState(0);
   const moduleManagerRichEditorRef = useRef(null);
   const moduleManagerRichEditorUpdateTimerRef = useRef(null);
-  const [moduleManagerComposerRawDataError, setModuleManagerComposerRawDataError] = useState('');
   const [moduleManagerHTML, setModuleManagerHTML] = useState('');
   const [moduleManagerURL, setModuleManagerURL] = useState('');
   const [moduleManagerID, setModuleManagerID] = useState('');
@@ -1140,10 +1140,6 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     : null;
 
   useEffect(() => {
-    setModuleManagerComposerRawDataError('');
-  }, [moduleManagerComposerSelectedIndex, selectedComposerActivity?.id, selectedComposerActivity?.type]);
-
-  useEffect(() => {
     if (moduleManagerRichEditorUpdateTimerRef.current) {
       clearTimeout(moduleManagerRichEditorUpdateTimerRef.current);
       moduleManagerRichEditorUpdateTimerRef.current = null;
@@ -1918,35 +1914,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       );
     }
 
-    const rawDataJson = JSON.stringify(data || {}, null, 2);
-    return (
-      <div className="space-y-2">
-        <p className="text-xs text-slate-400">
-          This block currently uses JSON settings. Edit and click out of the box to apply.
-        </p>
-        <textarea
-          key={`composer-raw-editor-${selectedComposerActivity.id || moduleManagerComposerSelectedIndex}`}
-          defaultValue={rawDataJson}
-          onBlur={(event) => {
-            const draft = event.currentTarget.value || '{}';
-            try {
-              const parsed = JSON.parse(draft);
-              replaceSelectedComposerActivityData(parsed);
-              setModuleManagerComposerRawDataError('');
-            } catch (err) {
-              setModuleManagerComposerRawDataError(err?.message || 'Invalid JSON');
-            }
-          }}
-          className="w-full min-h-60 bg-slate-950 border border-slate-700 rounded p-3 text-xs text-slate-200 font-mono"
-          spellCheck={false}
-        />
-        {moduleManagerComposerRawDataError ? (
-          <p className="text-xs text-rose-300">{moduleManagerComposerRawDataError}</p>
-        ) : (
-          <p className="text-[11px] text-slate-500">Use valid JSON object format.</p>
-        )}
-      </div>
-    );
+    return <GenericDataEditor data={data} onChange={replaceSelectedComposerActivityData} />;
   };
 
   const addStandaloneModule = () => {

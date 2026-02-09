@@ -23,6 +23,7 @@ import {
 } from '../../composer/layout.js';
 import { isComposerEnabled } from '../../utils/composer.js';
 import { buildModuleFrameHTML } from '../../utils/generators.js';
+import GenericDataEditor from '../GenericDataEditor.jsx';
 
 const { useEffect, useMemo, useRef, useState } = React;
 
@@ -91,7 +92,6 @@ export default function EditModal({
   const [composerPreviewNonce, setComposerPreviewNonce] = useState(0);
   const richEditorRef = useRef(null);
   const richEditorUpdateTimerRef = useRef(null);
-  const [composerRawDataError, setComposerRawDataError] = useState('');
   const composerGridModel = useMemo(
     () =>
       buildComposerGridModel(activities, composerMaxColumns, {
@@ -151,10 +151,6 @@ export default function EditModal({
 
   const selectedActivity = activities[selectedActivityIndex] || null;
   const selectedPlacement = selectedActivity ? composerPlacementsByIndex.get(selectedActivityIndex) || null : null;
-
-  useEffect(() => {
-    setComposerRawDataError('');
-  }, [selectedActivityIndex, selectedActivity?.id, selectedActivity?.type]);
 
   useEffect(() => {
     if (richEditorUpdateTimerRef.current) {
@@ -897,35 +893,7 @@ export default function EditModal({
       );
     }
 
-    const rawDataJson = JSON.stringify(data || {}, null, 2);
-    return (
-      <div className="space-y-2">
-        <p className="text-xs text-slate-400">
-          This block currently uses JSON settings. Edit and click out of the box to apply.
-        </p>
-        <textarea
-          key={`composer-raw-editor-${selectedActivity.id || selectedActivityIndex}`}
-          defaultValue={rawDataJson}
-          onBlur={(event) => {
-            const draft = event.currentTarget.value || '{}';
-            try {
-              const parsed = JSON.parse(draft);
-              replaceSelectedActivityData(parsed);
-              setComposerRawDataError('');
-            } catch (err) {
-              setComposerRawDataError(err?.message || 'Invalid JSON');
-            }
-          }}
-          className="w-full min-h-60 bg-slate-950 border border-slate-700 rounded p-3 text-xs text-slate-200 font-mono"
-          spellCheck={false}
-        />
-        {composerRawDataError ? (
-          <p className="text-xs text-rose-300">{composerRawDataError}</p>
-        ) : (
-          <p className="text-[11px] text-slate-500">Use valid JSON object format.</p>
-        )}
-      </div>
-    );
+    return <GenericDataEditor data={data} onChange={replaceSelectedActivityData} />;
   };
 
   return (
