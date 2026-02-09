@@ -10,6 +10,102 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+const COMPOSER_BLOCK_FONT_STACKS = {
+  Arial: 'Arial, Helvetica, sans-serif',
+  Helvetica: 'Helvetica, Arial, sans-serif',
+  Verdana: 'Verdana, Geneva, sans-serif',
+  Tahoma: 'Tahoma, Geneva, sans-serif',
+  'Trebuchet MS': 'Trebuchet MS, Helvetica, sans-serif',
+  'Segoe UI': 'Segoe UI, Tahoma, sans-serif',
+  Georgia: 'Georgia, serif',
+  Garamond: 'Garamond, serif',
+  'Palatino Linotype': 'Palatino Linotype, Book Antiqua, Palatino, serif',
+  'Times New Roman': 'Times New Roman, Times, serif',
+  'Courier New': 'Courier New, Courier, monospace',
+  'Lucida Console': 'Lucida Console, Monaco, monospace',
+  Impact: 'Impact, Haettenschweiler, Arial Narrow Bold, sans-serif',
+  'Comic Sans MS': 'Comic Sans MS, Comic Sans, cursive',
+  Inter: 'Inter, sans-serif',
+  Roboto: 'Roboto, sans-serif',
+  'Open Sans': 'Open Sans, sans-serif',
+  Lato: 'Lato, sans-serif',
+  Montserrat: 'Montserrat, sans-serif',
+  Poppins: 'Poppins, sans-serif',
+  Raleway: 'Raleway, sans-serif',
+  Nunito: 'Nunito, sans-serif',
+  'Playfair Display': 'Playfair Display, serif',
+  Merriweather: 'Merriweather, serif',
+  Oswald: 'Oswald, sans-serif',
+  'Bebas Neue': 'Bebas Neue, sans-serif',
+};
+
+const COMPOSER_BLOCK_THEME_PRESETS = {
+  default: null,
+  slate: {
+    textColor: '#dbe3ee',
+    containerBg: 'rgba(15, 23, 42, 0.82)',
+    borderColor: 'rgba(71, 85, 105, 0.7)',
+    accentColor: '#7dd3fc',
+  },
+  ocean: {
+    textColor: '#dbeafe',
+    containerBg: 'rgba(30, 58, 138, 0.45)',
+    borderColor: 'rgba(96, 165, 250, 0.7)',
+    accentColor: '#38bdf8',
+  },
+  forest: {
+    textColor: '#dcfce7',
+    containerBg: 'rgba(20, 83, 45, 0.5)',
+    borderColor: 'rgba(74, 222, 128, 0.6)',
+    accentColor: '#4ade80',
+  },
+  sunset: {
+    textColor: '#ffedd5',
+    containerBg: 'rgba(154, 52, 18, 0.45)',
+    borderColor: 'rgba(251, 146, 60, 0.65)',
+    accentColor: '#fb923c',
+  },
+  mono: {
+    textColor: '#f8fafc',
+    containerBg: 'rgba(17, 24, 39, 0.82)',
+    borderColor: 'rgba(148, 163, 184, 0.6)',
+    accentColor: '#cbd5e1',
+  },
+};
+
+function sanitizeHexColor(value) {
+  const raw = String(value || '').trim();
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(raw) ? raw : '';
+}
+
+function resolveComposerBlockTheme(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(COMPOSER_BLOCK_THEME_PRESETS, raw) ? raw : 'default';
+}
+
+function resolveComposerBlockFont(value) {
+  const raw = String(value || '').trim();
+  return COMPOSER_BLOCK_FONT_STACKS[raw] || '';
+}
+
+function resolveComposerBlockStyle(data = {}) {
+  const themeKey = resolveComposerBlockTheme(data.blockTheme);
+  const theme = COMPOSER_BLOCK_THEME_PRESETS[themeKey];
+  const fontFamily = resolveComposerBlockFont(data.blockFontFamily);
+  const textColor = sanitizeHexColor(data.blockTextColor) || (theme?.textColor || '');
+  const containerBg = sanitizeHexColor(data.blockContainerBg || data.containerBg) || (theme?.containerBg || '');
+  const borderColor = theme?.borderColor || '';
+  const accentColor = theme?.accentColor || '';
+  return {
+    themeKey,
+    fontFamily,
+    textColor,
+    containerBg,
+    borderColor,
+    accentColor,
+  };
+}
+
 export function normalizeActivities(activities, { maxColumns } = {}) {
   return normalizeComposerActivities(activities, { maxColumns });
 }
@@ -124,44 +220,490 @@ function buildComposerRuntimeScript() {
         };
       }
 
-      function buildSubmissionReport(root) {
+      function getSaveLoadContext(target) {
+        var block = closest(target, '[data-save-load-block]');
+        if (!block) return null;
+        return {
+          block: block,
+          root: closest(block, '[data-composer-root]') || document,
+          input: block.querySelector('[data-save-load-upload-input]'),
+          status: block.querySelector('[data-save-load-status]'),
+          fileName: block.getAttribute('data-save-load-file-name') || 'module-progress',
+        };
+      }
+
+      function setSaveLoadStatus(ctx, message, tone) {
+        if (!ctx || !ctx.status) return;
+        var normalizedTone = tone === 'error' ? 'error' : tone === 'success' ? 'success' : 'info';
+        var toneClass = normalizedTone === 'error' ? 'text-rose-300' : normalizedTone === 'success' ? 'text-emerald-300' : 'text-cyan-100/75';
+        ctx.status.className = 'mt-3 text-xs ' + toneClass;
+        ctx.status.textContent = message;
+      }
+
+      function getPersistableFields(root) {
+        return Array.prototype.slice.call(root.querySelectorAll('input, textarea, select')).filter(function(field) {
+          if (closest(field, '[data-submission-block]')) return false;
+          if (closest(field, '[data-save-load-block]')) return false;
+          var tag = String(field.tagName || '').toLowerCase();
+          var type = String(field.type || '').toLowerCase();
+          if (tag === 'input' && (type === 'hidden' || type === 'file' || type === 'button' || type === 'submit' || type === 'reset' || type === 'image')) {
+            return false;
+          }
+          return true;
+        });
+      }
+
+      function ensureSortItemIds(list, listIndex) {
+        if (!list) return;
+        Array.prototype.slice.call(list.querySelectorAll('[data-sort-item]')).forEach(function(item, itemIndex) {
+          if (!item.getAttribute('data-sort-item-id')) {
+            item.setAttribute('data-sort-item-id', 'sort-' + listIndex + '-item-' + itemIndex);
+          }
+        });
+      }
+
+      function collectInteractiveUiState(root) {
+        var tabs = Array.prototype.slice.call(root.querySelectorAll('[data-tabs-block]')).map(function(block) {
+          var activeTrigger = block.querySelector('[data-tabs-trigger][aria-selected="true"]');
+          if (!activeTrigger) activeTrigger = block.querySelector('[data-tabs-trigger]');
+          var idx = parseInt((activeTrigger && activeTrigger.getAttribute('data-tab-index')) || '0', 10);
+          return Number.isInteger(idx) ? idx : 0;
+        });
+
+        var pathMaps = Array.prototype.slice.call(root.querySelectorAll('[data-path-map-block]')).map(function(block) {
+          var activeNode = block.querySelector('[data-path-node].ring-1') || block.querySelector('[data-path-node]');
+          var idx = parseInt((activeNode && activeNode.getAttribute('data-path-index')) || '0', 10);
+          return Number.isInteger(idx) ? idx : 0;
+        });
+
+        var hotspots = Array.prototype.slice.call(root.querySelectorAll('[data-hotspot-block]')).map(function(block) {
+          var activeButton = block.querySelector('[data-hotspot-btn].bg-sky-500') || block.querySelector('[data-hotspot-btn]');
+          var idx = parseInt((activeButton && activeButton.getAttribute('data-hotspot-index')) || '0', 10);
+          return Number.isInteger(idx) ? idx : 0;
+        });
+
+        var flashcards = Array.prototype.slice.call(root.querySelectorAll('[data-flashcards-block]')).map(function(block) {
+          return Array.prototype.slice
+            .call(block.querySelectorAll('[data-flashcard]'))
+            .map(function(card, cardIndex) {
+              return card.getAttribute('data-flashcard-side') === 'back' ? cardIndex : null;
+            })
+            .filter(function(index) { return index !== null; });
+        });
+
+        var sortLists = Array.prototype.slice.call(root.querySelectorAll('[data-sort-list]')).map(function(list, listIndex) {
+          ensureSortItemIds(list, listIndex);
+          return Array.prototype.slice
+            .call(list.querySelectorAll('[data-sort-item]'))
+            .map(function(item) { return item.getAttribute('data-sort-item-id') || ''; })
+            .filter(Boolean);
+        });
+
+        return {
+          tabs: tabs,
+          pathMaps: pathMaps,
+          hotspots: hotspots,
+          flashcards: flashcards,
+          sortLists: sortLists,
+        };
+      }
+
+      function applyInteractiveUiState(root, uiState) {
+        var state = uiState && typeof uiState === 'object' ? uiState : {};
+
+        Array.prototype.slice.call(root.querySelectorAll('[data-tabs-block]')).forEach(function(block, idx) {
+          if (!Array.isArray(state.tabs)) return;
+          var next = parseInt(state.tabs[idx], 10);
+          if (!Number.isInteger(next)) return;
+          setActiveTab(block, next);
+        });
+
+        Array.prototype.slice.call(root.querySelectorAll('[data-path-map-block]')).forEach(function(block, idx) {
+          if (!Array.isArray(state.pathMaps)) return;
+          var next = parseInt(state.pathMaps[idx], 10);
+          if (!Number.isInteger(next)) return;
+          setPathMapIndex(block, next);
+        });
+
+        Array.prototype.slice.call(root.querySelectorAll('[data-hotspot-block]')).forEach(function(block, idx) {
+          if (!Array.isArray(state.hotspots)) return;
+          var next = parseInt(state.hotspots[idx], 10);
+          if (!Number.isInteger(next)) return;
+          setHotspotIndex(block, next);
+        });
+
+        Array.prototype.slice.call(root.querySelectorAll('[data-flashcards-block]')).forEach(function(block, idx) {
+          var openIndexes = Array.isArray(state.flashcards) && Array.isArray(state.flashcards[idx]) ? state.flashcards[idx] : [];
+          var openSet = new Set(openIndexes.map(function(value) { return parseInt(value, 10); }));
+          Array.prototype.slice.call(block.querySelectorAll('[data-flashcard]')).forEach(function(card, cardIndex) {
+            setFlashcardFace(card, openSet.has(cardIndex));
+          });
+        });
+
+        Array.prototype.slice.call(root.querySelectorAll('[data-sort-list]')).forEach(function(list, listIndex) {
+          ensureSortItemIds(list, listIndex);
+          if (!(Array.isArray(state.sortLists) && Array.isArray(state.sortLists[listIndex]))) return;
+          var desiredOrder = state.sortLists[listIndex];
+          var byId = {};
+          Array.prototype.slice.call(list.querySelectorAll('[data-sort-item]')).forEach(function(item) {
+            byId[item.getAttribute('data-sort-item-id') || ''] = item;
+          });
+          desiredOrder.forEach(function(itemId) {
+            var item = byId[itemId];
+            if (item) list.appendChild(item);
+          });
+          refreshSortRanks(list);
+        });
+      }
+
+      function collectModuleProgressSnapshot(root) {
+        var fields = getPersistableFields(root).map(function(field) {
+          var tag = String(field.tagName || '').toLowerCase();
+          var type = String(field.type || '').toLowerCase();
+          if (type === 'checkbox' || type === 'radio') {
+            return {
+              tag: tag,
+              type: type,
+              checked: Boolean(field.checked),
+            };
+          }
+          return {
+            tag: tag,
+            type: type,
+            value: String(field.value || ''),
+          };
+        });
+
+        return {
+          kind: 'course-factory-module-progress',
+          version: 1,
+          savedAt: new Date().toISOString(),
+          fields: fields,
+          ui: collectInteractiveUiState(root),
+        };
+      }
+
+      function applyModuleProgressSnapshot(root, snapshot) {
+        if (!snapshot || typeof snapshot !== 'object') {
+          return { ok: false, message: 'Invalid progress payload.' };
+        }
+        var records = Array.isArray(snapshot.fields) ? snapshot.fields : [];
+        if (!records.length) {
+          return { ok: false, message: 'No saved fields found in this file.' };
+        }
+
+        var fields = getPersistableFields(root);
+        var appliedCount = 0;
+        records.forEach(function(record, idx) {
+          var field = fields[idx];
+          if (!field) return;
+          var tag = String(field.tagName || '').toLowerCase();
+          var type = String(field.type || '').toLowerCase();
+          if (type === 'checkbox' || type === 'radio') {
+            field.checked = Boolean(record && record.checked);
+            appliedCount += 1;
+            return;
+          }
+          var nextValue = record && Object.prototype.hasOwnProperty.call(record, 'value') ? String(record.value || '') : '';
+          field.value = nextValue;
+          appliedCount += 1;
+          if (tag === 'select' || type === 'range') return;
+        });
+
+        applyInteractiveUiState(root, snapshot.ui || {});
+
+        Array.prototype.slice.call(root.querySelectorAll('[data-checklist-block]')).forEach(function(block) {
+          refreshChecklistBlock(block, true);
+        });
+        Array.prototype.slice.call(root.querySelectorAll('[data-before-after-block]')).forEach(function(block) {
+          refreshBeforeAfterBlock(block);
+        });
+        Array.prototype.slice.call(root.querySelectorAll('[data-decision-block]')).forEach(function(block) {
+          refreshDecisionBlock(block);
+        });
+
+        return { ok: true, message: 'Restored ' + appliedCount + ' fields from backup.' };
+      }
+
+      function downloadModuleProgressSnapshot(ctx, snapshot) {
+        var baseName = String((ctx && ctx.fileName) || 'module-progress').replace(/[^a-z0-9._-]/gi, '-').trim() || 'module-progress';
+        var fileName = /\\.json$/i.test(baseName) ? baseName : (baseName + '.json');
+        var blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json;charset=utf-8' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(function() {
+          URL.revokeObjectURL(link.href);
+        }, 500);
+      }
+
+      function getReadableText(el, fallback) {
+        if (!el) return fallback || '';
+        var text = normalizeSpace(el.innerText || el.textContent || '');
+        return text || fallback || '';
+      }
+
+      function getSectionTitle(section, fallback) {
+        if (!section) return fallback || 'Section';
+        var titleEl = section.querySelector('h3, h2, h4');
+        return getReadableText(titleEl, fallback || 'Section');
+      }
+
+      function readFieldLabel(field, scope, fallback) {
+        if (!field) return fallback || 'Response';
+        var labelEl = null;
+        var id = field.id;
+        if (id) {
+          try {
+            labelEl = scope.querySelector('label[for="' + id.replace(/"/g, '\\"') + '"]');
+          } catch (err) {
+            labelEl = null;
+          }
+        }
+        if (!labelEl) labelEl = closest(field, 'label');
+        var raw = labelEl ? getReadableText(labelEl, '') : '';
+        if (!raw && field.getAttribute) raw = normalizeSpace(field.getAttribute('aria-label') || '');
+        if (!raw) raw = normalizeSpace(field.name || field.id || field.placeholder || '');
+        return raw || fallback || 'Response';
+      }
+
+      function readFieldValue(field) {
+        if (!field) return '';
+        var tag = String(field.tagName || '').toLowerCase();
+        var type = String(field.type || '').toLowerCase();
+        if (type === 'checkbox') return field.checked ? 'Yes' : '';
+        if (tag === 'select') {
+          var selected = field.options && field.selectedIndex >= 0 ? field.options[field.selectedIndex] : null;
+          var selectedText = selected ? normalizeSpace(selected.innerText || selected.text || '') : '';
+          return selectedText || normalizeSpace(field.value || '');
+        }
+        return normalizeSpace(field.value || '');
+      }
+
+      function collectFilledFieldLines(scope, options) {
+        var config = options || {};
         var lines = [];
-        var checks = root.querySelectorAll('[data-kc-block]');
-        checks.forEach(function(block, idx) {
-          var promptEl = block.querySelector('h3');
-          var prompt = promptEl ? normalizeSpace(promptEl.innerText) : ('Knowledge Check ' + (idx + 1));
-          var selected = block.querySelector('input[type="radio"]:checked');
-          var selectedLabel = '[No selection]';
-          if (selected) {
-            var label = selected.closest('label');
-            selectedLabel = label ? normalizeSpace(label.innerText) : ('Option ' + selected.value);
-          }
-          lines.push((idx + 1) + '. ' + prompt);
-          lines.push('Answer: ' + selectedLabel);
-          var shortAnswer = block.querySelector('[data-kc-short-answer]');
-          if (shortAnswer) {
-            var shortAnswerText = normalizeSpace(shortAnswer.value);
-            lines.push('Reflection: ' + (shortAnswerText || '[No response]'));
-          }
-          lines.push('');
-        });
-
-        if (lines.length > 0) return lines.join('\\n');
-
-        var fields = root.querySelectorAll('input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), textarea, select');
-        var fieldLines = [];
-        fields.forEach(function(field, idx) {
+        var textFields = Array.prototype.slice.call(
+          scope.querySelectorAll('input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]), textarea, select'),
+        );
+        textFields.forEach(function(field, idx) {
           if (closest(field, '[data-submission-block]')) return;
-          var value = normalizeSpace(field.value);
+          if (Array.isArray(config.excludeSelectors) && config.excludeSelectors.some(function(selector) { return closest(field, selector); })) return;
+          var value = readFieldValue(field);
           if (!value) return;
-          var id = field.id;
-          var labelEl = null;
-          if (id) labelEl = root.querySelector('label[for="' + id + '"]');
-          if (!labelEl) labelEl = field.closest('label');
-          var label = labelEl ? normalizeSpace(labelEl.innerText) : (field.name || field.id || ('Field ' + (idx + 1)));
-          fieldLines.push(label + ': ' + value);
+          var fallbackLabel = 'Response ' + (idx + 1);
+          var label = readFieldLabel(field, scope, fallbackLabel);
+          lines.push(label + ': ' + value);
         });
-        return fieldLines.length > 0 ? fieldLines.join('\\n') : 'No responses found to include in this report.';
+
+        if (config.includeCheckedCheckboxes !== false) {
+          var checkboxes = Array.prototype.slice.call(scope.querySelectorAll('input[type="checkbox"]'));
+          checkboxes.forEach(function(field) {
+            if (closest(field, '[data-submission-block]')) return;
+            if (Array.isArray(config.excludeSelectors) && config.excludeSelectors.some(function(selector) { return closest(field, selector); })) return;
+            if (!field.checked) return;
+            var label = readFieldLabel(field, scope, 'Checkbox');
+            lines.push(label + ': Yes');
+          });
+        }
+
+        if (config.includeRadioSelections !== false) {
+          var radios = Array.prototype.slice.call(scope.querySelectorAll('input[type="radio"]'));
+          var radioGroups = {};
+          radios.forEach(function(field, idx) {
+            if (closest(field, '[data-submission-block]')) return;
+            if (Array.isArray(config.excludeSelectors) && config.excludeSelectors.some(function(selector) { return closest(field, selector); })) return;
+            var key = field.name || ('__radio_' + idx);
+            if (!radioGroups[key]) radioGroups[key] = [];
+            radioGroups[key].push(field);
+          });
+          Object.keys(radioGroups).forEach(function(key) {
+            var group = radioGroups[key];
+            if (!group || !group.length) return;
+            var selected = null;
+            group.forEach(function(field) {
+              if (field.checked) selected = field;
+            });
+            if (!selected) return;
+            var optionWrap = closest(selected, 'label');
+            var optionText = optionWrap ? getReadableText(optionWrap, '') : '';
+            if (!optionText) optionText = normalizeSpace(selected.value || 'Selected');
+            var label = key && key.indexOf('__radio_') !== 0 ? key : 'Selected Option';
+            lines.push(label + ': ' + optionText);
+          });
+        }
+
+        return lines;
+      }
+
+      function pushReportSection(targetLines, title, lines) {
+        if (!lines || !lines.length) return;
+        targetLines.push('[' + title + ']');
+        lines.forEach(function(line) {
+          targetLines.push('- ' + line);
+        });
+        targetLines.push('');
+      }
+
+      function buildSubmissionReport(root) {
+        var reportLines = [];
+        var sections = Array.prototype.slice.call(root.querySelectorAll('[data-activity-type]'));
+
+        sections.forEach(function(section, sectionIdx) {
+          var type = normalizeSpace(section.getAttribute('data-activity-type') || '').toLowerCase();
+          if (!type || type === 'submission_builder' || type === 'save_load_block') return;
+          var title = getSectionTitle(section, 'Activity ' + (sectionIdx + 1));
+          var lines = [];
+
+          if (type === 'knowledge_check') {
+            var block = section.querySelector('[data-kc-block]');
+            if (!block) return;
+            var prompt = getReadableText(block.querySelector('h3'), 'Knowledge Check');
+            var selected = block.querySelector('input[type="radio"]:checked');
+            var selectedLabel = '[No selection]';
+            var outcome = 'Not answered';
+            if (selected) {
+              var labelWrap = closest(selected, 'label');
+              selectedLabel = labelWrap ? getReadableText(labelWrap, 'Option ' + (selected.value || '?')) : ('Option ' + (selected.value || '?'));
+              var correct = parseInt(block.getAttribute('data-kc-correct') || '0', 10);
+              var picked = parseInt(selected.value || '-1', 10);
+              if (!isNaN(correct) && !isNaN(picked)) {
+                outcome = picked === correct ? 'Correct' : 'Incorrect';
+              }
+            }
+            lines.push('Prompt: ' + prompt);
+            lines.push('Selected Answer: ' + selectedLabel);
+            lines.push('Result: ' + outcome);
+            var shortAnswer = block.querySelector('[data-kc-short-answer]');
+            if (shortAnswer) {
+              var shortAnswerText = normalizeSpace(shortAnswer.value || '');
+              lines.push('Reflection: ' + (shortAnswerText || '[No response]'));
+            }
+          } else if (type === 'checklist_block') {
+            var checklist = section.querySelector('[data-checklist-block]');
+            if (!checklist) return;
+            var checklistInputs = Array.prototype.slice.call(checklist.querySelectorAll('[data-checklist-input]'));
+            var checkedCount = checklistInputs.filter(function(input) { return input.checked; }).length;
+            var total = checklistInputs.length;
+            lines.push('Progress: ' + checkedCount + ' / ' + total + ' complete');
+            checklistInputs.forEach(function(input) {
+              var row = closest(input, 'label');
+              var textEl = row ? row.querySelector('span') : null;
+              var itemText = getReadableText(textEl, 'Checklist item');
+              lines.push((input.checked ? '[x] ' : '[ ] ') + itemText);
+            });
+          } else if (type === 'drag_sort_block') {
+            var sortList = section.querySelector('[data-sort-list]');
+            if (!sortList) return;
+            var sortItems = Array.prototype.slice.call(sortList.querySelectorAll('[data-sort-item]'));
+            if (!sortItems.length) return;
+            lines.push('Current Order:');
+            sortItems.forEach(function(item, idx) {
+              var labelEl = item.querySelector('div span:last-child');
+              var itemText = getReadableText(labelEl, getReadableText(item, 'Item ' + (idx + 1)));
+              itemText = normalizeSpace(itemText.replace(/\\bUp\\b/g, '').replace(/\\bDown\\b/g, ''));
+              lines.push(String(idx + 1) + '. ' + itemText);
+            });
+          } else if (type === 'reflection_journal') {
+            var reflectionPrompt = getReadableText(section.querySelector('p'), 'Reflection Prompt');
+            var reflectionInput = section.querySelector('textarea');
+            var reflectionValue = normalizeSpace((reflectionInput && reflectionInput.value) || '');
+            lines.push('Prompt: ' + reflectionPrompt);
+            lines.push('Response: ' + (reflectionValue || '[No response]'));
+          } else if (type === 'worksheet_form') {
+            lines = collectFilledFieldLines(section, { includeCheckedCheckboxes: false, includeRadioSelections: false });
+            if (!lines.length) lines.push('No worksheet fields filled yet.');
+          } else if (type === 'portfolio_evidence') {
+            var artifactInput = section.querySelector('input[type="text"]');
+            var summaryInput = section.querySelector('textarea');
+            var artifactValue = normalizeSpace((artifactInput && artifactInput.value) || '');
+            var summaryValue = normalizeSpace((summaryInput && summaryInput.value) || '');
+            lines.push('Artifact URL: ' + (artifactValue || '[Not provided]'));
+            lines.push('Evidence Summary: ' + (summaryValue || '[Not provided]'));
+            var checkedCriteria = Array.prototype.slice
+              .call(section.querySelectorAll('input[type="checkbox"]'))
+              .filter(function(field) { return field.checked; })
+              .map(function(field) { return readFieldLabel(field, section, 'Criteria'); });
+            lines.push('Self-Check Criteria Met: ' + (checkedCriteria.length ? checkedCriteria.join('; ') : '[None selected]'));
+          } else if (type === 'roleplay_simulator') {
+            var rolePrompt = getReadableText(section.querySelector('label'), 'Your response');
+            var roleInput = section.querySelector('textarea');
+            var roleValue = normalizeSpace((roleInput && roleInput.value) || '');
+            lines.push('Prompt: ' + rolePrompt);
+            lines.push('Response: ' + (roleValue || '[No response]'));
+          } else if (type === 'decision_lab') {
+            var decisionInputs = Array.prototype.slice.call(section.querySelectorAll('[data-decision-input]'));
+            if (!decisionInputs.length) return;
+            decisionInputs.forEach(function(input) {
+              var card = closest(input, '.rounded-lg');
+              var name = getReadableText(card ? card.querySelector('p') : null, 'Variable');
+              var weight = normalizeSpace(input.getAttribute('data-decision-weight') || '1');
+              var min = normalizeSpace(input.getAttribute('data-decision-min') || '');
+              var max = normalizeSpace(input.getAttribute('data-decision-max') || '');
+              var value = normalizeSpace(input.value || '');
+              lines.push(name + ': ' + value + ' (range ' + min + '-' + max + ', weight ' + weight + ')');
+            });
+            var score = getReadableText(section.querySelector('[data-decision-score]'), '');
+            if (score) lines.push('Projected Outcome Score: ' + score);
+          } else if (type === 'before_after') {
+            var slider = section.querySelector('[data-before-after-slider]');
+            var beforeLabel = getReadableText(section.querySelector('[data-before-panel] p'), 'Before');
+            var afterLabel = getReadableText(section.querySelector('[data-after-panel] p'), 'After');
+            var afterPercent = parseInt((slider && slider.value) || '50', 10);
+            if (isNaN(afterPercent)) afterPercent = 50;
+            afterPercent = Math.max(0, Math.min(100, afterPercent));
+            var beforePercent = 100 - afterPercent;
+            lines.push('Comparison Split: ' + beforeLabel + ' ' + beforePercent + ' / ' + afterLabel + ' ' + afterPercent);
+          } else if (type === 'tabs_block') {
+            var activeTabPanel = section.querySelector('[data-tabs-panel]:not(.hidden)');
+            if (activeTabPanel) {
+              var activeTabLabel = getReadableText(activeTabPanel.querySelector('h4'), 'Tab');
+              lines.push('Active Tab: ' + activeTabLabel);
+            }
+          } else if (type === 'path_map') {
+            var activePath = section.querySelector('[data-path-panel]:not(.hidden)');
+            if (activePath) {
+              lines.push('Selected Path: ' + getReadableText(activePath.querySelector('h4'), 'Path'));
+            }
+          } else if (type === 'hotspot_image') {
+            var activeHotspot = section.querySelector('[data-hotspot-panel]:not(.hidden)');
+            if (activeHotspot) {
+              lines.push('Selected Hotspot: ' + getReadableText(activeHotspot.querySelector('p'), 'Hotspot'));
+            }
+          } else if (type === 'flashcard_deck') {
+            var cards = Array.prototype.slice.call(section.querySelectorAll('[data-flashcard]'));
+            if (cards.length) {
+              var flipped = cards.filter(function(card) { return card.getAttribute('data-flashcard-side') === 'back'; }).length;
+              lines.push('Cards Flipped: ' + flipped + ' / ' + cards.length);
+            }
+          } else if (type === 'scenario_branch' || type === 'accordion_block') {
+            var openItems = Array.prototype.slice
+              .call(section.querySelectorAll('details[open] summary'))
+              .map(function(summary) { return getReadableText(summary, 'Open item'); })
+              .filter(Boolean);
+            if (openItems.length) {
+              lines.push('Expanded Items: ' + openItems.join('; '));
+            }
+          } else {
+            lines = collectFilledFieldLines(section, {});
+          }
+
+          pushReportSection(reportLines, title, lines);
+        });
+
+        if (!reportLines.length) {
+          return 'No responses found to include in this report yet. Fill in one or more activity inputs and generate again.';
+        }
+
+        var header = [
+          'Course Factory Submission Report',
+          'Generated: ' + new Date().toLocaleString(),
+          '',
+        ];
+        return header.concat(reportLines).join('\\n').trim();
       }
 
       function escapeForHtml(value) {
@@ -508,6 +1050,9 @@ function buildComposerRuntimeScript() {
         if (!item || !offset) return;
         var list = closest(item, '[data-sort-list]');
         if (!list) return;
+        var allLists = Array.prototype.slice.call(document.querySelectorAll('[data-sort-list]'));
+        var listIndex = allLists.indexOf(list);
+        ensureSortItemIds(list, listIndex >= 0 ? listIndex : 0);
         var items = Array.prototype.slice.call(list.querySelectorAll('[data-sort-item]'));
         var fromIndex = items.indexOf(item);
         if (fromIndex < 0) return;
@@ -549,7 +1094,8 @@ function buildComposerRuntimeScript() {
         Array.prototype.slice.call(document.querySelectorAll('[data-decision-block]')).forEach(function(block) {
           refreshDecisionBlock(block);
         });
-        Array.prototype.slice.call(document.querySelectorAll('[data-sort-list]')).forEach(function(list) {
+        Array.prototype.slice.call(document.querySelectorAll('[data-sort-list]')).forEach(function(list, listIndex) {
+          ensureSortItemIds(list, listIndex);
           refreshSortRanks(list);
         });
       }
@@ -708,6 +1254,30 @@ function buildComposerRuntimeScript() {
           return;
         }
 
+        var saveLoadDownloadBtn = closest(event.target, '[data-save-load-download]');
+        if (saveLoadDownloadBtn) {
+          var saveCtx = getSaveLoadContext(saveLoadDownloadBtn);
+          if (!saveCtx || !saveCtx.root) return;
+          try {
+            var snapshot = collectModuleProgressSnapshot(saveCtx.root);
+            downloadModuleProgressSnapshot(saveCtx, snapshot);
+            setSaveLoadStatus(saveCtx, 'Backup downloaded (' + new Date().toLocaleTimeString() + ').', 'success');
+          } catch (err) {
+            setSaveLoadStatus(saveCtx, 'Could not create backup JSON.', 'error');
+          }
+          return;
+        }
+
+        var saveLoadUploadTriggerBtn = closest(event.target, '[data-save-load-upload-trigger]');
+        if (saveLoadUploadTriggerBtn) {
+          var uploadCtx = getSaveLoadContext(saveLoadUploadTriggerBtn);
+          if (!uploadCtx || !uploadCtx.input) return;
+          uploadCtx.input.value = '';
+          uploadCtx.input.click();
+          setSaveLoadStatus(uploadCtx, 'Select a JSON backup file to restore.', 'info');
+          return;
+        }
+
         var generateBtn = closest(event.target, '[data-submission-generate]');
         if (generateBtn) {
           var submissionContext = getSubmissionContext(generateBtn);
@@ -780,6 +1350,42 @@ function buildComposerRuntimeScript() {
           var checklistBlock = closest(checklistInput, '[data-checklist-block]');
           if (!checklistBlock) return;
           refreshChecklistBlock(checklistBlock, true);
+          return;
+        }
+
+        var uploadInput = closest(event.target, '[data-save-load-upload-input]');
+        if (uploadInput) {
+          var uploadCtx = getSaveLoadContext(uploadInput);
+          if (!uploadCtx || !uploadCtx.root) return;
+          var file = uploadInput.files && uploadInput.files[0];
+          if (!file) {
+            setSaveLoadStatus(uploadCtx, 'Upload canceled.', 'info');
+            return;
+          }
+          file
+            .text()
+            .then(function(text) {
+              var parsed = null;
+              try {
+                parsed = JSON.parse(text);
+              } catch {
+                setSaveLoadStatus(uploadCtx, 'Invalid JSON file. Could not parse backup.', 'error');
+                return;
+              }
+              var payload = parsed;
+              if (parsed && typeof parsed === 'object' && parsed.kind && parsed.kind !== 'course-factory-module-progress') {
+                setSaveLoadStatus(uploadCtx, 'Unsupported backup type for this module.', 'error');
+                return;
+              }
+              if (parsed && typeof parsed === 'object' && parsed.payload && typeof parsed.payload === 'object') {
+                payload = parsed.payload;
+              }
+              var result = applyModuleProgressSnapshot(uploadCtx.root, payload);
+              setSaveLoadStatus(uploadCtx, result.message, result.ok ? 'success' : 'error');
+            })
+            .catch(function() {
+              setSaveLoadStatus(uploadCtx, 'Failed to read selected backup file.', 'error');
+            });
         }
       });
 
@@ -879,20 +1485,45 @@ export function compileComposerModule(module) {
     const colSpan = activity?.layout?.colSpan || 1;
     const row = Number.isInteger(activity?.layout?.row) ? activity.layout.row : null;
     const col = Number.isInteger(activity?.layout?.col) ? activity.layout.col : null;
-    const sectionStyle = col
+    const sectionGridStyle = col
       ? `grid-column: ${col} / span ${colSpan};${row ? ` grid-row: ${row};` : ''}`
       : `grid-column: span ${colSpan} / span ${colSpan};${row ? ` grid-row: ${row};` : ''}`;
+    const blockStyle = resolveComposerBlockStyle(activity?.data || {});
+    const sectionStyleParts = [sectionGridStyle];
+    const sectionClasses = ['cf-composer-activity'];
+    if (blockStyle.fontFamily) {
+      sectionClasses.push('cf-block-font-override');
+      sectionStyleParts.push(`--cf-block-font:${blockStyle.fontFamily};`);
+    }
+    if (blockStyle.textColor) {
+      sectionClasses.push('cf-block-text-override');
+      sectionStyleParts.push(`--cf-block-text:${blockStyle.textColor};`);
+    }
+    if (blockStyle.containerBg) {
+      sectionClasses.push('cf-block-bg-override');
+      sectionStyleParts.push(`--cf-block-bg:${blockStyle.containerBg};`);
+    }
+    if (blockStyle.borderColor) {
+      sectionClasses.push('cf-block-border-override');
+      sectionStyleParts.push(`--cf-block-border:${blockStyle.borderColor};`);
+    }
+    if (blockStyle.accentColor) {
+      sectionClasses.push('cf-block-accent-override');
+      sectionStyleParts.push(`--cf-block-accent:${blockStyle.accentColor};`);
+    }
+    const sectionStyle = sectionStyleParts.join(' ');
     const def = getActivityDefinition(activity.type);
     if (!def) {
       return `
         <section
           data-activity-type="${escapeHtml(activity.type)}"
           data-activity-id="${escapeHtml(activity.id)}"
+          data-block-theme="${escapeHtml(blockStyle.themeKey)}"
           data-composer-col-span="${colSpan}"
           data-composer-row="${row || ''}"
           data-composer-col="${col || ''}"
           style="${sectionStyle}"
-          class="rounded-xl border border-rose-500/30 bg-rose-950/20 p-5"
+          class="${sectionClasses.join(' ')} rounded-xl border border-rose-500/30 bg-rose-950/20 p-5"
         >
           <p class="text-rose-300 text-sm font-semibold">Unknown activity type: ${escapeHtml(activity.type)}</p>
         </section>
@@ -907,10 +1538,12 @@ export function compileComposerModule(module) {
       <section
         data-activity-type="${escapeHtml(activity.type)}"
         data-activity-id="${escapeHtml(activity.id)}"
+        data-block-theme="${escapeHtml(blockStyle.themeKey)}"
         data-composer-col-span="${colSpan}"
         data-composer-row="${row || ''}"
         data-composer-col="${col || ''}"
         style="${sectionStyle}"
+        class="${sectionClasses.join(' ')}"
       >
         ${compiled}
       </section>
@@ -918,6 +1551,32 @@ export function compileComposerModule(module) {
   });
 
   const html = `
+    <style>
+      .cf-composer-activity {
+        position: relative;
+      }
+      .cf-composer-activity.cf-block-font-override,
+      .cf-composer-activity.cf-block-font-override * {
+        font-family: var(--cf-block-font);
+      }
+      .cf-composer-activity.cf-block-text-override :is(h1, h2, h3, h4, h5, h6, p, span, div, li, ul, ol, label, summary, small, strong, em, blockquote, pre, a, button, input, textarea, select) {
+        color: var(--cf-block-text);
+      }
+      .cf-composer-activity.cf-block-bg-override > :first-child {
+        background: var(--cf-block-bg);
+      }
+      .cf-composer-activity.cf-block-border-override > :first-child,
+      .cf-composer-activity.cf-block-border-override > :first-child [class*='border-'] {
+        border-color: var(--cf-block-border);
+      }
+      .cf-composer-activity.cf-block-accent-override a,
+      .cf-composer-activity.cf-block-accent-override [class*='text-indigo'],
+      .cf-composer-activity.cf-block-accent-override [class*='text-sky'],
+      .cf-composer-activity.cf-block-accent-override [class*='text-emerald'],
+      .cf-composer-activity.cf-block-accent-override [class*='text-cyan'] {
+        color: var(--cf-block-accent);
+      }
+    </style>
     <div
       class="grid gap-6"
       data-composer-root

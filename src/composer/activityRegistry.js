@@ -11,6 +11,7 @@ function toSafeUrl(url) {
   const raw = String(url || '').trim();
   if (!raw) return '';
   if (/^https?:\/\//i.test(raw) || raw.startsWith('/')) return raw;
+  if (/^materials\//i.test(raw)) return `/${raw}`;
   return '';
 }
 
@@ -27,6 +28,14 @@ function sanitizeRichHtml(rawHtml) {
     .replace(/\son[a-z]+\s*=\s*(['"]).*?\1/gi, '')
     .replace(/\shref\s*=\s*(['"])\s*javascript:.*?\1/gi, ' href="#"');
 }
+
+function sanitizeCssColor(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(raw) ? raw : '';
+}
+
+const RICH_WEB_FONT_IMPORT_CSS = "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Roboto:wght@400;700;900&family=Open+Sans:wght@400;700;800&family=Lato:wght@400;700;900&family=Montserrat:wght@400;700;900&family=Poppins:wght@400;700;900&family=Raleway:wght@400;700;900&family=Nunito:wght@400;700;900&family=Playfair+Display:wght@400;700;900&family=Merriweather:wght@400;700;900&family=Oswald:wght@400;700&family=Bebas+Neue&display=swap');";
 
 function escapeInlineScript(value) {
   return String(value || '').replace(/<\/script/gi, '<\\/script');
@@ -50,14 +59,18 @@ export const ACTIVITY_REGISTRY = {
         body: 'Write your lesson content here.',
         bodyMode: 'rich',
         bodyHtml: '<p>Write your lesson content here.</p>',
+        blockContainerBg: '',
       };
     },
     compileToHtml({ data = {} } = {}) {
       const richBody = sanitizeRichHtml(data.bodyHtml || '');
       const bodyHtml = data.bodyMode === 'plain' || !richBody ? renderSimpleBody(data.body) : richBody;
+      const containerBg = sanitizeCssColor(data.blockContainerBg || data.containerBg);
+      const containerStyle = containerBg ? ` style="background:${escapeHtml(containerBg)};"` : '';
       return `
-        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6">
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6"${containerStyle}>
           <style>
+            ${RICH_WEB_FONT_IMPORT_CSS}
             .cf-rich-content p { margin: 0.6rem 0; }
             .cf-rich-content ul { list-style: disc; padding-left: 1.5rem; margin: 0.75rem 0; }
             .cf-rich-content ol { list-style: decimal; padding-left: 1.5rem; margin: 0.75rem 0; }
@@ -78,6 +91,52 @@ export const ACTIVITY_REGISTRY = {
           </style>
           ${data.title ? `<h3 class="text-xl font-bold text-white mb-3">${escapeHtml(data.title)}</h3>` : ''}
           <div class="text-slate-200 leading-relaxed cf-rich-content">${bodyHtml}</div>
+        </article>
+      `;
+    },
+  },
+  title_block: {
+    type: 'title_block',
+    label: 'Title Block',
+    createDefaultData() {
+      return {
+        text: 'Module Title',
+        textMode: 'rich',
+        textHtml: '<h2>Module Title</h2>',
+        align: 'left',
+        blockContainerBg: '',
+      };
+    },
+    compileToHtml({ data = {} } = {}) {
+      const richText = sanitizeRichHtml(data.textHtml || '');
+      const textHtml = data.textMode === 'plain' || !richText ? renderSimpleBody(data.text || '') : richText;
+      const align = String(data.align || 'left').toLowerCase();
+      const alignClass = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left';
+      const containerBg = sanitizeCssColor(data.blockContainerBg || data.containerBg);
+      const containerStyle = containerBg ? ` style="background:${escapeHtml(containerBg)};"` : '';
+      return `
+        <article class="rounded-xl border border-indigo-500/30 bg-indigo-950/20 p-5 ${alignClass}" data-title-block${containerStyle}>
+          <style>
+            ${RICH_WEB_FONT_IMPORT_CSS}
+            .cf-title-content p { margin: 0.45rem 0; }
+            .cf-title-content h1 { font-size: 2.5rem; line-height: 1.1; font-weight: 900; margin: 0.4rem 0; }
+            .cf-title-content h2 { font-size: 2rem; line-height: 1.15; font-weight: 850; margin: 0.35rem 0; }
+            .cf-title-content h3 { font-size: 1.5rem; line-height: 1.2; font-weight: 800; margin: 0.3rem 0; }
+            .cf-title-content h4 { font-size: 1.25rem; line-height: 1.25; font-weight: 750; margin: 0.3rem 0; }
+            .cf-title-content ul { list-style: disc; padding-left: 1.5rem; margin: 0.65rem 0; }
+            .cf-title-content ol { list-style: decimal; padding-left: 1.5rem; margin: 0.65rem 0; }
+            .cf-title-content li { margin: 0.2rem 0; }
+            .cf-title-content a { color: #93c5fd; text-decoration: underline; }
+            .cf-title-content blockquote { border-left: 3px solid #6366f1; margin: 0.75rem 0; padding-left: 0.8rem; opacity: 0.95; }
+            .cf-title-content font[size='1'] { font-size: 0.75rem; }
+            .cf-title-content font[size='2'] { font-size: 0.875rem; }
+            .cf-title-content font[size='3'] { font-size: 1rem; }
+            .cf-title-content font[size='4'] { font-size: 1.125rem; }
+            .cf-title-content font[size='5'] { font-size: 1.25rem; }
+            .cf-title-content font[size='6'] { font-size: 1.5rem; }
+            .cf-title-content font[size='7'] { font-size: 1.875rem; }
+          </style>
+          <div class="cf-title-content text-white leading-tight">${textHtml || '<h2>Title</h2>'}</div>
         </article>
       `;
     },
@@ -360,6 +419,36 @@ export const ACTIVITY_REGISTRY = {
             </button>
           </div>
           <pre class="mt-4 p-4 rounded bg-slate-950/70 border border-slate-700 text-xs text-slate-200 whitespace-pre-wrap" data-submission-output>Generate your report to view a summary here.</pre>
+        </article>
+      `;
+    },
+  },
+  save_load_block: {
+    type: 'save_load_block',
+    label: 'Save / Load Progress',
+    createDefaultData() {
+      return {
+        title: 'Save or Restore Progress',
+        description: 'Download a JSON backup of current responses, then upload it later to restore the module state.',
+        fileName: 'module-progress',
+      };
+    },
+    compileToHtml({ data = {} } = {}) {
+      const safeName = String(data.fileName || 'module-progress').replace(/[^a-z0-9._-]/gi, '-').trim() || 'module-progress';
+      return `
+        <article class="rounded-xl border border-cyan-500/30 bg-cyan-950/20 p-6" data-save-load-block data-save-load-file-name="${escapeHtml(safeName)}">
+          <h3 class="text-lg font-bold text-cyan-300 mb-2">${escapeHtml(data.title || 'Save or Restore Progress')}</h3>
+          <p class="text-xs text-cyan-100/90 leading-relaxed">${renderSimpleBody(data.description || '')}</p>
+          <input type="file" accept=".json,application/json" class="hidden" data-save-load-upload-input />
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button type="button" class="px-3 py-2 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold uppercase tracking-wide" data-save-load-download>
+              Download JSON
+            </button>
+            <button type="button" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-bold uppercase tracking-wide" data-save-load-upload-trigger>
+              Upload JSON
+            </button>
+          </div>
+          <p class="mt-3 text-xs text-cyan-100/75" data-save-load-status>No backup loaded yet.</p>
         </article>
       `;
     },
@@ -1227,6 +1316,70 @@ export function getActivityDefinition(type) {
   return ACTIVITY_REGISTRY[type] || null;
 }
 
+const ACTIVITY_CATEGORY_LABELS = {
+  content: 'Content & Media',
+  assessment: 'Assessment & Knowledge',
+  interactive: 'Interactive Activities',
+  productivity: 'Reports & Save/Load',
+  layout: 'Layout & Utility',
+  general: 'Other',
+};
+
+const ACTIVITY_TYPE_CATEGORIES = {
+  content_block: 'content',
+  title_block: 'content',
+  spacer_block: 'layout',
+  embed_block: 'content',
+  image_block: 'content',
+  resource_list: 'content',
+  assessment_embed: 'assessment',
+  knowledge_check: 'assessment',
+  submission_builder: 'productivity',
+  save_load_block: 'productivity',
+  callout_block: 'content',
+  accordion_block: 'content',
+  tabs_block: 'content',
+  step_sequence: 'content',
+  checklist_block: 'interactive',
+  scenario_branch: 'interactive',
+  drag_sort_block: 'interactive',
+  flashcard_deck: 'interactive',
+  reflection_journal: 'interactive',
+  worksheet_form: 'assessment',
+  portfolio_evidence: 'assessment',
+  path_map: 'interactive',
+  hotspot_image: 'interactive',
+  timeline_story: 'content',
+  before_after: 'interactive',
+  roleplay_simulator: 'interactive',
+  decision_lab: 'interactive',
+};
+
+export function getActivityCategory(type) {
+  return ACTIVITY_TYPE_CATEGORIES[type] || 'general';
+}
+
+export function getActivityCategoryLabel(category) {
+  return ACTIVITY_CATEGORY_LABELS[category] || ACTIVITY_CATEGORY_LABELS.general;
+}
+
 export function listActivityTypes() {
   return Object.keys(ACTIVITY_REGISTRY);
+}
+
+export function listActivityTypeGroups() {
+  const groups = {};
+  Object.keys(ACTIVITY_REGISTRY).forEach((type) => {
+    const category = getActivityCategory(type);
+    if (!groups[category]) groups[category] = [];
+    groups[category].push(type);
+  });
+  const categoryOrder = ['content', 'assessment', 'interactive', 'productivity', 'layout', 'general'];
+  return categoryOrder
+    .filter((category) => Array.isArray(groups[category]) && groups[category].length > 0)
+    .map((category) => ({
+      category,
+      label: getActivityCategoryLabel(category),
+      types: groups[category],
+    }));
 }

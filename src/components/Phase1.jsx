@@ -34,7 +34,7 @@ import VaultBrowser from './VaultBrowser';
 import { CodeBlock, Toggle } from './Shared.jsx';
 import GenericDataEditor from './GenericDataEditor.jsx';
 import { buildModuleFrameHTML, cleanModuleScript, getMaterialBadgeLabel, validateModule } from '../utils/generators.js';
-import { getActivityDefinition, listActivityTypes } from '../composer/activityRegistry.js';
+import { getActivityDefinition, listActivityTypeGroups } from '../composer/activityRegistry.js';
 import {
   buildComposerGridModel,
   clampComposerColSpan,
@@ -54,6 +54,108 @@ function escapeEditorHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+const RICH_EDITOR_FONT_OPTIONS = [
+  { value: 'Arial', label: 'Arial (System)' },
+  { value: 'Helvetica', label: 'Helvetica (System)' },
+  { value: 'Verdana', label: 'Verdana (System)' },
+  { value: 'Tahoma', label: 'Tahoma (System)' },
+  { value: 'Trebuchet MS', label: 'Trebuchet MS (System)' },
+  { value: 'Segoe UI', label: 'Segoe UI (System)' },
+  { value: 'Georgia', label: 'Georgia (System)' },
+  { value: 'Garamond', label: 'Garamond (System)' },
+  { value: 'Palatino Linotype', label: 'Palatino Linotype (System)' },
+  { value: 'Times New Roman', label: 'Times New Roman (System)' },
+  { value: 'Courier New', label: 'Courier New (System)' },
+  { value: 'Lucida Console', label: 'Lucida Console (System)' },
+  { value: 'Impact', label: 'Impact (System)' },
+  { value: 'Comic Sans MS', label: 'Comic Sans MS (System)' },
+  { value: 'Inter', label: 'Inter (Web Font)' },
+  { value: 'Roboto', label: 'Roboto (Web Font)' },
+  { value: 'Open Sans', label: 'Open Sans (Web Font)' },
+  { value: 'Lato', label: 'Lato (Web Font)' },
+  { value: 'Montserrat', label: 'Montserrat (Web Font)' },
+  { value: 'Poppins', label: 'Poppins (Web Font)' },
+  { value: 'Raleway', label: 'Raleway (Web Font)' },
+  { value: 'Nunito', label: 'Nunito (Web Font)' },
+  { value: 'Playfair Display', label: 'Playfair Display (Web Font)' },
+  { value: 'Merriweather', label: 'Merriweather (Web Font)' },
+  { value: 'Oswald', label: 'Oswald (Web Font)' },
+  { value: 'Bebas Neue', label: 'Bebas Neue (Web Font)' },
+];
+
+const BLOCK_THEME_OPTIONS = [
+  { value: 'default', label: 'Default (Current Colors)' },
+  { value: 'slate', label: 'Slate' },
+  { value: 'ocean', label: 'Ocean' },
+  { value: 'forest', label: 'Forest' },
+  { value: 'sunset', label: 'Sunset' },
+  { value: 'mono', label: 'Monochrome' },
+];
+
+const BLOCK_THEME_PREVIEW_COLORS = {
+  default: { textColor: '#e2e8f0', containerBg: '#0f172a' },
+  slate: { textColor: '#dbe3ee', containerBg: '#0f172a' },
+  ocean: { textColor: '#dbeafe', containerBg: '#1e3a8a' },
+  forest: { textColor: '#dcfce7', containerBg: '#14532d' },
+  sunset: { textColor: '#ffedd5', containerBg: '#9a3412' },
+  mono: { textColor: '#f8fafc', containerBg: '#111827' },
+};
+
+function normalizeThemeValue(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  return BLOCK_THEME_OPTIONS.some((theme) => theme.value === raw) ? raw : 'default';
+}
+
+function getThemePreviewColors(themeValue) {
+  return BLOCK_THEME_PREVIEW_COLORS[normalizeThemeValue(themeValue)] || BLOCK_THEME_PREVIEW_COLORS.default;
+}
+
+function normalizeColorInputValue(value, fallback = '#0f172a') {
+  const raw = String(value || '').trim();
+  return /^#[0-9a-f]{6}$/i.test(raw) ? raw : fallback;
+}
+
+function extractMaterialImageAsset(material) {
+  if (!material || typeof material !== 'object') return null;
+  const imagePattern = /\.(avif|bmp|gif|ico|jpe?g|png|svg|webp)(\?.*)?$/i;
+  const candidates = [material.viewUrl, material.downloadUrl].map((value) => String(value || '').trim()).filter(Boolean);
+  const url = candidates.find((value) => imagePattern.test(value) || /^data:image\//i.test(value));
+  if (!url) return null;
+  return {
+    id: material.id,
+    url,
+    label: material.title || material.number || material.id || 'Image asset',
+    alt: material.title || material.number || '',
+  };
+}
+
+function getComposerRichEditorConfig(activity) {
+  const type = activity?.type || '';
+  if (type === 'content_block') {
+    return {
+      modeKey: 'bodyMode',
+      htmlKey: 'bodyHtml',
+      textKey: 'body',
+      plainLabel: 'Body',
+      titleInputLabel: 'Section Title',
+      titleInputKey: 'title',
+      plainRowsClass: 'h-40',
+    };
+  }
+  if (type === 'title_block') {
+    return {
+      modeKey: 'textMode',
+      htmlKey: 'textHtml',
+      textKey: 'text',
+      plainLabel: 'Title Text',
+      titleInputLabel: null,
+      titleInputKey: null,
+      plainRowsClass: 'h-28',
+    };
+  }
+  return null;
+}
+
 const MODULE_MANAGER_AUTOSAVE_KEY = 'course_factory_module_manager_autosave_v1';
 const MODULE_MANAGER_SAVED_DRAFTS_KEY = 'course_factory_module_manager_saved_drafts_v1';
 const MODULE_MANAGER_MAX_SAVED_DRAFTS = 30;
@@ -68,7 +170,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   // MODULE MANAGER STATE
   const [moduleManagerType, setModuleManagerType] = useState('standalone'); // 'standalone' | 'composer' | 'external'
   const [moduleManagerComposerStarterType, setModuleManagerComposerStarterType] = useState('content_block');
-  const moduleManagerActivityTypes = useMemo(() => listActivityTypes(), []);
+  const moduleManagerActivityTypeGroups = useMemo(() => listActivityTypeGroups(), []);
   const [moduleManagerComposerLayout, setModuleManagerComposerLayout] = useState({ maxColumns: 1 });
   const [moduleManagerComposerActivities, setModuleManagerComposerActivities] = useState([]);
   const [moduleManagerComposerExtraRows, setModuleManagerComposerExtraRows] = useState(0);
@@ -77,9 +179,11 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   const [moduleManagerComposerDragOverIndex, setModuleManagerComposerDragOverIndex] = useState(null);
   const [moduleManagerComposerDragOverSlotKey, setModuleManagerComposerDragOverSlotKey] = useState(null);
   const [moduleManagerResourceMaterialId, setModuleManagerResourceMaterialId] = useState('');
+  const [moduleManagerImageMaterialId, setModuleManagerImageMaterialId] = useState('');
   const [moduleManagerAssessmentId, setModuleManagerAssessmentId] = useState('');
   const [moduleManagerComposerPreviewNonce, setModuleManagerComposerPreviewNonce] = useState(0);
   const moduleManagerRichEditorRef = useRef(null);
+  const moduleManagerRichEditorSelectionRef = useRef(null);
   const moduleManagerRichEditorUpdateTimerRef = useRef(null);
   const moduleManagerDraftImportRef = useRef(null);
   const [moduleManagerHTML, setModuleManagerHTML] = useState('');
@@ -106,6 +210,10 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         .filter((mat) => !mat.hidden)
         .sort((a, b) => (a.order || 0) - (b.order || 0))),
     [projectData],
+  );
+  const moduleBankImageAssets = useMemo(
+    () => moduleBankMaterials.map(extractMaterialImageAsset).filter(Boolean),
+    [moduleBankMaterials],
   );
   const moduleBankAssessments = useMemo(() => {
     const modules = projectData?.["Current Course"]?.modules || [];
@@ -224,6 +332,10 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
           nextItems[itemIndex] = { ...(nextItems[itemIndex] || {}), [key]: file.path };
           updateSelectedComposerActivityData({ items: nextItems });
         }
+      }
+    } else if (vaultTargetField && typeof vaultTargetField === 'object' && vaultTargetField.target === 'composer-image') {
+      if (selectedComposerActivity?.type === 'image_block') {
+        updateSelectedComposerActivityData({ url: file.path || '' });
       }
     } else if (vaultTargetField === 'view') {
       setMaterialForm(prev => ({ ...prev, viewUrl: file.path }));
@@ -1255,6 +1367,16 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   }, [moduleBankMaterials, moduleManagerResourceMaterialId]);
 
   useEffect(() => {
+    if (moduleBankImageAssets.length === 0) {
+      if (moduleManagerImageMaterialId) setModuleManagerImageMaterialId('');
+      return;
+    }
+    if (!moduleManagerImageMaterialId || !moduleBankImageAssets.some((asset) => asset.id === moduleManagerImageMaterialId)) {
+      setModuleManagerImageMaterialId(moduleBankImageAssets[0].id);
+    }
+  }, [moduleBankImageAssets, moduleManagerImageMaterialId]);
+
+  useEffect(() => {
     if (!moduleManagerAssessmentId && moduleBankAssessments.length > 0) {
       setModuleManagerAssessmentId(moduleBankAssessments[0].id);
     }
@@ -1295,11 +1417,12 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
 
   useEffect(() => {
     const editor = moduleManagerRichEditorRef.current;
-    if (!editor || !selectedComposerActivity || selectedComposerActivity.type !== 'content_block') return;
+    const richConfig = getComposerRichEditorConfig(selectedComposerActivity);
+    if (!editor || !selectedComposerActivity || !richConfig) return;
     const data = selectedComposerActivity.data || {};
-    const bodyMode = data.bodyMode === 'plain' ? 'plain' : 'rich';
+    const bodyMode = data[richConfig.modeKey] === 'plain' ? 'plain' : 'rich';
     if (bodyMode !== 'rich') return;
-    const nextHtml = data.bodyHtml || escapeEditorHtml(data.body || '').replace(/\n/g, '<br>');
+    const nextHtml = data[richConfig.htmlKey] || escapeEditorHtml(data[richConfig.textKey] || '').replace(/\n/g, '<br>');
     if (document.activeElement !== editor && editor.innerHTML !== nextHtml) {
       editor.innerHTML = nextHtml;
     }
@@ -1309,6 +1432,9 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     selectedComposerActivity?.data?.bodyMode,
     selectedComposerActivity?.data?.bodyHtml,
     selectedComposerActivity?.data?.body,
+    selectedComposerActivity?.data?.textMode,
+    selectedComposerActivity?.data?.textHtml,
+    selectedComposerActivity?.data?.text,
   ]);
 
   const moduleManagerComposerPreviewDoc = useMemo(() => {
@@ -1508,15 +1634,17 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   };
 
   const queueModuleManagerRichEditorUpdate = (html, text, immediate = false) => {
+    const richConfig = getComposerRichEditorConfig(selectedComposerActivity);
+    if (!richConfig) return;
     if (moduleManagerRichEditorUpdateTimerRef.current) {
       clearTimeout(moduleManagerRichEditorUpdateTimerRef.current);
       moduleManagerRichEditorUpdateTimerRef.current = null;
     }
     const applyUpdate = () => {
       updateSelectedComposerActivityData({
-        bodyMode: 'rich',
-        bodyHtml: html,
-        body: text,
+        [richConfig.modeKey]: 'rich',
+        [richConfig.htmlKey]: html,
+        [richConfig.textKey]: text,
       });
     };
     if (immediate) {
@@ -1529,10 +1657,28 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     }, 140);
   };
 
+  const captureModuleManagerRichSelection = () => {
+    const editor = moduleManagerRichEditorRef.current;
+    const selection = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+    if (!editor || !selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return;
+    moduleManagerRichEditorSelectionRef.current = range.cloneRange();
+  };
+
+  const restoreModuleManagerRichSelection = () => {
+    const range = moduleManagerRichEditorSelectionRef.current;
+    const selection = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+    if (!range || !selection) return;
+    selection.removeAllRanges();
+    selection.addRange(range);
+  };
+
   const runModuleManagerRichEditorCommand = (command, value = null) => {
     if (!moduleManagerRichEditorRef.current) return;
     moduleManagerRichEditorRef.current.focus();
-    if (command === 'fontSize' || command === 'fontName') {
+    restoreModuleManagerRichSelection();
+    if (command === 'fontSize' || command === 'fontName' || command === 'foreColor' || command === 'hiliteColor' || command === 'backColor') {
       try {
         document.execCommand('styleWithCSS', false, true);
       } catch {
@@ -1544,6 +1690,9 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         ? value.replace(/[<>]/g, '').toUpperCase()
         : value;
     const didExecute = document.execCommand(command, false, normalizedValue);
+    if (!didExecute && command === 'hiliteColor') {
+      document.execCommand('backColor', false, normalizedValue);
+    }
     if (!didExecute && command === 'insertUnorderedList') {
       document.execCommand('insertHTML', false, '<ul><li>List item</li></ul>');
     }
@@ -1552,11 +1701,104 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     }
     const html = moduleManagerRichEditorRef.current.innerHTML || '';
     const text = moduleManagerRichEditorRef.current.innerText || '';
+    captureModuleManagerRichSelection();
     queueModuleManagerRichEditorUpdate(html, text, true);
   };
 
   const preserveModuleManagerRichSelection = (event) => {
     event.preventDefault();
+  };
+
+  const renderSelectedComposerActivityStylePanel = () => {
+    if (!selectedComposerActivity) return null;
+    const data = selectedComposerActivity.data || {};
+    const themeValue = normalizeThemeValue(data.blockTheme);
+    const themePreview = getThemePreviewColors(themeValue);
+    const effectiveFill =
+      data.blockContainerBg ||
+      data.containerBg ||
+      (selectedComposerActivity.type === 'title_block' ? '#1e1b4b' : themePreview.containerBg || '#0f172a');
+    const effectiveTextColor = data.blockTextColor || themePreview.textColor || '#e2e8f0';
+    return (
+      <div className="mb-3 rounded-lg border border-slate-700 bg-slate-900/60 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-300">Block Style</p>
+          <button
+            type="button"
+            onClick={() =>
+              updateSelectedComposerActivityData({
+                blockTheme: 'default',
+                blockFontFamily: '',
+                blockTextColor: '',
+                blockContainerBg: '',
+              })
+            }
+            className="rounded bg-slate-800 hover:bg-slate-700 px-2 py-1 text-[10px] font-bold text-slate-200"
+            title="Reset this block to default style"
+          >
+            Reset Style
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Theme</label>
+            <select
+              value={themeValue}
+              onChange={(e) => updateSelectedComposerActivityData({ blockTheme: e.target.value })}
+              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+            >
+              {BLOCK_THEME_OPTIONS.map((themeOption) => (
+                <option key={`block-theme-${themeOption.value}`} value={themeOption.value}>
+                  {themeOption.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Font Family</label>
+            <select
+              value={data.blockFontFamily || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ blockFontFamily: e.target.value })}
+              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+            >
+              <option value="">Default</option>
+              {RICH_EDITOR_FONT_OPTIONS.map((fontOption) => (
+                <option key={`block-font-${fontOption.value}`} value={fontOption.value} style={{ fontFamily: fontOption.value }}>
+                  {fontOption.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+            <span>Text Color</span>
+            <input
+              type="color"
+              value={normalizeColorInputValue(effectiveTextColor, '#e2e8f0')}
+              onChange={(e) => updateSelectedComposerActivityData({ blockTextColor: e.target.value })}
+              className="h-6 w-10 cursor-pointer border border-slate-600 rounded bg-transparent"
+              title="Block text color"
+              aria-label="Block text color"
+            />
+          </label>
+          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+            <span>Container Fill</span>
+            <input
+              type="color"
+              value={normalizeColorInputValue(effectiveFill, '#0f172a')}
+              onChange={(e) => updateSelectedComposerActivityData({ blockContainerBg: e.target.value })}
+              className="h-6 w-10 cursor-pointer border border-slate-600 rounded bg-transparent"
+              title="Block container background color"
+              aria-label="Block container background color"
+            />
+          </label>
+        </div>
+        <p className="text-[10px] text-slate-500">
+          Theme sets block defaults. Rich text inline formatting still overrides theme styles.
+        </p>
+      </div>
+    );
   };
 
   const renderModuleManagerComposerActivityEditor = () => {
@@ -1565,33 +1807,56 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     }
 
     const data = selectedComposerActivity.data || {};
-    if (selectedComposerActivity.type === 'content_block') {
-      const bodyMode = data.bodyMode === 'plain' ? 'plain' : 'rich';
+    if (selectedComposerActivity.type === 'content_block' || selectedComposerActivity.type === 'title_block') {
+      const richConfig = getComposerRichEditorConfig(selectedComposerActivity);
+      if (!richConfig) return null;
+      const bodyMode = data[richConfig.modeKey] === 'plain' ? 'plain' : 'rich';
       return (
         <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Section Title</label>
-            <input
-              type="text"
-              value={data.title || ''}
-              onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
-            />
-          </div>
+          {richConfig.titleInputKey ? (
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1">{richConfig.titleInputLabel}</label>
+              <input
+                type="text"
+                value={data[richConfig.titleInputKey] || ''}
+                onChange={(e) => updateSelectedComposerActivityData({ [richConfig.titleInputKey]: e.target.value })}
+                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              />
+            </div>
+          ) : null}
+          {selectedComposerActivity.type === 'title_block' ? (
+            <div className="grid grid-cols-12 gap-2">
+              <div className="col-span-6">
+                <label className="block text-xs font-bold text-slate-300 mb-1">Alignment</label>
+                <select
+                  value={data.align || 'left'}
+                  onChange={(e) => updateSelectedComposerActivityData({ align: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+                >
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select>
+              </div>
+              <div className="col-span-6 text-[11px] text-slate-500 self-end pb-1">
+                Use heading styles + font, text color, and container fill controls for strong hero text.
+              </div>
+            </div>
+          ) : null}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-bold text-slate-300">Body</label>
+              <label className="block text-xs font-bold text-slate-300">{richConfig.plainLabel}</label>
               <div className="inline-flex bg-slate-950 border border-slate-700 rounded p-0.5">
                 <button
                   type="button"
-                  onClick={() => updateSelectedComposerActivityData({ bodyMode: 'rich' })}
+                  onClick={() => updateSelectedComposerActivityData({ [richConfig.modeKey]: 'rich' })}
                   className={`px-2 py-1 rounded text-[10px] font-bold ${bodyMode === 'rich' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
                 >
                   Rich
                 </button>
                 <button
                   type="button"
-                  onClick={() => updateSelectedComposerActivityData({ bodyMode: 'plain' })}
+                  onClick={() => updateSelectedComposerActivityData({ [richConfig.modeKey]: 'plain' })}
                   className={`px-2 py-1 rounded text-[10px] font-bold ${bodyMode === 'plain' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
                 >
                   Plain
@@ -1600,9 +1865,14 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
             </div>
             {bodyMode === 'plain' ? (
               <textarea
-                value={data.body || ''}
-                onChange={(e) => updateSelectedComposerActivityData({ body: e.target.value })}
-                className="w-full h-40 bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                value={data[richConfig.textKey] || ''}
+                onChange={(e) =>
+                  updateSelectedComposerActivityData({
+                    [richConfig.modeKey]: 'plain',
+                    [richConfig.textKey]: e.target.value,
+                  })
+                }
+                className={`w-full ${richConfig.plainRowsClass} bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm`}
               />
             ) : (
               <div className="rounded border border-slate-700 bg-slate-950 overflow-hidden">
@@ -1616,9 +1886,6 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '2')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A-</button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '3')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A</button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '5')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A+</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontName', 'Arial')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Sans</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontName', 'Georgia')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Serif</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontName', 'Courier New')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Mono</button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('insertUnorderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">• List</button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('insertOrderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">1. List</button>
                   <button
@@ -1635,6 +1902,52 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
                   </button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('removeFormat')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Clear</button>
                 </div>
+                <div className="px-2 pb-2 bg-slate-900/80 border-b border-slate-700">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <select
+                      defaultValue=""
+                      onChange={(e) => {
+                        const font = e.target.value;
+                        if (!font) return;
+                        runModuleManagerRichEditorCommand('fontName', font);
+                      }}
+                      className="w-full rounded bg-slate-800 border border-slate-700 px-2 py-1 text-[11px] text-white"
+                      aria-label="Font family"
+                    >
+                      <option value="">Font Family</option>
+                      {RICH_EDITOR_FONT_OPTIONS.map((fontOption) => (
+                        <option key={`composer-font-${fontOption.value}`} value={fontOption.value} style={{ fontFamily: fontOption.value }}>
+                          {fontOption.label}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="flex items-center justify-between rounded bg-slate-800 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+                      <span>Text Color</span>
+                      <input
+                        type="color"
+                        defaultValue="#e2e8f0"
+                        onChange={(e) => runModuleManagerRichEditorCommand('foreColor', e.target.value)}
+                        className="h-6 w-10 cursor-pointer border border-slate-600 rounded bg-transparent"
+                        title="Set text color"
+                        aria-label="Set text color"
+                      />
+                    </label>
+                    <label className="flex items-center justify-between rounded bg-slate-800 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+                      <span>Container Fill</span>
+                      <input
+                        type="color"
+                        value={normalizeColorInputValue(
+                          data.blockContainerBg || data.containerBg,
+                          selectedComposerActivity.type === 'title_block' ? '#1e1b4b' : '#0f172a',
+                        )}
+                        onChange={(e) => updateSelectedComposerActivityData({ blockContainerBg: e.target.value })}
+                        className="h-6 w-10 cursor-pointer border border-slate-600 rounded bg-transparent"
+                        title="Set block container background color"
+                        aria-label="Set block container background color"
+                      />
+                    </label>
+                  </div>
+                </div>
                 <div
                   ref={moduleManagerRichEditorRef}
                   contentEditable
@@ -1642,11 +1955,15 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
                   onInput={(event) => {
                     const html = event.currentTarget.innerHTML || '';
                     const text = event.currentTarget.innerText || '';
+                    captureModuleManagerRichSelection();
                     queueModuleManagerRichEditorUpdate(html, text);
                   }}
+                  onMouseUp={captureModuleManagerRichSelection}
+                  onKeyUp={captureModuleManagerRichSelection}
                   onBlur={(event) => {
                     const html = event.currentTarget.innerHTML || '';
                     const text = event.currentTarget.innerText || '';
+                    captureModuleManagerRichSelection();
                     queueModuleManagerRichEditorUpdate(html, text, true);
                   }}
                   className="cf-rich-editor min-h-[180px] p-3 text-sm text-white outline-none"
@@ -1917,6 +2234,49 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
               className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
               placeholder="https://... or /assets/image.jpg"
             />
+            <div className="grid grid-cols-12 gap-2 mt-2">
+              <select
+                value={moduleManagerImageMaterialId}
+                onChange={(e) => setModuleManagerImageMaterialId(e.target.value)}
+                className="col-span-8 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+              >
+                {moduleBankImageAssets.length === 0 && <option value="">No image materials found</option>}
+                {moduleBankImageAssets.map((asset) => (
+                  <option key={asset.id} value={asset.id}>
+                    {asset.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  const selected = moduleBankImageAssets.find((asset) => asset.id === moduleManagerImageMaterialId);
+                  if (!selected) return;
+                  updateSelectedComposerActivityData({
+                    url: selected.url,
+                    alt: data.alt || selected.alt || '',
+                  });
+                }}
+                disabled={!moduleManagerImageMaterialId || moduleBankImageAssets.length === 0}
+                className="col-span-2 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-xs font-bold text-white"
+              >
+                Use
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setVaultTargetField({ target: 'composer-image' });
+                  setIsVaultOpen(true);
+                }}
+                className="col-span-2 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
+                title="Browse Local Vault"
+              >
+                <FolderOpen size={11} /> Vault
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-1">
+              For offline modules, use local paths like `/materials/...` from your vault/material library.
+            </p>
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-300 mb-1">Alt Text</label>
@@ -2067,6 +2427,43 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
               className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
             />
           </div>
+        </div>
+      );
+    }
+
+    if (selectedComposerActivity.type === 'save_load_block') {
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Section Title</label>
+            <input
+              type="text"
+              value={data.title || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Description</label>
+            <textarea
+              value={data.description || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ description: e.target.value })}
+              className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Download Filename</label>
+            <input
+              type="text"
+              value={data.fileName || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ fileName: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              placeholder="module-progress"
+            />
+          </div>
+          <p className="text-[11px] text-slate-500">
+            This block downloads all learner inputs as JSON and can restore them from an uploaded backup file.
+          </p>
         </div>
       );
     }
@@ -4715,14 +5112,18 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                         onChange={(e) => setModuleManagerComposerStarterType(e.target.value)}
                                                         className="col-span-2 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
                                                     >
-                                                        {moduleManagerActivityTypes.map((activityType) => {
-                                                            const def = getActivityDefinition(activityType);
-                                                            return (
+                                                        {moduleManagerActivityTypeGroups.map((group) => (
+                                                          <optgroup key={`composer-group-${group.category}`} label={group.label}>
+                                                            {group.types.map((activityType) => {
+                                                              const def = getActivityDefinition(activityType);
+                                                              return (
                                                                 <option key={activityType} value={activityType}>
-                                                                    {def?.label || activityType}
+                                                                  {def?.label || activityType}
                                                                 </option>
-                                                            );
-                                                        })}
+                                                              );
+                                                            })}
+                                                          </optgroup>
+                                                        ))}
                                                     </select>
                                                     <button
                                                         type="button"
@@ -4822,6 +5223,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             <h4 className="text-sm font-bold text-white mb-3">
                                                 {selectedComposerActivity ? (getActivityDefinition(selectedComposerActivity.type)?.label || selectedComposerActivity.type) : 'Activity Editor'}
                                             </h4>
+                                            {renderSelectedComposerActivityStylePanel()}
                                             {renderModuleManagerComposerActivityEditor()}
                                         </div>
                                     </div>

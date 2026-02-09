@@ -13,7 +13,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { getActivityDefinition, listActivityTypes } from '../../composer/activityRegistry.js';
+import { getActivityDefinition, listActivityTypeGroups, listActivityTypes } from '../../composer/activityRegistry.js';
 import {
   buildComposerGridModel,
   clampComposerColSpan,
@@ -47,6 +47,108 @@ function escapeEditorHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+const RICH_EDITOR_FONT_OPTIONS = [
+  { value: 'Arial', label: 'Arial (System)' },
+  { value: 'Helvetica', label: 'Helvetica (System)' },
+  { value: 'Verdana', label: 'Verdana (System)' },
+  { value: 'Tahoma', label: 'Tahoma (System)' },
+  { value: 'Trebuchet MS', label: 'Trebuchet MS (System)' },
+  { value: 'Segoe UI', label: 'Segoe UI (System)' },
+  { value: 'Georgia', label: 'Georgia (System)' },
+  { value: 'Garamond', label: 'Garamond (System)' },
+  { value: 'Palatino Linotype', label: 'Palatino Linotype (System)' },
+  { value: 'Times New Roman', label: 'Times New Roman (System)' },
+  { value: 'Courier New', label: 'Courier New (System)' },
+  { value: 'Lucida Console', label: 'Lucida Console (System)' },
+  { value: 'Impact', label: 'Impact (System)' },
+  { value: 'Comic Sans MS', label: 'Comic Sans MS (System)' },
+  { value: 'Inter', label: 'Inter (Web Font)' },
+  { value: 'Roboto', label: 'Roboto (Web Font)' },
+  { value: 'Open Sans', label: 'Open Sans (Web Font)' },
+  { value: 'Lato', label: 'Lato (Web Font)' },
+  { value: 'Montserrat', label: 'Montserrat (Web Font)' },
+  { value: 'Poppins', label: 'Poppins (Web Font)' },
+  { value: 'Raleway', label: 'Raleway (Web Font)' },
+  { value: 'Nunito', label: 'Nunito (Web Font)' },
+  { value: 'Playfair Display', label: 'Playfair Display (Web Font)' },
+  { value: 'Merriweather', label: 'Merriweather (Web Font)' },
+  { value: 'Oswald', label: 'Oswald (Web Font)' },
+  { value: 'Bebas Neue', label: 'Bebas Neue (Web Font)' },
+];
+
+const BLOCK_THEME_OPTIONS = [
+  { value: 'default', label: 'Default (Current Colors)' },
+  { value: 'slate', label: 'Slate' },
+  { value: 'ocean', label: 'Ocean' },
+  { value: 'forest', label: 'Forest' },
+  { value: 'sunset', label: 'Sunset' },
+  { value: 'mono', label: 'Monochrome' },
+];
+
+const BLOCK_THEME_PREVIEW_COLORS = {
+  default: { textColor: '#e2e8f0', containerBg: '#0f172a' },
+  slate: { textColor: '#dbe3ee', containerBg: '#0f172a' },
+  ocean: { textColor: '#dbeafe', containerBg: '#1e3a8a' },
+  forest: { textColor: '#dcfce7', containerBg: '#14532d' },
+  sunset: { textColor: '#ffedd5', containerBg: '#9a3412' },
+  mono: { textColor: '#f8fafc', containerBg: '#111827' },
+};
+
+function normalizeThemeValue(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  return BLOCK_THEME_OPTIONS.some((theme) => theme.value === raw) ? raw : 'default';
+}
+
+function getThemePreviewColors(themeValue) {
+  return BLOCK_THEME_PREVIEW_COLORS[normalizeThemeValue(themeValue)] || BLOCK_THEME_PREVIEW_COLORS.default;
+}
+
+function normalizeColorInputValue(value, fallback = '#0f172a') {
+  const raw = String(value || '').trim();
+  return /^#[0-9a-f]{6}$/i.test(raw) ? raw : fallback;
+}
+
+function extractMaterialImageAsset(material) {
+  if (!material || typeof material !== 'object') return null;
+  const imagePattern = /\.(avif|bmp|gif|ico|jpe?g|png|svg|webp)(\?.*)?$/i;
+  const candidates = [material.viewUrl, material.downloadUrl].map((value) => String(value || '').trim()).filter(Boolean);
+  const url = candidates.find((value) => imagePattern.test(value) || /^data:image\//i.test(value));
+  if (!url) return null;
+  return {
+    id: material.id,
+    url,
+    label: material.title || material.number || material.id || 'Image asset',
+    alt: material.title || material.number || '',
+  };
+}
+
+function getActivityRichEditorConfig(activity) {
+  const type = activity?.type || '';
+  if (type === 'content_block') {
+    return {
+      modeKey: 'bodyMode',
+      htmlKey: 'bodyHtml',
+      textKey: 'body',
+      plainLabel: 'Body',
+      titleInputLabel: 'Section Title',
+      titleInputKey: 'title',
+      plainRowsClass: 'h-40',
+    };
+  }
+  if (type === 'title_block') {
+    return {
+      modeKey: 'textMode',
+      htmlKey: 'textHtml',
+      textKey: 'text',
+      plainLabel: 'Title Text',
+      titleInputLabel: null,
+      titleInputKey: null,
+      plainRowsClass: 'h-28',
+    };
+  }
+  return null;
+}
+
 export default function EditModal({
   editingModule,
   editForm,
@@ -68,12 +170,17 @@ export default function EditModal({
     [editForm.activities, composerMaxColumns],
   );
   const activityTypes = useMemo(() => listActivityTypes(), []);
+  const activityTypeGroups = useMemo(() => listActivityTypeGroups(), []);
   const moduleBankMaterials = useMemo(
     () =>
       ((projectData?.['Current Course']?.materials || [])
         .filter((mat) => !mat.hidden)
         .sort((a, b) => (a.order || 0) - (b.order || 0))),
     [projectData],
+  );
+  const moduleBankImageAssets = useMemo(
+    () => moduleBankMaterials.map(extractMaterialImageAsset).filter(Boolean),
+    [moduleBankMaterials],
   );
   const availableAssessments = useMemo(() => {
     const modules = projectData?.['Current Course']?.modules || [];
@@ -88,9 +195,11 @@ export default function EditModal({
   const [composerExtraRows, setComposerExtraRows] = useState(0);
   const [newActivityType, setNewActivityType] = useState(activityTypes[0] || 'content_block');
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
+  const [selectedImageMaterialId, setSelectedImageMaterialId] = useState('');
   const [selectedAssessmentId, setSelectedAssessmentId] = useState('');
   const [composerPreviewNonce, setComposerPreviewNonce] = useState(0);
   const richEditorRef = useRef(null);
+  const richEditorSelectionRef = useRef(null);
   const richEditorUpdateTimerRef = useRef(null);
   const composerGridModel = useMemo(
     () =>
@@ -139,6 +248,16 @@ export default function EditModal({
   }, [moduleBankMaterials, selectedMaterialId]);
 
   useEffect(() => {
+    if (moduleBankImageAssets.length === 0) {
+      if (selectedImageMaterialId) setSelectedImageMaterialId('');
+      return;
+    }
+    if (!selectedImageMaterialId || !moduleBankImageAssets.some((asset) => asset.id === selectedImageMaterialId)) {
+      setSelectedImageMaterialId(moduleBankImageAssets[0].id);
+    }
+  }, [moduleBankImageAssets, selectedImageMaterialId]);
+
+  useEffect(() => {
     if (!selectedAssessmentId && availableAssessments.length > 0) {
       setSelectedAssessmentId(availableAssessments[0].id);
     }
@@ -161,11 +280,12 @@ export default function EditModal({
 
   useEffect(() => {
     const editor = richEditorRef.current;
-    if (!editor || !selectedActivity || selectedActivity.type !== 'content_block') return;
+    const richConfig = getActivityRichEditorConfig(selectedActivity);
+    if (!editor || !selectedActivity || !richConfig) return;
     const data = selectedActivity.data || {};
-    const bodyMode = data.bodyMode === 'plain' ? 'plain' : 'rich';
+    const bodyMode = data[richConfig.modeKey] === 'plain' ? 'plain' : 'rich';
     if (bodyMode !== 'rich') return;
-    const nextHtml = data.bodyHtml || escapeEditorHtml(data.body || '').replace(/\n/g, '<br>');
+    const nextHtml = data[richConfig.htmlKey] || escapeEditorHtml(data[richConfig.textKey] || '').replace(/\n/g, '<br>');
     if (document.activeElement !== editor && editor.innerHTML !== nextHtml) {
       editor.innerHTML = nextHtml;
     }
@@ -175,6 +295,9 @@ export default function EditModal({
     selectedActivity?.data?.bodyMode,
     selectedActivity?.data?.bodyHtml,
     selectedActivity?.data?.body,
+    selectedActivity?.data?.textMode,
+    selectedActivity?.data?.textHtml,
+    selectedActivity?.data?.text,
   ]);
 
   const composerPreviewSrcDoc = useMemo(() => {
@@ -362,15 +485,17 @@ export default function EditModal({
   };
 
   const queueRichEditorUpdate = (html, text, immediate = false) => {
+    const richConfig = getActivityRichEditorConfig(selectedActivity);
+    if (!richConfig) return;
     if (richEditorUpdateTimerRef.current) {
       clearTimeout(richEditorUpdateTimerRef.current);
       richEditorUpdateTimerRef.current = null;
     }
     const applyUpdate = () => {
       updateSelectedActivityData({
-        bodyMode: 'rich',
-        bodyHtml: html,
-        body: text,
+        [richConfig.modeKey]: 'rich',
+        [richConfig.htmlKey]: html,
+        [richConfig.textKey]: text,
       });
     };
     if (immediate) {
@@ -383,10 +508,28 @@ export default function EditModal({
     }, 140);
   };
 
+  const captureRichSelection = () => {
+    const editor = richEditorRef.current;
+    const selection = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+    if (!editor || !selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return;
+    richEditorSelectionRef.current = range.cloneRange();
+  };
+
+  const restoreRichSelection = () => {
+    const range = richEditorSelectionRef.current;
+    const selection = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+    if (!range || !selection) return;
+    selection.removeAllRanges();
+    selection.addRange(range);
+  };
+
   const runRichEditorCommand = (command, value = null) => {
     if (!richEditorRef.current) return;
     richEditorRef.current.focus();
-    if (command === 'fontSize' || command === 'fontName') {
+    restoreRichSelection();
+    if (command === 'fontSize' || command === 'fontName' || command === 'foreColor' || command === 'hiliteColor' || command === 'backColor') {
       try {
         document.execCommand('styleWithCSS', false, true);
       } catch {
@@ -398,6 +541,9 @@ export default function EditModal({
         ? value.replace(/[<>]/g, '').toUpperCase()
         : value;
     const didExecute = document.execCommand(command, false, normalizedValue);
+    if (!didExecute && command === 'hiliteColor') {
+      document.execCommand('backColor', false, normalizedValue);
+    }
     if (!didExecute && command === 'insertUnorderedList') {
       document.execCommand('insertHTML', false, '<ul><li>List item</li></ul>');
     }
@@ -406,11 +552,104 @@ export default function EditModal({
     }
     const html = richEditorRef.current.innerHTML || '';
     const text = richEditorRef.current.innerText || '';
+    captureRichSelection();
     queueRichEditorUpdate(html, text, true);
   };
 
   const preserveRichSelection = (event) => {
     event.preventDefault();
+  };
+
+  const renderSelectedActivityStylePanel = () => {
+    if (!selectedActivity) return null;
+    const data = selectedActivity.data || {};
+    const themeValue = normalizeThemeValue(data.blockTheme);
+    const themePreview = getThemePreviewColors(themeValue);
+    const effectiveFill =
+      data.blockContainerBg ||
+      data.containerBg ||
+      (selectedActivity.type === 'title_block' ? '#1e1b4b' : themePreview.containerBg || '#0f172a');
+    const effectiveTextColor = data.blockTextColor || themePreview.textColor || '#e2e8f0';
+    return (
+      <div className="mb-3 rounded-lg border border-slate-700 bg-slate-900/60 p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-300">Block Style</p>
+          <button
+            type="button"
+            onClick={() =>
+              updateSelectedActivityData({
+                blockTheme: 'default',
+                blockFontFamily: '',
+                blockTextColor: '',
+                blockContainerBg: '',
+              })
+            }
+            className="rounded bg-slate-800 hover:bg-slate-700 px-2 py-1 text-[10px] font-bold text-slate-200"
+            title="Reset this block to default style"
+          >
+            Reset Style
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Theme</label>
+            <select
+              value={themeValue}
+              onChange={(e) => updateSelectedActivityData({ blockTheme: e.target.value })}
+              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+            >
+              {BLOCK_THEME_OPTIONS.map((themeOption) => (
+                <option key={`modal-block-theme-${themeOption.value}`} value={themeOption.value}>
+                  {themeOption.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Font Family</label>
+            <select
+              value={data.blockFontFamily || ''}
+              onChange={(e) => updateSelectedActivityData({ blockFontFamily: e.target.value })}
+              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+            >
+              <option value="">Default</option>
+              {RICH_EDITOR_FONT_OPTIONS.map((fontOption) => (
+                <option key={`modal-block-font-${fontOption.value}`} value={fontOption.value} style={{ fontFamily: fontOption.value }}>
+                  {fontOption.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+            <span>Text Color</span>
+            <input
+              type="color"
+              value={normalizeColorInputValue(effectiveTextColor, '#e2e8f0')}
+              onChange={(e) => updateSelectedActivityData({ blockTextColor: e.target.value })}
+              className="h-6 w-10 cursor-pointer border border-slate-600 rounded bg-transparent"
+              title="Block text color"
+              aria-label="Block text color"
+            />
+          </label>
+          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+            <span>Container Fill</span>
+            <input
+              type="color"
+              value={normalizeColorInputValue(effectiveFill, '#0f172a')}
+              onChange={(e) => updateSelectedActivityData({ blockContainerBg: e.target.value })}
+              className="h-6 w-10 cursor-pointer border border-slate-600 rounded bg-transparent"
+              title="Block container background color"
+              aria-label="Block container background color"
+            />
+          </label>
+        </div>
+        <p className="text-[10px] text-slate-500">
+          Theme sets block defaults. Rich text inline formatting still overrides theme styles.
+        </p>
+      </div>
+    );
   };
 
   const renderActivityEditor = () => {
@@ -419,33 +658,56 @@ export default function EditModal({
     }
 
     const data = selectedActivity.data || {};
-    if (selectedActivity.type === 'content_block') {
-      const bodyMode = data.bodyMode === 'plain' ? 'plain' : 'rich';
+    if (selectedActivity.type === 'content_block' || selectedActivity.type === 'title_block') {
+      const richConfig = getActivityRichEditorConfig(selectedActivity);
+      if (!richConfig) return null;
+      const bodyMode = data[richConfig.modeKey] === 'plain' ? 'plain' : 'rich';
       return (
         <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Section Title</label>
-            <input
-              type="text"
-              value={data.title || ''}
-              onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
-            />
-          </div>
+          {richConfig.titleInputKey ? (
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1">{richConfig.titleInputLabel}</label>
+              <input
+                type="text"
+                value={data[richConfig.titleInputKey] || ''}
+                onChange={(e) => updateSelectedActivityData({ [richConfig.titleInputKey]: e.target.value })}
+                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              />
+            </div>
+          ) : null}
+          {selectedActivity.type === 'title_block' ? (
+            <div className="grid grid-cols-12 gap-2">
+              <div className="col-span-6">
+                <label className="block text-xs font-bold text-slate-300 mb-1">Alignment</label>
+                <select
+                  value={data.align || 'left'}
+                  onChange={(e) => updateSelectedActivityData({ align: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+                >
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select>
+              </div>
+              <div className="col-span-6 text-[11px] text-slate-500 self-end pb-1">
+                Use heading styles + font, text color, and container fill controls for strong hero text.
+              </div>
+            </div>
+          ) : null}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-bold text-slate-300">Body</label>
+              <label className="block text-xs font-bold text-slate-300">{richConfig.plainLabel}</label>
               <div className="inline-flex bg-slate-950 border border-slate-700 rounded p-0.5">
                 <button
                   type="button"
-                  onClick={() => updateSelectedActivityData({ bodyMode: 'rich' })}
+                  onClick={() => updateSelectedActivityData({ [richConfig.modeKey]: 'rich' })}
                   className={`px-2 py-1 rounded text-[10px] font-bold ${bodyMode === 'rich' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
                 >
                   Rich
                 </button>
                 <button
                   type="button"
-                  onClick={() => updateSelectedActivityData({ bodyMode: 'plain' })}
+                  onClick={() => updateSelectedActivityData({ [richConfig.modeKey]: 'plain' })}
                   className={`px-2 py-1 rounded text-[10px] font-bold ${bodyMode === 'plain' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
                 >
                   Plain
@@ -454,9 +716,14 @@ export default function EditModal({
             </div>
             {bodyMode === 'plain' ? (
               <textarea
-                value={data.body || ''}
-                onChange={(e) => updateSelectedActivityData({ body: e.target.value })}
-                className="w-full h-40 bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                value={data[richConfig.textKey] || ''}
+                onChange={(e) =>
+                  updateSelectedActivityData({
+                    [richConfig.modeKey]: 'plain',
+                    [richConfig.textKey]: e.target.value,
+                  })
+                }
+                className={`w-full ${richConfig.plainRowsClass} bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm`}
               />
             ) : (
               <div className="rounded border border-slate-700 bg-slate-950 overflow-hidden">
@@ -470,9 +737,6 @@ export default function EditModal({
                   <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '2')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A-</button>
                   <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '3')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A</button>
                   <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '5')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A+</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontName', 'Arial')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Sans</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontName', 'Georgia')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Serif</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontName', 'Courier New')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Mono</button>
                   <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('insertUnorderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">• List</button>
                   <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('insertOrderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">1. List</button>
                   <button
@@ -489,6 +753,52 @@ export default function EditModal({
                   </button>
                   <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('removeFormat')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Clear</button>
                 </div>
+                <div className="px-2 pb-2 bg-slate-900/80 border-b border-slate-700">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <select
+                      defaultValue=""
+                      onChange={(e) => {
+                        const font = e.target.value;
+                        if (!font) return;
+                        runRichEditorCommand('fontName', font);
+                      }}
+                      className="w-full rounded bg-slate-800 border border-slate-700 px-2 py-1 text-[11px] text-white"
+                      aria-label="Font family"
+                    >
+                      <option value="">Font Family</option>
+                      {RICH_EDITOR_FONT_OPTIONS.map((fontOption) => (
+                        <option key={`editor-font-${fontOption.value}`} value={fontOption.value} style={{ fontFamily: fontOption.value }}>
+                          {fontOption.label}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="flex items-center justify-between rounded bg-slate-800 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+                      <span>Text Color</span>
+                      <input
+                        type="color"
+                        defaultValue="#e2e8f0"
+                        onChange={(e) => runRichEditorCommand('foreColor', e.target.value)}
+                        className="h-6 w-10 cursor-pointer border border-slate-600 rounded bg-transparent"
+                        title="Set text color"
+                        aria-label="Set text color"
+                      />
+                    </label>
+                    <label className="flex items-center justify-between rounded bg-slate-800 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+                      <span>Container Fill</span>
+                      <input
+                        type="color"
+                        value={normalizeColorInputValue(
+                          data.blockContainerBg || data.containerBg,
+                          selectedActivity.type === 'title_block' ? '#1e1b4b' : '#0f172a',
+                        )}
+                        onChange={(e) => updateSelectedActivityData({ blockContainerBg: e.target.value })}
+                        className="h-6 w-10 cursor-pointer border border-slate-600 rounded bg-transparent"
+                        title="Set block container background color"
+                        aria-label="Set block container background color"
+                      />
+                    </label>
+                  </div>
+                </div>
                 <div
                   ref={richEditorRef}
                   contentEditable
@@ -496,11 +806,15 @@ export default function EditModal({
                   onInput={(event) => {
                     const html = event.currentTarget.innerHTML || '';
                     const text = event.currentTarget.innerText || '';
+                    captureRichSelection();
                     queueRichEditorUpdate(html, text);
                   }}
+                  onMouseUp={captureRichSelection}
+                  onKeyUp={captureRichSelection}
                   onBlur={(event) => {
                     const html = event.currentTarget.innerHTML || '';
                     const text = event.currentTarget.innerText || '';
+                    captureRichSelection();
                     queueRichEditorUpdate(html, text, true);
                   }}
                   className="cf-rich-editor min-h-[180px] p-3 text-sm text-white outline-none"
@@ -749,6 +1063,38 @@ export default function EditModal({
               className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
               placeholder="https://... or /assets/image.jpg"
             />
+            <div className="grid grid-cols-12 gap-2 mt-2">
+              <select
+                value={selectedImageMaterialId}
+                onChange={(e) => setSelectedImageMaterialId(e.target.value)}
+                className="col-span-10 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+              >
+                {moduleBankImageAssets.length === 0 && <option value="">No image materials found</option>}
+                {moduleBankImageAssets.map((asset) => (
+                  <option key={asset.id} value={asset.id}>
+                    {asset.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  const selected = moduleBankImageAssets.find((asset) => asset.id === selectedImageMaterialId);
+                  if (!selected) return;
+                  updateSelectedActivityData({
+                    url: selected.url,
+                    alt: data.alt || selected.alt || '',
+                  });
+                }}
+                disabled={!selectedImageMaterialId || moduleBankImageAssets.length === 0}
+                className="col-span-2 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-xs font-bold text-white"
+              >
+                Use
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-1">
+              Use local `/materials/...` image paths for offline-ready modules.
+            </p>
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-300 mb-1">Alt Text</label>
@@ -899,6 +1245,43 @@ export default function EditModal({
               className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
             />
           </div>
+        </div>
+      );
+    }
+
+    if (selectedActivity.type === 'save_load_block') {
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Section Title</label>
+            <input
+              type="text"
+              value={data.title || ''}
+              onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Description</label>
+            <textarea
+              value={data.description || ''}
+              onChange={(e) => updateSelectedActivityData({ description: e.target.value })}
+              className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Download Filename</label>
+            <input
+              type="text"
+              value={data.fileName || ''}
+              onChange={(e) => updateSelectedActivityData({ fileName: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              placeholder="module-progress"
+            />
+          </div>
+          <p className="text-[11px] text-slate-500">
+            This block downloads learner responses as JSON and restores them from uploaded backup files.
+          </p>
         </div>
       );
     }
@@ -1159,14 +1542,18 @@ export default function EditModal({
                                 onChange={(e) => setNewActivityType(e.target.value)}
                                 className="col-span-2 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
                               >
-                                {activityTypes.map((type) => {
-                                  const def = getActivityDefinition(type);
-                                  return (
-                                    <option key={type} value={type}>
-                                      {def?.label || type}
-                                    </option>
-                                  );
-                                })}
+                                {activityTypeGroups.map((group) => (
+                                  <optgroup key={`modal-group-${group.category}`} label={group.label}>
+                                    {group.types.map((type) => {
+                                      const def = getActivityDefinition(type);
+                                      return (
+                                        <option key={type} value={type}>
+                                          {def?.label || type}
+                                        </option>
+                                      );
+                                    })}
+                                  </optgroup>
+                                ))}
                               </select>
                               <button
                                 type="button"
@@ -1266,6 +1653,7 @@ export default function EditModal({
                           <h4 className="text-sm font-bold text-white mb-3">
                             {selectedActivity ? (getActivityDefinition(selectedActivity.type)?.label || selectedActivity.type) : 'Activity Editor'}
                           </h4>
+                          {renderSelectedActivityStylePanel()}
                           {renderActivityEditor()}
                         </div>
                       </div>
