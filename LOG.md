@@ -158,3 +158,82 @@
 - Added composer resource digital-content enrichment from material bank matches (title/url match), including chapter-based reader support in compiled modules. (`src/utils/generators.js`, `src/composer/compileModuleHtml.js`)
 - Added ZIP export bundling of local `materials/*` assets referenced by course materials and composer resource lists. (`src/components/Phase4.jsx`)
 - Fixed Phase 4 dashboard overflow by hardening container width constraints and code block wrapping (`min-w-0`, `overflow-x-hidden`, `break-all`). (`src/App.jsx`, `src/components/Phase4.jsx`, `src/components/Shared.jsx`)
+
+## Surgical Plan (Feb 8, 2026 — Composer Grid Layout + Drag/Drop)
+### Goal
+- Add module composer layout control with max 4 columns, side-by-side block placement, uneven rows (example: `3 + 1`), drag/drop ordering, and arrow controls (`Up/Down/Left/Right`).
+
+### Scope (Do First)
+1. Data model + migration (no breaking changes).
+2. Compiler/rendering support (preview/export parity).
+3. Editor UX in both composer flows (Phase 1 + Edit Modal).
+4. Validation + fixtures + release checks.
+
+### File-by-File Plan
+1. `src/utils/migrations.js`
+- Add composer layout defaults:
+  - module-level `composerLayout.maxColumns` (default `1`, clamp `1..4`).
+  - activity-level `layout.colSpan` (default `1`, clamp `1..maxColumns`).
+- Auto-heal missing/invalid values during load.
+
+2. `src/data/constants.js`
+- Add default `composerLayout` in project/module seeds to keep new modules predictable.
+
+3. `src/hooks/useModuleEditor.js`
+- Persist `composerLayout` in save + history snapshots + revert flow.
+- Ensure normalize/clamp runs on save.
+
+4. `src/components/Phase1.jsx`
+- In composer create flow:
+  - Add module-level layout control (`Max columns: 1/2/3/4`).
+  - Add per-activity width control (`Span: 1..maxColumns`).
+  - Keep `Up/Down`, add `Left/Right`.
+  - Arrow semantics:
+    - `Left/Right` = move index `-1/+1`.
+    - `Up/Down` = move index by `-maxColumns/+maxColumns` (grid row jump).
+- Add drag-and-drop reordering for activity tiles (dnd-kit sortable grid).
+
+5. `src/components/modals/EditModal.jsx`
+- Mirror the same controls/behavior as Phase 1:
+  - max columns selector
+  - span selector
+  - arrow movement semantics
+  - drag/drop reorder
+- Keep live preview enabled and driven by updated layout metadata.
+
+6. `src/composer/compileModuleHtml.js`
+- Render composer root as CSS grid:
+  - `grid-template-columns: repeat(maxColumns, minmax(0, 1fr))`.
+  - activity wrapper uses `grid-column: span colSpan`.
+- Keep existing runtime features (submission/report/resource handlers) unchanged.
+
+7. `src/utils/generators.js`
+- Ensure composer compile calls pass module layout metadata through unchanged for preview/export/legacy paths.
+- Confirm no rawHtml fallback path overrides composer layout.
+
+8. `scripts/verify_composer_fixtures.mjs`
+- Add fixture assertions for:
+  - max columns rendering markers
+  - colSpan markers
+  - order persistence after compilation.
+
+### Acceptance Criteria
+1. In composer mode, user can set columns `1..4`.
+2. Blocks can render side-by-side and produce uneven rows naturally.
+3. Drag/drop updates order and survives save/reload.
+4. Arrow controls work with new semantics and survive save/reload.
+5. Preview, beta export, and legacy compile render the same block layout.
+6. Existing composer modules without layout metadata still work (stacked/default).
+
+### Execution Order (Fastest Path)
+1. Migration + schema defaults.
+2. Compiler grid rendering.
+3. EditModal controls.
+4. Phase1 controls.
+5. Drag/drop integration.
+6. Fixture/script updates + release check.
+
+### Runbook After Implementation
+- `npm run build`
+- `npm run exports:fixtures`
+- `npm run release:check`

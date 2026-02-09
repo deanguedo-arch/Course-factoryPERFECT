@@ -1,4 +1,5 @@
 import { getActivityDefinition } from './activityRegistry.js';
+import { normalizeComposerActivities, normalizeComposerModuleConfig } from './layout.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -9,14 +10,8 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-export function normalizeActivities(activities) {
-  if (!Array.isArray(activities)) return [];
-  return activities.map((activity, idx) => {
-    const type = activity?.type || 'content_block';
-    const id = activity?.id || `activity-${idx + 1}`;
-    const data = activity?.data && typeof activity.data === 'object' ? activity.data : {};
-    return { type, id, data };
-  });
+export function normalizeActivities(activities, { maxColumns } = {}) {
+  return normalizeComposerActivities(activities, { maxColumns });
 }
 
 function buildComposerRuntimeScript() {
@@ -465,12 +460,27 @@ function buildComposerRuntimeScript() {
 }
 
 export function compileComposerModule(module) {
-  const activities = normalizeActivities(module?.activities);
+  const { composerLayout, activities } = normalizeComposerModuleConfig(module);
+  const maxColumns = composerLayout.maxColumns;
   const sections = activities.map((activity, idx) => {
+    const colSpan = activity?.layout?.colSpan || 1;
+    const row = Number.isInteger(activity?.layout?.row) ? activity.layout.row : null;
+    const col = Number.isInteger(activity?.layout?.col) ? activity.layout.col : null;
+    const sectionStyle = col
+      ? `grid-column: ${col} / span ${colSpan};${row ? ` grid-row: ${row};` : ''}`
+      : `grid-column: span ${colSpan} / span ${colSpan};${row ? ` grid-row: ${row};` : ''}`;
     const def = getActivityDefinition(activity.type);
     if (!def) {
       return `
-        <section class="rounded-xl border border-rose-500/30 bg-rose-950/20 p-5">
+        <section
+          data-activity-type="${escapeHtml(activity.type)}"
+          data-activity-id="${escapeHtml(activity.id)}"
+          data-composer-col-span="${colSpan}"
+          data-composer-row="${row || ''}"
+          data-composer-col="${col || ''}"
+          style="${sectionStyle}"
+          class="rounded-xl border border-rose-500/30 bg-rose-950/20 p-5"
+        >
           <p class="text-rose-300 text-sm font-semibold">Unknown activity type: ${escapeHtml(activity.type)}</p>
         </section>
       `;
@@ -481,15 +491,27 @@ export function compileComposerModule(module) {
       activityId: activity.id,
     });
     return `
-      <section data-activity-type="${escapeHtml(activity.type)}" data-activity-id="${escapeHtml(activity.id)}">
+      <section
+        data-activity-type="${escapeHtml(activity.type)}"
+        data-activity-id="${escapeHtml(activity.id)}"
+        data-composer-col-span="${colSpan}"
+        data-composer-row="${row || ''}"
+        data-composer-col="${col || ''}"
+        style="${sectionStyle}"
+      >
         ${compiled}
       </section>
     `;
   });
 
   const html = `
-    <div class="space-y-6" data-composer-root>
-      ${sections.length ? sections.join('\n') : '<p class="text-slate-400">No composer activities added yet.</p>'}
+    <div
+      class="grid gap-6"
+      data-composer-root
+      data-composer-columns="${maxColumns}"
+      style="grid-template-columns: repeat(${maxColumns}, minmax(0, 1fr)); grid-auto-flow: row;"
+    >
+      ${sections.length ? sections.join('\n') : '<p class="text-slate-400" style="grid-column: 1 / -1;">No composer activities added yet.</p>'}
     </div>
   `;
 

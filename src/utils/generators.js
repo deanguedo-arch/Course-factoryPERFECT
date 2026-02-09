@@ -322,8 +322,10 @@ ${sidebarFooterHtml}
             function setBackground() {
                 document.documentElement.style.backgroundColor = '${bgHex}';
                 document.documentElement.style.background = '${bgHex}';
-                document.body.style.backgroundColor = '${bgHex}';
-                document.body.style.background = '${bgHex}';
+                if (document.body) {
+                    document.body.style.backgroundColor = '${bgHex}';
+                    document.body.style.background = '${bgHex}';
+                }
             }
             setBackground();
             if (document.readyState === 'loading') {
@@ -1642,8 +1644,10 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
       function setBackground() {
         document.documentElement.style.backgroundColor = '${bgHex}';
         document.documentElement.style.background = '${bgHex}';
-        document.body.style.backgroundColor = '${bgHex}';
-        document.body.style.background = '${bgHex}';
+        if (document.body) {
+          document.body.style.backgroundColor = '${bgHex}';
+          document.body.style.background = '${bgHex}';
+        }
       }
       setBackground();
       if (document.readyState === 'loading') {
@@ -2920,8 +2924,10 @@ export const generateHubPageBeta = ({ projectData, manifest }) => {
     function setBackground() {
       document.documentElement.style.backgroundColor = '${bgHex}';
       document.documentElement.style.background = '${bgHex}';
-      document.body.style.backgroundColor = '${bgHex}';
-      document.body.style.background = '${bgHex}';
+      if (document.body) {
+        document.body.style.backgroundColor = '${bgHex}';
+        document.body.style.background = '${bgHex}';
+      }
     }
     setBackground();
     if (document.readyState === 'loading') {

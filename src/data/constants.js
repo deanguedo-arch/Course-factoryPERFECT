@@ -2,7 +2,7 @@
 // NOTE: Keep stable; changes affect defaults and legacy template display.
 
 export const PROJECT_DATA = {
-  projectSchemaVersion: 1,
+  projectSchemaVersion: 2,
   "Current Course": {
     name: "Mental Fitness",
     modules: [

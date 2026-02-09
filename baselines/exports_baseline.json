@@ -1,19 +1,19 @@
 {
-  "legacyHash": "b1f1a34f085a6ee29124ba460bc267626844ca8b5da4b0cdf3bd13baa7a510b7",
-  "betaAggregateHash": "b0f10a859da05f3b4815f93e3f25b8bd697bab4571e6927063234bdf0ee41a55",
+  "legacyHash": "31f1be789e3e6f49607caa1684b262c1ef2404182a5ff4c3aaa8cce66223c749",
+  "betaAggregateHash": "32183eaf4c561d9164782d4cf4f451b6f5d968086a21f91ff9a2e83ae2cb1b19",
   "perFile": {
     "beta/index.html": "207b919c73ede2c781c921454c655c82ec37b1eadc6bbc133df68ece9f5641e3",
     "beta/manifest.json": "2d522519265e8032f6ba42e97805f49c75adb67230816c016a07ff13ef6e50e3",
-    "beta/modules/item-1768749223001.html": "b1e1afdeac3903e35faed59e73b8e09cb8a03a5df0a2fce5ce07a9ebb765070e",
-    "beta/modules/item-assessments.html": "bf3f9fe525775ac508c4cd5db31d4f98d08e918b5f045041cca82946bf42a4fe",
-    "beta/modules/view-1.html": "8477b4f446a1f689c1bde00533e434bfd455ec739319451c4c6397c0ef77ed8a",
-    "beta/modules/view-BASE.html": "f88d61c1f5b2ce8d34018ed7943b7a529c3949cc3d0e202430a9dc1d7f79f55f",
-    "beta/modules/view-CONFIDENCE.html": "25bf8e242d3ad5c7f94af015e84a5421106a339f8b7ad3a80150d0e11126b733",
-    "beta/modules/view-FINAL.html": "bb21c3bffcf80ed9f10791b48c520ce5ba5a123e6028d9b490f070ec67925171",
-    "beta/modules/view-FOCUS.html": "38c4a505b90cf624777b658fd0b4d1158eefa7bc19088d83306abe727e2ff94e",
-    "beta/modules/view-GOALS.html": "1a9d07d53c9558f02422f8f09dfebf61f02cf9a13fa41b4d24783cc599408d61",
-    "beta/modules/view-VALUES.html": "d6e3054d0d8df861aeb151a4a417f54866ec389701d8b107457ec002234baef1",
-    "beta/modules/view-VISUAL.html": "7e1fc0a0047abfe47bd221d4fcfeaa9708000eb6714d484f904008b2b6e2c24c",
-    "beta/modules/view-arousal.html": "730fe0a7898ef24f3a14b2f23539093c71d2c97304044b05e7c2397aabbfcdcc"
+    "beta/modules/item-1768749223001.html": "7dc69cbc4b80407f0b5dbaffb5cafb8c3e36f0c8f30587b5518b5c1f25278d45",
+    "beta/modules/item-assessments.html": "b1ad3e359a92c1ca2452eb659c230c80169165430c9ca5673964871b50832c00",
+    "beta/modules/view-1.html": "6d1e6d18ae951b791fc104ba4629b603a15dc0ae7cccd7b612fb168affe96349",
+    "beta/modules/view-BASE.html": "0847ba00d29fbf34d4ce3b4622c1e9793fa753d0b6b717b1e25053cf61e782ac",
+    "beta/modules/view-CONFIDENCE.html": "602dc3c1371e112c24535390aea5b0eee08409519b4d56bca7fcb12b6a9a2d86",
+    "beta/modules/view-FINAL.html": "2e09d54a3dd4fdb54680449ee44a551cd9ba753fcc45d0356402d750d7cb6591",
+    "beta/modules/view-FOCUS.html": "6932cfa7a7d56479dee5f2c15f5a520aa246ea0531438cecca88ac632c27ab54",
+    "beta/modules/view-GOALS.html": "0c906f1bca4dc48c0bc646529eda5bdf4c9a0fd1e523946948d5ad196b84e6a2",
+    "beta/modules/view-VALUES.html": "28ad739ecffc3e076ad739ea0dad8ce1de402dc59e5490fad42fe1c6ab33a489",
+    "beta/modules/view-VISUAL.html": "7363cd62be1513a11ba929feed94fb2f2218becbc8282801a1b3be72a480e0ef",
+    "beta/modules/view-arousal.html": "06955e6402ef939c05c17ae12fd6a276fee966dd0655251a0b0714323f90fdd1"
   }
 }

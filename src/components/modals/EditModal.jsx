@@ -1,19 +1,49 @@
 import * as React from 'react';
-import { ChevronDown, ChevronUp, Clock, Copy, Edit, Plus, RefreshCw, RotateCcw, Trash2, X } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Clock,
+  Copy,
+  Edit,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { getActivityDefinition, listActivityTypes } from '../../composer/activityRegistry.js';
+import {
+  buildComposerGridModel,
+  clampComposerColSpan,
+  moveComposerActivityToCell,
+  normalizeComposerActivities,
+  normalizeComposerLayout,
+} from '../../composer/layout.js';
 import { isComposerEnabled } from '../../utils/composer.js';
 import { buildModuleFrameHTML } from '../../utils/generators.js';
 
-const { useEffect, useMemo, useState } = React;
+const { useEffect, useMemo, useRef, useState } = React;
 
 function createActivity(type) {
   const def = getActivityDefinition(type);
   if (!def) return null;
   return {
-    id: `activity-${Date.now()}`,
+    id: `activity-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     type,
     data: def.createDefaultData ? def.createDefaultData() : {},
+    layout: { colSpan: 1 },
   };
+}
+
+function escapeEditorHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export default function EditModal({
@@ -30,9 +60,11 @@ export default function EditModal({
   const composerEnabled = isComposerEnabled(projectData);
   const standaloneMode = editForm.moduleMode || 'custom_html';
   const canUseComposer = composerEnabled || standaloneMode === 'composer';
+  const composerLayout = useMemo(() => normalizeComposerLayout(editForm.composerLayout), [editForm.composerLayout]);
+  const composerMaxColumns = composerLayout.maxColumns;
   const activities = useMemo(
-    () => (Array.isArray(editForm.activities) ? editForm.activities : []),
-    [editForm.activities],
+    () => normalizeComposerActivities(editForm.activities, { maxColumns: composerMaxColumns }),
+    [editForm.activities, composerMaxColumns],
   );
   const activityTypes = useMemo(() => listActivityTypes(), []);
   const moduleBankMaterials = useMemo(
@@ -49,20 +81,56 @@ export default function EditModal({
       .filter((assessment) => !assessment.hidden);
   }, [projectData]);
   const [selectedActivityIndex, setSelectedActivityIndex] = useState(0);
+  const [draggingActivityIndex, setDraggingActivityIndex] = useState(null);
+  const [dragOverActivityIndex, setDragOverActivityIndex] = useState(null);
+  const [dragOverSlotKey, setDragOverSlotKey] = useState(null);
+  const [composerExtraRows, setComposerExtraRows] = useState(0);
   const [newActivityType, setNewActivityType] = useState(activityTypes[0] || 'content_block');
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
   const [selectedAssessmentId, setSelectedAssessmentId] = useState('');
   const [composerPreviewNonce, setComposerPreviewNonce] = useState(0);
+  const richEditorRef = useRef(null);
+  const richEditorUpdateTimerRef = useRef(null);
+  const [composerRawDataError, setComposerRawDataError] = useState('');
+  const composerGridModel = useMemo(
+    () =>
+      buildComposerGridModel(activities, composerMaxColumns, {
+        includeTrailingRow: true,
+        trailingRows: composerExtraRows,
+      }),
+    [activities, composerExtraRows, composerMaxColumns],
+  );
+  const composerPlacementsByIndex = useMemo(
+    () => new Map(composerGridModel.placements.map((placement) => [placement.index, placement])),
+    [composerGridModel],
+  );
 
   useEffect(() => {
     setSelectedActivityIndex(0);
+    setComposerExtraRows(0);
   }, [editingModule, standaloneMode]);
+
+  useEffect(() => {
+    setDraggingActivityIndex(null);
+    setDragOverActivityIndex(null);
+    setDragOverSlotKey(null);
+  }, [editingModule, standaloneMode, activities.length]);
 
   useEffect(() => {
     if (selectedActivityIndex > activities.length - 1) {
       setSelectedActivityIndex(Math.max(activities.length - 1, 0));
     }
   }, [activities.length, selectedActivityIndex]);
+
+  useEffect(
+    () => () => {
+      if (richEditorUpdateTimerRef.current) {
+        clearTimeout(richEditorUpdateTimerRef.current);
+        richEditorUpdateTimerRef.current = null;
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!selectedMaterialId && moduleBankMaterials.length > 0) {
@@ -82,6 +150,37 @@ export default function EditModal({
   }, [editingModule, standaloneMode]);
 
   const selectedActivity = activities[selectedActivityIndex] || null;
+  const selectedPlacement = selectedActivity ? composerPlacementsByIndex.get(selectedActivityIndex) || null : null;
+
+  useEffect(() => {
+    setComposerRawDataError('');
+  }, [selectedActivityIndex, selectedActivity?.id, selectedActivity?.type]);
+
+  useEffect(() => {
+    if (richEditorUpdateTimerRef.current) {
+      clearTimeout(richEditorUpdateTimerRef.current);
+      richEditorUpdateTimerRef.current = null;
+    }
+  }, [selectedActivityIndex, standaloneMode]);
+
+  useEffect(() => {
+    const editor = richEditorRef.current;
+    if (!editor || !selectedActivity || selectedActivity.type !== 'content_block') return;
+    const data = selectedActivity.data || {};
+    const bodyMode = data.bodyMode === 'plain' ? 'plain' : 'rich';
+    if (bodyMode !== 'rich') return;
+    const nextHtml = data.bodyHtml || escapeEditorHtml(data.body || '').replace(/\n/g, '<br>');
+    if (document.activeElement !== editor && editor.innerHTML !== nextHtml) {
+      editor.innerHTML = nextHtml;
+    }
+  }, [
+    selectedActivity?.id,
+    selectedActivity?.type,
+    selectedActivity?.data?.bodyMode,
+    selectedActivity?.data?.bodyHtml,
+    selectedActivity?.data?.body,
+  ]);
+
   const composerPreviewSrcDoc = useMemo(() => {
     if (standaloneMode !== 'composer') return '';
     const courseSettings = projectData?.['Course Settings'] || {};
@@ -90,6 +189,7 @@ export default function EditModal({
       title: editForm.title || 'Composer Preview',
       type: 'standalone',
       mode: 'composer',
+      composerLayout,
       activities,
       rawHtml: '',
       html: '',
@@ -104,14 +204,30 @@ export default function EditModal({
         __materials: projectData?.['Current Course']?.materials || [],
       }) || ''
     );
-  }, [activities, editForm.id, editForm.title, projectData, standaloneMode]);
+  }, [activities, composerLayout, editForm.id, editForm.title, projectData, standaloneMode]);
 
-  const updateActivities = (nextActivities) => {
+  const updateActivities = (nextActivities, nextComposerLayout = composerLayout) => {
+    const normalizedLayout = normalizeComposerLayout(nextComposerLayout);
+    const normalizedActivities = normalizeComposerActivities(nextActivities, {
+      maxColumns: normalizedLayout.maxColumns,
+    });
     setEditForm({
       ...editForm,
       moduleMode: 'composer',
-      activities: nextActivities,
+      composerLayout: normalizedLayout,
+      activities: normalizedActivities,
     });
+  };
+
+  const updateComposerMaxColumns = (nextColumns) => {
+    const normalizedLayout = normalizeComposerLayout({
+      ...(editForm.composerLayout || {}),
+      maxColumns: nextColumns,
+    });
+    const normalizedActivities = normalizeComposerActivities(activities, {
+      maxColumns: normalizedLayout.maxColumns,
+    });
+    updateActivities(normalizedActivities, normalizedLayout);
   };
 
   const updateSelectedActivityData = (updates) => {
@@ -130,12 +246,36 @@ export default function EditModal({
     updateActivities(nextActivities);
   };
 
+  const replaceSelectedActivityData = (nextData) => {
+    if (!selectedActivity) return;
+    const nextActivities = activities.map((activity, idx) =>
+      idx === selectedActivityIndex
+        ? {
+            ...activity,
+            data: nextData && typeof nextData === 'object' ? nextData : {},
+          }
+        : activity,
+    );
+    updateActivities(nextActivities);
+  };
+
   const addActivity = () => {
     const activity = createActivity(newActivityType);
     if (!activity) return;
+    const maxRow = composerGridModel.placements.reduce((largest, placement) => Math.max(largest, placement.row), 0);
+    activity.layout = {
+      ...(activity.layout || {}),
+      colSpan: clampComposerColSpan(activity?.layout?.colSpan, composerMaxColumns),
+      row: Math.max(1, maxRow + 1),
+      col: 1,
+    };
     const nextActivities = [...activities, activity];
     updateActivities(nextActivities);
     setSelectedActivityIndex(nextActivities.length - 1);
+  };
+
+  const addEmptyRow = () => {
+    setComposerExtraRows((count) => Math.min(50, count + 1));
   };
 
   const removeSelectedActivity = () => {
@@ -145,39 +285,126 @@ export default function EditModal({
   };
 
   const moveSelectedActivity = (direction) => {
-    if (!selectedActivity) return;
-    const targetIndex = selectedActivityIndex + direction;
-    if (targetIndex < 0 || targetIndex >= activities.length) return;
-    const nextActivities = [...activities];
-    [nextActivities[selectedActivityIndex], nextActivities[targetIndex]] = [
-      nextActivities[targetIndex],
-      nextActivities[selectedActivityIndex],
-    ];
-    updateActivities(nextActivities);
-    setSelectedActivityIndex(targetIndex);
+    if (!selectedActivity || !selectedPlacement) return;
+    const colSpan = clampComposerColSpan(selectedActivity?.layout?.colSpan, composerMaxColumns);
+    const maxStartCol = Math.max(1, composerMaxColumns - colSpan + 1);
+    let targetRow = selectedPlacement.row;
+    let targetCol = selectedPlacement.col;
+
+    if (direction === 'left') targetCol = Math.max(1, targetCol - 1);
+    if (direction === 'right') targetCol = Math.min(maxStartCol, targetCol + 1);
+    if (direction === 'up') targetRow = Math.max(1, targetRow - 1);
+    if (direction === 'down') targetRow += 1;
+
+    const result = moveComposerActivityToCell(activities, selectedActivityIndex, targetRow, targetCol, {
+      maxColumns: composerMaxColumns,
+    });
+    if (!result.changed) return;
+    updateActivities(result.activities);
+    setSelectedActivityIndex(selectedActivityIndex);
+  };
+
+  const moveActivityToCell = (fromIndex, targetRow, targetCol) => {
+    if (!Number.isInteger(fromIndex) || !Number.isInteger(targetRow) || !Number.isInteger(targetCol)) return;
+    const result = moveComposerActivityToCell(activities, fromIndex, targetRow, targetCol, {
+      maxColumns: composerMaxColumns,
+    });
+    if (!result.changed) return;
+    updateActivities(result.activities);
+    setSelectedActivityIndex(fromIndex);
   };
 
   const duplicateSelectedActivity = () => {
     if (!selectedActivity) return;
+    const basePlacement = selectedPlacement || { row: 1, col: 1 };
     const duplicate = {
       ...selectedActivity,
       id: `activity-${Date.now()}`,
       data: {
         ...(selectedActivity.data || {}),
       },
+      layout: {
+        ...(selectedActivity.layout || {}),
+        row: basePlacement.row + 1,
+        col: basePlacement.col,
+      },
     };
     const nextActivities = [...activities];
-    nextActivities.splice(selectedActivityIndex + 1, 0, duplicate);
+    nextActivities.push(duplicate);
     updateActivities(nextActivities);
-    setSelectedActivityIndex(selectedActivityIndex + 1);
+    setSelectedActivityIndex(nextActivities.length - 1);
+  };
+
+  const updateSelectedActivitySpan = (nextSpan) => {
+    if (!selectedActivity) return;
+    const clamped = clampComposerColSpan(nextSpan, composerMaxColumns);
+    const nextActivities = activities.map((activity, idx) =>
+      idx === selectedActivityIndex
+        ? {
+            ...activity,
+            layout: {
+              ...(activity.layout || {}),
+              colSpan: clamped,
+            },
+          }
+        : activity,
+    );
+    updateActivities(nextActivities);
   };
 
   const setStandaloneMode = (mode) => {
+    const normalizedLayout = normalizeComposerLayout(editForm.composerLayout);
+    const normalizedActivities = normalizeComposerActivities(editForm.activities, {
+      maxColumns: normalizedLayout.maxColumns,
+    });
     setEditForm({
       ...editForm,
       moduleMode: mode,
-      activities: Array.isArray(editForm.activities) ? editForm.activities : [],
+      composerLayout: normalizedLayout,
+      activities: normalizedActivities,
     });
+  };
+
+  const queueRichEditorUpdate = (html, text, immediate = false) => {
+    if (richEditorUpdateTimerRef.current) {
+      clearTimeout(richEditorUpdateTimerRef.current);
+      richEditorUpdateTimerRef.current = null;
+    }
+    const applyUpdate = () => {
+      updateSelectedActivityData({
+        bodyMode: 'rich',
+        bodyHtml: html,
+        body: text,
+      });
+    };
+    if (immediate) {
+      applyUpdate();
+      return;
+    }
+    richEditorUpdateTimerRef.current = setTimeout(() => {
+      richEditorUpdateTimerRef.current = null;
+      applyUpdate();
+    }, 140);
+  };
+
+  const runRichEditorCommand = (command, value = null) => {
+    if (!richEditorRef.current) return;
+    richEditorRef.current.focus();
+    if (command === 'fontSize' || command === 'fontName') {
+      try {
+        document.execCommand('styleWithCSS', false, true);
+      } catch (err) {
+        // Ignore browser differences in execCommand support.
+      }
+    }
+    document.execCommand(command, false, value);
+    const html = richEditorRef.current.innerHTML || '';
+    const text = richEditorRef.current.innerText || '';
+    queueRichEditorUpdate(html, text, true);
+  };
+
+  const preserveRichSelection = (event) => {
+    event.preventDefault();
   };
 
   const renderActivityEditor = () => {
@@ -187,6 +414,7 @@ export default function EditModal({
 
     const data = selectedActivity.data || {};
     if (selectedActivity.type === 'content_block') {
+      const bodyMode = data.bodyMode === 'plain' ? 'plain' : 'rich';
       return (
         <div className="space-y-3">
           <div>
@@ -199,12 +427,80 @@ export default function EditModal({
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Body</label>
-            <textarea
-              value={data.body || ''}
-              onChange={(e) => updateSelectedActivityData({ body: e.target.value })}
-              className="w-full h-40 bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-300">Body</label>
+              <div className="inline-flex bg-slate-950 border border-slate-700 rounded p-0.5">
+                <button
+                  type="button"
+                  onClick={() => updateSelectedActivityData({ bodyMode: 'rich' })}
+                  className={`px-2 py-1 rounded text-[10px] font-bold ${bodyMode === 'rich' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Rich
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateSelectedActivityData({ bodyMode: 'plain' })}
+                  className={`px-2 py-1 rounded text-[10px] font-bold ${bodyMode === 'plain' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Plain
+                </button>
+              </div>
+            </div>
+            {bodyMode === 'plain' ? (
+              <textarea
+                value={data.body || ''}
+                onChange={(e) => updateSelectedActivityData({ body: e.target.value })}
+                className="w-full h-40 bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+              />
+            ) : (
+              <div className="rounded border border-slate-700 bg-slate-950 overflow-hidden">
+                <div className="flex flex-wrap gap-1 p-2 border-b border-slate-700 bg-slate-900/80">
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('bold')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">B</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('italic')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs italic">I</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('underline')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs underline">U</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', '<p>')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">P</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', '<h2>')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H2</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', '<h3>')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H3</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '2')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A-</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '3')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '5')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A+</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontName', 'Arial')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Sans</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontName', 'Georgia')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Serif</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontName', 'Courier New')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Mono</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('insertUnorderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">• List</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('insertOrderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">1. List</button>
+                  <button
+                    type="button"
+                    onMouseDown={preserveRichSelection}
+                    onClick={() => {
+                      const url = window.prompt('Enter URL');
+                      if (!url) return;
+                      runRichEditorCommand('createLink', url);
+                    }}
+                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs"
+                  >
+                    Link
+                  </button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('removeFormat')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Clear</button>
+                </div>
+                <div
+                  ref={richEditorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onInput={(event) => {
+                    const html = event.currentTarget.innerHTML || '';
+                    const text = event.currentTarget.innerText || '';
+                    queueRichEditorUpdate(html, text);
+                  }}
+                  onBlur={(event) => {
+                    const html = event.currentTarget.innerHTML || '';
+                    const text = event.currentTarget.innerText || '';
+                    queueRichEditorUpdate(html, text, true);
+                  }}
+                  className="cf-rich-editor min-h-[180px] p-3 text-sm text-white outline-none"
+                />
+              </div>
+            )}
           </div>
         </div>
       );
@@ -555,6 +851,27 @@ export default function EditModal({
       );
     }
 
+    if (selectedActivity.type === 'spacer_block') {
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Spacer Height (px)</label>
+            <input
+              type="number"
+              min="0"
+              max="600"
+              value={Number.isFinite(Number(data.height)) ? data.height : 48}
+              onChange={(e) => updateSelectedActivityData({ height: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <p className="text-[11px] text-slate-500">
+            Use span + spacer blocks to reserve empty grid slots and force clean row structure.
+          </p>
+        </div>
+      );
+    }
+
     if (selectedActivity.type === 'submission_builder') {
       return (
         <div className="space-y-3">
@@ -580,7 +897,35 @@ export default function EditModal({
       );
     }
 
-    return <p className="text-xs text-slate-500">No editor for this activity type.</p>;
+    const rawDataJson = JSON.stringify(data || {}, null, 2);
+    return (
+      <div className="space-y-2">
+        <p className="text-xs text-slate-400">
+          This block currently uses JSON settings. Edit and click out of the box to apply.
+        </p>
+        <textarea
+          key={`composer-raw-editor-${selectedActivity.id || selectedActivityIndex}`}
+          defaultValue={rawDataJson}
+          onBlur={(event) => {
+            const draft = event.currentTarget.value || '{}';
+            try {
+              const parsed = JSON.parse(draft);
+              replaceSelectedActivityData(parsed);
+              setComposerRawDataError('');
+            } catch (err) {
+              setComposerRawDataError(err?.message || 'Invalid JSON');
+            }
+          }}
+          className="w-full min-h-60 bg-slate-950 border border-slate-700 rounded p-3 text-xs text-slate-200 font-mono"
+          spellCheck={false}
+        />
+        {composerRawDataError ? (
+          <p className="text-xs text-rose-300">{composerRawDataError}</p>
+        ) : (
+          <p className="text-[11px] text-slate-500">Use valid JSON object format.</p>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -698,26 +1043,127 @@ export default function EditModal({
                             <h4 className="text-sm font-bold text-white">Activities</h4>
                             <span className="text-[11px] text-slate-500">{activities.length} total</span>
                           </div>
-                          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                            {activities.map((activity, idx) => {
-                              const def = getActivityDefinition(activity.type);
-                              return (
-                                <button
-                                  key={activity.id || `${activity.type}-${idx}`}
-                                  type="button"
-                                  onClick={() => setSelectedActivityIndex(idx)}
-                                  className={`w-full text-left p-2 rounded border transition-colors ${
-                                    idx === selectedActivityIndex
-                                      ? 'bg-emerald-900/30 border-emerald-600 text-white'
-                                      : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
-                                  }`}
-                                >
-                                  <p className="text-xs font-bold">{def?.label || activity.type}</p>
-                                  <p className="text-[10px] text-slate-500 font-mono">{activity.id || `activity-${idx + 1}`}</p>
-                                </button>
-                              );
-                            })}
-                            {activities.length === 0 && <p className="text-xs text-slate-500">No activities yet.</p>}
+                          <div className="mb-3 p-2 rounded border border-slate-700 bg-slate-900/60">
+                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Grid Columns</label>
+                            <select
+                              value={composerMaxColumns}
+                              onChange={(e) => updateComposerMaxColumns(e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                            >
+                              {[1, 2, 3, 4].map((count) => (
+                                <option key={count} value={count}>
+                                  {count} {count === 1 ? 'Column' : 'Columns'}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="max-h-72 overflow-y-auto pr-1">
+                            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${composerMaxColumns}, minmax(0, 1fr))` }}>
+                              {composerGridModel.emptySlots.map((slot) => {
+                                const isSlotTarget =
+                                  draggingActivityIndex !== null &&
+                                  dragOverSlotKey === slot.key &&
+                                  dragOverActivityIndex === null;
+                                return (
+                                  <div
+                                    key={slot.key}
+                                    style={{ gridColumn: `${slot.col}`, gridRow: `${slot.row}`, minHeight: '58px' }}
+                                    onDragOver={(event) => {
+                                      if (!Number.isInteger(draggingActivityIndex)) return;
+                                      event.preventDefault();
+                                      if (event.dataTransfer) {
+                                        event.dataTransfer.dropEffect = 'move';
+                                      }
+                                      if (dragOverSlotKey !== slot.key) setDragOverSlotKey(slot.key);
+                                      if (dragOverActivityIndex !== null) setDragOverActivityIndex(null);
+                                    }}
+                                    onDragLeave={() => {
+                                      if (dragOverSlotKey === slot.key) setDragOverSlotKey(null);
+                                    }}
+                                    onDrop={(event) => {
+                                      event.preventDefault();
+                                      const fallback = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10);
+                                      const fromIndex = Number.isInteger(draggingActivityIndex) ? draggingActivityIndex : fallback;
+                                      moveActivityToCell(fromIndex, slot.row, slot.col);
+                                      setDraggingActivityIndex(null);
+                                      setDragOverActivityIndex(null);
+                                      setDragOverSlotKey(null);
+                                    }}
+                                    className={`rounded border border-dashed transition-colors ${
+                                      isSlotTarget
+                                        ? 'border-indigo-400 bg-indigo-500/20'
+                                        : 'border-slate-700/80 bg-slate-900/35'
+                                    }`}
+                                  />
+                                );
+                              })}
+                              {activities.map((activity, idx) => {
+                                const def = getActivityDefinition(activity.type);
+                                const colSpan = Math.min(activity?.layout?.colSpan || 1, composerMaxColumns);
+                                const placement = composerPlacementsByIndex.get(idx);
+                                const isSelected = idx === selectedActivityIndex;
+                                const isDropTarget = idx === dragOverActivityIndex && draggingActivityIndex !== null && idx !== draggingActivityIndex;
+                                return (
+                                  <div
+                                    key={activity.id || `${activity.type}-${idx}`}
+                                    style={{
+                                      gridColumn: placement
+                                        ? `${placement.col} / span ${placement.colSpan}`
+                                        : `span ${colSpan} / span ${colSpan}`,
+                                      gridRow: placement ? `${placement.row}` : undefined,
+                                    }}
+                                    draggable
+                                    onDragStart={(event) => {
+                                      setDraggingActivityIndex(idx);
+                                      setSelectedActivityIndex(idx);
+                                      setDragOverSlotKey(null);
+                                      if (event.dataTransfer) {
+                                        event.dataTransfer.effectAllowed = 'move';
+                                        event.dataTransfer.setData('text/plain', String(idx));
+                                      }
+                                    }}
+                                    onDragOver={(event) => {
+                                      event.preventDefault();
+                                      if (event.dataTransfer) {
+                                        event.dataTransfer.dropEffect = 'move';
+                                      }
+                                      if (dragOverActivityIndex !== idx) setDragOverActivityIndex(idx);
+                                      if (dragOverSlotKey !== null) setDragOverSlotKey(null);
+                                    }}
+                                    onDrop={(event) => {
+                                      event.preventDefault();
+                                      const fallback = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10);
+                                      const fromIndex = Number.isInteger(draggingActivityIndex) ? draggingActivityIndex : fallback;
+                                      moveActivityToCell(fromIndex, placement?.row || 1, placement?.col || 1);
+                                      setDraggingActivityIndex(null);
+                                      setDragOverActivityIndex(null);
+                                      setDragOverSlotKey(null);
+                                    }}
+                                    onDragEnd={() => {
+                                      setDraggingActivityIndex(null);
+                                      setDragOverActivityIndex(null);
+                                      setDragOverSlotKey(null);
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedActivityIndex(idx)}
+                                      className={`w-full text-left p-2 rounded border transition-colors ${
+                                        isSelected
+                                          ? 'bg-emerald-900/30 border-emerald-600 text-white'
+                                          : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                                      } ${isDropTarget ? 'ring-1 ring-indigo-400 border-indigo-500' : ''}`}
+                                    >
+                                      <p className="text-xs font-bold">{def?.label || activity.type}</p>
+                                      <p className="text-[10px] text-slate-500 font-mono">{activity.id || `activity-${idx + 1}`}</p>
+                                      <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-1">Span {colSpan}</p>
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {activities.length === 0 && <p className="text-xs text-slate-500 mt-1">No activities yet.</p>}
                           </div>
 
                           <div className="mt-4 pt-3 border-t border-slate-700">
@@ -744,40 +1190,87 @@ export default function EditModal({
                                 <Plus size={12} /> Add
                               </button>
                             </div>
-                            <div className="flex gap-2 mt-2">
+                            <button
+                              type="button"
+                              onClick={addEmptyRow}
+                              className="w-full mt-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1.5 text-white text-xs inline-flex items-center justify-center gap-1"
+                              title="Add one open row of empty drop targets"
+                            >
+                              <Plus size={12} /> Add Open Row
+                            </button>
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                              <label className="text-[11px] font-bold text-slate-400 uppercase self-center">Selected Span</label>
+                              <select
+                                value={selectedActivity?.layout?.colSpan || 1}
+                                onChange={(e) => updateSelectedActivitySpan(e.target.value)}
+                                disabled={!selectedActivity}
+                                className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs disabled:opacity-40"
+                              >
+                                {Array.from({ length: composerMaxColumns }, (_, idx) => idx + 1).map((span) => (
+                                  <option key={span} value={span}>
+                                    Span {span}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2 mt-2">
                               <button
                                 type="button"
-                                onClick={() => moveSelectedActivity(-1)}
-                                disabled={!selectedActivity || selectedActivityIndex === 0}
-                                className="flex-1 px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                                onClick={() => moveSelectedActivity('left')}
+                                disabled={!selectedActivity || !selectedPlacement || selectedPlacement.col <= 1}
+                                className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                                title="Move left"
+                              >
+                                <ChevronLeft size={12} /> Left
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveSelectedActivity('right')}
+                                disabled={
+                                  !selectedActivity ||
+                                  !selectedPlacement ||
+                                  selectedPlacement.col >= Math.max(1, composerMaxColumns - (selectedActivity?.layout?.colSpan || 1) + 1)
+                                }
+                                className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                                title="Move right"
+                              >
+                                <ChevronRight size={12} /> Right
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveSelectedActivity('up')}
+                                disabled={!selectedActivity || !selectedPlacement || selectedPlacement.row <= 1}
+                                className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
                               >
                                 <ChevronUp size={12} /> Up
                               </button>
                               <button
                                 type="button"
-                                onClick={() => moveSelectedActivity(1)}
-                                disabled={!selectedActivity || selectedActivityIndex >= activities.length - 1}
-                                className="flex-1 px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                                onClick={() => moveSelectedActivity('down')}
+                                disabled={!selectedActivity}
+                                className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
                               >
                                 <ChevronDown size={12} /> Down
                               </button>
+                            </div>
+                            <div className="flex gap-2 mt-2">
                               <button
                                 type="button"
                                 onClick={duplicateSelectedActivity}
                                 disabled={!selectedActivity}
-                                className="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center"
+                                className="flex-1 px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
                                 title="Duplicate selected activity"
                               >
-                                <Copy size={12} />
+                                <Copy size={12} /> Duplicate
                               </button>
                               <button
                                 type="button"
                                 onClick={removeSelectedActivity}
                                 disabled={!selectedActivity}
-                                className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center"
+                                className="flex-1 px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
                                 title="Delete selected activity"
                               >
-                                <Trash2 size={12} />
+                                <Trash2 size={12} /> Delete
                               </button>
                             </div>
                           </div>

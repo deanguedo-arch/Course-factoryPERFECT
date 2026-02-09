@@ -1,4 +1,9 @@
 import * as React from 'react';
+import {
+  normalizeComposerActivities,
+  normalizeComposerLayout,
+  normalizeComposerModuleConfig,
+} from '../composer/layout.js';
 
 const { useCallback, useState } = React;
 
@@ -11,13 +16,14 @@ const DEFAULT_EDIT_FORM = {
   moduleType: '',
   moduleMode: 'custom_html',
   activities: [],
+  composerLayout: { maxColumns: 1 },
   url: '',
   linkType: 'iframe',
   fullDocument: '',
 };
 
-function ensureComposerActivities(activities) {
-  const normalized = Array.isArray(activities) ? activities : [];
+function ensureComposerActivities(activities, maxColumns = 1) {
+  const normalized = normalizeComposerActivities(activities, { maxColumns });
   if (normalized.length > 0) return normalized;
   return [
     {
@@ -26,6 +32,9 @@ function ensureComposerActivities(activities) {
       data: {
         title: 'New Section',
         body: 'Add your lesson content here.',
+      },
+      layout: {
+        colSpan: 1,
       },
     },
   ];
@@ -37,6 +46,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
   const [moduleHistory, setModuleHistory] = useState(null); // { moduleId, history: [...] }
 
   const openEditModule = useCallback((item) => {
+    const composerState = normalizeComposerModuleConfig(item);
+
     // Handle external link modules
     if (item.type === 'external') {
       setEditForm({
@@ -47,7 +58,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         section: 'Current Course',
         moduleType: 'external',
         moduleMode: item.mode || 'custom_html',
-        activities: Array.isArray(item.activities) ? item.activities : [],
+        activities: composerState.activities,
+        composerLayout: composerState.composerLayout,
       });
       setEditingModule(item.id);
       return;
@@ -64,7 +76,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           section: 'Current Course',
           moduleType: 'standalone',
           moduleMode: item.mode || 'custom_html',
-          activities: Array.isArray(item.activities) ? item.activities : [],
+          activities: composerState.activities,
+          composerLayout: composerState.composerLayout,
           hasRawHtml: true, // Flag to indicate this uses rawHtml format
         });
         setEditingModule(item.id);
@@ -101,7 +114,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         section: 'Current Course',
         moduleType: 'standalone',
         moduleMode: item.mode || 'custom_html',
-        activities: Array.isArray(item.activities) ? item.activities : [],
+        activities: composerState.activities,
+        composerLayout: composerState.composerLayout,
         hasRawHtml: false,
       });
       setEditingModule(item.id);
@@ -123,7 +137,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       section: 'Current Course',
       moduleType: 'legacy',
       moduleMode: item.mode || 'custom_html',
-      activities: Array.isArray(item.activities) ? item.activities : [],
+      activities: composerState.activities,
+      composerLayout: composerState.composerLayout,
     });
     setEditingModule(item.id);
   }, []);
@@ -137,13 +152,15 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
     // Save current version to history before updating
     const currentModule = { ...items[idx] }; // Create a copy to avoid mutation issues
     const history = currentModule.history || [];
+    const currentComposerState = normalizeComposerModuleConfig(currentModule);
 
     // Create history snapshot (only save if content actually changed)
     const newSnapshot = {
       timestamp: new Date().toISOString(),
       title: currentModule.title,
       mode: currentModule.mode || 'custom_html',
-      activities: Array.isArray(currentModule.activities) ? currentModule.activities : [],
+      activities: currentComposerState.activities,
+      composerLayout: currentComposerState.composerLayout,
       ...(currentModule.type === 'standalone'
         ? // Use rawHtml if available (new format), otherwise use legacy fields
           currentModule.rawHtml
@@ -172,12 +189,11 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
     }
 
     const nextMode = editForm.moduleMode === 'composer' ? 'composer' : 'custom_html';
+    const nextComposerLayout = normalizeComposerLayout(editForm.composerLayout);
     const nextActivities =
       nextMode === 'composer'
-        ? ensureComposerActivities(editForm.activities)
-        : Array.isArray(editForm.activities)
-          ? editForm.activities
-          : [];
+        ? ensureComposerActivities(editForm.activities, nextComposerLayout.maxColumns)
+        : normalizeComposerActivities(editForm.activities, { maxColumns: nextComposerLayout.maxColumns });
 
     // Handle external link modules
     if (editForm.moduleType === 'external') {
@@ -186,6 +202,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         title: editForm.title,
         mode: nextMode,
         activities: nextActivities,
+        composerLayout: nextComposerLayout,
         url: editForm.url,
         linkType: editForm.linkType || 'iframe',
         type: 'external',
@@ -202,6 +219,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           title: editForm.title,
           mode: 'composer',
           activities: nextActivities,
+          composerLayout: nextComposerLayout,
           rawHtml: '',
           html: '',
           css: '',
@@ -216,6 +234,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           title: editForm.title,
           mode: 'custom_html',
           activities: nextActivities,
+          composerLayout: nextComposerLayout,
           rawHtml: editForm.fullDocument.trim(),
           html: '',
           css: '',
@@ -232,6 +251,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         title: editForm.title,
         mode: nextMode,
         activities: nextActivities,
+        composerLayout: nextComposerLayout,
         code: {
           id: items[idx].code?.id || editForm.id,
           html: editForm.html,
@@ -264,6 +284,11 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       if (versionIndex < 0 || versionIndex >= history.length) return;
 
       const version = history[versionIndex];
+      const fallbackComposer = normalizeComposerModuleConfig(items[idx]);
+      const restoredComposer = normalizeComposerModuleConfig({
+        composerLayout: version.composerLayout || fallbackComposer.composerLayout,
+        activities: Array.isArray(version.activities) ? version.activities : fallbackComposer.activities,
+      });
 
       // Restore the version based on module type
       if (module.type === 'standalone') {
@@ -273,7 +298,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
             ...items[idx],
             title: version.title,
             mode: version.mode || items[idx].mode || 'custom_html',
-            activities: Array.isArray(version.activities) ? version.activities : (items[idx].activities || []),
+            activities: restoredComposer.activities,
+            composerLayout: restoredComposer.composerLayout,
             rawHtml: version.rawHtml,
             html: '',
             css: '',
@@ -284,7 +310,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
             ...items[idx],
             title: version.title,
             mode: version.mode || items[idx].mode || 'custom_html',
-            activities: Array.isArray(version.activities) ? version.activities : (items[idx].activities || []),
+            activities: restoredComposer.activities,
+            composerLayout: restoredComposer.composerLayout,
             rawHtml: '', // Clear rawHtml if reverting to legacy format
             html: version.html || '',
             css: version.css || '',
@@ -296,7 +323,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           ...items[idx],
           title: version.title,
           mode: version.mode || items[idx].mode || 'custom_html',
-          activities: Array.isArray(version.activities) ? version.activities : (items[idx].activities || []),
+          activities: restoredComposer.activities,
+          composerLayout: restoredComposer.composerLayout,
           url: version.url || '',
           linkType: version.linkType || 'iframe',
         };
@@ -305,7 +333,8 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           ...items[idx],
           title: version.title,
           mode: version.mode || items[idx].mode || 'custom_html',
-          activities: Array.isArray(version.activities) ? version.activities : (items[idx].activities || []),
+          activities: restoredComposer.activities,
+          composerLayout: restoredComposer.composerLayout,
           code: version.code || {},
         };
       }

@@ -1,11 +1,61 @@
 ﻿import * as React from 'react';
-import { AlertTriangle, ArrowUpCircle, Box, CheckCircle, ChevronDown, ChevronUp, Clipboard, Copy, Database, Edit, Eye, EyeOff, FileJson, FolderOpen, Layers, PenTool, Plus, RefreshCw, RotateCcw, Save, Scissors, Search, Sparkles, Trash2, Wrench, X, Zap } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowUpCircle,
+  Box,
+  CheckCircle,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Clipboard,
+  Copy,
+  Database,
+  Edit,
+  Eye,
+  EyeOff,
+  FileJson,
+  FolderOpen,
+  Layers,
+  PenTool,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  Save,
+  Scissors,
+  Search,
+  Sparkles,
+  Trash2,
+  Wrench,
+  X,
+  Zap,
+} from 'lucide-react';
 import VaultBrowser from './VaultBrowser';
 import { CodeBlock, Toggle } from './Shared.jsx';
-import { buildModuleFrameHTML, getMaterialBadgeLabel, validateModule } from '../utils/generators.js';
+import { buildModuleFrameHTML, cleanModuleScript, getMaterialBadgeLabel, validateModule } from '../utils/generators.js';
 import { getActivityDefinition, listActivityTypes } from '../composer/activityRegistry.js';
+import {
+  buildComposerGridModel,
+  clampComposerColSpan,
+  moveComposerActivityToCell,
+  normalizeComposerActivities,
+  normalizeComposerLayout,
+} from '../composer/layout.js';
 
-const { useEffect, useMemo, useState } = React;
+const { useEffect, useMemo, useRef, useState } = React;
+
+function escapeEditorHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+const MODULE_MANAGER_AUTOSAVE_KEY = 'course_factory_module_manager_autosave_v1';
+const MODULE_MANAGER_SAVED_DRAFTS_KEY = 'course_factory_module_manager_saved_drafts_v1';
+const MODULE_MANAGER_MAX_SAVED_DRAFTS = 30;
 
 // --- PHASE 1: HARVEST ---
 const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, assessmentType, setAssessmentType, assessmentTitle, setAssessmentTitle, quizQuestions, setQuizQuestions, printInstructions, setPrintInstructions, editingAssessment, setEditingAssessment, migrateCode, setMigrateCode, migratePrompt, setMigratePrompt, migrateOutput, setMigrateOutput, isVaultOpen, setIsVaultOpen, setVaultTargetField, vaultTargetField }) => {
@@ -18,11 +68,19 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   const [moduleManagerType, setModuleManagerType] = useState('standalone'); // 'standalone' | 'composer' | 'external'
   const [moduleManagerComposerStarterType, setModuleManagerComposerStarterType] = useState('content_block');
   const moduleManagerActivityTypes = useMemo(() => listActivityTypes(), []);
+  const [moduleManagerComposerLayout, setModuleManagerComposerLayout] = useState({ maxColumns: 1 });
   const [moduleManagerComposerActivities, setModuleManagerComposerActivities] = useState([]);
+  const [moduleManagerComposerExtraRows, setModuleManagerComposerExtraRows] = useState(0);
   const [moduleManagerComposerSelectedIndex, setModuleManagerComposerSelectedIndex] = useState(0);
+  const [moduleManagerComposerDraggingIndex, setModuleManagerComposerDraggingIndex] = useState(null);
+  const [moduleManagerComposerDragOverIndex, setModuleManagerComposerDragOverIndex] = useState(null);
+  const [moduleManagerComposerDragOverSlotKey, setModuleManagerComposerDragOverSlotKey] = useState(null);
   const [moduleManagerResourceMaterialId, setModuleManagerResourceMaterialId] = useState('');
   const [moduleManagerAssessmentId, setModuleManagerAssessmentId] = useState('');
   const [moduleManagerComposerPreviewNonce, setModuleManagerComposerPreviewNonce] = useState(0);
+  const moduleManagerRichEditorRef = useRef(null);
+  const moduleManagerRichEditorUpdateTimerRef = useRef(null);
+  const [moduleManagerComposerRawDataError, setModuleManagerComposerRawDataError] = useState('');
   const [moduleManagerHTML, setModuleManagerHTML] = useState('');
   const [moduleManagerURL, setModuleManagerURL] = useState('');
   const [moduleManagerID, setModuleManagerID] = useState('');
@@ -37,6 +95,8 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   const [stagingJson, setStagingJson] = useState("");
   const [stagingTitle, setStagingTitle] = useState("");
   const [saveStatus, setSaveStatus] = useState(null); // 'success'
+  const [moduleManagerSavedDrafts, setModuleManagerSavedDrafts] = useState([]);
+  const [moduleManagerSelectedDraftId, setModuleManagerSelectedDraftId] = useState('');
 
   const moduleBankMaterials = useMemo(
     () =>
@@ -89,6 +149,8 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
 
   // Materials Manager State
   const [editingMaterial, setEditingMaterial] = useState(null);
+  const [phase1MaterialPreview, setPhase1MaterialPreview] = useState(null);
+  const [phase1AssessmentPreview, setPhase1AssessmentPreview] = useState(null);
   const [materialForm, setMaterialForm] = useState({
     number: '',
     title: '',
@@ -108,6 +170,19 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   const [parsedAiModule, setParsedAiModule] = useState(null);
   const [aiParseError, setAiParseError] = useState(null);
   const [aiTargetType, setAiTargetType] = useState('MODULE'); // 'MODULE' or 'FEATURE'
+  const moduleManagerComposerMaxColumns = normalizeComposerLayout(moduleManagerComposerLayout).maxColumns;
+  const moduleManagerGridModel = useMemo(
+    () =>
+      buildComposerGridModel(moduleManagerComposerActivities, moduleManagerComposerMaxColumns, {
+        includeTrailingRow: true,
+        trailingRows: moduleManagerComposerExtraRows,
+      }),
+    [moduleManagerComposerActivities, moduleManagerComposerExtraRows, moduleManagerComposerMaxColumns],
+  );
+  const moduleManagerPlacementByIndex = useMemo(
+    () => new Map(moduleManagerGridModel.placements.map((placement) => [placement.index, placement])),
+    [moduleManagerGridModel],
+  );
 
   // NEW: Handler for Batch Imports
   const handleBatchImport = (items) => {
@@ -760,15 +835,265 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       id: `activity-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       type: resolvedType,
       data: defaultData,
+      layout: {
+        colSpan: 1,
+      },
     };
   };
+
+  const buildModuleManagerDraftPayload = () => {
+    const composerLayout = normalizeComposerLayout(moduleManagerComposerLayout);
+    const composerActivities = normalizeComposerActivities(moduleManagerComposerActivities, {
+      maxColumns: composerLayout.maxColumns,
+    });
+    return {
+      version: 1,
+      type: moduleManagerType,
+      moduleId: moduleManagerID,
+      title: moduleManagerTitle,
+      html: moduleManagerHTML,
+      url: moduleManagerURL,
+      linkType: moduleManagerLinkType,
+      composerStarterType: moduleManagerComposerStarterType,
+      composerLayout,
+      composerActivities,
+      composerExtraRows: moduleManagerComposerExtraRows,
+      composerSelectedIndex: moduleManagerComposerSelectedIndex,
+    };
+  };
+
+  const applyModuleManagerDraftPayload = (payload) => {
+    if (!payload || typeof payload !== 'object') return false;
+
+    const nextType =
+      payload.type === 'composer' || payload.type === 'external' || payload.type === 'standalone'
+        ? payload.type
+        : 'standalone';
+    const nextStarterType =
+      payload.composerStarterType && getActivityDefinition(payload.composerStarterType)
+        ? payload.composerStarterType
+        : 'content_block';
+    const nextLayout = normalizeComposerLayout(payload.composerLayout);
+    const hydratedActivities = normalizeComposerActivities(payload.composerActivities, {
+      maxColumns: nextLayout.maxColumns,
+    });
+    const nextActivities =
+      hydratedActivities.length > 0
+        ? hydratedActivities
+        : normalizeComposerActivities([buildComposerStarterActivity(nextStarterType)], {
+            maxColumns: nextLayout.maxColumns,
+          });
+    const requestedIndex = Number.parseInt(payload.composerSelectedIndex, 10);
+    const nextSelectedIndex = Number.isInteger(requestedIndex)
+      ? Math.max(0, Math.min(nextActivities.length - 1, requestedIndex))
+      : 0;
+    const requestedExtraRows = Number.parseInt(payload.composerExtraRows, 10);
+    const nextExtraRows = Number.isInteger(requestedExtraRows) ? Math.max(0, Math.min(requestedExtraRows, 50)) : 0;
+
+    setModuleManagerType(nextType);
+    setModuleManagerID(payload.moduleId || '');
+    setModuleManagerTitle(payload.title || '');
+    setModuleManagerHTML(payload.html || '');
+    setModuleManagerURL(payload.url || '');
+    setModuleManagerLinkType(payload.linkType === 'newtab' ? 'newtab' : 'iframe');
+    setModuleManagerComposerStarterType(nextStarterType);
+    setModuleManagerComposerLayout(nextLayout);
+    setModuleManagerComposerActivities(nextActivities);
+    setModuleManagerComposerExtraRows(nextExtraRows);
+    setModuleManagerComposerSelectedIndex(nextSelectedIndex);
+    return true;
+  };
+
+  const persistModuleManagerSavedDrafts = (nextDrafts) => {
+    const trimmedDrafts = Array.isArray(nextDrafts) ? nextDrafts.slice(0, MODULE_MANAGER_MAX_SAVED_DRAFTS) : [];
+    setModuleManagerSavedDrafts(trimmedDrafts);
+    try {
+      localStorage.setItem(MODULE_MANAGER_SAVED_DRAFTS_KEY, JSON.stringify(trimmedDrafts));
+    } catch (err) {
+      console.error('Failed to persist module manager drafts:', err);
+    }
+    return trimmedDrafts;
+  };
+
+  const saveModuleManagerDraft = () => {
+    try {
+      const payload = buildModuleManagerDraftPayload();
+      const savedAt = new Date().toISOString();
+      const label =
+        moduleManagerTitle.trim() ||
+        moduleManagerID.trim() ||
+        `${payload.type === 'composer' ? 'Composer' : payload.type === 'external' ? 'External' : 'Standalone'} Draft`;
+      const draftId = moduleManagerSelectedDraftId || `module-draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const nextDraft = {
+        id: draftId,
+        label,
+        savedAt,
+        payload,
+      };
+      const withoutCurrent = moduleManagerSavedDrafts.filter((draft) => draft.id !== draftId);
+      const persisted = persistModuleManagerSavedDrafts([nextDraft, ...withoutCurrent]);
+      setModuleManagerSelectedDraftId(nextDraft.id);
+      setModuleManagerStatus('success');
+      setModuleManagerMessage(
+        persisted.length > withoutCurrent.length ? `Saved draft "${label}".` : `Updated draft "${label}".`,
+      );
+      setTimeout(() => {
+        setModuleManagerStatus(null);
+        setModuleManagerMessage('');
+      }, 2200);
+    } catch (err) {
+      setModuleManagerStatus('error');
+      setModuleManagerMessage(`Failed to save draft: ${err.message}`);
+    }
+  };
+
+  const loadModuleManagerDraft = () => {
+    const draft = moduleManagerSavedDrafts.find((entry) => entry.id === moduleManagerSelectedDraftId);
+    if (!draft) {
+      setModuleManagerStatus('error');
+      setModuleManagerMessage('Select a saved draft to load.');
+      return;
+    }
+    const loaded = applyModuleManagerDraftPayload(draft.payload);
+    if (!loaded) {
+      setModuleManagerStatus('error');
+      setModuleManagerMessage('Selected draft is invalid and could not be loaded.');
+      return;
+    }
+    setModuleManagerStatus('success');
+    setModuleManagerMessage(`Loaded draft "${draft.label}".`);
+    setTimeout(() => {
+      setModuleManagerStatus(null);
+      setModuleManagerMessage('');
+    }, 2200);
+  };
+
+  const deleteModuleManagerDraft = () => {
+    if (!moduleManagerSelectedDraftId) {
+      setModuleManagerStatus('error');
+      setModuleManagerMessage('Select a draft to delete.');
+      return;
+    }
+    const nextDrafts = moduleManagerSavedDrafts.filter((draft) => draft.id !== moduleManagerSelectedDraftId);
+    persistModuleManagerSavedDrafts(nextDrafts);
+    setModuleManagerSelectedDraftId(nextDrafts[0]?.id || '');
+    setModuleManagerStatus('success');
+    setModuleManagerMessage('Draft deleted.');
+    setTimeout(() => {
+      setModuleManagerStatus(null);
+      setModuleManagerMessage('');
+    }, 1800);
+  };
+
+  const resetModuleManagerBuilder = () => {
+    const confirmed = window.confirm(
+      'Reset Module Manager builder?\n\nThis clears the current unsaved module setup.\n\nContinue?',
+    );
+    if (!confirmed) return;
+
+    setModuleManagerType('standalone');
+    setModuleManagerID('');
+    setModuleManagerTitle('');
+    setModuleManagerHTML('');
+    setModuleManagerURL('');
+    setModuleManagerLinkType('iframe');
+    setModuleManagerComposerLayout({ maxColumns: 1 });
+    setModuleManagerComposerActivities(
+      normalizeComposerActivities([buildComposerStarterActivity(moduleManagerComposerStarterType)], {
+        maxColumns: 1,
+      }),
+    );
+    setModuleManagerComposerExtraRows(0);
+    setModuleManagerComposerSelectedIndex(0);
+    setModuleManagerComposerDraggingIndex(null);
+    setModuleManagerComposerDragOverIndex(null);
+    setModuleManagerComposerDragOverSlotKey(null);
+    setModuleManagerStatus('success');
+    setModuleManagerMessage('Builder reset.');
+    setTimeout(() => {
+      setModuleManagerStatus(null);
+      setModuleManagerMessage('');
+    }, 1800);
+  };
+
+  useEffect(() => {
+    try {
+      const rawDrafts = localStorage.getItem(MODULE_MANAGER_SAVED_DRAFTS_KEY);
+      if (rawDrafts) {
+        const parsed = JSON.parse(rawDrafts);
+        if (Array.isArray(parsed)) {
+          const sanitized = parsed
+            .filter((draft) => draft && typeof draft === 'object' && draft.id && draft.payload)
+            .slice(0, MODULE_MANAGER_MAX_SAVED_DRAFTS);
+          setModuleManagerSavedDrafts(sanitized);
+          if (sanitized.length > 0) {
+            setModuleManagerSelectedDraftId(sanitized[0].id);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load module manager drafts:', err);
+    }
+
+    try {
+      const rawAutosave = localStorage.getItem(MODULE_MANAGER_AUTOSAVE_KEY);
+      if (!rawAutosave) return;
+      const parsedAutosave = JSON.parse(rawAutosave);
+      if (!parsedAutosave || typeof parsedAutosave !== 'object') return;
+      const restored = applyModuleManagerDraftPayload(parsedAutosave.payload);
+      if (restored) {
+        setModuleManagerStatus('success');
+        setModuleManagerMessage('Module manager autosave restored.');
+        setTimeout(() => {
+          setModuleManagerStatus(null);
+          setModuleManagerMessage('');
+        }, 2200);
+      }
+    } catch (err) {
+      console.error('Failed to restore module manager autosave:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    const payload = buildModuleManagerDraftPayload();
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          MODULE_MANAGER_AUTOSAVE_KEY,
+          JSON.stringify({
+            savedAt: new Date().toISOString(),
+            payload,
+          }),
+        );
+      } catch (err) {
+        console.error('Failed to write module manager autosave:', err);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [
+    moduleManagerType,
+    moduleManagerID,
+    moduleManagerTitle,
+    moduleManagerHTML,
+    moduleManagerURL,
+    moduleManagerLinkType,
+    moduleManagerComposerStarterType,
+    moduleManagerComposerLayout,
+    moduleManagerComposerActivities,
+    moduleManagerComposerExtraRows,
+    moduleManagerComposerSelectedIndex,
+  ]);
 
   useEffect(() => {
     if (moduleManagerType !== 'composer') return;
     if (moduleManagerComposerActivities.length > 0) return;
-    setModuleManagerComposerActivities([buildComposerStarterActivity(moduleManagerComposerStarterType)]);
+    setModuleManagerComposerActivities(
+      normalizeComposerActivities([buildComposerStarterActivity(moduleManagerComposerStarterType)], {
+        maxColumns: moduleManagerComposerMaxColumns,
+      }),
+    );
     setModuleManagerComposerSelectedIndex(0);
-  }, [moduleManagerType, moduleManagerComposerActivities.length, moduleManagerComposerStarterType]);
+  }, [moduleManagerType, moduleManagerComposerActivities.length, moduleManagerComposerStarterType, moduleManagerComposerMaxColumns]);
 
   useEffect(() => {
     if (moduleManagerComposerSelectedIndex > moduleManagerComposerActivities.length - 1) {
@@ -793,7 +1118,56 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     setModuleManagerComposerPreviewNonce((n) => n + 1);
   }, [moduleManagerType]);
 
+  useEffect(() => {
+    setModuleManagerComposerDraggingIndex(null);
+    setModuleManagerComposerDragOverIndex(null);
+    setModuleManagerComposerDragOverSlotKey(null);
+  }, [moduleManagerType, moduleManagerComposerActivities.length]);
+
+  useEffect(
+    () => () => {
+      if (moduleManagerRichEditorUpdateTimerRef.current) {
+        clearTimeout(moduleManagerRichEditorUpdateTimerRef.current);
+        moduleManagerRichEditorUpdateTimerRef.current = null;
+      }
+    },
+    [],
+  );
+
   const selectedComposerActivity = moduleManagerComposerActivities[moduleManagerComposerSelectedIndex] || null;
+  const selectedComposerPlacement = selectedComposerActivity
+    ? moduleManagerPlacementByIndex.get(moduleManagerComposerSelectedIndex) || null
+    : null;
+
+  useEffect(() => {
+    setModuleManagerComposerRawDataError('');
+  }, [moduleManagerComposerSelectedIndex, selectedComposerActivity?.id, selectedComposerActivity?.type]);
+
+  useEffect(() => {
+    if (moduleManagerRichEditorUpdateTimerRef.current) {
+      clearTimeout(moduleManagerRichEditorUpdateTimerRef.current);
+      moduleManagerRichEditorUpdateTimerRef.current = null;
+    }
+  }, [moduleManagerComposerSelectedIndex, moduleManagerType]);
+
+  useEffect(() => {
+    const editor = moduleManagerRichEditorRef.current;
+    if (!editor || !selectedComposerActivity || selectedComposerActivity.type !== 'content_block') return;
+    const data = selectedComposerActivity.data || {};
+    const bodyMode = data.bodyMode === 'plain' ? 'plain' : 'rich';
+    if (bodyMode !== 'rich') return;
+    const nextHtml = data.bodyHtml || escapeEditorHtml(data.body || '').replace(/\n/g, '<br>');
+    if (document.activeElement !== editor && editor.innerHTML !== nextHtml) {
+      editor.innerHTML = nextHtml;
+    }
+  }, [
+    selectedComposerActivity?.id,
+    selectedComposerActivity?.type,
+    selectedComposerActivity?.data?.bodyMode,
+    selectedComposerActivity?.data?.bodyHtml,
+    selectedComposerActivity?.data?.body,
+  ]);
+
   const moduleManagerComposerPreviewDoc = useMemo(() => {
     if (moduleManagerType !== 'composer') return '';
     const courseSettings = projectData?.['Course Settings'] || {};
@@ -805,6 +1179,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       title,
       type: 'standalone',
       mode: 'composer',
+      composerLayout: { maxColumns: moduleManagerComposerMaxColumns },
       activities: moduleManagerComposerActivities,
       rawHtml: '',
       html: '',
@@ -819,10 +1194,49 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         __materials: projectData?.['Current Course']?.materials || [],
       }) || ''
     );
-  }, [moduleManagerComposerActivities, moduleManagerID, moduleManagerTitle, moduleManagerType, projectData]);
+  }, [moduleManagerComposerActivities, moduleManagerComposerMaxColumns, moduleManagerID, moduleManagerTitle, moduleManagerType, projectData]);
 
-  const updateComposerActivities = (nextActivities) => {
-    setModuleManagerComposerActivities(nextActivities);
+  const phase1MaterialCompiledPreviewDoc = useMemo(() => {
+    if (!phase1MaterialPreview) return '';
+    const courseSettings = projectData?.['Course Settings'] || {};
+    const previewMaterial = {
+      ...phase1MaterialPreview,
+      hidden: false,
+      order: 0,
+    };
+    const previewModule = {
+      id: 'item-materials-preview',
+      title: 'Course Materials',
+      type: 'legacy',
+      code: { id: 'view-materials', html: '', script: '' },
+      materials: [previewMaterial],
+    };
+    return (
+      buildModuleFrameHTML(previewModule, {
+        ...courseSettings,
+        __courseName: courseSettings.courseName || projectData?.['Current Course']?.name || 'Course',
+        __toolkit: projectData?.['Global Toolkit'] || [],
+        __materials: [previewMaterial],
+        ignoreAssetBaseUrl: true,
+      }) || ''
+    );
+  }, [phase1MaterialPreview, projectData]);
+
+  const updateComposerActivities = (nextActivities, nextLayout = moduleManagerComposerLayout) => {
+    const normalizedLayout = normalizeComposerLayout(nextLayout);
+    const normalizedActivities = normalizeComposerActivities(nextActivities, {
+      maxColumns: normalizedLayout.maxColumns,
+    });
+    setModuleManagerComposerLayout(normalizedLayout);
+    setModuleManagerComposerActivities(normalizedActivities);
+  };
+
+  const updateComposerMaxColumns = (nextColumns) => {
+    const normalizedLayout = normalizeComposerLayout({
+      ...(moduleManagerComposerLayout || {}),
+      maxColumns: nextColumns,
+    });
+    updateComposerActivities(moduleManagerComposerActivities, normalizedLayout);
   };
 
   const updateSelectedComposerActivityData = (updates) => {
@@ -841,11 +1255,35 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     updateComposerActivities(nextActivities);
   };
 
+  const replaceSelectedComposerActivityData = (nextData) => {
+    if (!selectedComposerActivity) return;
+    const nextActivities = moduleManagerComposerActivities.map((activity, idx) =>
+      idx === moduleManagerComposerSelectedIndex
+        ? {
+            ...activity,
+            data: nextData && typeof nextData === 'object' ? nextData : {},
+          }
+        : activity,
+    );
+    updateComposerActivities(nextActivities);
+  };
+
   const addComposerActivityDraft = () => {
     const nextActivity = buildComposerStarterActivity(moduleManagerComposerStarterType);
+    const maxRow = moduleManagerGridModel.placements.reduce((largest, placement) => Math.max(largest, placement.row), 0);
+    nextActivity.layout = {
+      ...(nextActivity.layout || {}),
+      colSpan: clampComposerColSpan(nextActivity?.layout?.colSpan, moduleManagerComposerMaxColumns),
+      row: Math.max(1, maxRow + 1),
+      col: 1,
+    };
     const nextActivities = [...moduleManagerComposerActivities, nextActivity];
     updateComposerActivities(nextActivities);
     setModuleManagerComposerSelectedIndex(nextActivities.length - 1);
+  };
+
+  const addComposerEmptyRowDraft = () => {
+    setModuleManagerComposerExtraRows((count) => Math.min(50, count + 1));
   };
 
   const removeSelectedComposerActivityDraft = () => {
@@ -855,31 +1293,117 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   };
 
   const moveSelectedComposerActivityDraft = (direction) => {
-    if (!selectedComposerActivity) return;
-    const targetIndex = moduleManagerComposerSelectedIndex + direction;
-    if (targetIndex < 0 || targetIndex >= moduleManagerComposerActivities.length) return;
-    const nextActivities = [...moduleManagerComposerActivities];
-    [nextActivities[moduleManagerComposerSelectedIndex], nextActivities[targetIndex]] = [
-      nextActivities[targetIndex],
-      nextActivities[moduleManagerComposerSelectedIndex],
-    ];
-    updateComposerActivities(nextActivities);
-    setModuleManagerComposerSelectedIndex(targetIndex);
+    if (!selectedComposerActivity || !selectedComposerPlacement) return;
+    const colSpan = clampComposerColSpan(selectedComposerActivity?.layout?.colSpan, moduleManagerComposerMaxColumns);
+    const maxStartCol = Math.max(1, moduleManagerComposerMaxColumns - colSpan + 1);
+    let targetRow = selectedComposerPlacement.row;
+    let targetCol = selectedComposerPlacement.col;
+
+    if (direction === 'left') targetCol = Math.max(1, targetCol - 1);
+    if (direction === 'right') targetCol = Math.min(maxStartCol, targetCol + 1);
+    if (direction === 'up') targetRow = Math.max(1, targetRow - 1);
+    if (direction === 'down') targetRow += 1;
+
+    const result = moveComposerActivityToCell(
+      moduleManagerComposerActivities,
+      moduleManagerComposerSelectedIndex,
+      targetRow,
+      targetCol,
+      { maxColumns: moduleManagerComposerMaxColumns },
+    );
+    if (!result.changed) return;
+    updateComposerActivities(result.activities);
+    setModuleManagerComposerSelectedIndex(moduleManagerComposerSelectedIndex);
+  };
+
+  const moveComposerActivityToGridCell = (fromIndex, targetRow, targetCol) => {
+    if (!Number.isInteger(fromIndex) || !Number.isInteger(targetRow) || !Number.isInteger(targetCol)) return;
+    const result = moveComposerActivityToCell(moduleManagerComposerActivities, fromIndex, targetRow, targetCol, {
+      maxColumns: moduleManagerComposerMaxColumns,
+    });
+    if (!result.changed) return;
+    updateComposerActivities(result.activities);
+    setModuleManagerComposerSelectedIndex(fromIndex);
   };
 
   const duplicateSelectedComposerActivityDraft = () => {
     if (!selectedComposerActivity) return;
+    const basePlacement = selectedComposerPlacement || { row: 1, col: 1 };
     const duplicate = {
       ...selectedComposerActivity,
       id: `activity-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       data: {
         ...(selectedComposerActivity.data || {}),
       },
+      layout: {
+        ...(selectedComposerActivity.layout || {}),
+        row: basePlacement.row + 1,
+        col: basePlacement.col,
+      },
     };
     const nextActivities = [...moduleManagerComposerActivities];
-    nextActivities.splice(moduleManagerComposerSelectedIndex + 1, 0, duplicate);
+    nextActivities.push(duplicate);
     updateComposerActivities(nextActivities);
-    setModuleManagerComposerSelectedIndex(moduleManagerComposerSelectedIndex + 1);
+    setModuleManagerComposerSelectedIndex(nextActivities.length - 1);
+  };
+
+  const updateSelectedComposerActivitySpan = (nextSpan) => {
+    if (!selectedComposerActivity) return;
+    const clamped = clampComposerColSpan(nextSpan, moduleManagerComposerMaxColumns);
+    const nextActivities = moduleManagerComposerActivities.map((activity, idx) =>
+      idx === moduleManagerComposerSelectedIndex
+        ? {
+            ...activity,
+            layout: {
+              ...(activity.layout || {}),
+              colSpan: clamped,
+            },
+          }
+        : activity,
+    );
+    updateComposerActivities(nextActivities);
+  };
+
+  const queueModuleManagerRichEditorUpdate = (html, text, immediate = false) => {
+    if (moduleManagerRichEditorUpdateTimerRef.current) {
+      clearTimeout(moduleManagerRichEditorUpdateTimerRef.current);
+      moduleManagerRichEditorUpdateTimerRef.current = null;
+    }
+    const applyUpdate = () => {
+      updateSelectedComposerActivityData({
+        bodyMode: 'rich',
+        bodyHtml: html,
+        body: text,
+      });
+    };
+    if (immediate) {
+      applyUpdate();
+      return;
+    }
+    moduleManagerRichEditorUpdateTimerRef.current = setTimeout(() => {
+      moduleManagerRichEditorUpdateTimerRef.current = null;
+      applyUpdate();
+    }, 140);
+  };
+
+  const runModuleManagerRichEditorCommand = (command, value = null) => {
+    if (!moduleManagerRichEditorRef.current) return;
+    moduleManagerRichEditorRef.current.focus();
+    if (command === 'fontSize' || command === 'fontName') {
+      try {
+        document.execCommand('styleWithCSS', false, true);
+      } catch (err) {
+        // Ignore browser differences in execCommand support.
+      }
+    }
+    document.execCommand(command, false, value);
+    const html = moduleManagerRichEditorRef.current.innerHTML || '';
+    const text = moduleManagerRichEditorRef.current.innerText || '';
+    queueModuleManagerRichEditorUpdate(html, text, true);
+  };
+
+  const preserveModuleManagerRichSelection = (event) => {
+    event.preventDefault();
   };
 
   const renderModuleManagerComposerActivityEditor = () => {
@@ -889,6 +1413,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
 
     const data = selectedComposerActivity.data || {};
     if (selectedComposerActivity.type === 'content_block') {
+      const bodyMode = data.bodyMode === 'plain' ? 'plain' : 'rich';
       return (
         <div className="space-y-3">
           <div>
@@ -901,12 +1426,80 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Body</label>
-            <textarea
-              value={data.body || ''}
-              onChange={(e) => updateSelectedComposerActivityData({ body: e.target.value })}
-              className="w-full h-40 bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-300">Body</label>
+              <div className="inline-flex bg-slate-950 border border-slate-700 rounded p-0.5">
+                <button
+                  type="button"
+                  onClick={() => updateSelectedComposerActivityData({ bodyMode: 'rich' })}
+                  className={`px-2 py-1 rounded text-[10px] font-bold ${bodyMode === 'rich' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Rich
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateSelectedComposerActivityData({ bodyMode: 'plain' })}
+                  className={`px-2 py-1 rounded text-[10px] font-bold ${bodyMode === 'plain' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Plain
+                </button>
+              </div>
+            </div>
+            {bodyMode === 'plain' ? (
+              <textarea
+                value={data.body || ''}
+                onChange={(e) => updateSelectedComposerActivityData({ body: e.target.value })}
+                className="w-full h-40 bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+              />
+            ) : (
+              <div className="rounded border border-slate-700 bg-slate-950 overflow-hidden">
+                <div className="flex flex-wrap gap-1 p-2 border-b border-slate-700 bg-slate-900/80">
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('bold')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">B</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('italic')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs italic">I</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('underline')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs underline">U</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', '<p>')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">P</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', '<h2>')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H2</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', '<h3>')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H3</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '2')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A-</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '3')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '5')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A+</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontName', 'Arial')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Sans</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontName', 'Georgia')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Serif</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontName', 'Courier New')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Mono</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('insertUnorderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">• List</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('insertOrderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">1. List</button>
+                  <button
+                    type="button"
+                    onMouseDown={preserveModuleManagerRichSelection}
+                    onClick={() => {
+                      const url = window.prompt('Enter URL');
+                      if (!url) return;
+                      runModuleManagerRichEditorCommand('createLink', url);
+                    }}
+                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs"
+                  >
+                    Link
+                  </button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('removeFormat')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Clear</button>
+                </div>
+                <div
+                  ref={moduleManagerRichEditorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onInput={(event) => {
+                    const html = event.currentTarget.innerHTML || '';
+                    const text = event.currentTarget.innerText || '';
+                    queueModuleManagerRichEditorUpdate(html, text);
+                  }}
+                  onBlur={(event) => {
+                    const html = event.currentTarget.innerHTML || '';
+                    const text = event.currentTarget.innerText || '';
+                    queueModuleManagerRichEditorUpdate(html, text, true);
+                  }}
+                  className="cf-rich-editor min-h-[180px] p-3 text-sm text-white outline-none"
+                />
+              </div>
+            )}
           </div>
         </div>
       );
@@ -1279,6 +1872,27 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       );
     }
 
+    if (selectedComposerActivity.type === 'spacer_block') {
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Spacer Height (px)</label>
+            <input
+              type="number"
+              min="0"
+              max="600"
+              value={Number.isFinite(Number(data.height)) ? data.height : 48}
+              onChange={(e) => updateSelectedComposerActivityData({ height: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <p className="text-[11px] text-slate-500">
+            Use span + spacer blocks to reserve empty grid slots and lock row structure.
+          </p>
+        </div>
+      );
+    }
+
     if (selectedComposerActivity.type === 'submission_builder') {
       return (
         <div className="space-y-3">
@@ -1304,7 +1918,35 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       );
     }
 
-    return <p className="text-xs text-slate-500">No editor for this activity type.</p>;
+    const rawDataJson = JSON.stringify(data || {}, null, 2);
+    return (
+      <div className="space-y-2">
+        <p className="text-xs text-slate-400">
+          This block currently uses JSON settings. Edit and click out of the box to apply.
+        </p>
+        <textarea
+          key={`composer-raw-editor-${selectedComposerActivity.id || moduleManagerComposerSelectedIndex}`}
+          defaultValue={rawDataJson}
+          onBlur={(event) => {
+            const draft = event.currentTarget.value || '{}';
+            try {
+              const parsed = JSON.parse(draft);
+              replaceSelectedComposerActivityData(parsed);
+              setModuleManagerComposerRawDataError('');
+            } catch (err) {
+              setModuleManagerComposerRawDataError(err?.message || 'Invalid JSON');
+            }
+          }}
+          className="w-full min-h-60 bg-slate-950 border border-slate-700 rounded p-3 text-xs text-slate-200 font-mono"
+          spellCheck={false}
+        />
+        {moduleManagerComposerRawDataError ? (
+          <p className="text-xs text-rose-300">{moduleManagerComposerRawDataError}</p>
+        ) : (
+          <p className="text-[11px] text-slate-500">Use valid JSON object format.</p>
+        )}
+      </div>
+    );
   };
 
   const addStandaloneModule = () => {
@@ -1360,6 +2002,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         type: 'standalone',
         mode: 'custom_html',
         activities: [],
+        composerLayout: { maxColumns: 1 },
         // Store the COMPLETE raw HTML document - this is the key change
         rawHtml: rawHtml,
         // Keep these for backward compatibility (empty for new modules)
@@ -1372,6 +2015,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
           title: title,
           mode: 'custom_html',
           activities: [],
+          composerLayout: { maxColumns: 1 },
           rawHtml: rawHtml
         }]
       };
@@ -1427,16 +2071,20 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
 
       // Derive title from ID when omitted
       const title = moduleManagerTitle.trim() || moduleId.replace('view-', '').replace(/-/g, ' ');
+      const composerLayout = normalizeComposerLayout(moduleManagerComposerLayout);
       const composerActivities =
         moduleManagerComposerActivities.length > 0
-          ? moduleManagerComposerActivities
-          : [buildComposerStarterActivity(moduleManagerComposerStarterType)];
+          ? normalizeComposerActivities(moduleManagerComposerActivities, { maxColumns: composerLayout.maxColumns })
+          : normalizeComposerActivities([buildComposerStarterActivity(moduleManagerComposerStarterType)], {
+              maxColumns: composerLayout.maxColumns,
+            });
 
       const newModule = {
         id: moduleId,
         title,
         type: 'standalone',
         mode: 'composer',
+        composerLayout,
         activities: composerActivities,
         rawHtml: '',
         html: '',
@@ -1446,6 +2094,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
           timestamp: new Date().toISOString(),
           title,
           mode: 'composer',
+          composerLayout,
           activities: composerActivities,
         }]
       };
@@ -1477,7 +2126,13 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
 
       setModuleManagerID('');
       setModuleManagerTitle('');
-      setModuleManagerComposerActivities([buildComposerStarterActivity(moduleManagerComposerStarterType)]);
+      setModuleManagerComposerLayout({ maxColumns: 1 });
+      setModuleManagerComposerActivities(
+        normalizeComposerActivities([buildComposerStarterActivity(moduleManagerComposerStarterType)], {
+          maxColumns: 1,
+        }),
+      );
+      setModuleManagerComposerExtraRows(0);
       setModuleManagerComposerSelectedIndex(0);
       setModuleManagerStatus('success');
       setModuleManagerMessage(`✅ Composer module "${title}" added with ${composerActivities.length} activities.`);
@@ -1534,6 +2189,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         type: 'external',
         mode: 'custom_html',
         activities: [],
+        composerLayout: { maxColumns: 1 },
         url: moduleManagerURL,
         linkType: moduleManagerLinkType,
         // Initialize history with version 1 (original state)
@@ -1542,6 +2198,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
           title: moduleManagerTitle || moduleId.replace('view-', '').replace(/-/g, ' '),
           mode: 'custom_html',
           activities: [],
+          composerLayout: { maxColumns: 1 },
           url: moduleManagerURL,
           linkType: moduleManagerLinkType
         }]
@@ -2326,6 +2983,13 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                             >
                                                                 {assess.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
                                                             </button>
+                                                            <button
+                                                                onClick={() => setPhase1AssessmentPreview(assess)}
+                                                                className="p-1.5 hover:bg-indigo-900 hover:text-indigo-300 rounded"
+                                                                title="Preview"
+                                                            >
+                                                                <Eye size={12} />
+                                                            </button>
                                                             <button 
                                                                 onClick={() => moveAssessment(assess.id, 'up')}
                                                                 disabled={assess.order === 0}
@@ -2389,6 +3053,43 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                         });
                                     })()}
                                 </div>
+
+                                {phase1AssessmentPreview && (
+                                    <div
+                                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                                        onClick={() => setPhase1AssessmentPreview(null)}
+                                    >
+                                        <div
+                                            className="bg-slate-900 border border-slate-700 rounded-xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
+                                                <div>
+                                                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                                        <Eye size={20} className="text-indigo-300" />
+                                                        Assessment Preview: {phase1AssessmentPreview.title}
+                                                    </h3>
+                                                    <p className="text-xs text-slate-400 mt-1">Phase 1 live preview</p>
+                                                </div>
+                                                <button onClick={() => setPhase1AssessmentPreview(null)} className="text-slate-400 hover:text-white transition-colors">
+                                                    <X size={24} />
+                                                </button>
+                                            </div>
+                                            <div className="p-0 max-h-[calc(90vh-80px)] overflow-y-auto">
+                                                <iframe
+                                                    srcDoc={(() => {
+                                                        const safeHtml = phase1AssessmentPreview.html || '<p class="text-slate-500">No HTML content</p>';
+                                                        const safeScript = cleanModuleScript(phase1AssessmentPreview.script || '');
+                                                        return `<!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"><\/script><style>body{background:#020617;color:#e2e8f0;padding:20px;}</style></head><body>${safeHtml}<script>${safeScript}<\/script></body></html>`;
+                                                    })()}
+                                                    className="w-full border-0"
+                                                    style={{ minHeight: '600px' }}
+                                                    title={phase1AssessmentPreview.title || 'Assessment Preview'}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* EDIT ASSESSMENT MODAL */}
                                 {editingAssessment && (
@@ -3195,6 +3896,13 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     >
                                                         {mat.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
                                                     </button>
+                                                    <button
+                                                        onClick={() => setPhase1MaterialPreview(mat)}
+                                                        className="p-1.5 hover:bg-cyan-900 hover:text-cyan-300 rounded"
+                                                        title="Preview"
+                                                    >
+                                                        <Eye size={12} />
+                                                    </button>
                                                     <button 
                                                         onClick={() => {
                                                             setEditingMaterial(mat.id);
@@ -3241,6 +3949,93 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 });
                             })()}
                         </div>
+
+                        {phase1MaterialPreview && (
+                            <div
+                                className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                                onClick={() => setPhase1MaterialPreview(null)}
+                            >
+                                <div
+                                    className="bg-slate-900 border border-slate-700 rounded-xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
+                                        <div>
+                                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                                <Eye size={20} className="text-cyan-300" />
+                                                Material Preview: {phase1MaterialPreview.title}
+                                            </h3>
+                                            <p className="text-xs text-slate-400 mt-1">{phase1MaterialPreview.description || 'No description'}</p>
+                                        </div>
+                                        <button onClick={() => setPhase1MaterialPreview(null)} className="text-slate-400 hover:text-white transition-colors">
+                                            <X size={24} />
+                                        </button>
+                                    </div>
+                                    <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+                                        {phase1MaterialCompiledPreviewDoc && (
+                                            <div className="mb-6">
+                                                <p className="text-[11px] text-cyan-300 font-bold uppercase tracking-wide mb-2">
+                                                    Compiled Materials Preview
+                                                </p>
+                                                <div className="rounded-lg overflow-hidden border border-slate-700 bg-black">
+                                                    <iframe
+                                                        srcDoc={phase1MaterialCompiledPreviewDoc}
+                                                        className="w-full border-0"
+                                                        style={{ minHeight: '620px' }}
+                                                        sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-top-navigation-by-user-activation"
+                                                        title={phase1MaterialPreview.title || 'Material Compiled Preview'}
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] text-slate-500 mt-2">
+                                                    This is the compiled module rendering. Use the in-frame <span className="text-emerald-300">Read</span> button to test JSON digital content.
+                                                </p>
+                                            </div>
+                                        )}
+                                        {phase1MaterialPreview.viewUrl && (
+                                            <div className="mb-6 rounded-lg overflow-hidden border border-slate-700 bg-black">
+                                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wide px-3 pt-3">Direct Source Preview</p>
+                                                <iframe
+                                                    src={
+                                                        phase1MaterialPreview.viewUrl.includes('/view')
+                                                            ? phase1MaterialPreview.viewUrl.replace('/view', '/preview')
+                                                            : phase1MaterialPreview.viewUrl
+                                                    }
+                                                    className="w-full border-0"
+                                                    style={{ minHeight: '420px' }}
+                                                    title={phase1MaterialPreview.title || 'Material Source Preview'}
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950 p-4 rounded-lg border border-slate-800">
+                                            <div>
+                                                <span className="text-xs font-bold text-slate-500 uppercase">Number</span>
+                                                <p className="text-white">{phase1MaterialPreview.number || 'N/A'}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-bold text-slate-500 uppercase">Badge</span>
+                                                <p className="text-white">{getMaterialBadgeLabel(phase1MaterialPreview)}</p>
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <span className="text-xs font-bold text-slate-500 uppercase">View URL</span>
+                                                <p className="text-cyan-300 text-xs break-all">{phase1MaterialPreview.viewUrl || 'N/A'}</p>
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <span className="text-xs font-bold text-slate-500 uppercase">Download URL</span>
+                                                <p className="text-cyan-300 text-xs break-all">{phase1MaterialPreview.downloadUrl || 'N/A'}</p>
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <span className="text-xs font-bold text-slate-500 uppercase">Digital Content</span>
+                                                <p className="text-white text-sm">
+                                                    {phase1MaterialPreview.digitalContent
+                                                        ? `Enabled (${phase1MaterialPreview.digitalContent?.chapters?.length || 0} chapters)`
+                                                        : 'Not configured'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* EDIT MATERIAL MODAL */}
                         {editingMaterial && (
@@ -3468,6 +4263,60 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 External Link
                             </button>
                         </div>
+
+                        <div className="mb-6 rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-300">Draft Saves</p>
+                                <span className="text-[10px] text-slate-500">{moduleManagerSavedDrafts.length} saved</span>
+                            </div>
+                            <div className="grid grid-cols-12 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={saveModuleManagerDraft}
+                                    className="col-span-12 sm:col-span-3 rounded bg-indigo-600 hover:bg-indigo-500 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
+                                >
+                                    <Save size={12} /> Save Draft
+                                </button>
+                                <select
+                                    value={moduleManagerSelectedDraftId}
+                                    onChange={(e) => setModuleManagerSelectedDraftId(e.target.value)}
+                                    className="col-span-12 sm:col-span-5 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                >
+                                    {moduleManagerSavedDrafts.length === 0 && <option value="">No saved drafts</option>}
+                                    {moduleManagerSavedDrafts.map((draft) => (
+                                        <option key={draft.id} value={draft.id}>
+                                            {draft.label} ({draft.savedAt ? new Date(draft.savedAt).toLocaleString() : 'no timestamp'})
+                                        </option>
+                                    ))}
+                                </select>
+                                <button
+                                    type="button"
+                                    onClick={loadModuleManagerDraft}
+                                    disabled={!moduleManagerSelectedDraftId}
+                                    className="col-span-6 sm:col-span-2 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
+                                >
+                                    <FolderOpen size={12} /> Load
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={deleteModuleManagerDraft}
+                                    disabled={!moduleManagerSelectedDraftId}
+                                    className="col-span-6 sm:col-span-2 rounded bg-rose-700/80 hover:bg-rose-600 disabled:opacity-40 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
+                                >
+                                    <Trash2 size={12} /> Delete
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={resetModuleManagerBuilder}
+                                    className="col-span-12 sm:col-span-12 rounded bg-amber-700/80 hover:bg-amber-600 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
+                                >
+                                    <RotateCcw size={12} /> Reset Builder
+                                </button>
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-2">
+                                Builder state auto-saves locally, and saved drafts can be loaded back into Module Manager anytime.
+                            </p>
+                        </div>
                         
                         <div className="space-y-4">
                             {/* Module ID */}
@@ -3540,26 +4389,140 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 <h4 className="text-sm font-bold text-white">Activities</h4>
                                                 <span className="text-[11px] text-slate-500">{moduleManagerComposerActivities.length} total</span>
                                             </div>
-                                            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                                                {moduleManagerComposerActivities.map((activity, idx) => {
-                                                    const def = getActivityDefinition(activity.type);
-                                                    return (
-                                                        <button
-                                                            key={activity.id || `${activity.type}-${idx}`}
-                                                            type="button"
-                                                            onClick={() => setModuleManagerComposerSelectedIndex(idx)}
-                                                            className={`w-full text-left p-2 rounded border transition-colors ${
-                                                                idx === moduleManagerComposerSelectedIndex
-                                                                    ? 'bg-emerald-900/30 border-emerald-600 text-white'
-                                                                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
-                                                            }`}
-                                                        >
-                                                            <p className="text-xs font-bold">{def?.label || activity.type}</p>
-                                                            <p className="text-[10px] text-slate-500 font-mono">{activity.id || `activity-${idx + 1}`}</p>
-                                                        </button>
-                                                    );
-                                                })}
-                                                {moduleManagerComposerActivities.length === 0 && <p className="text-xs text-slate-500">No activities yet.</p>}
+                                            <div className="mb-3 p-2 rounded border border-slate-700 bg-slate-900/60">
+                                                <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Grid Columns</label>
+                                                <select
+                                                    value={moduleManagerComposerMaxColumns}
+                                                    onChange={(e) => updateComposerMaxColumns(e.target.value)}
+                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                >
+                                                    {[1, 2, 3, 4].map((count) => (
+                                                        <option key={count} value={count}>
+                                                            {count} {count === 1 ? 'Column' : 'Columns'}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div className="max-h-72 overflow-y-auto pr-1">
+                                                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${moduleManagerComposerMaxColumns}, minmax(0, 1fr))` }}>
+                                                    {moduleManagerGridModel.emptySlots.map((slot) => {
+                                                        const isSlotTarget =
+                                                            moduleManagerComposerDraggingIndex !== null &&
+                                                            moduleManagerComposerDragOverSlotKey === slot.key &&
+                                                            moduleManagerComposerDragOverIndex === null;
+                                                        return (
+                                                            <div
+                                                                key={slot.key}
+                                                                style={{ gridColumn: `${slot.col}`, gridRow: `${slot.row}`, minHeight: '58px' }}
+                                                                onDragOver={(event) => {
+                                                                    if (!Number.isInteger(moduleManagerComposerDraggingIndex)) return;
+                                                                    event.preventDefault();
+                                                                    if (event.dataTransfer) {
+                                                                        event.dataTransfer.dropEffect = 'move';
+                                                                    }
+                                                                    if (moduleManagerComposerDragOverSlotKey !== slot.key) {
+                                                                        setModuleManagerComposerDragOverSlotKey(slot.key);
+                                                                    }
+                                                                    if (moduleManagerComposerDragOverIndex !== null) {
+                                                                        setModuleManagerComposerDragOverIndex(null);
+                                                                    }
+                                                                }}
+                                                                onDragLeave={() => {
+                                                                    if (moduleManagerComposerDragOverSlotKey === slot.key) {
+                                                                        setModuleManagerComposerDragOverSlotKey(null);
+                                                                    }
+                                                                }}
+                                                                onDrop={(event) => {
+                                                                    event.preventDefault();
+                                                                    const fallback = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10);
+                                                                    const fromIndex = Number.isInteger(moduleManagerComposerDraggingIndex) ? moduleManagerComposerDraggingIndex : fallback;
+                                                                    moveComposerActivityToGridCell(fromIndex, slot.row, slot.col);
+                                                                    setModuleManagerComposerDraggingIndex(null);
+                                                                    setModuleManagerComposerDragOverIndex(null);
+                                                                    setModuleManagerComposerDragOverSlotKey(null);
+                                                                }}
+                                                                className={`rounded border border-dashed transition-colors ${
+                                                                    isSlotTarget
+                                                                        ? 'border-indigo-400 bg-indigo-500/20'
+                                                                        : 'border-slate-700/80 bg-slate-900/35'
+                                                                }`}
+                                                            />
+                                                        );
+                                                    })}
+                                                    {moduleManagerComposerActivities.map((activity, idx) => {
+                                                        const def = getActivityDefinition(activity.type);
+                                                        const colSpan = Math.min(activity?.layout?.colSpan || 1, moduleManagerComposerMaxColumns);
+                                                        const placement = moduleManagerPlacementByIndex.get(idx);
+                                                        const isSelected = idx === moduleManagerComposerSelectedIndex;
+                                                        const isDropTarget =
+                                                          idx === moduleManagerComposerDragOverIndex &&
+                                                          moduleManagerComposerDraggingIndex !== null &&
+                                                          idx !== moduleManagerComposerDraggingIndex;
+                                                        return (
+                                                            <div
+                                                                key={activity.id || `${activity.type}-${idx}`}
+                                                                style={{
+                                                                    gridColumn: placement
+                                                                        ? `${placement.col} / span ${placement.colSpan}`
+                                                                        : `span ${colSpan} / span ${colSpan}`,
+                                                                    gridRow: placement ? `${placement.row}` : undefined,
+                                                                }}
+                                                                draggable
+                                                                onDragStart={(event) => {
+                                                                    setModuleManagerComposerDraggingIndex(idx);
+                                                                    setModuleManagerComposerSelectedIndex(idx);
+                                                                    setModuleManagerComposerDragOverSlotKey(null);
+                                                                    if (event.dataTransfer) {
+                                                                        event.dataTransfer.effectAllowed = 'move';
+                                                                        event.dataTransfer.setData('text/plain', String(idx));
+                                                                    }
+                                                                }}
+                                                                onDragOver={(event) => {
+                                                                    event.preventDefault();
+                                                                    if (event.dataTransfer) {
+                                                                        event.dataTransfer.dropEffect = 'move';
+                                                                    }
+                                                                    if (moduleManagerComposerDragOverIndex !== idx) {
+                                                                        setModuleManagerComposerDragOverIndex(idx);
+                                                                    }
+                                                                    if (moduleManagerComposerDragOverSlotKey !== null) {
+                                                                        setModuleManagerComposerDragOverSlotKey(null);
+                                                                    }
+                                                                }}
+                                                                onDrop={(event) => {
+                                                                    event.preventDefault();
+                                                                    const fallback = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10);
+                                                                    const fromIndex = Number.isInteger(moduleManagerComposerDraggingIndex) ? moduleManagerComposerDraggingIndex : fallback;
+                                                                    moveComposerActivityToGridCell(fromIndex, placement?.row || 1, placement?.col || 1);
+                                                                    setModuleManagerComposerDraggingIndex(null);
+                                                                    setModuleManagerComposerDragOverIndex(null);
+                                                                    setModuleManagerComposerDragOverSlotKey(null);
+                                                                }}
+                                                                onDragEnd={() => {
+                                                                    setModuleManagerComposerDraggingIndex(null);
+                                                                    setModuleManagerComposerDragOverIndex(null);
+                                                                    setModuleManagerComposerDragOverSlotKey(null);
+                                                                }}
+                                                            >
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setModuleManagerComposerSelectedIndex(idx)}
+                                                                    className={`w-full text-left p-2 rounded border transition-colors ${
+                                                                        isSelected
+                                                                            ? 'bg-emerald-900/30 border-emerald-600 text-white'
+                                                                            : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                                                                    } ${isDropTarget ? 'ring-1 ring-indigo-400 border-indigo-500' : ''}`}
+                                                                >
+                                                                    <p className="text-xs font-bold">{def?.label || activity.type}</p>
+                                                                    <p className="text-[10px] text-slate-500 font-mono">{activity.id || `activity-${idx + 1}`}</p>
+                                                                    <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-1">Span {colSpan}</p>
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                                {moduleManagerComposerActivities.length === 0 && <p className="text-xs text-slate-500 mt-1">No activities yet.</p>}
                                             </div>
 
                                             <div className="mt-4 pt-3 border-t border-slate-700">
@@ -3586,40 +4549,87 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                         <Plus size={12} /> Add
                                                     </button>
                                                 </div>
-                                                <div className="flex gap-2 mt-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={addComposerEmptyRowDraft}
+                                                    className="w-full mt-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1.5 text-white text-xs inline-flex items-center justify-center gap-1"
+                                                    title="Add one open row of empty drop targets"
+                                                >
+                                                    <Plus size={12} /> Add Open Row
+                                                </button>
+                                                <div className="grid grid-cols-2 gap-2 mt-2">
+                                                    <label className="text-[11px] font-bold text-slate-400 uppercase self-center">Selected Span</label>
+                                                    <select
+                                                        value={selectedComposerActivity?.layout?.colSpan || 1}
+                                                        onChange={(e) => updateSelectedComposerActivitySpan(e.target.value)}
+                                                        disabled={!selectedComposerActivity}
+                                                        className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs disabled:opacity-40"
+                                                    >
+                                                        {Array.from({ length: moduleManagerComposerMaxColumns }, (_, idx) => idx + 1).map((span) => (
+                                                            <option key={span} value={span}>
+                                                                Span {span}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="grid grid-cols-4 gap-2 mt-2">
                                                     <button
                                                         type="button"
-                                                        onClick={() => moveSelectedComposerActivityDraft(-1)}
-                                                        disabled={!selectedComposerActivity || moduleManagerComposerSelectedIndex === 0}
-                                                        className="flex-1 px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                                                        onClick={() => moveSelectedComposerActivityDraft('left')}
+                                                        disabled={!selectedComposerActivity || !selectedComposerPlacement || selectedComposerPlacement.col <= 1}
+                                                        className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                                                        title="Move left"
+                                                    >
+                                                        <ChevronLeft size={12} /> Left
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => moveSelectedComposerActivityDraft('right')}
+                                                        disabled={
+                                                          !selectedComposerActivity ||
+                                                          !selectedComposerPlacement ||
+                                                          selectedComposerPlacement.col >= Math.max(1, moduleManagerComposerMaxColumns - (selectedComposerActivity?.layout?.colSpan || 1) + 1)
+                                                        }
+                                                        className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                                                        title="Move right"
+                                                    >
+                                                        <ChevronRight size={12} /> Right
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => moveSelectedComposerActivityDraft('up')}
+                                                        disabled={!selectedComposerActivity || !selectedComposerPlacement || selectedComposerPlacement.row <= 1}
+                                                        className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
                                                     >
                                                         <ChevronUp size={12} /> Up
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => moveSelectedComposerActivityDraft(1)}
-                                                        disabled={!selectedComposerActivity || moduleManagerComposerSelectedIndex >= moduleManagerComposerActivities.length - 1}
-                                                        className="flex-1 px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                                                        onClick={() => moveSelectedComposerActivityDraft('down')}
+                                                        disabled={!selectedComposerActivity}
+                                                        className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
                                                     >
                                                         <ChevronDown size={12} /> Down
                                                     </button>
+                                                </div>
+                                                <div className="flex gap-2 mt-2">
                                                     <button
                                                         type="button"
                                                         onClick={duplicateSelectedComposerActivityDraft}
                                                         disabled={!selectedComposerActivity}
-                                                        className="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center"
+                                                        className="flex-1 px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
                                                         title="Duplicate selected activity"
                                                     >
-                                                        <Copy size={12} />
+                                                        <Copy size={12} /> Duplicate
                                                     </button>
                                                     <button
                                                         type="button"
                                                         onClick={removeSelectedComposerActivityDraft}
                                                         disabled={!selectedComposerActivity}
-                                                        className="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center"
+                                                        className="flex-1 px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
                                                         title="Delete selected activity"
                                                     >
-                                                        <Trash2 size={12} />
+                                                        <Trash2 size={12} /> Delete
                                                     </button>
                                                 </div>
                                             </div>

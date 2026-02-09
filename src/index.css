@@ -1,0 +1,52 @@
+.cf-rich-editor p {
+  margin: 0.6rem 0;
+}
+
+.cf-rich-editor ul {
+  list-style: disc;
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.cf-rich-editor ol {
+  list-style: decimal;
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.cf-rich-editor li {
+  margin: 0.35rem 0;
+}
+
+.cf-rich-editor h1 {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  font-weight: 700;
+  margin: 1rem 0 0.5rem;
+}
+
+.cf-rich-editor h2 {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+  margin: 0.9rem 0 0.45rem;
+}
+
+.cf-rich-editor h3 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 700;
+  margin: 0.8rem 0 0.4rem;
+}
+
+.cf-rich-editor a {
+  color: #7dd3fc;
+  text-decoration: underline;
+}
+
+.cf-rich-editor blockquote {
+  border-left: 3px solid #475569;
+  margin: 0.9rem 0;
+  opacity: 0.95;
+  padding-left: 0.8rem;
+}
