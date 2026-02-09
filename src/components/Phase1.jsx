@@ -22,7 +22,6 @@ import {
   Save,
   Sparkles,
   Trash2,
-  Wrench,
   X,
   Zap,
 } from 'lucide-react';
@@ -270,7 +269,6 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [aiOutput, setAiOutput] = useState("");
   const [parsedAiModule, setParsedAiModule] = useState(null);
   const [aiParseError, setAiParseError] = useState(null);
-  const [aiTargetType, setAiTargetType] = useState('MODULE'); // 'MODULE' or 'FEATURE'
   const moduleManagerComposerMaxColumns = normalizeComposerLayout(moduleManagerComposerLayout).maxColumns;
   const moduleManagerGridModel = useMemo(
     () =>
@@ -849,19 +847,11 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       // FUNCTIONAL UPDATE TO PREVENT STATE OVERWRITE
       setProjectData(prev => {
           const newData = { ...prev };
-          // Determine destination: AI_MODULE uses aiTargetType, others use harvestType
-          const isModule = harvestType === 'ASSESSMENT' || (harvestType === 'AI_MODULE' && aiTargetType === 'MODULE');
-          
-          if (isModule) { 
-              const currentModules = newData["Current Course"].modules || [];
-              newData["Current Course"] = {
-                  ...newData["Current Course"],
-                  modules: [...currentModules, newItem]
-              };
-          } else { 
-              const currentTools = newData["Global Toolkit"] || [];
-              newData["Global Toolkit"] = [...currentTools, newItem]; 
-          }
+          const currentModules = newData["Current Course"].modules || [];
+          newData["Current Course"] = {
+              ...newData["Current Course"],
+              modules: [...currentModules, newItem]
+          };
           return newData;
       });
 
@@ -5270,44 +5260,22 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
 
             {harvestType === 'AI_MODULE' && (
                  <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
-                     {/* MODULE/FEATURE TOGGLE */}
-                     <div className="flex gap-2 bg-slate-900 p-1 rounded-lg border border-slate-700 w-full max-w-md mx-auto">
-                         <button 
-                             onClick={() => setAiTargetType('MODULE')}
-                             className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-md text-xs font-bold transition-all ${aiTargetType === 'MODULE' ? 'bg-sky-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-                         >
-                             <Box size={14} /> Create Module
-                         </button>
-                         <button 
-                             onClick={() => setAiTargetType('FEATURE')}
-                             className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-md text-xs font-bold transition-all ${aiTargetType === 'FEATURE' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-                         >
-                             <Wrench size={14} /> Create Feature
-                         </button>
-                     </div>
-
                      {/* STEP 1: PROMPT GENERATOR */}
                      <div className="p-4 bg-emerald-900/20 border border-emerald-700/50 rounded-lg">
                         <h3 className="text-sm font-bold text-emerald-400 mb-4 flex items-center gap-2">
                             <Sparkles size={16} /> Step 1: Generate AI Prompt
                         </h3>
                         <p className="text-xs text-slate-400 mb-4">
-                            {aiTargetType === 'MODULE' 
-                                ? 'Describe what course module you want to create. We\'ll generate an optimized prompt for Google AI Studio.'
-                                : 'Describe what reusable feature you want to create. Features are saved to the Global Toolkit and can be used across courses.'
-                            }
+                            Describe what course module you want to create. We&apos;ll generate an optimized prompt for Google AI Studio.
                         </p>
                         <div className="space-y-3">
                             <label className="block text-xs font-bold text-slate-400 uppercase">
-                                {aiTargetType === 'MODULE' ? 'Describe Your Module' : 'Describe Your Feature'}
+                                Describe Your Module
                             </label>
                             <textarea 
                                 value={aiDescription}
                                 onChange={(e) => setAiDescription(e.target.value)}
-                                placeholder={aiTargetType === 'MODULE' 
-                                    ? "Example: Create a drag-and-drop goal-setting activity with 3 categories (Personal, Professional, Health). Include a save button that stores goals to localStorage and a reset button."
-                                    : "Example: Create a save/load system with 3 buttons: Save Progress, Load Progress, and Clear All. Use localStorage with a configurable storage key. Show success/error toasts."
-                                }
+                                placeholder="Example: Create a drag-and-drop goal-setting activity with 3 categories (Personal, Professional, Health). Include a save button that stores goals to localStorage and a reset button."
                                 className="w-full bg-slate-950 border border-emerald-900 rounded-lg p-3 text-sm text-white h-32 focus:border-emerald-500 outline-none resize-y"
                             />
                             <button 
@@ -5323,7 +5291,7 @@ I need you to act as a Senior System Architect.
 Return ONLY valid JSON. No markdown. Single-line strings.
 \`\`\`json
 {
-  "id": "${aiTargetType === 'MODULE' ? 'view' : 'feat'}-[descriptive-name]",
+  "id": "view-[descriptive-name]",
   "html": "...",
   "script": "..."
 }
@@ -5414,10 +5382,7 @@ ${aiDescription}
                                     setAiParseError(null);
                                     setParsedAiModule(null);
                                 }}
-                                placeholder={aiTargetType === 'MODULE' 
-                                    ? 'Paste JSON here: { "id": "view-example", "html": "...", "script": "..." }'
-                                    : 'Paste JSON here: { "id": "feat-example", "html": "...", "script": "..." }'
-                                }
+                                placeholder='Paste JSON here: { "id": "view-example", "html": "...", "script": "..." }'
                                 className="w-full bg-slate-950 border border-blue-900 rounded-lg p-3 text-xs text-blue-100 font-mono h-48 focus:border-blue-500 outline-none resize-y"
                             />
                             
@@ -5448,10 +5413,7 @@ ${aiDescription}
                                     type="text" 
                                     value={stagingTitle} 
                                     onChange={(e) => setStagingTitle(e.target.value)} 
-                                        placeholder={aiTargetType === 'MODULE' 
-                                            ? "Module title for sidebar (e.g., Goal Setting Activity)"
-                                            : "Feature title for Global Toolkit (e.g., Save/Load System)"
-                                        }
+                                        placeholder="Module title for sidebar (e.g., Goal Setting Activity)"
                                         className="w-full bg-slate-950 border border-blue-700 rounded-lg p-3 text-white text-sm"
                                     />
                                 </div>
@@ -5518,10 +5480,7 @@ ${aiDescription}
                             {saveStatus === 'success' && (
                                 <div className="mt-3 text-xs text-emerald-400 font-bold animate-in fade-in zoom-in flex items-center gap-2 justify-center bg-emerald-900/20 p-2 rounded border border-emerald-800">
                                     <CheckCircle size={14} /> 
-                                    {aiTargetType === 'MODULE' 
-                                        ? 'Module added! Check Phase 2 to preview or Phase 4 to compile.'
-                                        : 'Feature added to Global Toolkit! Check Phase 2 to preview or Phase 4 to add to a course.'
-                                    }
+                                    Module added! Check Phase 2 to preview or Phase 4 to compile.
                         </div>
                     )}
                  </div>

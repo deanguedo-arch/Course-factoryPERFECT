@@ -1,5 +1,5 @@
 ﻿import * as React from 'react';
-import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Wrench, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X, Edit, Clock, RotateCcw } from 'lucide-react';
+import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X, Edit, Clock, RotateCcw } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
@@ -211,7 +211,6 @@ export function App() {
   // The iframe's srcDoc includes the script, so it runs in the iframe's scope
 
   const currentCourse = projectData["Current Course"] || { name: "Error", modules: [] };
-  const toolkit = projectData["Global Toolkit"] || [];
   const previewSrcDoc = React.useMemo(() => {
     if (!previewModule) return '';
     const courseModules = projectData["Current Course"]?.modules || [];
@@ -1296,22 +1295,6 @@ export function App() {
                 </div>
             </div>
 
-            {/* GLOBAL TOOLKIT */}
-            <div>
-              <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3">Global Toolkit</h3>
-              {toolkit.length === 0 ? (
-                <p className="text-xs text-slate-600">No features saved.</p>
-              ) : (
-                <div className="space-y-1">
-                  {toolkit.map(tool => (
-                    <div key={tool.id} className="flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-slate-800 transition-colors">
-                      <Wrench size={12} className="text-orange-500" />
-                      <span className="text-slate-300 truncate flex-1">{tool.title}</span>
-                            </div>
-                    ))}
-                </div>
-                    )}
-            </div>
           </div>
         </aside>
 
@@ -1364,7 +1347,7 @@ export function App() {
             setVaultTargetField={setVaultTargetField}
             vaultTargetField={vaultTargetField}
           />}
-          {activePhase === 2 && <Phase2 projectData={projectData} setProjectData={setProjectData} editMaterial={editMaterial} onEdit={openEditModule} onPreview={openPreview} onDelete={deleteModule} onToggleHidden={toggleModuleHidden} deleteMaterial={deleteMaterial} deleteAssessment={deleteAssessment} toggleMaterialHidden={toggleMaterialHidden} toggleAssessmentHidden={toggleAssessmentHidden} />}
+          {activePhase === 2 && <Phase2 projectData={projectData} setProjectData={setProjectData} editMaterial={editMaterial} onEdit={openEditModule} onPreview={openPreview} onDelete={deleteModule} deleteMaterial={deleteMaterial} deleteAssessment={deleteAssessment} />}
           {activePhase === 3 && <Phase3 onGoToMaster={() => setActivePhase(0)} projectData={projectData} setProjectData={setProjectData} />}
           {activePhase === 4 && <Phase4 projectData={projectData} setProjectData={setProjectData} excludedIds={excludedIds} toggleModule={toggleModuleExclusion} onToggleHidden={toggleModuleHidden} onError={handleError} />}
           {activePhase === 5 && (

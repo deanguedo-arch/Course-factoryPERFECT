@@ -1,30 +1,30 @@
 ﻿import * as React from 'react';
-import { Box, CheckCircle, Download, Eye, EyeOff, FileCode, FolderOpen, Lock, PenTool, Save, Search, Trash2, Wrench, X } from 'lucide-react';
+import { Box, CheckCircle, Download, Eye, FileCode, FolderOpen, Lock, PenTool, Save, Search, Trash2, X } from 'lucide-react';
 import { cleanModuleScript } from '../utils/generators.js';
 
 const { useState } = React;
 
 // --- PHASE 2: PREVIEW & TEST ---
-const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, onDelete, onToggleHidden, deleteMaterial, deleteAssessment, toggleMaterialHidden, toggleAssessmentHidden }) => {
-  const [sourceType, setSourceType] = useState('MODULE'); // 'MODULE', 'ASSESSMENT', 'MATERIAL', or 'FEATURE'
+const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, onDelete, deleteMaterial, deleteAssessment }) => {
+  const [sourceType, setSourceType] = useState('MODULE'); // 'MODULE', 'ASSESSMENT', or 'MATERIAL'
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
   const [materialPreview, setMaterialPreview] = useState(null);
   const [materialEdit, setMaterialEdit] = useState(null);
   const [assessmentPreview, setAssessmentPreview] = useState(null);
   const [assessmentEdit, setAssessmentEdit] = useState(null);
-  const [selectedItems, setSelectedItems] = useState([]); // Array of item IDs for bulk operations
   
   const currentCourse = projectData["Current Course"]?.modules || [];
-  const globalToolkit = projectData["Global Toolkit"] || [];
   const courseMaterials = projectData["Current Course"]?.materials || [];
   const allAssessments = currentCourse.flatMap(m => (m.assessments || []).map(a => ({...a, moduleName: m.title})));
   
-  const items = sourceType === 'MODULE' ? currentCourse 
-                : sourceType === 'FEATURE' ? globalToolkit 
-                : sourceType === 'ASSESSMENT' ? allAssessments
-                : sourceType === 'MATERIAL' ? courseMaterials
-                : [];
+  const items = sourceType === 'MODULE'
+    ? currentCourse
+    : sourceType === 'ASSESSMENT'
+      ? allAssessments
+      : sourceType === 'MATERIAL'
+        ? courseMaterials
+        : [];
   
   // Filter items based on search query
   const filteredItems = items.filter(item => 
@@ -82,15 +82,24 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
 
   const handleDelete = (index) => {
     const item = filteredItems[index];
-    
-    // Prevent deletion of protected modules
-    if (isProtectedModule(item)) {
-      alert('Warning: Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle.');
+
+    if (sourceType === 'MATERIAL' && deleteMaterial) {
+      deleteMaterial(item.id);
       return;
     }
-    
-    if (onDelete) {
-      onDelete(item);
+    if (sourceType === 'ASSESSMENT' && deleteAssessment) {
+      deleteAssessment(item.id);
+      return;
+    }
+    if (sourceType === 'MODULE') {
+      // Prevent deletion of protected modules
+      if (isProtectedModule(item)) {
+        alert('Warning: Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle.');
+        return;
+      }
+      if (onDelete) {
+        onDelete(item);
+      }
     }
   };
 
@@ -116,11 +125,11 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
           <Eye className="text-purple-400" /> Phase 2: Preview & Test
         </h2>
         <p className="text-xs text-slate-400 mb-6">
-          Browse, preview, and test your modules and features before compiling.
+          Browse, preview, and test your modules, assessments, and materials before compiling.
         </p>
 
         {/* SOURCE TOGGLE */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-900 p-1 rounded-lg border border-slate-700 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 bg-slate-900 p-1 rounded-lg border border-slate-700 mb-4">
             <button 
                 onClick={() => { setSourceType('MODULE'); setSearchQuery(""); setSelectedItem(null); }}
                 className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all ${sourceType === 'MODULE' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
@@ -139,12 +148,6 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
             >
                 <FolderOpen size={14} /> Materials
             </button>
-            <button 
-                onClick={() => { setSourceType('FEATURE'); setSearchQuery(""); setSelectedItem(null); }}
-                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all ${sourceType === 'FEATURE' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-                <Wrench size={14} /> Toolkit ({globalToolkit.length})
-            </button>
         </div>
 
         {/* SEARCH BAR */}
@@ -159,259 +162,12 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
             />
         </div>
 
-        {/* BULK ACTIONS TOOLBAR */}
-        {selectedItems.length > 0 && (
-            <div className="mb-4 p-3 bg-amber-900/20 border border-amber-700/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-bold text-amber-400">
-                        {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected
-                    </span>
-                    <button
-                        onClick={() => setSelectedItems([])}
-                        className="text-xs text-slate-400 hover:text-white"
-                    >
-                        Clear Selection
-                    </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    {(sourceType === 'MODULE' || sourceType === 'MATERIAL' || sourceType === 'ASSESSMENT') && (
-                        <>
-                            <button
-                                onClick={() => {
-                                    if (sourceType === 'MODULE') {
-                                        // Batch update all modules at once
-                                        setProjectData(prev => {
-                                            const modules = prev["Current Course"]?.modules || [];
-                                            const updated = modules.map(m => {
-                                                if (selectedItems.includes(m.id) && !isProtectedModule(m) && !m.hidden) {
-                                                    return { ...m, hidden: true };
-                                                }
-                                                return m;
-                                            });
-                                            return {
-                                                ...prev,
-                                                "Current Course": {
-                                                    ...prev["Current Course"],
-                                                    modules: updated
-                                                }
-                                            };
-                                        });
-                                    } else if (sourceType === 'MATERIAL') {
-                                        // Batch update materials
-                                        setProjectData(prev => {
-                                            const materials = prev["Current Course"]?.materials || [];
-                                            const updated = materials.map(m => {
-                                                if (selectedItems.includes(m.id) && !(m.hidden === true)) {
-                                                    return { ...m, hidden: true };
-                                                }
-                                                return m;
-                                            });
-                                            return {
-                                                ...prev,
-                                                "Current Course": {
-                                                    ...prev["Current Course"],
-                                                    materials: updated
-                                                }
-                                            };
-                                        });
-                                    } else if (sourceType === 'ASSESSMENT') {
-                                        // Batch update assessments
-                                        setProjectData(prev => {
-                                            const modules = prev["Current Course"]?.modules || [];
-                                            const assessmentsModule = modules.find(m => 
-                                                m.id === 'item-assessments' || m.title === 'Assessments'
-                                            );
-                                            if (assessmentsModule) {
-                                                const assessments = assessmentsModule.assessments || [];
-                                                const updated = assessments.map(a => {
-                                                    if (selectedItems.includes(a.id) && !(a.hidden === true)) {
-                                                        return { ...a, hidden: true };
-                                                    }
-                                                    return a;
-                                                });
-                                                const updatedModules = modules.map(m => 
-                                                    (m.id === 'item-assessments' || m.title === 'Assessments')
-                                                        ? { ...m, assessments: updated }
-                                                        : m
-                                                );
-                                                return {
-                                                    ...prev,
-                                                    "Current Course": {
-                                                        ...prev["Current Course"],
-                                                        modules: updatedModules
-                                                    }
-                                                };
-                                            }
-                                            return prev;
-                                        });
-                                    }
-                                    setSelectedItems([]);
-                                }}
-                                className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded transition-colors flex items-center gap-1"
-                            >
-                                <EyeOff size={12} /> Hide Selected
-                            </button>
-                            <button
-                                onClick={() => {
-                                    if (sourceType === 'MODULE') {
-                                        // Batch update all modules at once
-                                        setProjectData(prev => {
-                                            const modules = prev["Current Course"]?.modules || [];
-                                            const updated = modules.map(m => {
-                                                if (selectedItems.includes(m.id) && m.hidden) {
-                                                    return { ...m, hidden: false };
-                                                }
-                                                return m;
-                                            });
-                                            return {
-                                                ...prev,
-                                                "Current Course": {
-                                                    ...prev["Current Course"],
-                                                    modules: updated
-                                                }
-                                            };
-                                        });
-                                    } else if (sourceType === 'MATERIAL') {
-                                        // Batch update materials
-                                        setProjectData(prev => {
-                                            const materials = prev["Current Course"]?.materials || [];
-                                            const updated = materials.map(m => {
-                                                if (selectedItems.includes(m.id) && m.hidden === true) {
-                                                    return { ...m, hidden: false };
-                                                }
-                                                return m;
-                                            });
-                                            return {
-                                                ...prev,
-                                                "Current Course": {
-                                                    ...prev["Current Course"],
-                                                    materials: updated
-                                                }
-                                            };
-                                        });
-                                    } else if (sourceType === 'ASSESSMENT') {
-                                        // Batch update assessments
-                                        setProjectData(prev => {
-                                            const modules = prev["Current Course"]?.modules || [];
-                                            const assessmentsModule = modules.find(m => 
-                                                m.id === 'item-assessments' || m.title === 'Assessments'
-                                            );
-                                            if (assessmentsModule) {
-                                                const assessments = assessmentsModule.assessments || [];
-                                                const updated = assessments.map(a => {
-                                                    if (selectedItems.includes(a.id) && a.hidden === true) {
-                                                        return { ...a, hidden: false };
-                                                    }
-                                                    return a;
-                                                });
-                                                const updatedModules = modules.map(m => 
-                                                    (m.id === 'item-assessments' || m.title === 'Assessments')
-                                                        ? { ...m, assessments: updated }
-                                                        : m
-                                                );
-                                                return {
-                                                    ...prev,
-                                                    "Current Course": {
-                                                        ...prev["Current Course"],
-                                                        modules: updatedModules
-                                                    }
-                                                };
-                                            }
-                                            return prev;
-                                        });
-                                    }
-                                    setSelectedItems([]);
-                                }}
-                                className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded transition-colors flex items-center gap-1"
-                            >
-                                <Eye size={12} /> Show Selected
-                            </button>
-                        </>
-                    )}
-                    <button
-                        onClick={() => {
-                            if (confirm(`Delete ${selectedItems.length} item${selectedItems.length !== 1 ? 's' : ''}? This cannot be undone.`)) {
-                                if (sourceType === 'MODULE') {
-                                    // Batch delete modules directly
-                                    setProjectData(prev => {
-                                        const modules = prev["Current Course"]?.modules || [];
-                                        const updated = modules.filter(m => 
-                                            !selectedItems.includes(m.id) || isProtectedModule(m)
-                                        );
-                                        return {
-                                            ...prev,
-                                            "Current Course": {
-                                                ...prev["Current Course"],
-                                                modules: updated
-                                            }
-                                        };
-                                    });
-                                } else if (sourceType === 'MATERIAL' && deleteMaterial) {
-                                    // Batch delete materials
-                                    setProjectData(prev => {
-                                        const materials = prev["Current Course"]?.materials || [];
-                                        const updated = materials.filter(m => !selectedItems.includes(m.id));
-                                        return {
-                                            ...prev,
-                                            "Current Course": {
-                                                ...prev["Current Course"],
-                                                materials: updated
-                                            }
-                                        };
-                                    });
-                                } else if (sourceType === 'ASSESSMENT' && deleteAssessment) {
-                                    // Batch delete assessments
-                                    const assessmentsModule = projectData["Current Course"]?.modules?.find(m => 
-                                        m.id === 'item-assessments' || m.title === 'Assessments'
-                                    );
-                                    if (assessmentsModule) {
-                                        const assessments = assessmentsModule.assessments || [];
-                                        const updated = assessments.filter(a => !selectedItems.includes(a.id));
-                                        setProjectData(prev => {
-                                            const modules = prev["Current Course"]?.modules || [];
-                                            const updatedModules = modules.map(m => 
-                                                (m.id === 'item-assessments' || m.title === 'Assessments')
-                                                    ? { ...m, assessments: updated }
-                                                    : m
-                                            );
-                                            return {
-                                                ...prev,
-                                                "Current Course": {
-                                                    ...prev["Current Course"],
-                                                    modules: updatedModules
-                                                }
-                                            };
-                                        });
-                                    }
-                                } else if (sourceType === 'FEATURE' && onDelete) {
-                                    // Batch delete toolkit items
-                                    setProjectData(prev => {
-                                        const tools = prev["Global Toolkit"] || [];
-                                        const updated = tools.filter(t => !selectedItems.includes(t.id));
-                                        return {
-                                            ...prev,
-                                            "Global Toolkit": updated
-                                        };
-                                    });
-                                }
-                                
-                                setSelectedItems([]);
-                            }
-                        }}
-                        className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded transition-colors flex items-center gap-1"
-                    >
-                        <Trash2 size={12} /> Delete Selected
-                    </button>
-                </div>
-            </div>
-        )}
-
-        {/* MODULE/FEATURE GRID */}
+        {/* ITEM GRID */}
         {filteredItems.length === 0 ? (
             <div className="p-12 text-center bg-slate-900/50 border border-slate-700 rounded-xl">
                 <Box size={48} className="mx-auto text-slate-700 mb-4" />
                 <p className="text-slate-400 text-sm mb-2">
-                    {searchQuery ? 'No items match your search' : `No ${sourceType === 'MODULE' ? 'modules' : 'features'} yet`}
+                    {searchQuery ? 'No items match your search' : `No ${sourceType === 'MODULE' ? 'modules' : sourceType === 'ASSESSMENT' ? 'assessments' : 'materials'} yet`}
                 </p>
                 <p className="text-slate-600 text-xs">
                     {!searchQuery && 'Go to Phase 1: Harvest to create some!'}
@@ -421,38 +177,25 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredItems.map((item, idx) => {
                     const stats = getCodeStats(item);
-                    const originalIndex = items.findIndex(i => i.id === item.id);
                     
                     return (
                         <div 
                             key={item.id} 
-                            className={`bg-slate-900 border rounded-lg p-4 hover:border-purple-500/50 transition-all group ${
-                                selectedItems.includes(item.id) 
-                                    ? 'border-amber-500 bg-amber-900/10' 
-                                    : 'border-slate-700'
-                            }`}
+                            className="bg-slate-900 border border-slate-700 rounded-lg p-4 hover:border-purple-500/50 transition-all group"
                         >
                             <div className="flex items-start justify-between mb-3">
-                                <div className="flex items-start gap-2 flex-1 min-w-0">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedItems.includes(item.id)}
-                                        onChange={(e) => {
-                                            if (e.target.checked) {
-                                                setSelectedItems([...selectedItems, item.id]);
-                                            } else {
-                                                setSelectedItems(selectedItems.filter(id => id !== item.id));
-                                            }
-                                        }}
-                                        className="mt-1 w-4 h-4 text-amber-600 bg-slate-800 border-slate-600 rounded focus:ring-amber-500 focus:ring-2"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="text-white font-bold text-sm truncate mb-1">{item.title}</h3>
-                                        <p className="text-xs text-slate-500 font-mono truncate">{item.id}</p>
-                                    </div>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="text-white font-bold text-sm truncate mb-1">{item.title}</h3>
+                                    <p className="text-xs text-slate-500 font-mono truncate">{item.id}</p>
                                 </div>
-                                <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${sourceType === 'MODULE' ? 'bg-purple-900/30 text-purple-400' : 'bg-orange-900/30 text-orange-400'}`}>
-                                    {sourceType === 'MODULE' ? 'Module' : 'Feature'}
+                                <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                                  sourceType === 'MODULE'
+                                    ? 'bg-purple-900/30 text-purple-400'
+                                    : sourceType === 'ASSESSMENT'
+                                      ? 'bg-blue-900/30 text-blue-400'
+                                      : 'bg-cyan-900/30 text-cyan-400'
+                                }`}>
+                                    {sourceType === 'MODULE' ? 'Module' : sourceType === 'ASSESSMENT' ? 'Assessment' : 'Material'}
                                 </div>
                             </div>
 
@@ -489,20 +232,20 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                                 </button>
                                 <button 
                                     onClick={() => handleDelete(idx)}
-                                    disabled={isProtectedModule(item)}
+                                    disabled={sourceType === 'MODULE' && isProtectedModule(item)}
                                     className={`flex items-center justify-center gap-1 text-white text-xs font-bold px-3 py-2 rounded transition-colors ${
-                                        isProtectedModule(item) 
+                                        sourceType === 'MODULE' && isProtectedModule(item) 
                                             ? 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50' 
                                             : 'bg-slate-700 hover:bg-rose-600'
                                     }`}
-                                    title={isProtectedModule(item) ? 'Core modules cannot be deleted. Hide them instead.' : 'Delete'}
+                                    title={sourceType === 'MODULE' && isProtectedModule(item) ? 'Core modules cannot be deleted. Hide them instead.' : 'Delete'}
                                 >
                                     <Trash2 size={12} />
                                 </button>
                             </div>
                             
                             {/* Protected Module Indicator */}
-                            {isProtectedModule(item) && (
+                            {sourceType === 'MODULE' && isProtectedModule(item) && (
                                 <div className="mt-2 flex items-center gap-1 text-[10px] text-amber-400">
                                     <Lock size={10} />
                                     <span>Core module (cannot be deleted)</span>
