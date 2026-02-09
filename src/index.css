@@ -50,3 +50,35 @@
   opacity: 0.95;
   padding-left: 0.8rem;
 }
+
+.cf-rich-editor div {
+  margin: 0.45rem 0;
+}
+
+.cf-rich-editor font[size='1'] {
+  font-size: 0.75rem;
+}
+
+.cf-rich-editor font[size='2'] {
+  font-size: 0.875rem;
+}
+
+.cf-rich-editor font[size='3'] {
+  font-size: 1rem;
+}
+
+.cf-rich-editor font[size='4'] {
+  font-size: 1.125rem;
+}
+
+.cf-rich-editor font[size='5'] {
+  font-size: 1.25rem;
+}
+
+.cf-rich-editor font[size='6'] {
+  font-size: 1.5rem;
+}
+
+.cf-rich-editor font[size='7'] {
+  font-size: 1.875rem;
+}

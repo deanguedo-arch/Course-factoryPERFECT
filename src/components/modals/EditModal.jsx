@@ -389,11 +389,21 @@ export default function EditModal({
     if (command === 'fontSize' || command === 'fontName') {
       try {
         document.execCommand('styleWithCSS', false, true);
-      } catch (err) {
+      } catch {
         // Ignore browser differences in execCommand support.
       }
     }
-    document.execCommand(command, false, value);
+    const normalizedValue =
+      command === 'formatBlock' && typeof value === 'string'
+        ? value.replace(/[<>]/g, '').toUpperCase()
+        : value;
+    const didExecute = document.execCommand(command, false, normalizedValue);
+    if (!didExecute && command === 'insertUnorderedList') {
+      document.execCommand('insertHTML', false, '<ul><li>List item</li></ul>');
+    }
+    if (!didExecute && command === 'insertOrderedList') {
+      document.execCommand('insertHTML', false, '<ol><li>List item</li></ol>');
+    }
     const html = richEditorRef.current.innerHTML || '';
     const text = richEditorRef.current.innerText || '';
     queueRichEditorUpdate(html, text, true);
@@ -454,9 +464,9 @@ export default function EditModal({
                   <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('bold')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">B</button>
                   <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('italic')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs italic">I</button>
                   <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('underline')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs underline">U</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', '<p>')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">P</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', '<h2>')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H2</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', '<h3>')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H3</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', 'P')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">P</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', 'H2')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H2</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', 'H3')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H3</button>
                   <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '2')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A-</button>
                   <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '3')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A</button>
                   <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '5')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A+</button>
@@ -862,7 +872,7 @@ export default function EditModal({
             />
           </div>
           <p className="text-[11px] text-slate-500">
-            Use span + spacer blocks to reserve empty grid slots and force clean row structure.
+            Optional utility block. You can also leave rows open and move blocks directly into empty grid cells.
           </p>
         </div>
       );
@@ -893,7 +903,15 @@ export default function EditModal({
       );
     }
 
-    return <GenericDataEditor data={data} onChange={replaceSelectedActivityData} />;
+    const fallbackTemplate = (() => {
+      const def = getActivityDefinition(selectedActivity.type);
+      if (def && typeof def.createDefaultData === 'function') {
+        return def.createDefaultData();
+      }
+      return data;
+    })();
+
+    return <GenericDataEditor data={data} onChange={replaceSelectedActivityData} schemaTemplate={fallbackTemplate} />;
   };
 
   return (

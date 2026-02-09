@@ -81,6 +81,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   const [moduleManagerComposerPreviewNonce, setModuleManagerComposerPreviewNonce] = useState(0);
   const moduleManagerRichEditorRef = useRef(null);
   const moduleManagerRichEditorUpdateTimerRef = useRef(null);
+  const moduleManagerDraftImportRef = useRef(null);
   const [moduleManagerHTML, setModuleManagerHTML] = useState('');
   const [moduleManagerURL, setModuleManagerURL] = useState('');
   const [moduleManagerID, setModuleManagerID] = useState('');
@@ -97,6 +98,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   const [saveStatus, setSaveStatus] = useState(null); // 'success'
   const [moduleManagerSavedDrafts, setModuleManagerSavedDrafts] = useState([]);
   const [moduleManagerSelectedDraftId, setModuleManagerSelectedDraftId] = useState('');
+  const [moduleManagerDownloadDraftOnSave, setModuleManagerDownloadDraftOnSave] = useState(true);
 
   const moduleBankMaterials = useMemo(
     () =>
@@ -915,74 +917,219 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     return trimmedDrafts;
   };
 
-  const saveModuleManagerDraft = () => {
+  const showModuleManagerNotice = (status, message, durationMs = 2200) => {
+    setModuleManagerStatus(status);
+    setModuleManagerMessage(message);
+    if (!durationMs) return;
+    setTimeout(() => {
+      setModuleManagerStatus(null);
+      setModuleManagerMessage('');
+    }, durationMs);
+  };
+
+  const buildModuleManagerDraftRecord = ({ id, payload, label, savedAt }) => ({
+    id: id || `module-draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    label:
+      label ||
+      moduleManagerTitle.trim() ||
+      moduleManagerID.trim() ||
+      `${payload?.type === 'composer' ? 'Composer' : payload?.type === 'external' ? 'External' : 'Standalone'} Draft`,
+    savedAt: savedAt || new Date().toISOString(),
+    payload,
+  });
+
+  const downloadModuleManagerDraftFile = (draft) => {
+    if (!draft || !draft.payload) return false;
+    try {
+      const payload = {
+        kind: 'course-factory-module-draft',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        draft,
+      };
+      const filenameBase = (draft.label || draft.id || 'module-draft').replace(/[^a-z0-9._ -]/gi, '_').trim() || 'module-draft';
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${filenameBase}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(link.href), 500);
+      return true;
+    } catch (err) {
+      console.error('Failed to download module manager draft:', err);
+      return false;
+    }
+  };
+
+  const saveModuleManagerDraft = ({ overwriteSelected = false } = {}) => {
     try {
       const payload = buildModuleManagerDraftPayload();
-      const savedAt = new Date().toISOString();
-      const label =
-        moduleManagerTitle.trim() ||
-        moduleManagerID.trim() ||
-        `${payload.type === 'composer' ? 'Composer' : payload.type === 'external' ? 'External' : 'Standalone'} Draft`;
-      const draftId = moduleManagerSelectedDraftId || `module-draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const nextDraft = {
+      const draftId =
+        overwriteSelected && moduleManagerSelectedDraftId
+          ? moduleManagerSelectedDraftId
+          : `module-draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const existing = moduleManagerSavedDrafts.find((draft) => draft.id === draftId);
+      const nextDraft = buildModuleManagerDraftRecord({
         id: draftId,
-        label,
-        savedAt,
         payload,
-      };
+        label: existing?.label || undefined,
+      });
       const withoutCurrent = moduleManagerSavedDrafts.filter((draft) => draft.id !== draftId);
-      const persisted = persistModuleManagerSavedDrafts([nextDraft, ...withoutCurrent]);
+      persistModuleManagerSavedDrafts([nextDraft, ...withoutCurrent]);
       setModuleManagerSelectedDraftId(nextDraft.id);
-      setModuleManagerStatus('success');
-      setModuleManagerMessage(
-        persisted.length > withoutCurrent.length ? `Saved draft "${label}".` : `Updated draft "${label}".`,
-      );
-      setTimeout(() => {
-        setModuleManagerStatus(null);
-        setModuleManagerMessage('');
-      }, 2200);
+      if (moduleManagerDownloadDraftOnSave) {
+        downloadModuleManagerDraftFile(nextDraft);
+      }
+      const message = overwriteSelected && existing ? `Updated draft "${nextDraft.label}".` : `Saved draft "${nextDraft.label}".`;
+      showModuleManagerNotice('success', message);
     } catch (err) {
-      setModuleManagerStatus('error');
-      setModuleManagerMessage(`Failed to save draft: ${err.message}`);
+      showModuleManagerNotice('error', `Failed to save draft: ${err.message}`, 2800);
     }
+  };
+
+  const updateModuleManagerSelectedDraft = () => {
+    if (!moduleManagerSelectedDraftId) {
+      showModuleManagerNotice('error', 'Select a draft to update.', 1800);
+      return;
+    }
+    saveModuleManagerDraft({ overwriteSelected: true });
   };
 
   const loadModuleManagerDraft = () => {
     const draft = moduleManagerSavedDrafts.find((entry) => entry.id === moduleManagerSelectedDraftId);
     if (!draft) {
-      setModuleManagerStatus('error');
-      setModuleManagerMessage('Select a saved draft to load.');
+      showModuleManagerNotice('error', 'Select a saved draft to load.', 1800);
       return;
     }
     const loaded = applyModuleManagerDraftPayload(draft.payload);
     if (!loaded) {
-      setModuleManagerStatus('error');
-      setModuleManagerMessage('Selected draft is invalid and could not be loaded.');
+      showModuleManagerNotice('error', 'Selected draft is invalid and could not be loaded.', 2400);
       return;
     }
-    setModuleManagerStatus('success');
-    setModuleManagerMessage(`Loaded draft "${draft.label}".`);
-    setTimeout(() => {
-      setModuleManagerStatus(null);
-      setModuleManagerMessage('');
-    }, 2200);
+    showModuleManagerNotice('success', `Loaded draft "${draft.label}".`);
+  };
+
+  const triggerModuleManagerDraftImport = () => {
+    if (!moduleManagerDraftImportRef.current) return;
+    moduleManagerDraftImportRef.current.value = '';
+    moduleManagerDraftImportRef.current.click();
+  };
+
+  const exportModuleManagerSelectedDraft = () => {
+    const draft = moduleManagerSavedDrafts.find((entry) => entry.id === moduleManagerSelectedDraftId);
+    if (!draft) {
+      showModuleManagerNotice('error', 'Select a saved draft to export.', 2000);
+      return;
+    }
+    const downloaded = downloadModuleManagerDraftFile(draft);
+    if (!downloaded) {
+      showModuleManagerNotice('error', 'Could not export selected draft.', 2200);
+      return;
+    }
+    showModuleManagerNotice('success', `Exported draft "${draft.label}".`, 1600);
+  };
+
+  const importModuleManagerDraftFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const rawText = await file.text();
+      const parsed = JSON.parse(rawText);
+
+      const mergeAndSelectDraft = (draftRecord) => {
+        if (!draftRecord || typeof draftRecord !== 'object' || !draftRecord.payload) return false;
+        const normalizedDraft = buildModuleManagerDraftRecord({
+          id: draftRecord.id,
+          payload: draftRecord.payload,
+          label: draftRecord.label,
+          savedAt: draftRecord.savedAt,
+        });
+        const nextDrafts = [normalizedDraft, ...moduleManagerSavedDrafts.filter((entry) => entry.id !== normalizedDraft.id)];
+        persistModuleManagerSavedDrafts(nextDrafts);
+        setModuleManagerSelectedDraftId(normalizedDraft.id);
+        return true;
+      };
+
+      let importedPayload = null;
+      let importedDraftRecord = null;
+
+      if (parsed && typeof parsed === 'object' && parsed.kind === 'course-factory-module-draft' && parsed.draft?.payload) {
+        importedDraftRecord = parsed.draft;
+        importedPayload = parsed.draft.payload;
+      } else if (parsed && typeof parsed === 'object' && parsed.payload && typeof parsed.payload === 'object') {
+        importedDraftRecord = parsed;
+        importedPayload = parsed.payload;
+      } else if (Array.isArray(parsed)) {
+        const candidates = parsed.filter((entry) => entry && typeof entry === 'object' && entry.payload);
+        if (!candidates.length) {
+          showModuleManagerNotice('error', 'No valid drafts found in file.', 2400);
+          return;
+        }
+        const merged = [
+          ...candidates.map((entry) =>
+            buildModuleManagerDraftRecord({
+              id: entry.id,
+              payload: entry.payload,
+              label: entry.label,
+              savedAt: entry.savedAt,
+            }),
+          ),
+          ...moduleManagerSavedDrafts,
+        ];
+        const uniqueById = [];
+        const seen = new Set();
+        merged.forEach((entry) => {
+          if (!entry?.id || seen.has(entry.id)) return;
+          seen.add(entry.id);
+          uniqueById.push(entry);
+        });
+        const persisted = persistModuleManagerSavedDrafts(uniqueById);
+        const firstImported = persisted[0];
+        if (firstImported) {
+          setModuleManagerSelectedDraftId(firstImported.id);
+          applyModuleManagerDraftPayload(firstImported.payload);
+          showModuleManagerNotice('success', `Imported ${candidates.length} drafts from file.`);
+        }
+        return;
+      } else if (parsed && typeof parsed === 'object') {
+        importedPayload = parsed;
+        importedDraftRecord = {
+          id: `module-draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          label: file.name.replace(/\.[^.]+$/, '') || 'Imported Draft',
+          savedAt: new Date().toISOString(),
+          payload: parsed,
+        };
+      }
+
+      if (!importedPayload || !importedDraftRecord) {
+        showModuleManagerNotice('error', 'File format not recognized for module drafts.', 2600);
+        return;
+      }
+
+      const loaded = applyModuleManagerDraftPayload(importedPayload);
+      if (!loaded) {
+        showModuleManagerNotice('error', 'Imported draft is invalid and could not be loaded.', 2600);
+        return;
+      }
+
+      mergeAndSelectDraft(importedDraftRecord);
+      showModuleManagerNotice('success', `Imported and loaded "${importedDraftRecord.label || 'draft'}".`);
+    } catch (err) {
+      showModuleManagerNotice('error', `Failed to import draft file: ${err.message}`, 3000);
+    }
   };
 
   const deleteModuleManagerDraft = () => {
     if (!moduleManagerSelectedDraftId) {
-      setModuleManagerStatus('error');
-      setModuleManagerMessage('Select a draft to delete.');
+      showModuleManagerNotice('error', 'Select a draft to delete.', 1800);
       return;
     }
     const nextDrafts = moduleManagerSavedDrafts.filter((draft) => draft.id !== moduleManagerSelectedDraftId);
     persistModuleManagerSavedDrafts(nextDrafts);
     setModuleManagerSelectedDraftId(nextDrafts[0]?.id || '');
-    setModuleManagerStatus('success');
-    setModuleManagerMessage('Draft deleted.');
-    setTimeout(() => {
-      setModuleManagerStatus(null);
-      setModuleManagerMessage('');
-    }, 1800);
+    showModuleManagerNotice('success', 'Draft deleted.', 1800);
   };
 
   const resetModuleManagerBuilder = () => {
@@ -1388,11 +1535,21 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     if (command === 'fontSize' || command === 'fontName') {
       try {
         document.execCommand('styleWithCSS', false, true);
-      } catch (err) {
+      } catch {
         // Ignore browser differences in execCommand support.
       }
     }
-    document.execCommand(command, false, value);
+    const normalizedValue =
+      command === 'formatBlock' && typeof value === 'string'
+        ? value.replace(/[<>]/g, '').toUpperCase()
+        : value;
+    const didExecute = document.execCommand(command, false, normalizedValue);
+    if (!didExecute && command === 'insertUnorderedList') {
+      document.execCommand('insertHTML', false, '<ul><li>List item</li></ul>');
+    }
+    if (!didExecute && command === 'insertOrderedList') {
+      document.execCommand('insertHTML', false, '<ol><li>List item</li></ol>');
+    }
     const html = moduleManagerRichEditorRef.current.innerHTML || '';
     const text = moduleManagerRichEditorRef.current.innerText || '';
     queueModuleManagerRichEditorUpdate(html, text, true);
@@ -1453,9 +1610,9 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('bold')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">B</button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('italic')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs italic">I</button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('underline')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs underline">U</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', '<p>')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">P</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', '<h2>')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H2</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', '<h3>')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H3</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', 'P')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">P</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', 'H2')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H2</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', 'H3')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H3</button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '2')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A-</button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '3')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A</button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '5')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A+</button>
@@ -1883,7 +2040,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
             />
           </div>
           <p className="text-[11px] text-slate-500">
-            Use span + spacer blocks to reserve empty grid slots and lock row structure.
+            Optional utility block. You can also keep rows open and move blocks directly into empty grid cells.
           </p>
         </div>
       );
@@ -1914,7 +2071,15 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       );
     }
 
-    return <GenericDataEditor data={data} onChange={replaceSelectedComposerActivityData} />;
+    const fallbackTemplate = (() => {
+      const def = getActivityDefinition(selectedComposerActivity.type);
+      if (def && typeof def.createDefaultData === 'function') {
+        return def.createDefaultData();
+      }
+      return data;
+    })();
+
+    return <GenericDataEditor data={data} onChange={replaceSelectedComposerActivityData} schemaTemplate={fallbackTemplate} />;
   };
 
   const addStandaloneModule = () => {
@@ -4237,18 +4402,33 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 <p className="text-[11px] font-bold uppercase tracking-wide text-slate-300">Draft Saves</p>
                                 <span className="text-[10px] text-slate-500">{moduleManagerSavedDrafts.length} saved</span>
                             </div>
+                            <input
+                                ref={moduleManagerDraftImportRef}
+                                type="file"
+                                accept=".json,application/json"
+                                className="hidden"
+                                onChange={importModuleManagerDraftFile}
+                            />
                             <div className="grid grid-cols-12 gap-2">
                                 <button
                                     type="button"
-                                    onClick={saveModuleManagerDraft}
+                                    onClick={() => saveModuleManagerDraft({ overwriteSelected: false })}
                                     className="col-span-12 sm:col-span-3 rounded bg-indigo-600 hover:bg-indigo-500 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
                                 >
-                                    <Save size={12} /> Save Draft
+                                    <Save size={12} /> Save New
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={updateModuleManagerSelectedDraft}
+                                    disabled={!moduleManagerSelectedDraftId}
+                                    className="col-span-12 sm:col-span-3 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
+                                >
+                                    <RefreshCw size={12} /> Update Selected
                                 </button>
                                 <select
                                     value={moduleManagerSelectedDraftId}
                                     onChange={(e) => setModuleManagerSelectedDraftId(e.target.value)}
-                                    className="col-span-12 sm:col-span-5 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                    className="col-span-12 sm:col-span-6 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
                                 >
                                     {moduleManagerSavedDrafts.length === 0 && <option value="">No saved drafts</option>}
                                     {moduleManagerSavedDrafts.map((draft) => (
@@ -4257,6 +4437,15 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         </option>
                                     ))}
                                 </select>
+                                <label className="col-span-12 sm:col-span-6 inline-flex items-center gap-2 rounded border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-300">
+                                    <input
+                                        type="checkbox"
+                                        checked={moduleManagerDownloadDraftOnSave}
+                                        onChange={(event) => setModuleManagerDownloadDraftOnSave(event.target.checked)}
+                                        className="w-4 h-4"
+                                    />
+                                    Download .json when saving
+                                </label>
                                 <button
                                     type="button"
                                     onClick={loadModuleManagerDraft}
@@ -4275,14 +4464,29 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 </button>
                                 <button
                                     type="button"
+                                    onClick={triggerModuleManagerDraftImport}
+                                    className="col-span-6 sm:col-span-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
+                                >
+                                    <FolderOpen size={12} /> Import File
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={exportModuleManagerSelectedDraft}
+                                    disabled={!moduleManagerSelectedDraftId}
+                                    className="col-span-6 sm:col-span-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-40 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
+                                >
+                                    <FileJson size={12} /> Export File
+                                </button>
+                                <button
+                                    type="button"
                                     onClick={resetModuleManagerBuilder}
-                                    className="col-span-12 sm:col-span-12 rounded bg-amber-700/80 hover:bg-amber-600 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
+                                    className="col-span-12 sm:col-span-4 rounded bg-amber-700/80 hover:bg-amber-600 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
                                 >
                                     <RotateCcw size={12} /> Reset Builder
                                 </button>
                             </div>
                             <p className="text-[10px] text-slate-500 mt-2">
-                                Builder state auto-saves locally, and saved drafts can be loaded back into Module Manager anytime.
+                                Builder state auto-saves locally. You can keep multiple drafts, import/export JSON draft files, and load any saved draft back into Module Manager.
                             </p>
                         </div>
                         
@@ -4410,11 +4614,15 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                     setModuleManagerComposerDragOverIndex(null);
                                                                     setModuleManagerComposerDragOverSlotKey(null);
                                                                 }}
+                                                                onClick={() => {
+                                                                    if (!selectedComposerActivity) return;
+                                                                    moveComposerActivityToGridCell(moduleManagerComposerSelectedIndex, slot.row, slot.col);
+                                                                }}
                                                                 className={`rounded border border-dashed transition-colors ${
                                                                     isSlotTarget
                                                                         ? 'border-indigo-400 bg-indigo-500/20'
-                                                                        : 'border-slate-700/80 bg-slate-900/35'
-                                                                }`}
+                                                                        : 'border-slate-700/80 bg-slate-900/35 hover:border-indigo-500/60 hover:bg-slate-900/60'
+                                                                } cursor-pointer`}
                                                             />
                                                         );
                                                     })}
@@ -4462,7 +4670,14 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                     event.preventDefault();
                                                                     const fallback = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10);
                                                                     const fromIndex = Number.isInteger(moduleManagerComposerDraggingIndex) ? moduleManagerComposerDraggingIndex : fallback;
-                                                                    moveComposerActivityToGridCell(fromIndex, placement?.row || 1, placement?.col || 1);
+                                                                    const placedSpan = placement?.colSpan || colSpan || 1;
+                                                                    const placedCol = placement?.col || 1;
+                                                                    const rect = event.currentTarget.getBoundingClientRect();
+                                                                    const relativeX = rect.width > 0 ? event.clientX - rect.left : 0;
+                                                                    const boundedX = Math.max(0, Math.min(Math.max(0, rect.width - 1), relativeX));
+                                                                    const offset = placedSpan > 1 && rect.width > 0 ? Math.floor((boundedX / rect.width) * placedSpan) : 0;
+                                                                    const targetCol = placedCol + offset;
+                                                                    moveComposerActivityToGridCell(fromIndex, placement?.row || 1, targetCol);
                                                                     setModuleManagerComposerDraggingIndex(null);
                                                                     setModuleManagerComposerDragOverIndex(null);
                                                                     setModuleManagerComposerDragOverSlotKey(null);

@@ -74,11 +74,33 @@ function formatLabel(key) {
     .replace(/^\w/, (letter) => letter.toUpperCase());
 }
 
-export default function GenericDataEditor({ data, onChange }) {
+function getPathKey(path) {
+  return path.join('.');
+}
+
+export default function GenericDataEditor({ data, onChange, schemaTemplate = null }) {
   const source = isPlainObject(data) ? data : {};
   const topLevelEntries = Object.entries(source);
+  const [jsonErrors, setJsonErrors] = React.useState({});
+
+  const getTemplateAtPath = (path) => {
+    const fromSchema = getAtPath(schemaTemplate, path);
+    if (fromSchema !== undefined) return fromSchema;
+    return getAtPath(source, path);
+  };
+
+  const clearJsonError = (path) => {
+    const key = getPathKey(path);
+    setJsonErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
 
   const applyPathUpdate = (path, value) => {
+    clearJsonError(path);
     onChange(setAtPath(source, path, value));
   };
 
@@ -88,6 +110,18 @@ export default function GenericDataEditor({ data, onChange }) {
 
   const appendAtPath = (path, template) => {
     onChange(appendArrayItem(source, path, inferBlankValue(template)));
+  };
+
+  const resolveArrayItemTemplate = (path, items) => {
+    const fromSchema = getTemplateAtPath(path);
+    if (Array.isArray(fromSchema) && fromSchema.length > 0) {
+      return fromSchema[0];
+    }
+    if (Array.isArray(items) && items.length > 0) {
+      const firstDefined = items.find((item) => item !== undefined);
+      if (firstDefined !== undefined) return firstDefined;
+    }
+    return '';
   };
 
   const renderPrimitiveEditor = (path, label, value) => {
@@ -150,25 +184,33 @@ export default function GenericDataEditor({ data, onChange }) {
     );
   };
 
-  const renderJsonFallback = (path, label, value) => (
-    <div>
-      <label className="block text-xs font-bold text-slate-300 mb-1">{label}</label>
-      <textarea
-        key={`json-field-${path.join('.')}`}
-        defaultValue={JSON.stringify(value, null, 2)}
-        onBlur={(event) => {
-          try {
-            const parsed = JSON.parse(event.target.value || 'null');
-            applyPathUpdate(path, parsed);
-          } catch (err) {
-            // Keep previous value when JSON is invalid.
-          }
-        }}
-        className="w-full min-h-24 bg-slate-950 border border-slate-700 rounded p-2 text-xs text-slate-200 font-mono"
-        spellCheck={false}
-      />
-    </div>
-  );
+  const renderJsonFallback = (path, label, value) => {
+    const errorKey = getPathKey(path);
+    const errorText = jsonErrors[errorKey] || '';
+    return (
+      <div>
+        <label className="block text-xs font-bold text-slate-300 mb-1">{label}</label>
+        <textarea
+          key={`json-field-${errorKey}`}
+          defaultValue={JSON.stringify(value, null, 2)}
+          onBlur={(event) => {
+            try {
+              const parsed = JSON.parse(event.target.value || 'null');
+              clearJsonError(path);
+              applyPathUpdate(path, parsed);
+            } catch {
+              setJsonErrors((prev) => ({ ...prev, [errorKey]: 'Invalid JSON. Fix syntax to apply changes.' }));
+            }
+          }}
+          className={`w-full min-h-24 bg-slate-950 border rounded p-2 text-xs text-slate-200 font-mono ${
+            errorText ? 'border-rose-500' : 'border-slate-700'
+          }`}
+          spellCheck={false}
+        />
+        {errorText ? <p className="text-[11px] text-rose-400 mt-1">{errorText}</p> : null}
+      </div>
+    );
+  };
 
   const renderArrayOfPrimitives = (path, label, items) => (
     <div className="space-y-2">
@@ -228,7 +270,7 @@ export default function GenericDataEditor({ data, onChange }) {
       })}
       <button
         type="button"
-        onClick={() => appendAtPath(path, items[0] ?? '')}
+        onClick={() => appendAtPath(path, resolveArrayItemTemplate(path, items))}
         className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
       >
         <Plus size={12} /> Add Item
@@ -281,7 +323,10 @@ export default function GenericDataEditor({ data, onChange }) {
         ))}
         <button
           type="button"
-          onClick={() => appendAtPath(path, items[0] || {})}
+          onClick={() => {
+            const template = resolveArrayItemTemplate(path, items);
+            appendAtPath(path, isPlainObject(template) ? template : items[0] || {});
+          }}
           className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
         >
           <Plus size={12} /> Add Row
@@ -293,16 +338,18 @@ export default function GenericDataEditor({ data, onChange }) {
   const renderArrayEditor = (path, label, value) => {
     if (!Array.isArray(value)) return null;
     if (!value.length) {
+      const template = resolveArrayItemTemplate(path, value);
+      const addLabel = isPlainObject(template) ? 'Add Row' : 'Add Item';
       return (
         <div className="space-y-2">
           <label className="block text-xs font-bold text-slate-300 mb-1">{label}</label>
           <p className="text-xs text-slate-500">No items yet.</p>
           <button
             type="button"
-            onClick={() => appendAtPath(path, '')}
+            onClick={() => appendAtPath(path, template)}
             className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
           >
-            <Plus size={12} /> Add Item
+            <Plus size={12} /> {addLabel}
           </button>
         </div>
       );

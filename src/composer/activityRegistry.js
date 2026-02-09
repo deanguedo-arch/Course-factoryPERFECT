@@ -35,7 +35,7 @@ function escapeInlineScript(value) {
 function encodeDataAttrJson(value) {
   try {
     return encodeURIComponent(JSON.stringify(value));
-  } catch (e) {
+  } catch {
     return '';
   }
 }
@@ -67,6 +67,14 @@ export const ACTIVITY_REGISTRY = {
             .cf-rich-content h3 { font-size: 1.25rem; line-height: 1.75rem; font-weight: 700; margin: 0.8rem 0 0.4rem; }
             .cf-rich-content a { color: #7dd3fc; text-decoration: underline; }
             .cf-rich-content blockquote { border-left: 3px solid #475569; margin: 0.9rem 0; padding-left: 0.8rem; opacity: 0.95; }
+            .cf-rich-content div { margin: 0.45rem 0; }
+            .cf-rich-content font[size='1'] { font-size: 0.75rem; }
+            .cf-rich-content font[size='2'] { font-size: 0.875rem; }
+            .cf-rich-content font[size='3'] { font-size: 1rem; }
+            .cf-rich-content font[size='4'] { font-size: 1.125rem; }
+            .cf-rich-content font[size='5'] { font-size: 1.25rem; }
+            .cf-rich-content font[size='6'] { font-size: 1.5rem; }
+            .cf-rich-content font[size='7'] { font-size: 1.875rem; }
           </style>
           ${data.title ? `<h3 class="text-xl font-bold text-white mb-3">${escapeHtml(data.title)}</h3>` : ''}
           <div class="text-slate-200 leading-relaxed cf-rich-content">${bodyHtml}</div>
@@ -262,7 +270,7 @@ export const ACTIVITY_REGISTRY = {
             <div class="mt-4 space-y-3">
               ${html || '<p class="text-slate-400 text-sm">No assessment HTML found for this item.</p>'}
             </div>
-            ${script ? `<script>(function(){\n${script}\n})();<\/script>` : ''}
+            ${script ? `<script>(function(){\n${script}\n})();<\\/script>` : ''}
           </div>
         `;
       });
@@ -463,25 +471,52 @@ export const ACTIVITY_REGISTRY = {
     compileToHtml({ data = {} } = {}) {
       const tabs = (Array.isArray(data.tabs) ? data.tabs : []).filter((tab) => tab && (tab.label || tab.content));
       return `
-        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6">
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-tabs-block>
           <h3 class="text-lg font-bold text-white mb-3">${escapeHtml(data.title || 'Tabs')}</h3>
-          <div class="grid md:grid-cols-12 gap-3">
+          <div class="flex flex-wrap gap-2" role="tablist" aria-label="${escapeHtml(data.title || 'Tabs')}">
             ${
               tabs.length
                 ? tabs
                     .map(
                       (tab, idx) => `
-                      <div class="md:col-span-4 rounded-lg border border-slate-700 bg-slate-950/70 p-3">
-                        <p class="text-xs font-bold uppercase tracking-widest text-indigo-300">Tab ${idx + 1}</p>
-                        <h4 class="text-sm font-bold text-white mt-1">${escapeHtml(tab.label || `Tab ${idx + 1}`)}</h4>
-                        <p class="text-sm text-slate-300 mt-2 leading-relaxed">${renderSimpleBody(tab.content || '')}</p>
-                      </div>
+                      <button
+                        type="button"
+                        role="tab"
+                        data-tabs-trigger
+                        data-tab-index="${idx}"
+                        class="px-3 py-1.5 rounded border border-slate-700 bg-slate-950/70 text-xs font-bold text-slate-200 hover:bg-slate-800 ${idx === 0 ? 'ring-1 ring-indigo-400 border-indigo-500 text-white' : ''}"
+                      >
+                        ${escapeHtml(tab.label || `Tab ${idx + 1}`)}
+                      </button>
                     `,
                     )
                     .join('\n')
                 : '<p class="text-sm text-slate-400">No tabs configured yet.</p>'
             }
           </div>
+          ${
+            tabs.length
+              ? `
+              <div class="mt-3 space-y-2">
+                ${tabs
+                  .map(
+                    (tab, idx) => `
+                    <div
+                      role="tabpanel"
+                      data-tabs-panel
+                      data-tab-index="${idx}"
+                      class="rounded-lg border border-slate-700 bg-slate-950/70 p-3 ${idx === 0 ? '' : 'hidden'}"
+                    >
+                      <h4 class="text-sm font-bold text-white">${escapeHtml(tab.label || `Tab ${idx + 1}`)}</h4>
+                      <p class="text-sm text-slate-300 mt-2 leading-relaxed">${renderSimpleBody(tab.content || '')}</p>
+                    </div>
+                  `,
+                  )
+                  .join('\n')}
+              </div>
+            `
+              : ''
+          }
         </article>
       `;
     },
@@ -543,7 +578,7 @@ export const ACTIVITY_REGISTRY = {
     compileToHtml({ data = {}, activityId = '' } = {}) {
       const items = (Array.isArray(data.items) ? data.items : []).map((item) => String(item || '').trim()).filter(Boolean);
       return `
-        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-checklist-block data-checklist-id="${escapeHtml(activityId)}">
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-checklist-block data-checklist-id="${escapeHtml(activityId || data.title || 'checklist')}" data-checklist-total="${items.length}">
           <div class="flex items-center justify-between gap-3 mb-3">
             <h3 class="text-lg font-bold text-white">${escapeHtml(data.title || 'Checklist')}</h3>
             <p class="text-xs font-semibold uppercase tracking-widest text-slate-400" data-checklist-progress>${items.length ? `0 / ${items.length}` : '0 / 0'} done</p>
@@ -586,6 +621,12 @@ export const ACTIVITY_REGISTRY = {
     },
     compileToHtml({ data = {} } = {}) {
       const choices = (Array.isArray(data.choices) ? data.choices : []).filter((choice) => choice && (choice.label || choice.outcome));
+      const toneMap = {
+        good: 'border-emerald-500/30 bg-emerald-950/20',
+        caution: 'border-amber-500/30 bg-amber-950/20',
+        risk: 'border-rose-500/30 bg-rose-950/20',
+        neutral: 'border-slate-700 bg-slate-950/70',
+      };
       return `
         <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6">
           <h3 class="text-lg font-bold text-white">${escapeHtml(data.title || 'Scenario Branch')}</h3>
@@ -596,7 +637,7 @@ export const ACTIVITY_REGISTRY = {
                 ? choices
                     .map(
                       (choice, idx) => `
-                      <details class="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                      <details class="rounded-lg border p-3 ${toneMap[String(choice.tone || 'neutral').toLowerCase()] || toneMap.neutral}">
                         <summary class="cursor-pointer text-sm font-bold text-slate-100">${escapeHtml(choice.label || `Choice ${idx + 1}`)}</summary>
                         <p class="text-sm text-slate-300 mt-2 leading-relaxed">${renderSimpleBody(choice.outcome || '')}</p>
                       </details>
@@ -623,18 +664,25 @@ export const ACTIVITY_REGISTRY = {
     compileToHtml({ data = {} } = {}) {
       const items = (Array.isArray(data.items) ? data.items : []).map((item) => String(item || '').trim()).filter(Boolean);
       return `
-        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6">
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-sort-block>
           <h3 class="text-lg font-bold text-white">${escapeHtml(data.title || 'Sort')}</h3>
           <p class="text-sm text-slate-300 mt-2">${renderSimpleBody(data.instructions || '')}</p>
           ${
             items.length
               ? `
-              <ol class="mt-4 space-y-2">
+              <ol class="mt-4 space-y-2" data-sort-list>
                 ${items
                   .map(
                     (item, idx) => `
-                    <li class="rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200">
-                      <span class="text-slate-500 mr-2 font-mono">${idx + 1}.</span>${escapeHtml(item)}
+                    <li class="rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-slate-200 flex items-center justify-between gap-3" data-sort-item draggable="true">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <span class="text-slate-500 font-mono" data-sort-rank>${idx + 1}.</span>
+                        <span class="truncate">${escapeHtml(item)}</span>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <button type="button" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-white" data-sort-move="-1" title="Move up">Up</button>
+                        <button type="button" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-white" data-sort-move="1" title="Move down">Down</button>
+                      </div>
                     </li>
                   `,
                   )
@@ -643,6 +691,7 @@ export const ACTIVITY_REGISTRY = {
             `
               : '<p class="text-sm text-slate-400 mt-3">No sort items yet.</p>'
           }
+          <p class="text-[11px] text-slate-500 mt-3">Tip: drag rows or use Up/Down to reorder.</p>
         </article>
       `;
     },
@@ -662,19 +711,26 @@ export const ACTIVITY_REGISTRY = {
     compileToHtml({ data = {} } = {}) {
       const cards = (Array.isArray(data.cards) ? data.cards : []).filter((card) => card && (card.front || card.back));
       return `
-        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6">
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-flashcards-block>
           <h3 class="text-lg font-bold text-white mb-3">${escapeHtml(data.title || 'Flashcards')}</h3>
           <div class="grid gap-3 md:grid-cols-2">
             ${
               cards.length
                 ? cards
                     .map(
-                      (card) => `
-                      <div class="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Front</p>
-                        <p class="text-sm text-white mt-1">${renderSimpleBody(card.front || '')}</p>
-                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-3">Back</p>
-                        <p class="text-sm text-slate-300 mt-1">${renderSimpleBody(card.back || '')}</p>
+                      (card, idx) => `
+                      <div class="rounded-lg border border-slate-700 bg-slate-950/70 p-4" data-flashcard data-flashcard-index="${idx}">
+                        <div data-flashcard-front>
+                          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Front</p>
+                          <p class="text-sm text-white mt-1">${renderSimpleBody(card.front || '')}</p>
+                        </div>
+                        <div data-flashcard-back class="hidden">
+                          <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Back</p>
+                          <p class="text-sm text-slate-300 mt-1">${renderSimpleBody(card.back || '')}</p>
+                        </div>
+                        <button type="button" class="mt-3 px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-[11px] font-bold text-white uppercase tracking-wide" data-flashcard-toggle>
+                          Flip
+                        </button>
                       </div>
                     `,
                     )
@@ -829,7 +885,7 @@ export const ACTIVITY_REGISTRY = {
     compileToHtml({ data = {} } = {}) {
       const nodes = (Array.isArray(data.nodes) ? data.nodes : []).filter((node) => node && (node.title || node.description));
       return `
-        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6">
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-path-map-block>
           <h3 class="text-lg font-bold text-white mb-3">${escapeHtml(data.title || 'Path Map')}</h3>
           ${
             nodes.length
@@ -839,10 +895,15 @@ export const ACTIVITY_REGISTRY = {
                   ${nodes
                     .map(
                       (node, idx) => `
-                      <div class="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                      <button
+                        type="button"
+                        data-path-node
+                        data-path-index="${idx}"
+                        class="w-full text-left rounded-lg border border-slate-700 bg-slate-950/70 p-3 transition-colors hover:border-indigo-500/60 hover:bg-slate-900 ${idx === 0 ? 'ring-1 ring-indigo-400 border-indigo-500 text-white' : 'text-slate-200'}"
+                      >
                         <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Path ${idx + 1}</p>
                         <p class="text-sm font-bold text-white mt-1">${escapeHtml(node.title || `Path ${idx + 1}`)}</p>
-                      </div>
+                      </button>
                     `,
                     )
                     .join('\n')}
@@ -850,10 +911,12 @@ export const ACTIVITY_REGISTRY = {
                 <div class="md:col-span-8 space-y-2">
                   ${nodes
                     .map(
-                      (node) => `
+                      (node, idx) => `
                       <div class="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
+                        <div data-path-panel data-path-index="${idx}" class="${idx === 0 ? '' : 'hidden'}">
                         <h4 class="text-sm font-bold text-indigo-300">${escapeHtml(node.title || 'Path')}</h4>
                         <p class="text-sm text-slate-300 mt-1 leading-relaxed">${renderSimpleBody(node.description || '')}</p>
+                        </div>
                       </div>
                     `,
                     )
@@ -885,13 +948,38 @@ export const ACTIVITY_REGISTRY = {
       const safeUrl = toSafeUrl(data.url);
       const hotspots = Array.isArray(data.hotspots) ? data.hotspots : [];
       return `
-        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6">
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-hotspot-block>
           <h3 class="text-lg font-bold text-white mb-3">${escapeHtml(data.title || 'Interactive Image')}</h3>
           ${
             safeUrl
               ? `
-              <figure class="rounded-lg border border-slate-700 bg-black overflow-hidden">
+              <figure class="relative rounded-lg border border-slate-700 bg-black overflow-hidden" data-hotspot-figure>
                 <img src="${escapeHtml(safeUrl)}" alt="${escapeHtml(data.alt || 'Interactive image')}" class="w-full h-auto" loading="lazy" />
+                ${
+                  hotspots.length
+                    ? hotspots
+                        .map((spot, idx) => {
+                          const x = Math.max(0, Math.min(100, Number.parseFloat(spot?.x) || 0));
+                          const y = Math.max(0, Math.min(100, Number.parseFloat(spot?.y) || 0));
+                          return `
+                          <button
+                            type="button"
+                            data-hotspot-btn
+                            data-hotspot-index="${idx}"
+                            style="left:${x}%;top:${y}%;"
+                            class="absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full border text-[10px] font-black transition-colors ${
+                              idx === 0
+                                ? 'border-sky-300 bg-sky-500 text-slate-950'
+                                : 'border-slate-200/80 bg-slate-900/85 text-white hover:bg-sky-500 hover:text-slate-950'
+                            }"
+                            title="${escapeHtml(spot?.label || `Hotspot ${idx + 1}`)}"
+                            aria-label="${escapeHtml(spot?.label || `Hotspot ${idx + 1}`)}"
+                          >${idx + 1}</button>
+                        `;
+                        })
+                        .join('\n')
+                    : ''
+                }
               </figure>
               ${
                 hotspots.length
@@ -899,12 +987,16 @@ export const ACTIVITY_REGISTRY = {
                   <div class="mt-3 grid md:grid-cols-2 gap-2">
                     ${hotspots
                       .map(
-                        (spot, idx) => `
-                        <div class="rounded border border-slate-700 bg-slate-950/70 p-2 text-xs text-slate-300">
-                          <p class="font-bold text-slate-100">${escapeHtml(spot.label || `Hotspot ${idx + 1}`)} (${Number(spot.x) || 0}%, ${Number(spot.y) || 0}%)</p>
-                          <p class="mt-1">${renderSimpleBody(spot.content || '')}</p>
+                        (spot, idx) => {
+                          const x = Math.max(0, Math.min(100, Number.parseFloat(spot?.x) || 0));
+                          const y = Math.max(0, Math.min(100, Number.parseFloat(spot?.y) || 0));
+                          return `
+                        <div data-hotspot-panel data-hotspot-index="${idx}" class="rounded border border-slate-700 bg-slate-950/70 p-2 text-xs text-slate-300 ${idx === 0 ? '' : 'hidden'}">
+                          <p class="font-bold text-slate-100">${escapeHtml(spot.label || `Hotspot ${idx + 1}`)} (${x}%, ${y}%)</p>
+                          <p class="mt-1">${renderSimpleBody(spot?.content || '')}</p>
                         </div>
-                      `,
+                      `;
+                        },
                       )
                       .join('\n')}
                   </div>
@@ -974,16 +1066,25 @@ export const ACTIVITY_REGISTRY = {
     },
     compileToHtml({ data = {} } = {}) {
       return `
-        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6">
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-before-after-block>
           <h3 class="text-lg font-bold text-white mb-3">${escapeHtml(data.title || 'Before / After')}</h3>
+          <p class="text-xs text-slate-400">Move the slider to compare emphasis between both states.</p>
           <div class="grid md:grid-cols-2 gap-3">
-            <div class="rounded-lg border border-rose-500/30 bg-rose-950/20 p-4">
+            <div class="rounded-lg border border-rose-500/30 bg-rose-950/20 p-4 transition-opacity" data-before-panel>
               <p class="text-xs font-bold uppercase tracking-widest text-rose-300">${escapeHtml(data.beforeLabel || 'Before')}</p>
               <p class="text-sm text-rose-100/90 mt-2 leading-relaxed">${renderSimpleBody(data.beforeText || '')}</p>
             </div>
-            <div class="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-4">
+            <div class="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-4 transition-opacity" data-after-panel>
               <p class="text-xs font-bold uppercase tracking-widest text-emerald-300">${escapeHtml(data.afterLabel || 'After')}</p>
               <p class="text-sm text-emerald-100/90 mt-2 leading-relaxed">${renderSimpleBody(data.afterText || '')}</p>
+            </div>
+          </div>
+          <div class="mt-4">
+            <input type="range" min="0" max="100" value="50" class="w-full" data-before-after-slider />
+            <div class="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+              <span>${escapeHtml(data.beforeLabel || 'Before')}</span>
+              <span data-before-after-value>50 / 50</span>
+              <span>${escapeHtml(data.afterLabel || 'After')}</span>
             </div>
           </div>
         </article>
@@ -1051,18 +1152,21 @@ export const ACTIVITY_REGISTRY = {
     },
     compileToHtml({ data = {} } = {}) {
       const variables = Array.isArray(data.variables) ? data.variables : [];
-      const scored = variables.map((variable) => {
+      const scored = variables.map((variable, idx) => {
         const min = Number(variable?.min);
         const max = Number(variable?.max);
         const value = Number(variable?.value);
         const weight = Number(variable?.weight);
         const safeMin = Number.isFinite(min) ? min : 0;
-        const safeMax = Number.isFinite(max) ? max : 10;
+        const safeMax = Number.isFinite(max) && max >= safeMin ? max : safeMin + 10;
         const clampedValue = Number.isFinite(value) ? Math.max(safeMin, Math.min(safeMax, value)) : safeMin;
         const safeWeight = Number.isFinite(weight) && weight > 0 ? weight : 1;
         const normalized = safeMax === safeMin ? 0 : (clampedValue - safeMin) / (safeMax - safeMin);
         return {
+          key: `decision-${idx}`,
           name: String(variable?.name || 'Variable'),
+          min: safeMin,
+          max: safeMax,
           value: clampedValue,
           weight: safeWeight,
           normalized,
@@ -1072,7 +1176,7 @@ export const ACTIVITY_REGISTRY = {
       const weightedSum = scored.reduce((sum, variable) => sum + variable.normalized * variable.weight, 0);
       const score = totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 100) : 0;
       return `
-        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6">
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-decision-block>
           <h3 class="text-lg font-bold text-white">${escapeHtml(data.title || 'Decision Lab')}</h3>
           <p class="text-sm text-slate-300 mt-2">${renderSimpleBody(data.description || '')}</p>
           <div class="mt-4 grid gap-2 md:grid-cols-2">
@@ -1083,8 +1187,25 @@ export const ACTIVITY_REGISTRY = {
                       (variable) => `
                       <div class="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
                         <p class="text-xs uppercase tracking-widest text-slate-500">${escapeHtml(variable.name)}</p>
-                        <p class="text-sm text-slate-200 mt-1">Value: <span class="font-bold text-white">${variable.value}</span></p>
                         <p class="text-xs text-slate-400 mt-1">Weight: ${variable.weight}</p>
+                        <input
+                          type="range"
+                          min="${variable.min}"
+                          max="${variable.max}"
+                          step="1"
+                          value="${variable.value}"
+                          class="mt-2 w-full"
+                          data-decision-input
+                          data-decision-key="${escapeHtml(variable.key)}"
+                          data-decision-min="${variable.min}"
+                          data-decision-max="${variable.max}"
+                          data-decision-weight="${variable.weight}"
+                        />
+                        <div class="mt-1 flex items-center justify-between text-[11px] text-slate-500">
+                          <span>${variable.min}</span>
+                          <span class="font-bold text-white" data-decision-current data-decision-key="${escapeHtml(variable.key)}">${variable.value}</span>
+                          <span>${variable.max}</span>
+                        </div>
                       </div>
                     `,
                     )
@@ -1094,7 +1215,7 @@ export const ACTIVITY_REGISTRY = {
           </div>
           <div class="mt-4 rounded-lg border border-indigo-500/30 bg-indigo-950/20 p-3">
             <p class="text-xs uppercase tracking-widest text-indigo-300">${escapeHtml(data.resultLabel || 'Outcome score')}</p>
-            <p class="text-2xl font-black text-white mt-1">${score}</p>
+            <p class="text-2xl font-black text-white mt-1" data-decision-score>${score}</p>
           </div>
         </article>
       `;
