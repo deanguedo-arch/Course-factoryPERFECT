@@ -29,7 +29,7 @@ const Phase3 = ({ onGoToMaster, projectData, setProjectData }) => {
       try {
         const restored = JSON.parse(e.target.result);
         setProjectData(restored);
-        // alert("Ã¢Å“â€¦ Project Restored Successfully!"); // Removed Alert
+        // alert("Project Restored Successfully!"); // Removed Alert
       } catch (error) {
         console.error("Invalid backup file", error);
       }

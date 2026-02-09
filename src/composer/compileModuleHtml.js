@@ -421,6 +421,9 @@ function buildComposerRuntimeScript() {
         Array.prototype.slice.call(root.querySelectorAll('[data-decision-block]')).forEach(function(block) {
           refreshDecisionBlock(block);
         });
+        Array.prototype.slice.call(root.querySelectorAll('[data-rubric-block]')).forEach(function(block) {
+          refreshRubricBlock(block);
+        });
 
         return { ok: true, message: 'Restored ' + appliedCount + ' fields from backup.' };
       }
@@ -481,6 +484,13 @@ function buildComposerRuntimeScript() {
           return selectedText || normalizeSpace(field.value || '');
         }
         return normalizeSpace(field.value || '');
+      }
+
+      function formatNumericValue(value) {
+        var parsed = Number(value);
+        if (!Number.isFinite(parsed)) return '0';
+        var rounded = Math.round(parsed * 100) / 100;
+        return String(rounded);
       }
 
       function collectFilledFieldLines(scope, options) {
@@ -648,6 +658,30 @@ function buildComposerRuntimeScript() {
             });
             var score = getReadableText(section.querySelector('[data-decision-score]'), '');
             if (score) lines.push('Projected Outcome Score: ' + score);
+          } else if (type === 'rubric_creator') {
+            var rubricBlock = section.querySelector('[data-rubric-block]');
+            if (!rubricBlock) return;
+            var rubricRows = Array.prototype.slice.call(rubricBlock.querySelectorAll('tr[data-rubric-row]'));
+            var totalScore = 0;
+            rubricRows.forEach(function(row, rowIdx) {
+              var rowLabel = getReadableText(row.querySelector('[data-rubric-row-label]'), 'Criterion ' + (rowIdx + 1));
+              var selectedChoice = row.querySelector('[data-rubric-choice]:checked');
+              if (!selectedChoice) {
+                lines.push(rowLabel + ': [No selection]');
+                return;
+              }
+              var scoreValue = Number(selectedChoice.getAttribute('data-rubric-score') || selectedChoice.value);
+              if (Number.isFinite(scoreValue)) totalScore += scoreValue;
+              var colIdx = parseInt(selectedChoice.getAttribute('data-rubric-col') || '-1', 10);
+              var descriptor = '';
+              if (Number.isInteger(colIdx) && colIdx >= 0) {
+                var cell = row.querySelector('[data-rubric-cell][data-rubric-col="' + colIdx + '"]');
+                descriptor = getReadableText(cell ? cell.querySelector('p') : null, '');
+              }
+              lines.push(rowLabel + ': Score ' + formatNumericValue(scoreValue) + (descriptor ? ' - ' + descriptor : ''));
+            });
+            var maxText = getReadableText(rubricBlock.querySelector('[data-rubric-max]'), '');
+            lines.push('Total: ' + formatNumericValue(totalScore) + (maxText ? ' / ' + maxText : ''));
           } else if (type === 'before_after') {
             var slider = section.querySelector('[data-before-after-slider]');
             var beforeLabel = getReadableText(section.querySelector('[data-before-panel] p'), 'Before');
@@ -1030,6 +1064,31 @@ function buildComposerRuntimeScript() {
         if (scoreEl) scoreEl.textContent = String(score);
       }
 
+      function refreshRubricBlock(block) {
+        if (!block) return;
+        var choices = Array.prototype.slice.call(block.querySelectorAll('[data-rubric-choice]'));
+        var total = 0;
+        choices.forEach(function(choice) {
+          var row = parseInt(choice.getAttribute('data-rubric-row') || '-1', 10);
+          var col = parseInt(choice.getAttribute('data-rubric-col') || '-1', 10);
+          var cell = null;
+          if (Number.isInteger(row) && Number.isInteger(col) && row >= 0 && col >= 0) {
+            cell = block.querySelector('[data-rubric-cell][data-rubric-row="' + row + '"][data-rubric-col="' + col + '"]');
+          }
+          if (cell) {
+            cell.classList.toggle('ring-1', choice.checked);
+            cell.classList.toggle('ring-emerald-400', choice.checked);
+            cell.classList.toggle('bg-emerald-900/20', choice.checked);
+          }
+          if (choice.checked) {
+            var score = Number(choice.getAttribute('data-rubric-score') || choice.value);
+            if (Number.isFinite(score)) total += score;
+          }
+        });
+        var totalEl = block.querySelector('[data-rubric-total]');
+        if (totalEl) totalEl.textContent = formatNumericValue(total);
+      }
+
       function getSortContext(target) {
         var item = closest(target, '[data-sort-item]');
         if (!item) return null;
@@ -1093,6 +1152,9 @@ function buildComposerRuntimeScript() {
         });
         Array.prototype.slice.call(document.querySelectorAll('[data-decision-block]')).forEach(function(block) {
           refreshDecisionBlock(block);
+        });
+        Array.prototype.slice.call(document.querySelectorAll('[data-rubric-block]')).forEach(function(block) {
+          refreshRubricBlock(block);
         });
         Array.prototype.slice.call(document.querySelectorAll('[data-sort-list]')).forEach(function(list, listIndex) {
           ensureSortItemIds(list, listIndex);
@@ -1167,6 +1229,17 @@ function buildComposerRuntimeScript() {
           var delta = parseInt(sortMoveBtn.getAttribute('data-sort-move') || '0', 10);
           if (!Number.isFinite(delta)) return;
           moveSortItem(sortContext.item, delta);
+          return;
+        }
+
+        var rubricClearBtn = closest(event.target, '[data-rubric-clear]');
+        if (rubricClearBtn) {
+          var rubricBlock = closest(rubricClearBtn, '[data-rubric-block]');
+          if (!rubricBlock) return;
+          Array.prototype.slice.call(rubricBlock.querySelectorAll('[data-rubric-choice]')).forEach(function(choice) {
+            choice.checked = false;
+          });
+          refreshRubricBlock(rubricBlock);
           return;
         }
 
@@ -1350,6 +1423,14 @@ function buildComposerRuntimeScript() {
           var checklistBlock = closest(checklistInput, '[data-checklist-block]');
           if (!checklistBlock) return;
           refreshChecklistBlock(checklistBlock, true);
+          return;
+        }
+
+        var rubricChoiceInput = closest(event.target, '[data-rubric-choice]');
+        if (rubricChoiceInput) {
+          var rubricChoiceBlock = closest(rubricChoiceInput, '[data-rubric-block]');
+          if (!rubricChoiceBlock) return;
+          refreshRubricBlock(rubricChoiceBlock);
           return;
         }
 

@@ -49,6 +49,68 @@ function encodeDataAttrJson(value) {
   }
 }
 
+const RUBRIC_MIN_SIZE = 2;
+const RUBRIC_MAX_SIZE = 5;
+
+function clampRubricSize(value, fallback = 3) {
+  const parsed = Number.parseInt(value, 10);
+  const base = Number.isFinite(parsed) ? parsed : Number.parseInt(fallback, 10);
+  const normalized = Number.isFinite(base) ? base : 3;
+  return Math.max(RUBRIC_MIN_SIZE, Math.min(RUBRIC_MAX_SIZE, normalized));
+}
+
+function normalizeRubricScore(value, fallback = 0) {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.round(parsed * 100) / 100;
+}
+
+function formatRubricScore(value) {
+  return Number.isInteger(value) ? String(value) : String(Math.round(value * 100) / 100);
+}
+
+function buildDefaultRubricColumns(count = 3) {
+  const safeCount = clampRubricSize(count, 3);
+  const presets = {
+    2: [
+      { label: 'Strong', score: 2 },
+      { label: 'Needs Work', score: 1 },
+    ],
+    3: [
+      { label: 'Exceeds', score: 3 },
+      { label: 'Meets', score: 2 },
+      { label: 'Developing', score: 1 },
+    ],
+    4: [
+      { label: 'Exemplary', score: 4 },
+      { label: 'Proficient', score: 3 },
+      { label: 'Developing', score: 2 },
+      { label: 'Beginning', score: 1 },
+    ],
+    5: [
+      { label: 'Mastery', score: 5 },
+      { label: 'Advanced', score: 4 },
+      { label: 'Proficient', score: 3 },
+      { label: 'Developing', score: 2 },
+      { label: 'Beginning', score: 1 },
+    ],
+  };
+  return (presets[safeCount] || presets[3]).map((column) => ({ ...column }));
+}
+
+function buildDefaultRubricRows(count = 3) {
+  const safeCount = clampRubricSize(count, 3);
+  return Array.from({ length: safeCount }, (_, idx) => ({
+    label: `Criterion ${idx + 1}`,
+  }));
+}
+
+function buildDefaultRubricCells(rows, columns) {
+  return rows.map((row) =>
+    columns.map((column) => `Describe "${column.label}" for ${row.label.toLowerCase()}.`),
+  );
+}
+
 export const ACTIVITY_REGISTRY = {
   content_block: {
     type: 'content_block',
@@ -337,6 +399,142 @@ export const ACTIVITY_REGISTRY = {
         <article class="rounded-xl border border-purple-500/30 bg-purple-950/20 p-6">
           <h3 class="text-lg font-bold text-purple-300 mb-3">${escapeHtml(data.title || 'Assessments')}</h3>
           ${cards.length ? `<div class="space-y-4">${cards.join('\n')}</div>` : '<p class="text-slate-400 text-sm">No assessments linked yet.</p>'}
+        </article>
+      `;
+    },
+  },
+  rubric_creator: {
+    type: 'rubric_creator',
+    label: 'Rubric Creator',
+    createDefaultData() {
+      const rowCount = 3;
+      const colCount = 3;
+      const rows = buildDefaultRubricRows(rowCount);
+      const columns = buildDefaultRubricColumns(colCount);
+      return {
+        title: 'Performance Rubric',
+        instructions: 'Review each criterion and choose one level per row.',
+        rowCount,
+        colCount,
+        selfScoringEnabled: true,
+        totalLabel: 'Self Score Total',
+        rows,
+        columns,
+        cells: buildDefaultRubricCells(rows, columns),
+      };
+    },
+    compileToHtml({ data = {}, activityId = '' } = {}) {
+      const rowCount = clampRubricSize(data.rowCount, Array.isArray(data.rows) ? data.rows.length : 3);
+      const colCount = clampRubricSize(data.colCount, Array.isArray(data.columns) ? data.columns.length : 3);
+      const rows = Array.from({ length: rowCount }, (_, rowIdx) => {
+        const raw = Array.isArray(data.rows) ? data.rows[rowIdx] : null;
+        const fallback = `Criterion ${rowIdx + 1}`;
+        const label = String(raw?.label || fallback).trim() || fallback;
+        return { label };
+      });
+      const columns = Array.from({ length: colCount }, (_, colIdx) => {
+        const raw = Array.isArray(data.columns) ? data.columns[colIdx] : null;
+        const fallbackLabel = `Level ${colIdx + 1}`;
+        const fallbackScore = colCount - colIdx;
+        const label = String(raw?.label || fallbackLabel).trim() || fallbackLabel;
+        const score = normalizeRubricScore(raw?.score, fallbackScore);
+        return { label, score };
+      });
+      const cells = rows.map((row, rowIdx) =>
+        columns.map((column, colIdx) => {
+          const raw = Array.isArray(data.cells) && Array.isArray(data.cells[rowIdx]) ? data.cells[rowIdx][colIdx] : '';
+          const fallback = `Describe "${column.label}" for ${row.label.toLowerCase()}.`;
+          return String(raw || fallback).trim() || fallback;
+        }),
+      );
+      const selfScoringEnabled = data.selfScoringEnabled !== false;
+      const rubricKey = String(activityId || 'rubric').replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
+      const maxColumnScore = columns.reduce((max, column) => Math.max(max, Number(column.score) || 0), 0);
+      const maxTotalScore = normalizeRubricScore(maxColumnScore * rows.length, 0);
+      return `
+        <article class="rounded-xl border border-emerald-500/30 bg-emerald-950/10 p-6" data-rubric-block data-rubric-id="${escapeHtml(rubricKey)}">
+          <h3 class="text-lg font-bold text-emerald-300">${escapeHtml(data.title || 'Rubric')}</h3>
+          ${
+            data.instructions
+              ? `<p class="text-sm text-slate-300 mt-2">${renderSimpleBody(data.instructions || '')}</p>`
+              : ''
+          }
+          <div class="mt-4 overflow-x-auto rounded-lg border border-slate-700">
+            <table class="min-w-full border-collapse text-xs">
+              <thead class="bg-slate-900/80">
+                <tr>
+                  <th class="p-3 border-b border-slate-700 text-left font-bold uppercase tracking-wider text-slate-300">Criteria</th>
+                  ${columns
+                    .map(
+                      (column) => `
+                        <th class="p-3 border-b border-slate-700 text-left font-bold uppercase tracking-wider text-slate-300">
+                          <div>${escapeHtml(column.label)}</div>
+                          <div class="text-[10px] font-semibold text-emerald-300 mt-1">Score: ${escapeHtml(formatRubricScore(column.score))}</div>
+                        </th>
+                      `,
+                    )
+                    .join('\n')}
+                </tr>
+              </thead>
+              <tbody>
+                ${rows
+                  .map(
+                    (row, rowIdx) => `
+                    <tr data-rubric-row="${rowIdx}">
+                      <th class="align-top p-3 border-b border-slate-800 bg-slate-950/80 text-left text-slate-100 font-bold" data-rubric-row-label>${escapeHtml(row.label)}</th>
+                      ${columns
+                        .map(
+                          (column, colIdx) => `
+                          <td class="align-top p-3 border-b border-slate-800 bg-slate-950/60 transition-colors" data-rubric-cell data-rubric-row="${rowIdx}" data-rubric-col="${colIdx}" data-rubric-score="${escapeHtml(formatRubricScore(column.score))}">
+                            <p class="text-xs text-slate-300 leading-relaxed">${escapeHtml(cells[rowIdx][colIdx])}</p>
+                            ${
+                              selfScoringEnabled
+                                ? `
+                                  <label class="mt-3 inline-flex items-center gap-2 rounded border border-slate-700 bg-slate-900/70 px-2 py-1 cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      name="rubric-${escapeHtml(rubricKey)}-row-${rowIdx}"
+                                      value="${escapeHtml(formatRubricScore(column.score))}"
+                                      data-rubric-choice
+                                      data-rubric-row="${rowIdx}"
+                                      data-rubric-col="${colIdx}"
+                                      data-rubric-score="${escapeHtml(formatRubricScore(column.score))}"
+                                      class="w-3.5 h-3.5"
+                                    />
+                                    <span class="text-[10px] font-semibold uppercase tracking-wide text-slate-200">Select</span>
+                                  </label>
+                                `
+                                : ''
+                            }
+                          </td>
+                        `,
+                        )
+                        .join('\n')}
+                    </tr>
+                  `,
+                  )
+                  .join('\n')}
+              </tbody>
+            </table>
+          </div>
+          ${
+            selfScoringEnabled
+              ? `
+                <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3">
+                  <p class="text-xs font-bold uppercase tracking-wider text-emerald-300">${escapeHtml(data.totalLabel || 'Self Score Total')}</p>
+                  <div class="flex items-center gap-2">
+                    <p class="text-lg font-black text-white">
+                      <span data-rubric-total>0</span>
+                      <span class="text-xs font-semibold text-slate-400"> / <span data-rubric-max>${escapeHtml(formatRubricScore(maxTotalScore))}</span></span>
+                    </p>
+                    <button type="button" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-bold uppercase tracking-wide text-slate-100" data-rubric-clear>
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              `
+              : '<p class="mt-4 text-[11px] text-slate-400">Self-scoring is disabled for this rubric.</p>'
+          }
         </article>
       `;
     },
@@ -1333,6 +1531,7 @@ const ACTIVITY_TYPE_CATEGORIES = {
   image_block: 'content',
   resource_list: 'content',
   assessment_embed: 'assessment',
+  rubric_creator: 'assessment',
   knowledge_check: 'assessment',
   submission_builder: 'productivity',
   save_load_block: 'productivity',

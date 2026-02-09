@@ -71,19 +71,19 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
         const imported = JSON.parse(e.target.result);
         if (imported && imported["Current Course"]) {
           setProjectData(imported);
-          alert('Ã¢Å“â€¦ Project imported successfully!');
+          alert('Project imported successfully.');
         } else {
-          alert('Ã¢ÂÅ’ Invalid project file');
+          alert('Invalid project file.');
         }
       } catch (error) {
-        alert('Ã¢ÂÅ’ Failed to import: ' + error.message);
+        alert('Failed to import: ' + error.message);
       }
     };
     reader.readAsText(file);
   };
   
   const resetProject = () => {
-    if (window.confirm('Ã¢Å¡Â Ã¯Â¸Â This will delete all your course data! Are you sure?')) {
+    if (window.confirm('Warning: This will delete all your course data. Are you sure?')) {
       localStorage.removeItem('course_factory_v2_data');
       window.location.reload();
     }
@@ -467,13 +467,13 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
 
             <div className="pt-4 border-t border-slate-800">
               <p className="text-[10px] text-slate-500 mb-2 italic">
-                Clear every per-material theme and assessment color override so the Phase 5 palette becomes the source of truth again.
+                Reset to the functional default visual scheme and clear all per-material and per-assessment overrides.
               </p>
               <button
                 onClick={applyVisualDefaults}
                 className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold py-3 px-4 rounded-md text-xs w-full justify-center transition-colors"
               >
-                <RefreshCw size={14} /> Apply Visual Defaults (materials & assessments)
+                <RefreshCw size={14} /> Reset To Functional Visual Defaults
               </button>
             </div>
             
@@ -664,7 +664,7 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
                   if (projectBackup) {
                     localStorage.setItem('course_factory_v2_data', projectBackup);
                   }
-                  alert('Ã¢Å“â€¦ Cache cleared');
+                  alert('Cache cleared.');
                 }
               }}
               className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all"
@@ -674,7 +674,7 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
 
             <button
               onClick={async () => {
-                if (window.confirm('Ã°Å¸â€â€ž Force Refresh?\n\nThis will:\nÃ¢â‚¬Â¢ Clear browser cache for this site\nÃ¢â‚¬Â¢ Clear any service workers\nÃ¢â‚¬Â¢ Reload with fresh code\n\nYour project data will be preserved.')) {
+                if (window.confirm('Force refresh?\n\nThis will:\n- Clear browser cache for this site\n- Clear any service workers\n- Reload with fresh code\n\nYour project data will be preserved.')) {
                   try {
                     // Clear service worker caches
                     if ('caches' in window) {
@@ -707,7 +707,7 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
               </p>
               <button
                 onClick={() => {
-                  if (window.confirm('Ã¢Å¡Â Ã¯Â¸Â FULL RESET WARNING!\n\nThis will permanently delete:\nÃ¢â‚¬Â¢ All your materials (but keep Materials module)\nÃ¢â‚¬Â¢ All your assessments (but keep Assessments module)\nÃ¢â‚¬Â¢ All other custom modules\nÃ¢â‚¬Â¢ All toolkit items\n\nThe Course Materials and Assessments containers will remain empty.\n\nContinue?')) {
+                  if (window.confirm('FULL RESET WARNING!\n\nThis will permanently delete:\n- All your materials (but keep Materials module)\n- All your assessments (but keep Assessments module)\n- All other custom modules\n- All toolkit items\n\nThe Course Materials and Assessments containers will remain empty.\n\nContinue?')) {
                     const userInput = window.prompt('Type RESET to confirm full data wipe:');
                     if (userInput === 'RESET') {
                       // Get the current Course Materials and Assessments modules from PROJECT_DATA defaults
@@ -821,7 +821,7 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
                         });
                       }
                       
-                      alert('Ã¢Å“â€¦ Reset complete! Course Materials and Assessments modules preserved (but emptied). All other content cleared.');
+                      alert('Reset complete. Course Materials and Assessments modules were preserved but emptied. All other content was cleared.');
                     } else {
                       alert('Reset cancelled. Your data is safe.');
                     }

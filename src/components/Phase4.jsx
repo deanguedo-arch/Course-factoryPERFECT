@@ -766,9 +766,9 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
               </div>
               <div className="mt-3 text-xs text-slate-500">
                 {betaStructureMode === 'multi-file' ? (
-                  <span>Ã¢Å“â€¦ Separate HTML files per module Ã¢â‚¬Â¢ Bookmarkable URLs Ã¢â‚¬Â¢ Delta publish support</span>
+                  <span>Separate HTML files per module - Bookmarkable URLs - Delta publish support</span>
                 ) : (
-                  <span>Ã¢Å“â€¦ Single HTML file Ã¢â‚¬Â¢ Sidebar navigation Ã¢â‚¬Â¢ Instant switching Ã¢â‚¬Â¢ State preserved</span>
+                  <span>Single HTML file - Sidebar navigation - Instant switching - State preserved</span>
                 )}
               </div>
             </div>
@@ -1013,7 +1013,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                 {exportedHTML && (
                     <div className="animate-in fade-in slide-in-from-top-2">
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs font-bold text-emerald-400">Ã¢Å“â€¦ Successfully Generated!</span>
+                            <span className="text-xs font-bold text-emerald-400">Successfully generated.</span>
                             <button onClick={() => navigator.clipboard.writeText(exportedHTML)} className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded flex items-center gap-1"><Copy size={12}/> Copy Code</button>
                         </div>
                         <textarea readOnly value={exportedHTML} className="w-full h-32 bg-black border border-emerald-900/50 rounded-lg p-3 text-[10px] font-mono text-emerald-500/80 focus:outline-none resize-y" />
@@ -1132,7 +1132,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                       <>
                         <div className="flex items-center gap-2 text-rose-300 font-bold mb-2">
                           <AlertTriangle size={18} />
-                          {compileValidation.errors.length} validation error{compileValidation.errors.length !== 1 ? 's' : ''} Ã¢â‚¬â€ fix before compiling
+                          {compileValidation.errors.length} validation error{compileValidation.errors.length !== 1 ? 's' : ''} - fix before compiling
                         </div>
                         <ul className="list-disc list-inside space-y-1 text-sm text-rose-200/90">
                           {compileValidation.errors.map((e, i) => (

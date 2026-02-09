@@ -10,20 +10,16 @@ import {
   ChevronUp,
   Clipboard,
   Copy,
-  Database,
   Edit,
   Eye,
   EyeOff,
   FileJson,
   FolderOpen,
-  Layers,
   PenTool,
   Plus,
   RefreshCw,
   RotateCcw,
   Save,
-  Scissors,
-  Search,
   Sparkles,
   Trash2,
   Wrench,
@@ -31,7 +27,7 @@ import {
   Zap,
 } from 'lucide-react';
 import VaultBrowser from './VaultBrowser';
-import { CodeBlock, Toggle } from './Shared.jsx';
+import { CodeBlock } from './Shared.jsx';
 import GenericDataEditor from './GenericDataEditor.jsx';
 import { buildModuleFrameHTML, cleanModuleScript, getMaterialBadgeLabel, validateModule } from '../utils/generators.js';
 import { getActivityDefinition, listActivityTypeGroups } from '../composer/activityRegistry.js';
@@ -161,9 +157,9 @@ const MODULE_MANAGER_SAVED_DRAFTS_KEY = 'course_factory_module_manager_saved_dra
 const MODULE_MANAGER_MAX_SAVED_DRAFTS = 30;
 
 // --- PHASE 1: HARVEST ---
-const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, assessmentType, setAssessmentType, assessmentTitle, setAssessmentTitle, quizQuestions, setQuizQuestions, printInstructions, setPrintInstructions, editingAssessment, setEditingAssessment, migrateCode, setMigrateCode, migratePrompt, setMigratePrompt, migrateOutput, setMigrateOutput, isVaultOpen, setIsVaultOpen, setVaultTargetField, vaultTargetField }) => {
-  const [harvestType, setHarvestType] = useState('MODULE_MANAGER'); // 'FEATURE', 'ASSET', 'ASSESSMENT', 'AI_MODULE', 'MODULE_MANAGER'
-  const [mode, setMode] = useState('B');
+const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, assessmentType, setAssessmentType, assessmentTitle, setAssessmentTitle, quizQuestions, setQuizQuestions, printInstructions, setPrintInstructions, editingAssessment, setEditingAssessment, isVaultOpen, setIsVaultOpen, setVaultTargetField, vaultTargetField }) => {
+  const [harvestType, setHarvestType] = useState('MODULE_MANAGER'); // 'ASSESSMENT', 'MATERIALS', 'AI_MODULE', 'MODULE_MANAGER'
+  const [mode, setMode] = useState('ADD');
   const [importInput, setImportInput] = useState("");
   const [importPreview, setImportPreview] = useState([]); 
   
@@ -195,8 +191,6 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   const [moduleManagerMessage, setModuleManagerMessage] = useState('');
   const [testingLink, setTestingLink] = useState(false);
   const [linkTestResult, setLinkTestResult] = useState(null); 
-  const [divId, setDivId] = useState("");
-  const [jsPrefix, setJsPrefix] = useState("");
   const [stagingJson, setStagingJson] = useState("");
   const [stagingTitle, setStagingTitle] = useState("");
   const [saveStatus, setSaveStatus] = useState(null); // 'success'
@@ -222,16 +216,13 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       .filter((assessment) => !assessment.hidden);
   }, [projectData]);
 
-  // NEW: Error State for manual imports
-  const [importError, setImportError] = useState(null);
-
-  // NEW: Batch Mode State
-  const [isBatchMode, setIsBatchMode] = useState(false);
-
   // NEW: AI Studio Module Creator State
   const [aiDescription, setAiDescription] = useState("");
+  const [migrateCode, setMigrateCode] = useState("");
+  const [migratePrompt, setMigratePrompt] = useState("");
+  const [migrateOutput, setMigrateOutput] = useState("");
 
-  // Assessment override colors (Phase 1 Edit modal) â€” "Use course default" + common colors
+  // Assessment override colors (Phase 1 Edit modal) - "Use course default" + common colors
   const assessmentOverrideOptions = [
     { value: '', label: 'Use course default' },
     { value: 'white', label: 'White', swatch: 'bg-white border-slate-300', text: 'text-slate-900' },
@@ -293,32 +284,6 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     () => new Map(moduleManagerGridModel.placements.map((placement) => [placement.index, placement])),
     [moduleManagerGridModel],
   );
-
-  // NEW: Handler for Batch Imports
-  const handleBatchImport = (items) => {
-     const newModules = items.map(item => {
-       const moduleCode = { id: item.id, html: item.html, script: item.script };
-       return {
-         id: item.id || `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-         title: item.title,
-         code: moduleCode,
-         // Initialize history with version 1 (original state)
-         history: [{
-           timestamp: new Date().toISOString(),
-           title: item.title,
-           code: moduleCode
-         }]
-       };
-     });
-     
-     setProjectData(prev => ({
-         ...prev,
-         "Current Course": { ...prev["Current Course"], modules: [...prev["Current Course"].modules, ...newModules] }
-     }));
-     setSaveStatus('success');
-     setTimeout(() => setSaveStatus(null), 3000);
-     setIsBatchMode(false);
-  };
 
   // Assessment Generator Functions
   const handleVaultSelect = (file) => {
@@ -427,10 +392,10 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
         <!-- Action Buttons -->
         <div class="flex flex-wrap gap-3 mt-8 no-print">
           <button type="button" onclick="${quizId}_reset()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-            Ã°Å¸â€â€ž Reset
+            Reset
           </button>
           <button type="button" onclick="${quizId}_generateReport()" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-            Ã°Å¸â€“Â¨Ã¯Â¸Â Print & Submit
+            Print & Submit
           </button>
         </div>
         
@@ -832,12 +797,12 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
   };
 
   const handleSessionSave = (overrideJson = null) => {
-      setImportError(null);
+      setAiParseError(null);
       const jsonToUse = overrideJson || stagingJson;
       const titleToUse = stagingTitle;
 
       if (!jsonToUse || !titleToUse) {
-          setImportError("Missing Title or Code content.");
+          setAiParseError("Missing title or code content.");
           return;
       }
 
@@ -850,12 +815,12 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
               }
           } 
       } catch (e) { 
-          setImportError("Invalid JSON format. Please check your syntax.");
+          setAiParseError("Invalid JSON format. Please check your syntax.");
           return; 
       }
 
       const newItem = { 
-          id: divId || (parsedCode.id ? parsedCode.id : `item-${Date.now()}`), 
+          id: parsedCode.id ? parsedCode.id : `item-${Date.now()}`,
           title: titleToUse, 
           code: parsedCode,
           // Initialize history with version 1 (original state)
@@ -869,7 +834,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       // Validate module before saving
       const validation = validateModule(newItem, true);
       if (!validation.isValid) {
-        setImportError('Validation failed: ' + validation.errors.join(', '));
+        setAiParseError('Validation failed: ' + validation.errors.join(', '));
         if (validation.warnings.length > 0) {
           console.warn('Module warnings:', validation.warnings);
         }
@@ -885,8 +850,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       setProjectData(prev => {
           const newData = { ...prev };
           // Determine destination: AI_MODULE uses aiTargetType, others use harvestType
-          const isModule = harvestType === 'MODULE' || harvestType === 'ASSESSMENT' || 
-                          (harvestType === 'AI_MODULE' && aiTargetType === 'MODULE');
+          const isModule = harvestType === 'ASSESSMENT' || (harvestType === 'AI_MODULE' && aiTargetType === 'MODULE');
           
           if (isModule) { 
               const currentModules = newData["Current Course"].modules || [];
@@ -903,8 +867,6 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
 
       setStagingJson("");
       setStagingTitle("");
-      setDivId("");
-      setJsPrefix("");
       setSaveStatus('success');
       setTimeout(() => setSaveStatus(null), 3000);
   };
@@ -2566,7 +2528,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       setModuleManagerID('');
       setModuleManagerTitle('');
       setModuleManagerStatus('success');
-      setModuleManagerMessage(`Ã¢Å“â€¦ Module "${title}" added successfully! It will run in an isolated iframe.`);
+      setModuleManagerMessage(`Module "${title}" added successfully. It will run in an isolated iframe.`);
       
       setTimeout(() => {
         setModuleManagerStatus(null);
@@ -2665,7 +2627,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       setModuleManagerComposerExtraRows(0);
       setModuleManagerComposerSelectedIndex(0);
       setModuleManagerStatus('success');
-      setModuleManagerMessage(`✅ Composer module "${title}" added with ${composerActivities.length} activities.`);
+      setModuleManagerMessage(`Composer module "${title}" added with ${composerActivities.length} activities.`);
 
       setTimeout(() => {
         setModuleManagerStatus(null);
@@ -2766,7 +2728,7 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
       setModuleManagerID('');
       setModuleManagerTitle('');
       setModuleManagerStatus('success');
-      setModuleManagerMessage(`Ã¢Å“â€¦ External link module "${newModule.title}" added successfully!`);
+      setModuleManagerMessage(`External link module "${newModule.title}" added successfully.`);
       
       setTimeout(() => {
         setModuleManagerStatus(null);
@@ -2846,73 +2808,6 @@ const Phase1 = ({ projectData, setProjectData, scannerNotes, setScannerNotes, ad
     }
   };
 
-  // Prompts for the standard harvester
-  const analysisPrompt = `I have a large HTML file I am pasting below. I am not a coder.
-Please scan the file and list out every "${harvestType === 'MODULE' ? 'Module View' : 'Functional Feature'}" inside it.
-For each one, tell me:
-1. The HTML ID of the container div (e.g., id="view-something").
-2. The specific Javascript Function Prefix used (e.g., function p1_saveData -> prefix is "p1_").
-
-Format the output as a simple list I can copy.`;
-
-  const jsInstruction = jsPrefix.trim() 
-    ? `2. Extract all JavaScript functions that start with the prefix: "${jsPrefix}".`
-    : `2. Extract the specific JavaScript functions that control the logic for element "${divId}".`;
-
-  const deconstructPrompt = `I have a large "Monolith" HTML file (which I will paste below). 
-I need to extract ONE specific ${harvestType.toLowerCase()} from it to create a standalone component file.
-
-**Task:**
-1. Extract the HTML Element with ID: "${divId}".
-2. Extract ALL JavaScript logic required for this element to function.
-3. **CRITICAL RE-FACTORING STEPS:**
-   - **Change Variables to VAR:** You MUST change any top-level state variables (like scores, category lists, settings) from \`const\` or \`let\` to \`var\`. (e.g., change \`const p1_scores = ...\` to \`var p1_scores = ...\`). This ensures the HTML buttons can see them.
-   - **Attach Functions to Window:** After EACH function definition, add \`window.functionName = functionName;\` to make it accessible in Google Sites' sandboxed iframes. Example:
-     \`\`\`javascript
-     function ${jsPrefix || 'prefix_'}calculate() { ... }
-     window.${jsPrefix || 'prefix_'}calculate = ${jsPrefix || 'prefix_'}calculate;
-     \`\`\`
-   - **Verify Selectors:** Check that the JS selectors (e.g., \`getElementById\`) actually match the IDs in the HTML you extracted. If the JS looks for a button but the HTML is a table cell, update the JS to match the HTML.
-   - **Add Initialization Block:** At the END of the script, add an initialization block to force immediate execution in sandboxed environments. If the original code has initialization (DOMContentLoaded listeners, function calls at the bottom), preserve it. If not, add this:
-     \`\`\`javascript
-     // Force script execution in sandboxed environments
-     if (document.readyState === 'loading') {
-         document.addEventListener('DOMContentLoaded', function() {
-             console.log('Ã¢Å“â€¦ ${divId} module loaded');
-         });
-     } else {
-         console.log('Ã¢Å“â€¦ ${divId} module loaded');
-     }
-     \`\`\`
-
-**Output Format:**
-{
-  "id": "${divId}",
-  "html": "<div>... (The full inner HTML) ...</div>",
-  "script": "// State Variables (Must be var)\\nvar ${jsPrefix || 'prefix_'}scores = { ... };\\n\\n// Functions (with window attachment)\\nfunction ${jsPrefix || 'prefix_'}update() { ... }\\nwindow.${jsPrefix || 'prefix_'}update = ${jsPrefix || 'prefix_'}update;\\n\\n// Initialization (REQUIRED)\\nif (document.readyState === 'loading') {...}"
-}`;
-
-  const targetCollection = harvestType === 'MODULE' ? 'Current Course' : 'Global Toolkit';
-  
-  const saveToDocPrompt = `I need to update the "CourseFactoryDashboard.tsx" file.
-Please add the following data to the \`PROJECT_DATA\` object.
-
-**Target:** ${targetCollection} (${harvestType})
-**Data:**
-\`\`\`javascript
-{
-  id: "${divId || 'item-x'}",
-  title: "${stagingTitle}",
-  code: ${stagingJson} 
-}
-\`\`\`
-
-**Instructions:**
-1. Locate \`PROJECT_DATA\` at the top.
-2. Insert this object into the correct array (modules or Global Toolkit).
-3. Ensure the 'code' property is inserted as a raw Object (not a string).
-4. Do NOT modify the rest of the file.`;
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
@@ -2921,36 +2816,23 @@ Please add the following data to the \`PROJECT_DATA\` object.
         </h2>
         
         {/* HARVEST TYPE TOGGLE */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-             <div className="flex gap-2 bg-slate-900 p-1 rounded-lg border border-slate-700 w-full md:w-auto overflow-x-auto">
-                 <button onClick={() => { setIsBatchMode(false); setHarvestType('FEATURE'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'FEATURE' ? 'bg-orange-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
-                <Wrench size={14} /> Feature
-            </button>
-                <button onClick={() => { setIsBatchMode(false); setHarvestType('ASSESSMENT'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'ASSESSMENT' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+        <div className="mb-6">
+            <div className="flex gap-2 bg-slate-900 p-1 rounded-lg border border-slate-700 w-full md:w-auto overflow-x-auto">
+                <button onClick={() => setHarvestType('ASSESSMENT')} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${harvestType === 'ASSESSMENT' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
                 <CheckCircle size={14} /> Assessment
                 </button>
-                <button onClick={() => { setIsBatchMode(false); setHarvestType('MATERIALS'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'MATERIALS' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                <button onClick={() => setHarvestType('MATERIALS')} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${harvestType === 'MATERIALS' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
                    <FolderOpen size={14} /> Materials
                 </button>
-                 <button onClick={() => { setIsBatchMode(false); setHarvestType('AI_MODULE'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'AI_MODULE' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                 <button onClick={() => setHarvestType('AI_MODULE')} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${harvestType === 'AI_MODULE' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
                      <Sparkles size={14} /> AI Studio
                  </button>
-                 <button onClick={() => { setIsBatchMode(false); setHarvestType('MODULE_MANAGER'); }} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${!isBatchMode && harvestType === 'MODULE_MANAGER' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                 <button onClick={() => setHarvestType('MODULE_MANAGER')} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${harvestType === 'MODULE_MANAGER' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
                      <Box size={14} /> Module Manager
                  </button>
-             </div>
-             <button 
-                 onClick={() => setIsBatchMode(!isBatchMode)} 
-                 className={`w-full md:w-auto flex items-center justify-center gap-2 py-2 px-4 rounded-lg border text-xs font-bold transition-all ${isBatchMode ? 'bg-indigo-600 border-indigo-500 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'}`}
-             >
-                 <Layers size={14} /> BATCH MODE
-            </button>
+            </div>
         </div>
 
-        {/* CONDITIONAL RENDER: BATCH VS STANDARD */}
-        {isBatchMode ? (
-             <BatchHarvester onImport={handleBatchImport} />
-        ) : (
          <>
             {harvestType === 'ASSESSMENT' && (
              <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
@@ -3078,7 +2960,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                     options: currentQuestion.options,
                                                     correct: currentQuestion.correct
                                                 });
-                                                alert("Ã¢Å“â€¦ Question added to Master Assessment!");
+                                                alert("Question added to Master Assessment.");
                                             }}
                                             className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded flex items-center justify-center gap-2"
                                         >
@@ -3113,7 +2995,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                     type: 'long-answer',
                                                     question: currentQuestion.question
                                                 });
-                                                alert("Ã¢Å“â€¦ Question added to Master Assessment!");
+                                                alert("Question added to Master Assessment.");
                                             }}
                                             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded flex items-center justify-center gap-2"
                                         >
@@ -3125,7 +3007,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                 {/* Quick Info */}
                                 <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg">
                                     <p className="text-purple-300 text-xs">
-                                        Ã°Å¸â€™Â¡ <strong>Tip:</strong> Add all your questions here, then go to the "Master Assessment" tab to organize them and generate the final assessment.
+                                        <strong>Tip:</strong> Add all your questions here, then go to the "Master Assessment" tab to organize them and generate the final assessment.
                                     </p>
                  </div>
              </div>
@@ -3303,7 +3185,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                     setQuizQuestions([{ question: '', options: ['', '', '', ''], correct: 0 }]);
                                                     setMode('MANAGE'); // Switch to Manage tab to see it
                                                 } catch(e) {
-                                                    alert("Ã¢ÂÅ’ Error adding assessment. Please try again.");
+                                                    alert("Error adding assessment. Please try again.");
                                                     console.error(e);
                                                 }
                                             }}
@@ -3460,7 +3342,7 @@ Please add the following data to the \`PROJECT_DATA\` object.
                                                     setMasterQuestions([]);
                                                     setMode('MANAGE');
                                                 } catch(e) {
-                                                    alert("Ã¢ÂÅ’ Error adding assessment. Please try again.");
+                                                    alert("Error adding assessment. Please try again.");
                                                     console.error(e);
                                                 }
                                             }}
@@ -3983,8 +3865,8 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         </p>
                                         <button 
                                             onClick={() => {
-                                                if (window.confirm('Ã¢Å¡Â Ã¯Â¸Â WARNING: This will permanently delete ALL your course data including:\n\nÃ¢â‚¬Â¢ Course settings\nÃ¢â‚¬Â¢ All modules\nÃ¢â‚¬Â¢ All assessments\nÃ¢â‚¬Â¢ All materials\n\nAre you sure you want to continue?')) {
-                                                    if (window.confirm('Ã°Å¸Å¡Â¨ FINAL CONFIRMATION: Type "DELETE" in the next prompt to confirm.\n\nClick OK to proceed with deletion.')) {
+                                                if (window.confirm('WARNING: This will permanently delete ALL your course data including:\n\n- Course settings\n- All modules\n- All assessments\n- All materials\n\nAre you sure you want to continue?')) {
+                                                    if (window.confirm('FINAL CONFIRMATION: Type "DELETE" in the next prompt to confirm.\n\nClick OK to proceed with deletion.')) {
                                                         const userInput = window.prompt('Type DELETE to confirm:');
                                                         if (userInput === 'DELETE') {
                                                             localStorage.removeItem('course_factory_v2_data');
@@ -3995,7 +3877,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                     localStorage.removeItem(key);
                                                                 }
                                                             });
-                                                            alert('Ã¢Å“â€¦ All data cleared! The page will now reload.');
+                                                            alert('All data cleared. The page will now reload.');
                                                             window.location.reload();
                                                         } else {
                                                             alert('Deletion cancelled. Your data is safe.');
@@ -4050,7 +3932,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             </div>
                                         </div>
                                         <div>
-                                            <p className="text-xs font-bold text-amber-300 mb-1">Ã¢Â­Â For Mixed Types (Recommended):</p>
+                                            <p className="text-xs font-bold text-amber-300 mb-1">For Mixed Types (Recommended):</p>
                                             <div className="bg-black p-2 rounded border border-amber-700 relative group">
                                                 <code className="text-[10px] text-amber-400 font-mono block break-words">
                                                     Convert this mixed assessment into JSON. Multiple-choice: [{"{"} "question": "...", "options": ["A","B","C","D"], "correct": 0 {"}"}]. Long-answer: [{"{"} "question": "...", "options": [] {"}"}]. Include ALL questions in order. Output JSON ONLY.
@@ -4138,7 +4020,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                         return (
                                                                             <div key={oIdx} className={`flex items-center gap-2 ${q.correct === oIdx ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
                                                                                 <span>{String.fromCharCode(65+oIdx)}.</span> <span>{optionText}</span>
-                                                                                {q.correct === oIdx && <span className="text-[10px] text-emerald-400">Ã¢Å“â€œ</span>}
+                                                                                {q.correct === oIdx && <span className="text-[10px] text-emerald-400">(Correct)</span>}
                                                                             </div>
                                                                         );
                                                                     })
@@ -4166,7 +4048,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             formattedQuestions.forEach(q => addQuestionToMaster(q));
                                             const mcCount = formattedQuestions.filter(q => q.type === 'multiple-choice').length;
                                             const laCount = formattedQuestions.filter(q => q.type === 'long-answer').length;
-                                            alert(`Ã¢Å“â€¦ Imported ${formattedQuestions.length} questions! (${mcCount} multiple-choice, ${laCount} long-answer)`);
+                                            alert(`Imported ${formattedQuestions.length} questions. (${mcCount} multiple-choice, ${laCount} long-answer)`);
                                             setImportInput("");
                                             setImportPreview([]);
                                             setMode('MASTER');
@@ -4936,7 +4818,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-indigo-100 text-xs font-mono h-64 resize-y focus:border-indigo-500 outline-none"
                                         />
                                         <p className="text-[10px] text-emerald-400 mt-1 font-bold">
-                                            Ã¢Å“â€œ Your code runs AS-IS in an isolated iframe - no modifications needed!
+                                            Your code runs AS-IS in an isolated iframe - no modifications needed.
                                         </p>
                                     </div>
                                     
@@ -5310,7 +5192,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     : 'bg-rose-900/30 text-rose-400 border-rose-500/30'
                                             }`}>
                                                 <div className="flex items-start gap-2">
-                                                    <span className="font-bold">{linkTestResult.success ? 'Ã¢Å“â€œ' : 'Ã¢Å“â€”'}</span>
+                                                    <span className="font-bold">{linkTestResult.success ? 'OK' : 'Error'}</span>
                                                     <span>{linkTestResult.message}</span>
                                                 </div>
                                             </div>
@@ -5371,14 +5253,14 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                             
                             {/* Help Section */}
                             <div className="p-4 bg-sky-900/10 border border-sky-500/20 rounded-lg">
-                                <h4 className="text-xs font-bold text-sky-400 uppercase mb-2">Ã°Å¸â€™Â¡ Module Types</h4>
+                                <h4 className="text-xs font-bold text-sky-400 uppercase mb-2">Module Types</h4>
                                 <ul className="text-[10px] text-slate-400 space-y-1 leading-relaxed">
                                     <li><strong className="text-sky-300">Standalone HTML:</strong> Complete HTML file (like HSS3020). CSS auto-scoped, wrapped in view container.</li>
                                     <li><strong className="text-sky-300">Composer Module:</strong> Activity-based module using built-in blocks (content, embeds, resources, checks, submission).</li>
                                     <li><strong className="text-sky-300">External Link:</strong> Link to hosted module. Choose iframe (embedded) or new tab (external).</li>
-                                    <li>Ã¢Å“â€¦ Modules appear in sidebar navigation</li>
-                                    <li>Ã¢Å“â€¦ Can be hidden/shown in Phase 2</li>
-                                    <li>Ã¢Å“â€¦ Included in compiled site</li>
+                                    <li>Modules appear in sidebar navigation.</li>
+                                    <li>Can be hidden or shown in Phase 2.</li>
+                                    <li>Included in compiled site output.</li>
                                 </ul>
                             </div>
                         </div>
@@ -5469,10 +5351,10 @@ Return ONLY valid JSON. No markdown. Single-line strings.
    // Force script execution
    if (document.readyState === 'loading') {
        document.addEventListener('DOMContentLoaded', function() {
-           console.log('Ã¢Å“â€¦ [feature-name] loaded');
+           console.log('[feature-name] loaded');
        });
    } else {
-       console.log('Ã¢Å“â€¦ [feature-name] loaded');
+       console.log('[feature-name] loaded');
    }
    \`\`\`
    If your code has state to restore from localStorage, call your populate/init function here instead.
@@ -5647,51 +5529,7 @@ ${aiDescription}
              </div>
         )}
 
-            {harvestType !== 'ASSET' && harvestType !== 'ASSESSMENT' && harvestType !== 'AI_MODULE' && (
-         <>
-            <Toggle active={mode} onToggle={setMode} labelA="New Content (PDF)" labelB="Migrate Code" iconA={Sparkles} iconB={Scissors} />
-            {mode === 'B' && (
-                <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-8">
-                    
-                    {/* STEP 1: SCANNER */}
-                    <div className="bg-slate-900/50 p-4 rounded-xl border border-blue-900/50">
-                        <h3 className="text-sm font-bold text-blue-400 flex items-center gap-2 mb-2"><Search size={16} /> Step 1: The Scanner</h3>
-                        <CodeBlock label="Analysis Prompt" code={analysisPrompt} height="h-24" />
-                        <div className="mt-4 pt-4 border-t border-slate-800"><textarea value={scannerNotes} onChange={(e) => setScannerNotes(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-300 font-mono h-24 focus:border-blue-500 outline-none resize-y" placeholder="Paste results here..." /></div>
-                    </div>
-
-                    {/* STEP 2: EXTRACTOR */}
-                    <div className="bg-slate-900/50 p-4 rounded-xl border border-pink-900/50">
-                        <h3 className="text-sm font-bold text-pink-400 flex items-center gap-2 mb-2"><Scissors size={16} /> Step 2: The Extractor</h3>
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                            <input type="text" value={divId} onChange={(e) => setDivId(e.target.value)} placeholder="Target ID..." className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-pink-400 font-mono text-xs" />
-                            <input type="text" value={jsPrefix} onChange={(e) => setJsPrefix(e.target.value)} placeholder="JS Prefix..." className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-pink-400 font-mono text-xs" />
-                        </div>
-                        <CodeBlock label="Deconstruction Prompt" code={deconstructPrompt} height="h-32" />
-                    </div>
-
-                    {/* STEP 3: STORAGE */}
-                    <div className="bg-emerald-900/20 border border-emerald-700/50 p-4 rounded-xl">
-                        <div className="flex items-center justify-between mb-2"><h3 className="text-sm font-bold text-emerald-400 flex items-center gap-2"><Database size={16} /> Step 3: Commit to {targetCollection}</h3>{saveStatus === 'success' && (<span className="flex items-center gap-1 text-xs text-emerald-300 animate-in fade-in zoom-in"><CheckCircle size={14} /> Saved to Session!</span>)}</div>
-                            
-                            {/* ERROR MESSAGE DISPLAY */}
-                            {importError && (
-                                <div className="mb-2 p-2 bg-rose-900/30 border border-rose-600 rounded text-xs text-rose-200">
-                                    {importError}
-                                </div>
-                            )}
-
-                        <input type="text" value={stagingTitle} onChange={(e) => setStagingTitle(e.target.value)} placeholder="Title (e.g. Save System)" className="w-full mb-2 bg-slate-950 border border-emerald-900 rounded p-2 text-white text-sm"/>
-                        <textarea value={stagingJson} onChange={(e) => setStagingJson(e.target.value)} className="w-full bg-slate-950 border border-emerald-900 rounded-lg p-3 text-xs text-emerald-100 font-mono h-24 focus:border-emerald-500 outline-none resize-y mb-2" placeholder='Paste output JSON here...' />
-                            <div className="flex gap-2 mb-6"><button onClick={() => handleSessionSave()} disabled={!stagingJson || !stagingTitle} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-xs shadow-lg"><Zap size={14} /> Ã¢Å¡Â¡ Add to Session (Instant)</button></div>
-                        <div className="pt-4 border-t border-emerald-800/50"><div className="flex items-center justify-between mb-2"><p className="text-[10px] text-emerald-400/60 uppercase font-bold">Optional: Hard Save</p><span className="text-[9px] text-emerald-600 bg-emerald-950/50 px-2 py-0.5 rounded">Only do this once at the end</span></div><CodeBlock label="Permanent Save Prompt (Use Sparingly)" code={saveToDocPrompt} height="h-24" /></div>
-                    </div>
-                </div>
-                )}
-             </>
-            )}
         </>
-        )}
       </div>
       
       {/* VAULT BROWSER MODAL */}

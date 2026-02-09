@@ -16,7 +16,7 @@ export function useProjectPersistence({
   const [isAutoLoaded, setIsAutoLoaded] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
 
-  // Ã°Å¸â€™Â¾ AUTO-LOAD: Runs once on mount
+  // AUTO-LOAD: Runs once on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey);
@@ -41,12 +41,12 @@ export function useProjectPersistence({
       setIsAutoLoaded(true); // Allow saving to start
     } catch (error) {
       showToast('Failed to load project data. Starting fresh.', 'error');
-      console.error('Ã¢ÂÅ’ Load failed:', error);
+      console.error('Load failed:', error);
       setIsAutoLoaded(true);
     }
   }, []);
 
-  // Ã°Å¸â€™Â¾ AUTO-SAVE: Runs when projectData changes
+  // AUTO-SAVE: Runs when projectData changes
   useEffect(() => {
     if (!isAutoLoaded) return; // Safety Lock: Don't save empty defaults
 
@@ -71,7 +71,7 @@ export function useProjectPersistence({
         } else {
           showToast('Failed to save project. Check console for details.', 'error');
         }
-        console.error('Ã¢ÂÅ’ Save failed:', error);
+        console.error('Save failed:', error);
       }
     }, 1000); // 1-second debounce
 

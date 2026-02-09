@@ -406,7 +406,7 @@ ${footerHtml}
         
         // --- CORE NAVIGATION LOGIC ---
         function switchView(view) {
-            console.log('ðŸ”„ [switchView] Switching to view:', view);
+            console.log('[switchView] Switching to view:', view);
             
             // 1. Close sidebar on mobile after selecting a view
             if (window.innerWidth <= 768) {
@@ -426,16 +426,16 @@ ${footerHtml}
             
             // 3. Hide All Views (both native divs and iframe containers)
             const allViews = document.querySelectorAll('[id^="view-"]');
-            console.log('ðŸ”„ [switchView] Hiding', allViews.length, 'views');
+            console.log('[switchView] Hiding', allViews.length, 'views');
             allViews.forEach(v => v.classList.add('hidden'));
 
             // 4. Show Target View
             const target = document.getElementById('view-' + view);
             if(target) {
                 target.classList.remove('hidden');
-                console.log('âœ… [switchView] Showing view:', 'view-' + view);
+                console.log('[switchView] Showing view:', 'view-' + view);
             } else {
-                console.error('âŒ [switchView] View not found:', 'view-' + view);
+                console.error('Error: [switchView] View not found:', 'view-' + view);
             }
             
             // Backward compatibility: Call module init if available
@@ -545,7 +545,7 @@ ${footerHtml}
                             course: '${courseName}',
                             state: state
                         }));
-                        console.log('ðŸ’¾ [Autosave] Saved', Object.keys(state).length, 'fields');
+                        console.log('[Autosave] Saved', Object.keys(state).length, 'fields');
                     }
                 } catch(e) {
                     console.warn('Autosave failed:', e);
@@ -567,7 +567,7 @@ ${footerHtml}
                         if (state) {
                             restoreInputState(state);
                             const savedDate = new Date(timestamp);
-                            console.log('ðŸ“‚ [Autosave] Restored from', savedDate.toLocaleString());
+                            console.log('[Autosave] Restored from', savedDate.toLocaleString());
                         }
                     }
                 } catch(e) {
@@ -578,7 +578,7 @@ ${footerHtml}
             // Mark work as exported (disables unsaved warning)
             window.markWorkSaved = function() {
                 hasExported = true;
-                console.log('âœ… [Autosave] Work marked as saved/exported');
+                console.log('[Autosave] Work marked as saved/exported');
             };
             
             // Initialize on DOM ready
@@ -606,7 +606,7 @@ ${footerHtml}
                     }
                 });
                 
-                console.log('ðŸ”§ [Autosave] Initialized for course: ${courseName}');
+                console.log('[Autosave] Initialized for course: ${courseName}');
             }
             
             if (document.readyState === 'loading') {
@@ -2164,7 +2164,7 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
             }
         });
         
-        console.log('ðŸ“– Digital Reader initialized with event delegation');
+        console.log('Digital Reader initialized with event delegation');
         `;
         scriptInjection += '\n        ' + digitalReaderScript + '\n';
       }
@@ -2269,10 +2269,10 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
             <!-- INLINE ASSESSMENT NAVIGATION SCRIPTS -->
             <script>
             (function() {
-              console.log('ðŸ”§ [INLINE] Initializing assessment navigation functions...');
+              console.log('Initializing assessment navigation functions...');
               
               window.showAssessment = function(index) {
-                console.log('ðŸ“‹ [INLINE] Showing assessment:', index);
+                console.log('Showing assessment:', index);
                 var listEl = document.getElementById('assessment-list');
                 var targetEl = document.getElementById('assessment-' + index);
                 
@@ -2283,13 +2283,13 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
                 if (targetEl) {
                   targetEl.classList.remove('hidden');
                 } else {
-                  console.error('âŒ Assessment container not found:', 'assessment-' + index);
+                  console.error('Error: Assessment container not found:', 'assessment-' + index);
                 }
                 window.scrollTo(0, 0);
               };
               
               window.backToAssessmentList = function() {
-                console.log('â¬…ï¸ [INLINE] Returning to assessment list');
+                console.log('[INLINE] Returning to assessment list');
                 document.querySelectorAll('.assessment-container').forEach(function(c) {
                   c.classList.add('hidden');
                 });
@@ -2300,7 +2300,7 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
               
               // Global Toolkit Menu Toggle
               window.toggleToolkitMenu = function() {
-                console.log('ðŸ”§ [INLINE] Toggling toolkit menu');
+                console.log('[INLINE] Toggling toolkit menu');
                 var dropdown = document.getElementById('toolkit-dropdown');
                 if (dropdown) {
                   dropdown.classList.toggle('hidden');
@@ -2311,8 +2311,8 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
               var toolkitState = JSON.parse(localStorage.getItem('mf_toolkit') || '{}');
               
               window.toggleTool = function(toolId) {
-                console.log('ðŸ”§ [INLINE] Toggling tool:', toolId);
-                console.log('ðŸ”§ [DEBUG] Looking for element ID:', 'feat-' + toolId);
+                console.log('[INLINE] Toggling tool:', toolId);
+                console.log('[DEBUG] Looking for element ID:', 'feat-' + toolId);
                 
                 toolkitState[toolId] = !toolkitState[toolId];
                 localStorage.setItem('mf_toolkit', JSON.stringify(toolkitState));
@@ -2320,17 +2320,17 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
                 var toolElement = document.getElementById('feat-' + toolId);
                 var toggleButton = document.getElementById('toggle-' + toolId);
                 
-                console.log('ðŸ”§ [DEBUG] Tool element found:', !!toolElement);
-                console.log('ðŸ”§ [DEBUG] Toggle button found:', !!toggleButton);
-                console.log('ðŸ”§ [DEBUG] New state:', toolkitState[toolId]);
+                console.log('[DEBUG] Tool element found:', !!toolElement);
+                console.log('[DEBUG] Toggle button found:', !!toggleButton);
+                console.log('[DEBUG] New state:', toolkitState[toolId]);
                 
                 if (toolElement) {
                   if (toolkitState[toolId]) {
                     toolElement.classList.remove('hidden');
-                    console.log('ðŸ”§ [DEBUG] Showing tool');
+                    console.log('[DEBUG] Showing tool');
                   } else {
                     toolElement.classList.add('hidden');
-                    console.log('ðŸ”§ [DEBUG] Hiding tool');
+                    console.log('[DEBUG] Hiding tool');
                   }
                 }
                 
@@ -2340,20 +2340,20 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
                     toggleButton.classList.add('bg-emerald-600');
                     var dot = toggleButton.querySelector('div');
                     if (dot) dot.classList.add('translate-x-4');
-                    console.log('ðŸ”§ [DEBUG] Toggle ON visual');
+                    console.log('[DEBUG] Toggle ON visual');
                   } else {
                     toggleButton.classList.remove('bg-emerald-600');
                     toggleButton.classList.add('bg-slate-600');
                     var dot = toggleButton.querySelector('div');
                     if (dot) dot.classList.remove('translate-x-4');
-                    console.log('ðŸ”§ [DEBUG] Toggle OFF visual');
+                    console.log('[DEBUG] Toggle OFF visual');
                   }
                 }
               };
               
               // Initialize toolkit state on load
               window.initializeToolkit = function() {
-                console.log('ðŸ”§ [INLINE] Initializing toolkit state');
+                console.log('[INLINE] Initializing toolkit state');
                 Object.keys(toolkitState).forEach(function(toolId) {
                   if (toolkitState[toolId]) {
                     var toolElement = document.getElementById('feat-' + toolId);
@@ -2376,7 +2376,7 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
                 window.initializeToolkit();
               }
               
-              console.log('âœ… [INLINE] Assessment navigation + toolkit functions ready!');
+              console.log('[INLINE] Assessment navigation + toolkit functions ready!');
             })();
             </script>
         </div>`;
@@ -2387,10 +2387,10 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
       // Add navigation functions (attached to window for onclick access)
       const navScripts = `
         (function() {
-          console.log('ðŸ”§ Initializing assessment navigation functions...');
+          console.log('Initializing assessment navigation functions...');
           
           window.showAssessment = function(index) {
-            console.log('ðŸ“‹ Showing assessment:', index);
+            console.log('Showing assessment:', index);
             var listEl = document.getElementById('assessment-list');
             var targetEl = document.getElementById('assessment-' + index);
             
@@ -2401,13 +2401,13 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
             if (targetEl) {
               targetEl.classList.remove('hidden');
             } else {
-              console.error('Assessment container not found:', 'assessment-' + index);
+              console.error('Error: Assessment container not found:', 'assessment-' + index);
             }
             window.scrollTo(0, 0);
           };
           
           window.backToAssessmentList = function() {
-            console.log('â¬…ï¸ Returning to assessment list');
+            console.log('[INLINE] Returning to assessment list');
             document.querySelectorAll('.assessment-container').forEach(function(c) {
               c.classList.add('hidden');
             });
@@ -2416,7 +2416,7 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
             window.scrollTo(0, 0);
           };
           
-          console.log('âœ… Assessment navigation functions ready!');
+          console.log('Assessment navigation functions ready!');
         })();
         `;
       
@@ -2600,7 +2600,7 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
         <div id="toolkit-dropdown" class="hidden fixed top-16 left-4 bg-slate-800 border border-slate-700 rounded-xl p-3 shadow-2xl z-50 w-64">
             <div class="flex items-center justify-between mb-3">
                 <h3 class="text-sm font-bold text-white">Global Toolkit</h3>
-                <button onclick="toggleToolkitMenu()" class="text-slate-400 hover:text-white">âœ•</button>
+                <button onclick="toggleToolkitMenu()" class="text-slate-400 hover:text-white">x</button>
             </div>
             <div class="space-y-1">
                 ${dropdownItems}
@@ -2693,9 +2693,9 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
             if (moduleProgress[moduleId]) {
               // Add checkmark indicator
               if (moduleProgress[moduleId].completed && !btn.querySelector('.progress-check')) {
-                btn.insertAdjacentHTML('beforeend', '<span class="progress-check ml-2 text-emerald-400">âœ“</span>');
+                btn.insertAdjacentHTML('beforeend', '<span class="progress-check ml-2 text-emerald-400">Done</span>');
               } else if (moduleProgress[moduleId].viewed && !moduleProgress[moduleId].completed && !btn.querySelector('.progress-dot')) {
-                btn.insertAdjacentHTML('beforeend', '<span class="progress-dot ml-2 text-amber-400">â—</span>');
+                btn.insertAdjacentHTML('beforeend', '<span class="progress-dot ml-2 text-amber-400">In Progress</span>');
               }
             }
           });

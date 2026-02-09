@@ -47,12 +47,12 @@ import EditModal from './components/modals/EditModal.jsx';
 const { useState, useEffect, useRef } = React;
 
 // ==========================================
-// Ã°Å¸Å¸Â¢ TOAST NOTIFICATION SYSTEM
+// TOAST NOTIFICATION SYSTEM
 // ==========================================
 // (moved to src/components/Shared.jsx)
 
 // ==========================================
-// Ã°Å¸â€Â´ FIREBASE CONFIG & INIT (DISABLED LOCALLY)
+// FIREBASE CONFIG & INIT (DISABLED LOCALLY)
 // ==========================================
 // const firebaseConfig = JSON.parse(__firebase_config);
 // const app = initializeApp(firebaseConfig);
@@ -60,8 +60,21 @@ const { useState, useEffect, useRef } = React;
 // const db = getFirestore(app);
 const appId = 'course-factory-v1';
 
+const FUNCTIONAL_VISUAL_DEFAULTS = {
+  accentColor: 'sky',
+  backgroundColor: 'slate-900',
+  headingTextColor: 'white',
+  secondaryTextColor: 'slate-400',
+  assessmentTextColor: 'white',
+  assessmentBoxColor: 'slate-900',
+  defaultMaterialTheme: 'dark',
+  buttonColor: 'sky-600',
+  containerColor: 'slate-900/80',
+  fontFamily: 'inter',
+};
+
 // ==========================================
-// Ã°Å¸Å¸Â¢ PROJECT DATA (THE LIVING LIBRARY)
+// PROJECT DATA (THE LIVING LIBRARY)
 // ==========================================
 
 
@@ -70,7 +83,7 @@ const appId = 'course-factory-v1';
 // Shared UI moved to src/components/Shared.jsx
 
 // ==========================================
-// Ã°Å¸â€Â§ MODULE UTILITY FUNCTIONS (Unified)
+// MODULE UTILITY FUNCTIONS (Unified)
 // ==========================================
 
 /**
@@ -120,7 +133,6 @@ const appId = 'course-factory-v1';
 
 export function App() {
   const [activePhase, setActivePhase] = useState(0);
-  const [scannerNotes, setScannerNotes] = useState("");
   // Initialize state with PROJECT_DATA constant
   const [projectData, setProjectData] = useState(PROJECT_DATA);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
@@ -195,11 +207,6 @@ export function App() {
   });
   const [editingQuestion, setEditingQuestion] = useState(null);
   
-  // Assessment Migrator State
-  const [migrateCode, setMigrateCode] = useState("");
-  const [migratePrompt, setMigratePrompt] = useState("");
-  const [migrateOutput, setMigrateOutput] = useState("");
-
   // Note: Preview scripts execute inside the iframe, not in the parent window
   // The iframe's srcDoc includes the script, so it runs in the iframe's scope
 
@@ -280,7 +287,7 @@ export function App() {
   const deleteModule = (item) => {
     // Prevent deletion of protected modules
     if (isProtectedModule(item)) {
-      alert('Ã¢Å¡Â Ã¯Â¸Â Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle in Phase 2.');
+      alert('Warning: Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle in Phase 2.');
       return;
     }
     
@@ -307,7 +314,7 @@ export function App() {
       // Safety check: prevent deletion of protected modules
       const moduleToDelete = projectData["Current Course"]?.modules?.find(m => m.id === deleteConfirmation.id);
       if (moduleToDelete && isProtectedModule(moduleToDelete)) {
-        alert('Ã¢Å¡Â Ã¯Â¸Â Course Materials and Assessments are core modules and cannot be deleted.');
+        alert('Warning: Course Materials and Assessments are core modules and cannot be deleted.');
         setDeleteConfirmation(null);
         return;
       }
@@ -394,45 +401,59 @@ export function App() {
     });
   }
 
-  const resetMaterialOverrides = () => {
-    const currentMaterials = projectData["Current Course"]?.materials || [];
-    const hasOverride = currentMaterials.some(mat => mat.themeOverride);
-    if (!hasOverride) return false;
-    const clearedMaterials = currentMaterials.map(mat => (
-      mat.themeOverride ? { ...mat, themeOverride: null } : mat
-    ));
-    setProjectData(prev => ({
-      ...prev,
-      "Current Course": {
-        ...prev["Current Course"],
-        materials: clearedMaterials
-      }
-    }));
-    return true;
-  };
-
-  const resetAssessmentOverrides = () => {
-    const assessmentsModule = getAssessmentsModule();
-    const assessments = assessmentsModule?.assessments || [];
-    const hasOverride = assessments.some(a => a.textColorOverride || a.boxColorOverride);
-    if (!hasOverride) return false;
-    const clearedAssessments = assessments.map(a => ({
-      ...a,
-      textColorOverride: null,
-      boxColorOverride: null
-    }));
-    updateAssessmentsModule(clearedAssessments);
-    return true;
-  };
-
   const applyVisualDefaults = () => {
-    const materialsCleared = resetMaterialOverrides();
-    const assessmentsCleared = resetAssessmentOverrides();
-    if (materialsCleared || assessmentsCleared) {
-      showToast('Per-material and assessment overrides were cleared, reverting to Phase 5 defaults.', 'success');
-    } else {
-      showToast('Materials and assessments already use the Phase 5 defaults.', 'info');
+    const currentCourseState = projectData["Current Course"] || {};
+    const currentSettings = projectData["Course Settings"] || {};
+    const currentMaterials = currentCourseState.materials || [];
+    const currentModules = currentCourseState.modules || [];
+
+    const materialsChanged = currentMaterials.some((mat) => mat.themeOverride);
+    const clearedMaterials = currentMaterials.map((mat) =>
+      mat.themeOverride ? { ...mat, themeOverride: null } : mat,
+    );
+
+    let assessmentsChanged = false;
+    const updatedModules = currentModules.map((module) => {
+      if (!(module.id === "item-assessments" || module.title === "Assessments")) return module;
+      const assessments = module.assessments || [];
+      const clearedAssessments = assessments.map((assessment) => {
+        const hasOverride = Boolean(assessment.textColorOverride || assessment.boxColorOverride);
+        if (hasOverride) assessmentsChanged = true;
+        return hasOverride
+          ? {
+              ...assessment,
+              textColorOverride: null,
+              boxColorOverride: null,
+            }
+          : assessment;
+      });
+      return {
+        ...module,
+        assessments: clearedAssessments,
+      };
+    });
+
+    const settingsChanged = Object.entries(FUNCTIONAL_VISUAL_DEFAULTS).some(([key, value]) => currentSettings[key] !== value);
+
+    if (!materialsChanged && !assessmentsChanged && !settingsChanged) {
+      showToast('Visuals already use the functional defaults.', 'info');
+      return;
     }
+
+    setProjectData((prev) => ({
+      ...prev,
+      "Course Settings": {
+        ...(prev["Course Settings"] || {}),
+        ...FUNCTIONAL_VISUAL_DEFAULTS,
+      },
+      "Current Course": {
+        ...(prev["Current Course"] || {}),
+        materials: clearedMaterials,
+        modules: updatedModules,
+      },
+    }));
+
+    showToast('Functional visual defaults applied. Material and assessment overrides were cleared.', 'success');
   };
 
   const addMaterial = (materialData) => {
@@ -1121,7 +1142,7 @@ export function App() {
               Course Factory Dashboard
             </h1>
             <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-1 font-mono">
-              LIVING DOC Ã¢â‚¬Â¢ SAVED {lastSaved ? lastSaved.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }).toUpperCase() : '---'}
+              LIVING DOC - SAVED {lastSaved ? lastSaved.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }).toUpperCase() : '---'}
             </p>
           </div>
           
@@ -1300,8 +1321,6 @@ export function App() {
           {activePhase === 1 && <Phase1 
             projectData={projectData} 
             setProjectData={setProjectData} 
-            scannerNotes={scannerNotes} 
-            setScannerNotes={setScannerNotes} 
             addMaterial={addMaterial} 
             editMaterial={editMaterial} 
             deleteMaterial={deleteMaterial} 
@@ -1340,12 +1359,6 @@ export function App() {
             setPrintInstructions={setPrintInstructions} 
             editingAssessment={editingAssessment} 
             setEditingAssessment={setEditingAssessment} 
-            migrateCode={migrateCode} 
-            setMigrateCode={setMigrateCode} 
-            migratePrompt={migratePrompt} 
-            setMigratePrompt={setMigratePrompt} 
-            migrateOutput={migrateOutput} 
-            setMigrateOutput={setMigrateOutput} 
             isVaultOpen={isVaultOpen}
             setIsVaultOpen={setIsVaultOpen}
             setVaultTargetField={setVaultTargetField}

@@ -40,7 +40,7 @@ export default function PreviewModal({
               title="Script execution can run untrusted code. Disable if you only need static preview."
               type="button"
             >
-              ⚠️ Enable Scripts (Unsafe): {enablePreviewScripts ? 'ON' : 'OFF'}
+              Warning: Enable Scripts (Unsafe): {enablePreviewScripts ? 'ON' : 'OFF'}
             </button>
             <button
               onClick={onClose}

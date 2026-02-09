@@ -85,7 +85,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
     
     // Prevent deletion of protected modules
     if (isProtectedModule(item)) {
-      alert('Ã¢Å¡Â Ã¯Â¸Â Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle.');
+      alert('Warning: Course Materials and Assessments are core modules and cannot be deleted.\n\nYou can hide them instead using the hide/show toggle.');
       return;
     }
     
@@ -459,9 +459,9 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                             <div className="flex items-center gap-2 mb-3 text-xs text-slate-400">
                                 <FileCode size={12} />
                                 <span>{(stats.total / 1024).toFixed(1)} KB</span>
-                                <span className="text-slate-700">Ã¢â‚¬Â¢</span>
+                                <span className="text-slate-700">|</span>
                                 <span>{stats.htmlLength > 0 ? 'Has HTML' : 'No HTML'}</span>
-                                <span className="text-slate-700">Ã¢â‚¬Â¢</span>
+                                <span className="text-slate-700">|</span>
                                 <span>{stats.scriptLength > 0 ? 'Has Script' : 'No Script'}</span>
                             </div>
 

@@ -14,7 +14,8 @@
     "exports:verify": "node scripts/verify_exports.mjs verify",
     "exports:parity": "node scripts/exports_parity.mjs",
     "exports:fixtures": "node scripts/verify_composer_fixtures.mjs",
-    "release:check": "node scripts/release_gate.mjs"
+    "release:check": "node scripts/release_gate.mjs",
+    "validate": "npm run build && npm run lint && npm run release:check"
   },
   "dependencies": {
     "autoprefixer": "^10.4.23",

@@ -149,6 +149,82 @@ function getActivityRichEditorConfig(activity) {
   return null;
 }
 
+const RUBRIC_MIN_SIZE = 2;
+const RUBRIC_MAX_SIZE = 5;
+
+function clampRubricDimension(value, fallback = 3) {
+  const parsed = Number.parseInt(value, 10);
+  const base = Number.isFinite(parsed) ? parsed : Number.parseInt(fallback, 10);
+  const normalized = Number.isFinite(base) ? base : 3;
+  return Math.max(RUBRIC_MIN_SIZE, Math.min(RUBRIC_MAX_SIZE, normalized));
+}
+
+function getDefaultRubricColumns(count) {
+  const safeCount = clampRubricDimension(count, 3);
+  const presets = {
+    2: [
+      { label: 'Strong', score: 2 },
+      { label: 'Needs Work', score: 1 },
+    ],
+    3: [
+      { label: 'Exceeds', score: 3 },
+      { label: 'Meets', score: 2 },
+      { label: 'Developing', score: 1 },
+    ],
+    4: [
+      { label: 'Exemplary', score: 4 },
+      { label: 'Proficient', score: 3 },
+      { label: 'Developing', score: 2 },
+      { label: 'Beginning', score: 1 },
+    ],
+    5: [
+      { label: 'Mastery', score: 5 },
+      { label: 'Advanced', score: 4 },
+      { label: 'Proficient', score: 3 },
+      { label: 'Developing', score: 2 },
+      { label: 'Beginning', score: 1 },
+    ],
+  };
+  return (presets[safeCount] || presets[3]).map((column) => ({ ...column }));
+}
+
+function normalizeRubricData(data, rowValue, colValue) {
+  const rowCount = clampRubricDimension(rowValue ?? data?.rowCount ?? data?.rows?.length ?? 3, 3);
+  const colCount = clampRubricDimension(colValue ?? data?.colCount ?? data?.columns?.length ?? 3, 3);
+  const fallbackColumns = getDefaultRubricColumns(colCount);
+  const rows = Array.from({ length: rowCount }, (_, rowIdx) => {
+    const raw = Array.isArray(data?.rows) ? data.rows[rowIdx] : null;
+    const fallback = `Criterion ${rowIdx + 1}`;
+    return {
+      label: String(raw?.label || fallback).trim() || fallback,
+    };
+  });
+  const columns = Array.from({ length: colCount }, (_, colIdx) => {
+    const raw = Array.isArray(data?.columns) ? data.columns[colIdx] : null;
+    const fallback = fallbackColumns[colIdx] || { label: `Level ${colIdx + 1}`, score: colCount - colIdx };
+    const parsedScore = Number.parseFloat(raw?.score);
+    return {
+      label: String(raw?.label || fallback.label).trim() || fallback.label,
+      score: Number.isFinite(parsedScore) ? parsedScore : fallback.score,
+    };
+  });
+  const cells = rows.map((row, rowIdx) =>
+    columns.map((column, colIdx) => {
+      const raw = Array.isArray(data?.cells) && Array.isArray(data.cells[rowIdx]) ? data.cells[rowIdx][colIdx] : '';
+      const fallback = `Describe "${column.label}" for ${row.label.toLowerCase()}.`;
+      return String(raw || fallback);
+    }),
+  );
+  return {
+    rowCount,
+    colCount,
+    rows,
+    columns,
+    cells,
+    selfScoringEnabled: data?.selfScoringEnabled !== false,
+  };
+}
+
 export default function EditModal({
   editingModule,
   editForm,
@@ -1198,6 +1274,190 @@ export default function EditModal({
             >
               Add
             </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedActivity.type === 'rubric_creator') {
+      const rubric = normalizeRubricData(data);
+      const rows = rubric.rows;
+      const columns = rubric.columns;
+      const cells = rubric.cells;
+      const rowCount = rubric.rowCount;
+      const colCount = rubric.colCount;
+
+      const applyRubricShape = (nextRowCount, nextColCount) => {
+        const normalized = normalizeRubricData(data, nextRowCount, nextColCount);
+        updateSelectedActivityData({
+          rowCount: normalized.rowCount,
+          colCount: normalized.colCount,
+          rows: normalized.rows,
+          columns: normalized.columns,
+          cells: normalized.cells,
+        });
+      };
+
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Rubric Title</label>
+            <input
+              type="text"
+              value={data.title || ''}
+              onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Instructions</label>
+            <textarea
+              value={data.instructions || ''}
+              onChange={(e) => updateSelectedActivityData({ instructions: e.target.value })}
+              className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-12 gap-2">
+            <div className="col-span-3">
+              <label className="block text-xs font-bold text-slate-300 mb-1">Rows</label>
+              <select
+                value={rowCount}
+                onChange={(e) => applyRubricShape(Number.parseInt(e.target.value, 10), colCount)}
+                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              >
+                {[2, 3, 4, 5].map((count) => (
+                  <option key={`rubric-row-count-${count}`} value={count}>
+                    {count}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-span-3">
+              <label className="block text-xs font-bold text-slate-300 mb-1">Columns</label>
+              <select
+                value={colCount}
+                onChange={(e) => applyRubricShape(rowCount, Number.parseInt(e.target.value, 10))}
+                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              >
+                {[2, 3, 4, 5].map((count) => (
+                  <option key={`rubric-col-count-${count}`} value={count}>
+                    {count}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-span-6 flex items-end">
+              <label className="inline-flex items-center gap-2 rounded border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={rubric.selfScoringEnabled}
+                  onChange={(e) => updateSelectedActivityData({ selfScoringEnabled: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                Enable self scoring
+              </label>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Total Label</label>
+            <input
+              type="text"
+              value={data.totalLabel || 'Self Score Total'}
+              onChange={(e) => updateSelectedActivityData({ totalLabel: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              disabled={!rubric.selfScoringEnabled}
+            />
+          </div>
+          <div className="space-y-2 rounded border border-slate-700 bg-slate-950/50 p-3">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Columns (Label + Score)</p>
+            {columns.map((column, colIdx) => (
+              <div key={`rubric-column-${colIdx}`} className="grid grid-cols-12 gap-2">
+                <input
+                  type="text"
+                  value={column.label}
+                  onChange={(e) => {
+                    const nextColumns = columns.map((item, idx) => (idx === colIdx ? { ...item, label: e.target.value } : item));
+                    updateSelectedActivityData({ rowCount, colCount, rows, columns: nextColumns, cells });
+                  }}
+                  className="col-span-8 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                  placeholder={`Column ${colIdx + 1} label`}
+                />
+                <input
+                  type="number"
+                  step="0.5"
+                  value={Number.isFinite(Number(column.score)) ? column.score : 0}
+                  onChange={(e) => {
+                    const parsed = Number.parseFloat(e.target.value);
+                    const nextColumns = columns.map((item, idx) =>
+                      idx === colIdx ? { ...item, score: Number.isFinite(parsed) ? parsed : 0 } : item,
+                    );
+                    updateSelectedActivityData({ rowCount, colCount, rows, columns: nextColumns, cells });
+                  }}
+                  className="col-span-4 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                  placeholder="Score"
+                  title="Column score value"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2 rounded border border-slate-700 bg-slate-950/50 p-3">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Row Labels</p>
+            {rows.map((row, rowIdx) => (
+              <input
+                key={`rubric-row-${rowIdx}`}
+                type="text"
+                value={row.label}
+                onChange={(e) => {
+                  const nextRows = rows.map((item, idx) => (idx === rowIdx ? { ...item, label: e.target.value } : item));
+                  updateSelectedActivityData({ rowCount, colCount, rows: nextRows, columns, cells });
+                }}
+                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                placeholder={`Criterion ${rowIdx + 1}`}
+              />
+            ))}
+          </div>
+          <div className="space-y-2">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Cell Descriptions</p>
+            <div className="overflow-x-auto rounded border border-slate-700">
+              <table className="min-w-[720px] w-full border-collapse text-xs">
+                <thead className="bg-slate-900">
+                  <tr>
+                    <th className="p-2 border-b border-slate-700 text-left text-slate-300 uppercase tracking-wide">Criteria</th>
+                    {columns.map((column, colIdx) => (
+                      <th key={`rubric-head-${colIdx}`} className="p-2 border-b border-slate-700 text-left text-slate-300 uppercase tracking-wide">
+                        {column.label || `Column ${colIdx + 1}`}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, rowIdx) => (
+                    <tr key={`rubric-grid-row-${rowIdx}`} className="align-top">
+                      <td className="p-2 border-b border-slate-800 text-slate-200 font-semibold">
+                        {row.label || `Criterion ${rowIdx + 1}`}
+                      </td>
+                      {columns.map((column, colIdx) => (
+                        <td key={`rubric-grid-cell-${rowIdx}-${colIdx}`} className="p-2 border-b border-slate-800">
+                          <textarea
+                            value={cells[rowIdx]?.[colIdx] || ''}
+                            onChange={(e) => {
+                              const nextCells = cells.map((cellRow, cellRowIdx) =>
+                                cellRowIdx === rowIdx
+                                  ? cellRow.map((cellValue, cellColIdx) => (cellColIdx === colIdx ? e.target.value : cellValue))
+                                  : cellRow,
+                              );
+                              updateSelectedActivityData({ rowCount, colCount, rows, columns, cells: nextCells });
+                            }}
+                            className="w-full h-20 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                            placeholder={`Describe "${column.label || `Column ${colIdx + 1}`}"`}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       );

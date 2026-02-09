@@ -1,4 +1,4 @@
-﻿import * as React from 'react';
+import * as React from 'react';
 import { Database, Layers } from 'lucide-react';
 
 // --- PHASE 0: MASTER SHELL ---
@@ -259,7 +259,7 @@ const BatchHarvester = ({ onImport }) => {
   );
 };
 
-// Ã°Å¸â€ºÂ¡Ã¯Â¸Â THE BULLETPROOF VEST: Cleans up messy AI output or raw text input
+// THE BULLETPROOF VEST: Cleans up messy AI output or raw text input
 const sanitizeImportData = (input) => {
   let cleanData = [];
   try {
