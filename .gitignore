@@ -18,3 +18,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Accidental duplicate editor copies
+* 2.jsx
+* 2.html
