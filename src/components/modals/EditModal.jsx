@@ -24,6 +24,7 @@ import {
 import { isComposerEnabled } from '../../utils/composer.js';
 import { buildModuleFrameHTML } from '../../utils/generators.js';
 import GenericDataEditor from '../GenericDataEditor.jsx';
+import HotspotEditor from '../composer/HotspotEditor.jsx';
 
 const { useEffect, useMemo, useRef, useState } = React;
 
@@ -106,6 +107,53 @@ function getThemePreviewColors(themeValue) {
 function normalizeColorInputValue(value, fallback = '#0f172a') {
   const raw = String(value || '').trim();
   return /^#[0-9a-f]{6}$/i.test(raw) ? raw : fallback;
+}
+
+function extractRichEditorText(html) {
+  const input = String(html || '');
+  if (!input) return '';
+  if (typeof document === 'undefined') {
+    return input
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|li|h1|h2|h3|h4|h5|h6|blockquote)>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/\u00a0/g, ' ')
+      .trim();
+  }
+  const container = document.createElement('div');
+  container.innerHTML = input;
+  return (container.innerText || container.textContent || '').replace(/\u00a0/g, ' ').trim();
+}
+
+function stripInlineRichFormatting(html) {
+  const input = String(html || '');
+  if (!input.trim()) return '';
+  if (typeof document === 'undefined') {
+    return input
+      .replace(/<font\b[^>]*>/gi, '')
+      .replace(/<\/font>/gi, '')
+      .replace(/\sstyle\s*=\s*(['"]).*?\1/gi, '')
+      .replace(/\s(?:bgcolor|color|face|size)\s*=\s*(['"]).*?\1/gi, '');
+  }
+  const template = document.createElement('template');
+  template.innerHTML = input;
+  const fontNodes = Array.from(template.content.querySelectorAll('font'));
+  fontNodes.forEach((fontNode) => {
+    const parent = fontNode.parentNode;
+    if (!parent) return;
+    while (fontNode.firstChild) {
+      parent.insertBefore(fontNode.firstChild, fontNode);
+    }
+    parent.removeChild(fontNode);
+  });
+  Array.from(template.content.querySelectorAll('*')).forEach((node) => {
+    node.removeAttribute('style');
+    node.removeAttribute('bgcolor');
+    node.removeAttribute('color');
+    node.removeAttribute('face');
+    node.removeAttribute('size');
+  });
+  return template.innerHTML;
 }
 
 function extractMaterialImageAsset(material) {
@@ -441,6 +489,63 @@ export default function EditModal({
     updateActivities(nextActivities);
   };
 
+  const clearPendingRichEditorUpdate = () => {
+    if (!richEditorUpdateTimerRef.current) return;
+    clearTimeout(richEditorUpdateTimerRef.current);
+    richEditorUpdateTimerRef.current = null;
+  };
+
+  const getSelectedRichStyleResetPayload = () => {
+    if (!selectedActivity) return null;
+    const richConfig = getActivityRichEditorConfig(selectedActivity);
+    if (!richConfig) return null;
+    const data = selectedActivity.data || {};
+    const bodyMode = data[richConfig.modeKey] === 'plain' ? 'plain' : 'rich';
+    if (bodyMode !== 'rich') return null;
+    const sourceHtml = data[richConfig.htmlKey] || escapeEditorHtml(data[richConfig.textKey] || '').replace(/\n/g, '<br>');
+    const cleanedHtml = stripInlineRichFormatting(sourceHtml);
+    const cleanedText = extractRichEditorText(cleanedHtml);
+    return { richConfig, cleanedHtml, cleanedText };
+  };
+
+  const resetSelectedActivityBodyStyle = () => {
+    if (!selectedActivity) return;
+    const payload = getSelectedRichStyleResetPayload();
+    const updates = { bodyContainerBg: '' };
+    if (payload) {
+      clearPendingRichEditorUpdate();
+      if (richEditorRef.current) {
+        richEditorRef.current.innerHTML = payload.cleanedHtml;
+      }
+      updates[payload.richConfig.modeKey] = 'rich';
+      updates[payload.richConfig.htmlKey] = payload.cleanedHtml;
+      updates[payload.richConfig.textKey] = payload.cleanedText;
+    }
+    updateSelectedActivityData(updates);
+  };
+
+  const resetSelectedActivityStyle = () => {
+    if (!selectedActivity) return;
+    const payload = getSelectedRichStyleResetPayload();
+    const updates = {
+      blockTheme: 'default',
+      blockFontFamily: '',
+      blockTextColor: '',
+      blockContainerBg: '',
+      bodyContainerBg: '',
+    };
+    if (payload) {
+      clearPendingRichEditorUpdate();
+      if (richEditorRef.current) {
+        richEditorRef.current.innerHTML = payload.cleanedHtml;
+      }
+      updates[payload.richConfig.modeKey] = 'rich';
+      updates[payload.richConfig.htmlKey] = payload.cleanedHtml;
+      updates[payload.richConfig.textKey] = payload.cleanedText;
+    }
+    updateSelectedActivityData(updates);
+  };
+
   const replaceSelectedActivityData = (nextData) => {
     if (!selectedActivity) return;
     const nextActivities = activities.map((activity, idx) =>
@@ -652,16 +757,9 @@ export default function EditModal({
           <p className="text-[11px] font-bold uppercase tracking-wide text-slate-300">Block Style</p>
           <button
             type="button"
-            onClick={() =>
-              updateSelectedActivityData({
-                blockTheme: 'default',
-                blockFontFamily: '',
-                blockTextColor: '',
-                blockContainerBg: '',
-              })
-            }
+            onClick={resetSelectedActivityStyle}
             className="rounded bg-slate-800 hover:bg-slate-700 px-2 py-1 text-[10px] font-bold text-slate-200"
-            title="Reset this block to default style"
+            title="Reset block and body styles to defaults"
           >
             Reset Style
           </button>
@@ -830,7 +928,7 @@ export default function EditModal({
                   <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('removeFormat')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Clear</button>
                 </div>
                 <div className="px-2 pb-2 bg-slate-900/80 border-b border-slate-700">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                     <select
                       defaultValue=""
                       onChange={(e) => {
@@ -864,15 +962,24 @@ export default function EditModal({
                       <input
                         type="color"
                         value={normalizeColorInputValue(
-                          data.blockContainerBg || data.containerBg,
+                          data.bodyContainerBg || data.blockContainerBg || data.containerBg,
                           selectedActivity.type === 'title_block' ? '#1e1b4b' : '#0f172a',
                         )}
-                        onChange={(e) => updateSelectedActivityData({ blockContainerBg: e.target.value })}
+                        onChange={(e) => updateSelectedActivityData({ bodyContainerBg: e.target.value })}
                         className="h-6 w-10 cursor-pointer border border-slate-600 rounded bg-transparent"
-                        title="Set block container background color"
-                        aria-label="Set block container background color"
+                        title="Set body container background color override"
+                        aria-label="Set body container background color override"
                       />
                     </label>
+                    <button
+                      type="button"
+                      onMouseDown={preserveRichSelection}
+                      onClick={resetSelectedActivityBodyStyle}
+                      className="rounded bg-slate-800 hover:bg-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-200"
+                      title="Reset body style overrides"
+                    >
+                      Reset Body Style
+                    </button>
                   </div>
                 </div>
                 <div
@@ -1205,6 +1312,10 @@ export default function EditModal({
           </div>
         </div>
       );
+    }
+
+    if (selectedActivity.type === 'hotspot_image') {
+      return <HotspotEditor data={data} onChange={updateSelectedActivityData} />;
     }
 
     if (selectedActivity.type === 'assessment_embed') {

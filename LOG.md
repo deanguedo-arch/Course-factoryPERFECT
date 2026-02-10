@@ -237,3 +237,28 @@
 - `npm run build`
 - `npm run exports:fixtures`
 - `npm run release:check`
+
+## Update (Feb 10, 2026 — Tuesday Morning Fixes)
+- Added composer text-style reset hardening for content/title blocks:
+  - `Reset Style` now clears block style + body style overrides.
+  - Added `Reset Body Style` in rich editor toolbars.
+  - Body container override now defaults to block style unless explicitly changed.
+  (`src/components/modals/EditModal.jsx`, `src/components/Phase1.jsx`, `src/composer/activityRegistry.js`)
+- Added drag-and-drop hotspot authoring UI:
+  - New hotspot editor with live image preview and draggable hotspot points.
+  - Inline hotspot label/content editing in the same panel.
+  (`src/components/composer/HotspotEditor.jsx`, `src/components/modals/EditModal.jsx`, `src/components/Phase1.jsx`)
+- Updated hotspot output behavior:
+  - Hotspot points render on-image at saved coordinates.
+  - Hotspot detail panels show label + content (no coordinate text).
+  (`src/composer/activityRegistry.js`)
+- Workspace state note for this chat:
+  - Intention is to revert to yesterday’s baseline in the work terminal and then re-apply these targeted fixes there.
+  - Consolidated patch saved at `docs/patches/2026-02-10-tuesday-morning-fixes.patch`.
+- Recovery diagnosis (missing work):
+  - Multiple local clones were in use:
+    - `/Users/deanguedo/Library/Mobile Documents/com~apple~CloudDocs/Course-factoryPERFECT`
+    - `/Users/deanguedo/Documents/GitHub/Course-factoryPERFECT`
+    - `/Users/deanguedo/Projects/Course-factoryPERFECT`
+  - The iCloud workspace was behind the GitHub-backed repo and tracking a local-path remote (`/Users/deanguedo/Documents/GitHub/Course-factoryPERFECT`) rather than direct GitHub.
+  - This mismatch explains why prior changes appeared to be missing when switching workspaces.

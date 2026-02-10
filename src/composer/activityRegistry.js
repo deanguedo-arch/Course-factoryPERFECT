@@ -122,12 +122,13 @@ export const ACTIVITY_REGISTRY = {
         bodyMode: 'rich',
         bodyHtml: '<p>Write your lesson content here.</p>',
         blockContainerBg: '',
+        bodyContainerBg: '',
       };
     },
     compileToHtml({ data = {} } = {}) {
       const richBody = sanitizeRichHtml(data.bodyHtml || '');
       const bodyHtml = data.bodyMode === 'plain' || !richBody ? renderSimpleBody(data.body) : richBody;
-      const containerBg = sanitizeCssColor(data.blockContainerBg || data.containerBg);
+      const containerBg = sanitizeCssColor(data.bodyContainerBg || data.blockContainerBg || data.containerBg);
       const containerStyle = containerBg ? ` style="background:${escapeHtml(containerBg)};"` : '';
       return `
         <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6"${containerStyle}>
@@ -167,6 +168,7 @@ export const ACTIVITY_REGISTRY = {
         textHtml: '<h2>Module Title</h2>',
         align: 'left',
         blockContainerBg: '',
+        bodyContainerBg: '',
       };
     },
     compileToHtml({ data = {} } = {}) {
@@ -174,7 +176,7 @@ export const ACTIVITY_REGISTRY = {
       const textHtml = data.textMode === 'plain' || !richText ? renderSimpleBody(data.text || '') : richText;
       const align = String(data.align || 'left').toLowerCase();
       const alignClass = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left';
-      const containerBg = sanitizeCssColor(data.blockContainerBg || data.containerBg);
+      const containerBg = sanitizeCssColor(data.bodyContainerBg || data.blockContainerBg || data.containerBg);
       const containerStyle = containerBg ? ` style="background:${escapeHtml(containerBg)};"` : '';
       return `
         <article class="rounded-xl border border-indigo-500/30 bg-indigo-950/20 p-5 ${alignClass}" data-title-block${containerStyle}>
@@ -1249,20 +1251,22 @@ export const ACTIVITY_REGISTRY = {
                           const x = Math.max(0, Math.min(100, Number.parseFloat(spot?.x) || 0));
                           const y = Math.max(0, Math.min(100, Number.parseFloat(spot?.y) || 0));
                           return `
-                          <button
-                            type="button"
-                            data-hotspot-btn
-                            data-hotspot-index="${idx}"
-                            style="left:${x}%;top:${y}%;"
-                            class="absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full border text-[10px] font-black transition-colors ${
-                              idx === 0
-                                ? 'border-sky-300 bg-sky-500 text-slate-950'
-                                : 'border-slate-200/80 bg-slate-900/85 text-white hover:bg-sky-500 hover:text-slate-950'
-                            }"
-                            title="${escapeHtml(spot?.label || `Hotspot ${idx + 1}`)}"
-                            aria-label="${escapeHtml(spot?.label || `Hotspot ${idx + 1}`)}"
-                          >${idx + 1}</button>
-                        `;
+                        <button
+                          type="button"
+                          data-hotspot-btn
+                          data-hotspot-index="${idx}"
+                          style="left:${x}%;top:${y}%;"
+                          class="absolute -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full border text-[11px] font-black transition-colors ${
+                            idx === 0
+                              ? 'border-sky-300 bg-sky-500 text-slate-950'
+                              : 'border-slate-200/80 bg-slate-900/85 text-white hover:bg-sky-500 hover:text-slate-950'
+                          }"
+                          title="${escapeHtml(spot?.label || `Hotspot ${idx + 1}`)}"
+                          aria-label="${escapeHtml(spot?.label || `Hotspot ${idx + 1}`)}"
+                        >
+                          ${idx + 1}
+                        </button>
+                      `;
                         })
                         .join('\n')
                     : ''
@@ -1274,16 +1278,12 @@ export const ACTIVITY_REGISTRY = {
                   <div class="mt-3 grid md:grid-cols-2 gap-2">
                     ${hotspots
                       .map(
-                        (spot, idx) => {
-                          const x = Math.max(0, Math.min(100, Number.parseFloat(spot?.x) || 0));
-                          const y = Math.max(0, Math.min(100, Number.parseFloat(spot?.y) || 0));
-                          return `
+                        (spot, idx) => `
                         <div data-hotspot-panel data-hotspot-index="${idx}" class="rounded border border-slate-700 bg-slate-950/70 p-2 text-xs text-slate-300 ${idx === 0 ? '' : 'hidden'}">
-                          <p class="font-bold text-slate-100">${escapeHtml(spot.label || `Hotspot ${idx + 1}`)} (${x}%, ${y}%)</p>
+                          <p class="font-bold text-slate-100">${escapeHtml(spot.label || `Hotspot ${idx + 1}`)}</p>
                           <p class="mt-1">${renderSimpleBody(spot?.content || '')}</p>
                         </div>
-                      `;
-                        },
+                      `,
                       )
                       .join('\n')}
                   </div>
