@@ -132,13 +132,52 @@ function buildComposerRuntimeScript() {
         var url = resolveAssetUrl(rawUrl);
         if (!url) return '';
         if (url.indexOf('docs.google.com/viewer') !== -1) return url;
-        var isIframe = window.self !== window.top;
-        var isGoogleHost = /\\.google\\./i.test(window.location.hostname || '');
-        var isDrive = /docs\\.google\\.com|drive\\.google\\.com/i.test(url);
-        if ((isIframe || isGoogleHost) && !isDrive) {
-          return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
+
+        function isGoogleSitesHost() {
+          var ref = '';
+          try { ref = document.referrer || ''; } catch (e) { ref = ''; }
+          if (/sites\\.google\\.com/i.test(ref)) return true;
+          try { return /sites\\.google\\.com/i.test(window.top.location.host || ''); } catch (e) { return /sites\\.google\\.com/i.test(ref); }
         }
-        return url;
+
+        var clean = String(url).trim();
+        if (!clean) return clean;
+
+        // Prefer direct Drive preview URLs.
+        var isDrive = /docs\\.google\\.com|drive\\.google\\.com/i.test(clean);
+        if (isDrive) {
+          var driveIdMatch = clean.match(/\\/file\\/d\\/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+          if (driveIdMatch && driveIdMatch[1]) {
+            return 'https://drive.google.com/file/d/' + driveIdMatch[1] + '/preview';
+          }
+          if (clean.indexOf('/view') !== -1) {
+            return clean.replace('/view', '/preview');
+          }
+          return clean;
+        }
+
+        // Never route local/same-origin URLs through Google Docs Viewer.
+        if (/^(\\/|\\.\\/|\\.\\.\\/|blob:|data:)/i.test(clean)) {
+          return clean;
+        }
+        var isSameOrigin = false;
+        try {
+          var parsed = new URL(clean, window.location.href);
+          isSameOrigin = parsed.origin === window.location.origin;
+        } catch (e) {
+          isSameOrigin = false;
+        }
+        if (isSameOrigin) {
+          return clean;
+        }
+
+        // Google Sites embeds often need the Docs viewer, but only for public absolute URLs.
+        var forceViewer = isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
+        if (forceViewer && /^https?:\\/\\//i.test(clean)) {
+          return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(clean);
+        }
+
+        return clean;
       }
 
       function resolveAssetUrl(rawUrl) {
