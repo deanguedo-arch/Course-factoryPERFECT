@@ -55,7 +55,7 @@ export default function PreviewModal({
         <div className="p-0 overflow-hidden max-h-[calc(90vh-80px)]">
           <iframe
             srcDoc={srcDoc || ''}
-            sandbox={sandbox}
+            sandbox={sandbox || undefined}
             key={iframeKey}
             className="w-full h-full border-0"
             style={{ minHeight: 'calc(90vh - 80px)' }}

@@ -456,18 +456,38 @@ ${footerHtml}
         }
         function getPdfEmbedUrl(url) {
             if (!url) return url;
-            if (url.indexOf('docs.google.com/viewer') !== -1) return url;
-            var isDrive = url.indexOf('drive.google.com') !== -1;
-            var isIframe = false;
-            try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
-            var forceViewer = isIframe || isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
-            if (forceViewer && !isDrive) {
-                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
+            var clean = String(url).trim();
+            if (!clean) return clean;
+            if (clean.indexOf('docs.google.com/viewer') !== -1) return clean;
+            var isDrive = clean.indexOf('drive.google.com') !== -1;
+            if (isDrive) {
+                var driveIdMatch = clean.match(/\/file\/d\/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+                if (driveIdMatch && driveIdMatch[1]) {
+                    return 'https://drive.google.com/file/d/' + driveIdMatch[1] + '/preview';
+                }
+                if (clean.indexOf('/view') !== -1) {
+                    return clean.replace('/view', '/preview');
+                }
+                return clean;
             }
-            if (isDrive && url.indexOf('/view') !== -1) {
-                return url.replace('/view', '/preview');
+            if (/^(\/|\.\/|\.\.\/|blob:|data:)/i.test(clean)) {
+                return clean;
             }
-            return url;
+            var isSameOrigin = false;
+            try {
+                var parsed = new URL(clean, window.location.href);
+                isSameOrigin = parsed.origin === window.location.origin;
+            } catch (e) {
+                isSameOrigin = false;
+            }
+            if (isSameOrigin) {
+                return clean;
+            }
+            var forceViewer = isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
+            if (forceViewer && /^https?:\/\//i.test(clean)) {
+                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(clean);
+            }
+            return clean;
         }
 
         function openPDF(url, title) {
@@ -1377,18 +1397,38 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
       }
       function getPdfEmbedUrl(url) {
         if (!url) return url;
-        if (url.indexOf('docs.google.com/viewer') !== -1) return url;
-        var isDrive = url.indexOf('drive.google.com') !== -1;
-        var isIframe = false;
-        try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
-        var forceViewer = isIframe || isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
-        if (forceViewer && !isDrive) {
-          return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
+        var clean = String(url).trim();
+        if (!clean) return clean;
+        if (clean.indexOf('docs.google.com/viewer') !== -1) return clean;
+        var isDrive = clean.indexOf('drive.google.com') !== -1;
+        if (isDrive) {
+          var driveIdMatch = clean.match(/\\/file\\/d\\/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+          if (driveIdMatch && driveIdMatch[1]) {
+            return 'https://drive.google.com/file/d/' + driveIdMatch[1] + '/preview';
+          }
+          if (clean.indexOf('/view') !== -1) {
+            return clean.replace('/view', '/preview');
+          }
+          return clean;
         }
-        if (isDrive && url.indexOf('/view') !== -1) {
-          return url.replace('/view', '/preview');
+        if (/^(\\/|\\.\\/|\\.\\.\\/|blob:|data:)/i.test(clean)) {
+          return clean;
         }
-        return url;
+        var isSameOrigin = false;
+        try {
+          var parsed = new URL(clean, window.location.href);
+          isSameOrigin = parsed.origin === window.location.origin;
+        } catch (e) {
+          isSameOrigin = false;
+        }
+        if (isSameOrigin) {
+          return clean;
+        }
+        var forceViewer = isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
+        if (forceViewer && /^https?:\\/\\//i.test(clean)) {
+          return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(clean);
+        }
+        return clean;
       }
       function openPDF(url, title) {
         var container = document.getElementById('pdf-viewer-container');
@@ -1994,22 +2034,38 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
                           ? getPdfEmbedUrl(url)
                           : (function(u) {
                               if (!u) return u;
-                              if (u.indexOf('docs.google.com/viewer') !== -1) return u;
-                              var isDrive = u.indexOf('drive.google.com') !== -1;
-                              var isIframe = false;
-                              try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
+                              var clean = String(u).trim();
+                              if (!clean) return clean;
+                              if (clean.indexOf('docs.google.com/viewer') !== -1) return clean;
+                              var isDrive = clean.indexOf('drive.google.com') !== -1;
+                              if (isDrive) {
+                                var driveIdMatch = clean.match(/\/file\/d\/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+                                if (driveIdMatch && driveIdMatch[1]) {
+                                  return 'https://drive.google.com/file/d/' + driveIdMatch[1] + '/preview';
+                                }
+                                if (clean.indexOf('/view') !== -1) {
+                                  return clean.replace('/view', '/preview');
+                                }
+                                return clean;
+                              }
+                              if (/^(\/|\.\/|\.\.\/|blob:|data:)/i.test(clean)) {
+                                return clean;
+                              }
+                              var sameOrigin = false;
+                              try {
+                                var parsed = new URL(clean, window.location.href);
+                                sameOrigin = parsed.origin === window.location.origin;
+                              } catch (e) {}
+                              if (sameOrigin) return clean;
                               var ref = '';
                               try { ref = document.referrer || ''; } catch (e) { ref = ''; }
                               var isSites = /sites\\.google\\.com/i.test(ref);
                               try { isSites = isSites || /sites\\.google\\.com/i.test(window.top.location.host || ''); } catch (e) {}
-                              var forceViewer = isIframe || isSites || window.CF_FORCE_PDF_VIEWER === true;
-                              if (forceViewer && !isDrive) {
-                                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(u);
+                              var forceViewer = isSites || window.CF_FORCE_PDF_VIEWER === true;
+                              if (forceViewer && /^https?:\/\//i.test(clean)) {
+                                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(clean);
                               }
-                              if (isDrive && u.indexOf('/view') !== -1) {
-                                return u.replace('/view', '/preview');
-                              }
-                              return u;
+                              return clean;
                             })(url);
                         document.getElementById('pdf-frame').src = embedUrl || '';
                         document.getElementById('viewer-title').innerText = 'VIEWING: ' + title;

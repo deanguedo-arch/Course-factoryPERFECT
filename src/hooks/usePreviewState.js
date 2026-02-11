@@ -27,7 +27,7 @@ export function usePreviewState() {
   }, []);
 
   const sandbox = enablePreviewScripts
-    ? 'allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-top-navigation-by-user-activation'
+    ? null
     : 'allow-same-origin allow-forms';
 
   const iframeKey = useMemo(

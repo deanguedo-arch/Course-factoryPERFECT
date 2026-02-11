@@ -4495,7 +4495,6 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                         srcDoc={phase1MaterialCompiledPreviewDoc}
                                                         className="w-full border-0"
                                                         style={{ minHeight: '620px' }}
-                                                        sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-top-navigation-by-user-activation"
                                                         title={phase1MaterialPreview.title || 'Material Compiled Preview'}
                                                     />
                                                 </div>
