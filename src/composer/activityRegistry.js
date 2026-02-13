@@ -111,6 +111,191 @@ function buildDefaultRubricCells(rows, columns) {
   );
 }
 
+function normalizeWorksheetFieldType(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'textarea' || raw === 'number') return raw;
+  return 'text';
+}
+
+function hasOwn(obj, key) {
+  return Boolean(obj && typeof obj === 'object' && Object.prototype.hasOwnProperty.call(obj, key));
+}
+
+function normalizeWorksheetBlockKind(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  return raw === 'title' ? 'title' : 'field';
+}
+
+export function createWorksheetBuilderBlock(kind = 'field') {
+  const normalizedKind = normalizeWorksheetBlockKind(kind);
+  if (normalizedKind === 'title') {
+    return {
+      kind: 'title',
+      title: 'Section Title',
+      showContent: false,
+      content: '',
+    };
+  }
+  return {
+    kind: 'field',
+    label: 'Field Label',
+    fieldType: 'text',
+    placeholder: '',
+  };
+}
+
+function normalizeWorksheetTitleBlock(block) {
+  const titleSource = hasOwn(block, 'title') ? block.title : block?.text;
+  const contentSource = hasOwn(block, 'content') ? block.content : block?.instructions;
+  const title = titleSource == null ? '' : String(titleSource);
+  const content = contentSource == null ? '' : String(contentSource);
+  const showContent = Boolean(block?.showContent === true || (content && block?.showContent !== false));
+  return {
+    kind: 'title',
+    title,
+    showContent,
+    content,
+  };
+}
+
+function normalizeWorksheetFieldBlock(block) {
+  const label = block?.label == null ? '' : String(block.label);
+  const placeholder = block?.placeholder == null ? '' : String(block.placeholder);
+  const rawFieldType = block?.fieldType || block?.inputType || (block?.type !== 'field' ? block?.type : '');
+  return {
+    kind: 'field',
+    label,
+    fieldType: normalizeWorksheetFieldType(rawFieldType),
+    placeholder,
+  };
+}
+
+export function normalizeWorksheetBuilderBlocks(data = {}) {
+  const hasBlocksProp = hasOwn(data, 'blocks');
+  const rawBlocks = Array.isArray(data.blocks) ? data.blocks : [];
+  if (hasBlocksProp) {
+    return rawBlocks.map((block, idx) => {
+      const kind = normalizeWorksheetBlockKind(block?.kind || block?.blockType || block?.type || 'field');
+      return kind === 'title' ? normalizeWorksheetTitleBlock(block, idx) : normalizeWorksheetFieldBlock(block, idx);
+    });
+  }
+
+  const legacyBlocks = [];
+  const legacyTitle = String(data.title || '').trim();
+  if (legacyTitle) {
+    legacyBlocks.push(
+      normalizeWorksheetTitleBlock(
+        {
+          title: legacyTitle,
+          showContent: false,
+          content: '',
+        },
+        0,
+      ),
+    );
+  }
+  const legacyFields = Array.isArray(data.fields) ? data.fields : [];
+  legacyFields.forEach((field, idx) => {
+    legacyBlocks.push(normalizeWorksheetFieldBlock(field, idx));
+  });
+  return legacyBlocks;
+}
+
+function normalizeKnowledgeQuestionType(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  return raw === 'short_answer' || raw === 'short-answer' || raw === 'short' ? 'short_answer' : 'multiple_choice';
+}
+
+function normalizeKnowledgeQuestionOptions(options, { ensureMinimum = false } = {}) {
+  const list = (Array.isArray(options) ? options : []).map((option) => (option == null ? '' : String(option)));
+  if (!ensureMinimum) return list;
+  const nonEmpty = list.map((option) => option.trim()).filter(Boolean);
+  if (nonEmpty.length >= 2) return nonEmpty;
+  if (nonEmpty.length === 1) return [nonEmpty[0], 'Option B'];
+  return ['Option A', 'Option B'];
+}
+
+export function createKnowledgeCheckBuilderQuestion(kind = 'multiple_choice') {
+  const normalizedType = normalizeKnowledgeQuestionType(kind);
+  if (normalizedType === 'short_answer') {
+    return {
+      type: 'short_answer',
+      prompt: 'Add a short-answer prompt.',
+      placeholder: 'Write your response...',
+    };
+  }
+  return {
+    type: 'multiple_choice',
+    prompt: 'Add your question prompt here.',
+    options: ['Option A', 'Option B', 'Option C'],
+    correctIndex: 0,
+  };
+}
+
+function normalizeKnowledgeQuestion(question = {}) {
+  const type = normalizeKnowledgeQuestionType(question?.type || question?.kind);
+  if (type === 'short_answer') {
+    return {
+      type: 'short_answer',
+      prompt: question?.prompt == null ? '' : String(question.prompt),
+      placeholder: question?.placeholder == null ? '' : String(question.placeholder),
+    };
+  }
+  const options = normalizeKnowledgeQuestionOptions(question?.options);
+  const rawCorrect = Number.parseInt(question?.correctIndex, 10);
+  const maxOptionIndex = Math.max(options.length - 1, 0);
+  const correctIndex = Number.isFinite(rawCorrect) ? Math.max(0, Math.min(rawCorrect, maxOptionIndex)) : 0;
+  return {
+    type: 'multiple_choice',
+    prompt: question?.prompt == null ? '' : String(question.prompt),
+    options,
+    correctIndex,
+  };
+}
+
+export function normalizeKnowledgeCheckBuilderQuestions(data = {}) {
+  const hasQuestionsProp = hasOwn(data, 'questions');
+  const rawQuestions = Array.isArray(data.questions) ? data.questions : [];
+  if (hasQuestionsProp) {
+    return rawQuestions.map((question, idx) => normalizeKnowledgeQuestion(question, idx));
+  }
+
+  const legacyQuestions = [];
+  const legacyPrompt = String(data.prompt || '').trim();
+  const legacyOptions = Array.isArray(data.options) ? data.options : [];
+  const hasLegacyMultipleChoice = Boolean(legacyPrompt || legacyOptions.some((option) => String(option || '').trim()));
+  if (hasLegacyMultipleChoice || !String(data.shortAnswerPrompt || '').trim()) {
+    legacyQuestions.push(
+      normalizeKnowledgeQuestion(
+        {
+          type: 'multiple_choice',
+          prompt: data.prompt,
+          options: data.options,
+          correctIndex: data.correctIndex,
+        },
+        0,
+      ),
+    );
+  }
+  const shortPrompt = String(data.shortAnswerPrompt || '').trim();
+  if (shortPrompt) {
+    legacyQuestions.push(
+      normalizeKnowledgeQuestion(
+        {
+          type: 'short_answer',
+          prompt: shortPrompt,
+          placeholder: data.shortAnswerPlaceholder,
+        },
+        legacyQuestions.length,
+      ),
+    );
+  }
+  if (!legacyQuestions.length) {
+    legacyQuestions.push(createKnowledgeCheckBuilderQuestion('multiple_choice'));
+  }
+  return legacyQuestions;
+}
+
 export const ACTIVITY_REGISTRY = {
   content_block: {
     type: 'content_block',
@@ -546,47 +731,69 @@ export const ACTIVITY_REGISTRY = {
     label: 'Knowledge Check',
     createDefaultData() {
       return {
-        prompt: 'Add your question prompt here.',
-        options: ['Option A', 'Option B', 'Option C'],
-        correctIndex: 0,
-        shortAnswerPrompt: 'Optional short-answer reflection',
+        title: 'Knowledge Check',
+        questions: [createKnowledgeCheckBuilderQuestion('multiple_choice')],
       };
     },
     compileToHtml({ data = {}, index = 0, activityId = '' } = {}) {
-      const options = (Array.isArray(data.options) ? data.options : []).filter((opt) => String(opt || '').trim().length > 0);
-      const normalizedCorrect = Number.isInteger(data.correctIndex) ? data.correctIndex : 0;
-      const questionName = `kc-${index}-${activityId}`;
+      const questions = normalizeKnowledgeCheckBuilderQuestions(data);
+      const blockTitle = String(data.title || '').trim() || 'Knowledge Check';
       return `
-        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-kc-block data-kc-id="${escapeHtml(activityId)}" data-kc-correct="${normalizedCorrect}">
-          <h3 class="text-lg font-bold text-white mb-4">${escapeHtml(data.prompt || 'Knowledge Check')}</h3>
-          <div class="space-y-2">
-            ${options
-              .map(
-                (opt, optIdx) => `
-                  <label class="flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-950/70 p-3 text-slate-200">
-                    <input type="radio" name="${questionName}" value="${optIdx}" class="w-4 h-4" />
-                    <span>${escapeHtml(opt)}</span>
-                  </label>
-                `,
-              )
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-kc-block data-kc-id="${escapeHtml(activityId)}">
+          <h3 class="text-lg font-bold text-white mb-4">${escapeHtml(blockTitle)}</h3>
+          <div class="space-y-4">
+            ${questions
+              .map((question, questionIdx) => {
+                const prompt = escapeHtml(question.prompt == null ? `Question ${questionIdx + 1}` : String(question.prompt));
+                if (question.type === 'short_answer') {
+                  const placeholder = escapeHtml(question.placeholder == null ? 'Write your response...' : String(question.placeholder));
+                  return `
+                    <section class="rounded-lg border border-emerald-500/25 bg-emerald-950/10 p-4" data-kc-question data-kc-kind="short_answer" data-kc-question-index="${questionIdx}">
+                      <p class="text-[10px] font-bold uppercase tracking-widest text-emerald-300 mb-2">Question ${questionIdx + 1}</p>
+                      <label class="text-xs font-semibold uppercase tracking-wide text-slate-300 block mb-2" data-kc-prompt>${prompt}</label>
+                      <textarea
+                        class="w-full min-h-28 rounded-lg border border-slate-700 bg-slate-950/70 p-3 text-slate-200"
+                        data-kc-short-answer
+                        placeholder="${placeholder}"
+                      ></textarea>
+                    </section>
+                  `;
+                }
+                const questionName = `kc-${index}-${activityId}-${questionIdx}`;
+                const options = normalizeKnowledgeQuestionOptions(question.options);
+                const maxOptionIndex = Math.max(options.length - 1, 0);
+                const normalizedCorrect = Number.isInteger(question.correctIndex) ? Math.max(0, Math.min(question.correctIndex, maxOptionIndex)) : 0;
+                return `
+                  <section class="rounded-lg border border-slate-700 bg-slate-950/55 p-4" data-kc-question data-kc-kind="multiple_choice" data-kc-question-index="${questionIdx}" data-kc-correct="${normalizedCorrect}">
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Question ${questionIdx + 1}</p>
+                    <h4 class="text-sm font-bold text-white mb-3" data-kc-prompt>${prompt}</h4>
+                    <div class="space-y-2">
+                      ${
+                        options.length
+                          ? options
+                              .map(
+                                (opt, optIdx) => `
+                                  <label class="flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-950/70 p-3 text-slate-200">
+                                    <input type="radio" name="${escapeHtml(questionName)}" value="${optIdx}" class="w-4 h-4" />
+                                    <span>${escapeHtml(opt)}</span>
+                                  </label>
+                                `,
+                              )
+                              .join('\n')
+                          : '<p class="text-xs text-slate-500">No options added yet.</p>'
+                      }
+                    </div>
+                    <div class="mt-4 flex items-center gap-3">
+                      <button type="button" class="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold uppercase tracking-wide" data-kc-check>
+                        Check Answer
+                      </button>
+                      <p class="text-xs text-slate-400" data-kc-result></p>
+                    </div>
+                  </section>
+                `;
+              })
               .join('\n')}
           </div>
-          <div class="mt-4 flex items-center gap-3">
-            <button type="button" class="px-3 py-2 rounded bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold uppercase tracking-wide" data-kc-check>
-              Check Answer
-            </button>
-            <p class="text-xs text-slate-400" data-kc-result></p>
-          </div>
-          ${
-            data.shortAnswerPrompt
-              ? `
-            <div class="mt-5">
-              <label class="text-xs font-semibold uppercase tracking-wide text-slate-400 block mb-2">${escapeHtml(data.shortAnswerPrompt)}</label>
-              <textarea class="w-full min-h-28 rounded-lg border border-slate-700 bg-slate-950/70 p-3 text-slate-200" data-kc-short-answer></textarea>
-            </div>
-          `
-              : ''
-          }
         </article>
       `;
     },
@@ -1057,28 +1264,49 @@ export const ACTIVITY_REGISTRY = {
     createDefaultData() {
       return {
         title: 'Worksheet',
-        fields: [
-          { label: 'Goal', type: 'text', placeholder: 'Enter goal...' },
-          { label: 'Plan', type: 'textarea', placeholder: 'Describe your plan...' },
+        blocks: [
+          {
+            kind: 'title',
+            title: 'Section 1',
+            showContent: true,
+            content: 'Add instructions for this section.',
+          },
+          { kind: 'field', label: 'Goal', fieldType: 'text', placeholder: 'Enter goal...' },
+          { kind: 'field', label: 'Plan', fieldType: 'textarea', placeholder: 'Describe your plan...' },
         ],
       };
     },
     compileToHtml({ data = {} } = {}) {
-      const fields = Array.isArray(data.fields) ? data.fields : [];
+      const blocks = normalizeWorksheetBuilderBlocks(data);
+      const header = String(data.title || '').trim();
       return `
-        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6">
-          <h3 class="text-lg font-bold text-white mb-3">${escapeHtml(data.title || 'Worksheet')}</h3>
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-worksheet-block>
+          ${header ? `<h3 class="text-lg font-bold text-white mb-3">${escapeHtml(header)}</h3>` : ''}
           <div class="space-y-3">
             ${
-              fields.length
-                ? fields
-                    .map((field, idx) => {
-                      const label = escapeHtml(field?.label || `Field ${idx + 1}`);
-                      const type = String(field?.type || 'text').toLowerCase();
-                      const placeholder = escapeHtml(field?.placeholder || '');
+              blocks.length
+                ? blocks
+                    .map((block, idx) => {
+                      if (block.kind === 'title') {
+                        const titleText = block.title == null ? `Section ${idx + 1}` : String(block.title);
+                        return `
+                          <section class="rounded-lg border border-indigo-500/30 bg-indigo-950/20 p-4" data-worksheet-segment data-worksheet-kind="title">
+                            <h4 class="text-sm font-bold uppercase tracking-wide text-indigo-200">${escapeHtml(titleText)}</h4>
+                            ${
+                              block.showContent && block.content
+                                ? `<p class="mt-2 text-sm text-indigo-100/90 leading-relaxed">${renderSimpleBody(block.content)}</p>`
+                                : ''
+                            }
+                          </section>
+                        `;
+                      }
+                      const labelValue = block?.label == null ? `Field ${idx + 1}` : String(block.label);
+                      const label = escapeHtml(labelValue);
+                      const type = normalizeWorksheetFieldType(block?.fieldType || block?.inputType || block?.type);
+                      const placeholder = escapeHtml(block?.placeholder || '');
                       if (type === 'textarea') {
                         return `
-                          <div>
+                          <div data-worksheet-segment data-worksheet-kind="field">
                             <label class="block text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">${label}</label>
                             <textarea class="w-full min-h-24 rounded border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-200" placeholder="${placeholder}"></textarea>
                           </div>
@@ -1086,21 +1314,21 @@ export const ACTIVITY_REGISTRY = {
                       }
                       if (type === 'number') {
                         return `
-                          <div>
+                          <div data-worksheet-segment data-worksheet-kind="field">
                             <label class="block text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">${label}</label>
                             <input type="number" class="w-full rounded border border-slate-700 bg-slate-950/70 p-2 text-sm text-slate-200" placeholder="${placeholder}" />
                           </div>
                         `;
                       }
                       return `
-                        <div>
+                        <div data-worksheet-segment data-worksheet-kind="field">
                           <label class="block text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">${label}</label>
                           <input type="text" class="w-full rounded border border-slate-700 bg-slate-950/70 p-2 text-sm text-slate-200" placeholder="${placeholder}" />
                         </div>
                       `;
                     })
                     .join('\n')
-                : '<p class="text-sm text-slate-400">No worksheet fields yet.</p>'
+                : '<p class="text-sm text-slate-400">No worksheet blocks yet.</p>'
             }
           </div>
         </article>
@@ -1637,9 +1865,28 @@ export function validateComposerActivity(activity) {
   }
 
   if (type === 'knowledge_check') {
-    if (!String(data.prompt || '').trim()) addIssue('warn', 'Knowledge check prompt is empty.');
-    const options = Array.isArray(data.options) ? data.options : [];
-    if (options.length < 2) addIssue('warn', 'Knowledge check should have at least 2 options.');
+    const rawQuestions = Array.isArray(data.questions) ? data.questions : [];
+    if (rawQuestions.length) {
+      rawQuestions.forEach((question, idx) => {
+        const questionType = normalizeKnowledgeQuestionType(question?.type || question?.kind);
+        if (!String(question?.prompt || '').trim()) addIssue('warn', `Knowledge check question #${idx + 1} prompt is empty.`);
+        if (questionType === 'multiple_choice') {
+          const options = (Array.isArray(question?.options) ? question.options : []).filter((option) => String(option || '').trim());
+          if (options.length < 2) addIssue('warn', `Knowledge check question #${idx + 1} should have at least 2 options.`);
+        }
+      });
+    } else {
+      if (!String(data.prompt || '').trim()) addIssue('warn', 'Knowledge check prompt is empty.');
+      const options = Array.isArray(data.options) ? data.options : [];
+      if (options.length < 2) addIssue('warn', 'Knowledge check should have at least 2 options.');
+    }
+  }
+
+  if (type === 'worksheet_form') {
+    const blocks = normalizeWorksheetBuilderBlocks(data);
+    if (!blocks.length) addIssue('warn', 'Worksheet has no blocks yet.');
+    const fieldBlocks = blocks.filter((block) => block.kind === 'field');
+    if (!fieldBlocks.length) addIssue('warn', 'Worksheet should include at least one input field.');
   }
 
   if (type === 'hotspot_image') {

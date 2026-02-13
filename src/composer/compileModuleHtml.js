@@ -610,26 +610,59 @@ function buildComposerRuntimeScript() {
           if (type === 'knowledge_check') {
             var block = section.querySelector('[data-kc-block]');
             if (!block) return;
-            var prompt = getReadableText(block.querySelector('h3'), 'Knowledge Check');
-            var selected = block.querySelector('input[type="radio"]:checked');
-            var selectedLabel = '[No selection]';
-            var outcome = 'Not answered';
-            if (selected) {
-              var labelWrap = closest(selected, 'label');
-              selectedLabel = labelWrap ? getReadableText(labelWrap, 'Option ' + (selected.value || '?')) : ('Option ' + (selected.value || '?'));
-              var correct = parseInt(block.getAttribute('data-kc-correct') || '0', 10);
-              var picked = parseInt(selected.value || '-1', 10);
-              if (!isNaN(correct) && !isNaN(picked)) {
-                outcome = picked === correct ? 'Correct' : 'Incorrect';
+            var title = getReadableText(block.querySelector('h3'), 'Knowledge Check');
+            lines.push('Set: ' + title);
+            var questionNodes = Array.prototype.slice.call(block.querySelectorAll('[data-kc-question]'));
+            if (questionNodes.length) {
+              questionNodes.forEach(function(questionNode, qIdx) {
+                var kind = normalizeSpace(questionNode.getAttribute('data-kc-kind') || '').toLowerCase();
+                var prompt = getReadableText(questionNode.querySelector('[data-kc-prompt]'), 'Question ' + (qIdx + 1));
+                if (kind === 'short_answer') {
+                  var responseField = questionNode.querySelector('[data-kc-short-answer]');
+                  var responseText = normalizeSpace((responseField && responseField.value) || '');
+                  lines.push('Q' + (qIdx + 1) + ': ' + prompt);
+                  lines.push('Response: ' + (responseText || '[No response]'));
+                  return;
+                }
+                var selected = questionNode.querySelector('input[type="radio"]:checked');
+                var selectedLabel = '[No selection]';
+                var outcome = 'Not answered';
+                if (selected) {
+                  var labelWrap = closest(selected, 'label');
+                  selectedLabel = labelWrap ? getReadableText(labelWrap, 'Option ' + (selected.value || '?')) : ('Option ' + (selected.value || '?'));
+                  var correct = parseInt(questionNode.getAttribute('data-kc-correct') || '0', 10);
+                  var picked = parseInt(selected.value || '-1', 10);
+                  if (!isNaN(correct) && !isNaN(picked)) {
+                    outcome = picked === correct ? 'Correct' : 'Incorrect';
+                  }
+                }
+                lines.push('Q' + (qIdx + 1) + ': ' + prompt);
+                lines.push('Selected Answer: ' + selectedLabel);
+                lines.push('Result: ' + outcome);
+              });
+            } else {
+              // Legacy knowledge-check markup fallback.
+              var prompt = getReadableText(block.querySelector('h3'), 'Knowledge Check');
+              var selected = block.querySelector('input[type="radio"]:checked');
+              var selectedLabel = '[No selection]';
+              var outcome = 'Not answered';
+              if (selected) {
+                var labelWrap = closest(selected, 'label');
+                selectedLabel = labelWrap ? getReadableText(labelWrap, 'Option ' + (selected.value || '?')) : ('Option ' + (selected.value || '?'));
+                var correct = parseInt(block.getAttribute('data-kc-correct') || '0', 10);
+                var picked = parseInt(selected.value || '-1', 10);
+                if (!isNaN(correct) && !isNaN(picked)) {
+                  outcome = picked === correct ? 'Correct' : 'Incorrect';
+                }
               }
-            }
-            lines.push('Prompt: ' + prompt);
-            lines.push('Selected Answer: ' + selectedLabel);
-            lines.push('Result: ' + outcome);
-            var shortAnswer = block.querySelector('[data-kc-short-answer]');
-            if (shortAnswer) {
-              var shortAnswerText = normalizeSpace(shortAnswer.value || '');
-              lines.push('Reflection: ' + (shortAnswerText || '[No response]'));
+              lines.push('Prompt: ' + prompt);
+              lines.push('Selected Answer: ' + selectedLabel);
+              lines.push('Result: ' + outcome);
+              var shortAnswer = block.querySelector('[data-kc-short-answer]');
+              if (shortAnswer) {
+                var shortAnswerText = normalizeSpace(shortAnswer.value || '');
+                lines.push('Reflection: ' + (shortAnswerText || '[No response]'));
+              }
             }
           } else if (type === 'checklist_block') {
             var checklist = section.querySelector('[data-checklist-block]');
@@ -1207,11 +1240,13 @@ function buildComposerRuntimeScript() {
       document.addEventListener('click', function(event) {
         var checkBtn = closest(event.target, '[data-kc-check]');
         if (checkBtn) {
+          var questionScope = closest(checkBtn, '[data-kc-question]');
           var block = closest(checkBtn, '[data-kc-block]');
-          if (!block) return;
-          var correct = parseInt(block.getAttribute('data-kc-correct') || '0', 10);
-          var chosen = block.querySelector('input[type="radio"]:checked');
-          var resultEl = block.querySelector('[data-kc-result]');
+          var scope = questionScope || block;
+          if (!scope) return;
+          var correct = parseInt(scope.getAttribute('data-kc-correct') || '0', 10);
+          var chosen = scope.querySelector('input[type="radio"]:checked');
+          var resultEl = scope.querySelector('[data-kc-result]');
           if (!chosen) {
             if (resultEl) resultEl.textContent = 'Select an option first.';
             return;

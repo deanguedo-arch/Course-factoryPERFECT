@@ -31,7 +31,14 @@ import GenericDataEditor from './GenericDataEditor.jsx';
 import HotspotEditor from './composer/HotspotEditor.jsx';
 import ComposerSidebarTools from './composer/ComposerSidebarTools.jsx';
 import { buildModuleFrameHTML, cleanModuleScript, getMaterialBadgeLabel, validateModule } from '../utils/generators.js';
-import { getActivityDefinition, listActivityTypeGroups } from '../composer/activityRegistry.js';
+import {
+  createKnowledgeCheckBuilderQuestion,
+  createWorksheetBuilderBlock,
+  getActivityDefinition,
+  listActivityTypeGroups,
+  normalizeKnowledgeCheckBuilderQuestions,
+  normalizeWorksheetBuilderBlocks,
+} from '../composer/activityRegistry.js';
 import vaultIndex from '../data/vault.json';
 import {
   buildComposerGridModel,
@@ -160,6 +167,17 @@ function stripInlineRichFormatting(html) {
   return template.innerHTML;
 }
 
+function reorderByIndex(items, fromIndex, toIndex) {
+  if (!Array.isArray(items)) return [];
+  if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex)) return [...items];
+  if (fromIndex < 0 || fromIndex >= items.length || toIndex < 0 || toIndex >= items.length) return [...items];
+  if (fromIndex === toIndex) return [...items];
+  const next = [...items];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next;
+}
+
 function extractMaterialImageAsset(material) {
   if (!material || typeof material !== 'object') return null;
   const imagePattern = /\.(avif|bmp|gif|ico|jpe?g|png|svg|webp)(\?.*)?$/i;
@@ -223,6 +241,10 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerComposerDraggingIndex, setModuleManagerComposerDraggingIndex] = useState(null);
   const [moduleManagerComposerDragOverIndex, setModuleManagerComposerDragOverIndex] = useState(null);
   const [moduleManagerComposerDragOverSlotKey, setModuleManagerComposerDragOverSlotKey] = useState(null);
+  const [moduleManagerKnowledgeDragIndex, setModuleManagerKnowledgeDragIndex] = useState(null);
+  const [moduleManagerKnowledgeDragOverIndex, setModuleManagerKnowledgeDragOverIndex] = useState(null);
+  const [moduleManagerWorksheetDragIndex, setModuleManagerWorksheetDragIndex] = useState(null);
+  const [moduleManagerWorksheetDragOverIndex, setModuleManagerWorksheetDragOverIndex] = useState(null);
   const [moduleManagerResourceMaterialId, setModuleManagerResourceMaterialId] = useState('');
   const [moduleManagerImageMaterialId, setModuleManagerImageMaterialId] = useState('');
   const [moduleManagerAssessmentId, setModuleManagerAssessmentId] = useState('');
@@ -1442,6 +1464,10 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     setModuleManagerComposerDraggingIndex(null);
     setModuleManagerComposerDragOverIndex(null);
     setModuleManagerComposerDragOverSlotKey(null);
+    setModuleManagerKnowledgeDragIndex(null);
+    setModuleManagerKnowledgeDragOverIndex(null);
+    setModuleManagerWorksheetDragIndex(null);
+    setModuleManagerWorksheetDragOverIndex(null);
   }, [moduleManagerType, moduleManagerComposerActivities.length]);
 
   useEffect(
@@ -2305,73 +2331,472 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     }
 
     if (selectedComposerActivity.type === 'knowledge_check') {
-      const options = Array.isArray(data.options) ? data.options : [];
+      const questions = normalizeKnowledgeCheckBuilderQuestions(data);
+      const moveKnowledgeQuestion = (fromIndex, toIndex) => {
+        const nextQuestions = reorderByIndex(questions, fromIndex, toIndex);
+        updateSelectedComposerActivityData({ questions: nextQuestions });
+      };
       return (
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Prompt</label>
-            <textarea
-              value={data.prompt || ''}
-              onChange={(e) => updateSelectedComposerActivityData({ prompt: e.target.value })}
-              className="w-full h-24 bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Options</label>
-            <div className="space-y-2">
-              {options.map((opt, idx) => (
-                <div key={`kc-option-${idx}`} className="grid grid-cols-12 gap-2">
-                  <input
-                    type="text"
-                    value={opt || ''}
-                    onChange={(e) => {
-                      const nextOptions = [...options];
-                      nextOptions[idx] = e.target.value;
-                      updateSelectedComposerActivityData({ options: nextOptions });
-                    }}
-                    className="col-span-10 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
-                  />
-                  <input
-                    type="radio"
-                    name="builder-kc-correct"
-                    checked={(data.correctIndex || 0) === idx}
-                    onChange={() => updateSelectedComposerActivityData({ correctIndex: idx })}
-                    className="col-span-1 self-center"
-                    title="Correct answer"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const nextOptions = options.filter((_, optionIdx) => optionIdx !== idx);
-                      updateSelectedComposerActivityData({
-                        options: nextOptions,
-                        correctIndex: Math.max(0, Math.min(data.correctIndex || 0, nextOptions.length - 1)),
-                      });
-                    }}
-                    className="col-span-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs"
-                    title="Remove option"
-                  >
-                    <Trash2 size={12} className="mx-auto" />
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => updateSelectedComposerActivityData({ options: [...options, ''] })}
-                className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
-              >
-                <Plus size={12} /> Add Option
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-300 mb-1">Short Answer Prompt</label>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Block Title</label>
             <input
               type="text"
-              value={data.shortAnswerPrompt || ''}
-              onChange={(e) => updateSelectedComposerActivityData({ shortAnswerPrompt: e.target.value })}
+              value={data.title || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
               className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              placeholder="Knowledge Check"
             />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Questions</label>
+            <div className="space-y-2">
+              {questions.map((question, qIdx) => {
+                const isDropTarget =
+                  moduleManagerKnowledgeDragOverIndex === qIdx &&
+                  moduleManagerKnowledgeDragIndex !== null &&
+                  qIdx !== moduleManagerKnowledgeDragIndex;
+                const options = Array.isArray(question.options) ? question.options : [];
+                const isShortAnswer = question.type === 'short_answer';
+                return (
+                  <div
+                    key={`builder-kc-question-${qIdx}`}
+                    draggable
+                    onDragStart={(event) => {
+                      setModuleManagerKnowledgeDragIndex(qIdx);
+                      if (event.dataTransfer) {
+                        event.dataTransfer.effectAllowed = 'move';
+                        event.dataTransfer.setData('text/plain', String(qIdx));
+                      }
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+                      if (moduleManagerKnowledgeDragOverIndex !== qIdx) setModuleManagerKnowledgeDragOverIndex(qIdx);
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      const fallback = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10);
+                      const fromIndex = Number.isInteger(moduleManagerKnowledgeDragIndex) ? moduleManagerKnowledgeDragIndex : fallback;
+                      moveKnowledgeQuestion(fromIndex, qIdx);
+                      setModuleManagerKnowledgeDragIndex(null);
+                      setModuleManagerKnowledgeDragOverIndex(null);
+                    }}
+                    onDragEnd={() => {
+                      setModuleManagerKnowledgeDragIndex(null);
+                      setModuleManagerKnowledgeDragOverIndex(null);
+                    }}
+                    className={`space-y-2 rounded border p-3 ${isDropTarget ? 'border-indigo-500 bg-indigo-500/15' : 'border-slate-700 bg-slate-900/70'}`}
+                  >
+                    <div className="grid grid-cols-12 gap-2 items-center">
+                      <p className="col-span-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Question {qIdx + 1}</p>
+                      <select
+                        value={isShortAnswer ? 'short_answer' : 'multiple_choice'}
+                        onChange={(e) => {
+                          const nextType = e.target.value === 'short_answer' ? 'short_answer' : 'multiple_choice';
+                          const nextQuestions = questions.map((item, idx) => {
+                            if (idx !== qIdx) return item;
+                            if (nextType === 'short_answer') {
+                              return {
+                                type: 'short_answer',
+                                prompt: item.prompt == null ? '' : String(item.prompt),
+                                placeholder: item.placeholder == null ? '' : String(item.placeholder),
+                              };
+                            }
+                            return {
+                              type: 'multiple_choice',
+                              prompt: item.prompt == null ? '' : String(item.prompt),
+                              options: ['Option A', 'Option B', 'Option C'],
+                              correctIndex: 0,
+                            };
+                          });
+                          updateSelectedComposerActivityData({ questions: nextQuestions });
+                        }}
+                        className="col-span-4 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                      >
+                        <option value="multiple_choice">Multiple Choice</option>
+                        <option value="short_answer">Short Answer</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => moveKnowledgeQuestion(qIdx, Math.max(0, qIdx - 1))}
+                        disabled={qIdx === 0}
+                        className="col-span-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded p-2 flex items-center justify-center"
+                        title="Move up"
+                      >
+                        <ChevronUp size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveKnowledgeQuestion(qIdx, Math.min(questions.length - 1, qIdx + 1))}
+                        disabled={qIdx >= questions.length - 1}
+                        className="col-span-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded p-2 flex items-center justify-center"
+                        title="Move down"
+                      >
+                        <ChevronDown size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedComposerActivityData({ questions: questions.filter((_, idx) => idx !== qIdx) })}
+                        className="col-span-2 bg-rose-600 hover:bg-rose-500 text-white rounded p-2 text-xs"
+                        title="Delete question"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Prompt</label>
+                      <textarea
+                        value={question.prompt || ''}
+                        onChange={(e) => {
+                          const nextQuestions = questions.map((item, idx) => (idx === qIdx ? { ...item, prompt: e.target.value } : item));
+                          updateSelectedComposerActivityData({ questions: nextQuestions });
+                        }}
+                        className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                      />
+                    </div>
+                    {isShortAnswer ? (
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Placeholder</label>
+                        <input
+                          type="text"
+                          value={question.placeholder || ''}
+                          onChange={(e) => {
+                            const nextQuestions = questions.map((item, idx) => (idx === qIdx ? { ...item, placeholder: e.target.value } : item));
+                            updateSelectedComposerActivityData({ questions: nextQuestions });
+                          }}
+                          className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                          placeholder="Write your response..."
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Options</label>
+                        {options.map((option, optionIdx) => (
+                          <div key={`builder-kc-question-${qIdx}-option-${optionIdx}`} className="grid grid-cols-12 gap-2">
+                            <input
+                              type="text"
+                              value={option || ''}
+                              onChange={(e) => {
+                                const nextQuestions = questions.map((item, idx) => {
+                                  if (idx !== qIdx) return item;
+                                  const nextOptions = [...(Array.isArray(item.options) ? item.options : [])];
+                                  nextOptions[optionIdx] = e.target.value;
+                                  return { ...item, options: nextOptions };
+                                });
+                                updateSelectedComposerActivityData({ questions: nextQuestions });
+                              }}
+                              className="col-span-10 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                            />
+                            <input
+                              type="radio"
+                              name={`builder-kc-correct-${qIdx}`}
+                              checked={(question.correctIndex || 0) === optionIdx}
+                              onChange={() => {
+                                const nextQuestions = questions.map((item, idx) =>
+                                  idx === qIdx ? { ...item, correctIndex: optionIdx } : item,
+                                );
+                                updateSelectedComposerActivityData({ questions: nextQuestions });
+                              }}
+                              className="col-span-1 self-center"
+                              title="Correct answer"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextQuestions = questions.map((item, idx) => {
+                                  if (idx !== qIdx) return item;
+                                  const nextOptions = (Array.isArray(item.options) ? item.options : []).filter((_, itemIdx) => itemIdx !== optionIdx);
+                                  return {
+                                    ...item,
+                                    options: nextOptions,
+                                    correctIndex: Math.max(0, Math.min(item.correctIndex || 0, Math.max(nextOptions.length - 1, 0))),
+                                  };
+                                });
+                                updateSelectedComposerActivityData({ questions: nextQuestions });
+                              }}
+                              className="col-span-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs"
+                              title="Remove option"
+                            >
+                              <Trash2 size={12} className="mx-auto" />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextQuestions = questions.map((item, idx) =>
+                              idx === qIdx ? { ...item, options: [...(Array.isArray(item.options) ? item.options : []), ''] } : item,
+                            );
+                            updateSelectedComposerActivityData({ questions: nextQuestions });
+                          }}
+                          className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
+                        >
+                          <Plus size={12} /> Add Option
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {questions.length === 0 && <p className="text-xs text-slate-500">No questions yet. Add one below.</p>}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                updateSelectedComposerActivityData({
+                  questions: [...questions, createKnowledgeCheckBuilderQuestion('multiple_choice')],
+                })
+              }
+              className="px-3 py-1.5 bg-sky-700 hover:bg-sky-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
+            >
+              <Plus size={12} /> Add Multiple Choice
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                updateSelectedComposerActivityData({
+                  questions: [...questions, createKnowledgeCheckBuilderQuestion('short_answer')],
+                })
+              }
+              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
+            >
+              <Plus size={12} /> Add Short Answer
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedComposerActivity.type === 'worksheet_form') {
+      const blocks = normalizeWorksheetBuilderBlocks(data);
+      const moveWorksheetBlock = (fromIndex, toIndex) => {
+        const nextBlocks = reorderByIndex(blocks, fromIndex, toIndex);
+        updateSelectedComposerActivityData({ blocks: nextBlocks });
+      };
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Worksheet Header (Optional)</label>
+            <input
+              type="text"
+              value={data.title || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              placeholder="Worksheet"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Worksheet Blocks</label>
+            <div className="space-y-2">
+              {blocks.map((block, blockIdx) => {
+                const isDropTarget =
+                  moduleManagerWorksheetDragOverIndex === blockIdx &&
+                  moduleManagerWorksheetDragIndex !== null &&
+                  blockIdx !== moduleManagerWorksheetDragIndex;
+                const isTitle = block.kind === 'title';
+                return (
+                  <div
+                    key={`builder-worksheet-block-${blockIdx}`}
+                    draggable
+                    onDragStart={(event) => {
+                      setModuleManagerWorksheetDragIndex(blockIdx);
+                      if (event.dataTransfer) {
+                        event.dataTransfer.effectAllowed = 'move';
+                        event.dataTransfer.setData('text/plain', String(blockIdx));
+                      }
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+                      if (moduleManagerWorksheetDragOverIndex !== blockIdx) setModuleManagerWorksheetDragOverIndex(blockIdx);
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      const fallback = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10);
+                      const fromIndex = Number.isInteger(moduleManagerWorksheetDragIndex) ? moduleManagerWorksheetDragIndex : fallback;
+                      moveWorksheetBlock(fromIndex, blockIdx);
+                      setModuleManagerWorksheetDragIndex(null);
+                      setModuleManagerWorksheetDragOverIndex(null);
+                    }}
+                    onDragEnd={() => {
+                      setModuleManagerWorksheetDragIndex(null);
+                      setModuleManagerWorksheetDragOverIndex(null);
+                    }}
+                    className={`space-y-2 rounded border p-3 ${isDropTarget ? 'border-indigo-500 bg-indigo-500/15' : 'border-slate-700 bg-slate-900/70'}`}
+                  >
+                    <div className="grid grid-cols-12 gap-2 items-center">
+                      <p className="col-span-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Block {blockIdx + 1}</p>
+                      <select
+                        value={isTitle ? 'title' : 'field'}
+                        onChange={(e) => {
+                          const nextKind = e.target.value === 'title' ? 'title' : 'field';
+                          const nextBlocks = blocks.map((item, idx) => {
+                            if (idx !== blockIdx) return item;
+                            if (nextKind === 'title') {
+                              return {
+                                ...createWorksheetBuilderBlock('title'),
+                                title: item.kind === 'title' ? item.title : item.label || 'Section Title',
+                              };
+                            }
+                            return {
+                              ...createWorksheetBuilderBlock('field'),
+                              label: item.kind === 'field' ? item.label : item.title || 'Field Label',
+                            };
+                          });
+                          updateSelectedComposerActivityData({ blocks: nextBlocks });
+                        }}
+                        className="col-span-4 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                      >
+                        <option value="field">Field</option>
+                        <option value="title">Title + Instructions</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => moveWorksheetBlock(blockIdx, Math.max(0, blockIdx - 1))}
+                        disabled={blockIdx === 0}
+                        className="col-span-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded p-2 flex items-center justify-center"
+                        title="Move up"
+                      >
+                        <ChevronUp size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveWorksheetBlock(blockIdx, Math.min(blocks.length - 1, blockIdx + 1))}
+                        disabled={blockIdx >= blocks.length - 1}
+                        className="col-span-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded p-2 flex items-center justify-center"
+                        title="Move down"
+                      >
+                        <ChevronDown size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedComposerActivityData({ blocks: blocks.filter((_, idx) => idx !== blockIdx) })}
+                        className="col-span-2 bg-rose-600 hover:bg-rose-500 text-white rounded p-2 text-xs"
+                        title="Delete block"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    {isTitle ? (
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Title Text</label>
+                          <input
+                            type="text"
+                            value={block.title || ''}
+                            onChange={(e) => {
+                              const nextBlocks = blocks.map((item, idx) => (idx === blockIdx ? { ...item, title: e.target.value } : item));
+                              updateSelectedComposerActivityData({ blocks: nextBlocks });
+                            }}
+                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                            placeholder="Section title"
+                          />
+                        </div>
+                        <label className="inline-flex items-center gap-2 text-xs text-slate-300">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(block.showContent)}
+                            onChange={(e) => {
+                              const nextBlocks = blocks.map((item, idx) => (idx === blockIdx ? { ...item, showContent: e.target.checked } : item));
+                              updateSelectedComposerActivityData({ blocks: nextBlocks });
+                            }}
+                            className="w-4 h-4"
+                          />
+                          Show instructions under title
+                        </label>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Instruction Content</label>
+                          <textarea
+                            value={block.content || ''}
+                            onChange={(e) => {
+                              const nextBlocks = blocks.map((item, idx) => (idx === blockIdx ? { ...item, content: e.target.value } : item));
+                              updateSelectedComposerActivityData({ blocks: nextBlocks });
+                            }}
+                            className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs disabled:opacity-50"
+                            placeholder="Add instructions or context for this section."
+                            disabled={!block.showContent}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-12 gap-2">
+                        <div className="col-span-5">
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Field Label</label>
+                          <input
+                            type="text"
+                            value={block.label || ''}
+                            onChange={(e) => {
+                              const nextBlocks = blocks.map((item, idx) => (idx === blockIdx ? { ...item, label: e.target.value } : item));
+                              updateSelectedComposerActivityData({ blocks: nextBlocks });
+                            }}
+                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                            placeholder="Field label"
+                          />
+                        </div>
+                        <div className="col-span-3">
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Input Type</label>
+                          <select
+                            value={block.fieldType || 'text'}
+                            onChange={(e) => {
+                              const nextBlocks = blocks.map((item, idx) =>
+                                idx === blockIdx ? { ...item, fieldType: e.target.value || 'text' } : item,
+                              );
+                              updateSelectedComposerActivityData({ blocks: nextBlocks });
+                            }}
+                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                          >
+                            <option value="text">Text</option>
+                            <option value="textarea">Textarea</option>
+                            <option value="number">Number</option>
+                          </select>
+                        </div>
+                        <div className="col-span-4">
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Placeholder</label>
+                          <input
+                            type="text"
+                            value={block.placeholder || ''}
+                            onChange={(e) => {
+                              const nextBlocks = blocks.map((item, idx) => (idx === blockIdx ? { ...item, placeholder: e.target.value } : item));
+                              updateSelectedComposerActivityData({ blocks: nextBlocks });
+                            }}
+                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                            placeholder="Optional placeholder"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {blocks.length === 0 && <p className="text-xs text-slate-500">No blocks yet. Add a title or field below.</p>}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                updateSelectedComposerActivityData({
+                  blocks: [...blocks, createWorksheetBuilderBlock('title')],
+                })
+              }
+              className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
+            >
+              <Plus size={12} /> Add Title Block
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                updateSelectedComposerActivityData({
+                  blocks: [...blocks, createWorksheetBuilderBlock('field')],
+                })
+              }
+              className="px-3 py-1.5 bg-sky-700 hover:bg-sky-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
+            >
+              <Plus size={12} /> Add Field
+            </button>
           </div>
         </div>
       );
