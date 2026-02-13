@@ -25,6 +25,88 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
       includeTimestamp: true
     }
   };
+
+  const THEME_PACKS = [
+    {
+      id: 'functional-dark',
+      label: 'Functional Dark',
+      description: 'High contrast, clean defaults for building and previewing.',
+      updates: {
+        accentColor: 'sky',
+        backgroundColor: 'slate-950',
+        headingTextColor: 'white',
+        secondaryTextColor: 'slate-400',
+        assessmentTextColor: 'white',
+        assessmentBoxColor: 'slate-900',
+        containerColor: 'slate-900/80',
+        buttonColor: 'sky-600',
+        fontFamily: 'inter',
+        defaultMaterialTheme: 'dark',
+      },
+    },
+    {
+      id: 'clean-light',
+      label: 'Clean Light',
+      description: 'Light background with dark text for print-like readability.',
+      updates: {
+        accentColor: 'indigo',
+        backgroundColor: 'slate-50',
+        headingTextColor: 'slate-900',
+        secondaryTextColor: 'slate-600',
+        assessmentTextColor: 'slate-900',
+        assessmentBoxColor: 'white',
+        containerColor: 'white/90',
+        buttonColor: 'indigo-600',
+        fontFamily: 'montserrat',
+        defaultMaterialTheme: 'high-contrast-light',
+      },
+    },
+    {
+      id: 'warm-sunset',
+      label: 'Warm Sunset',
+      description: 'Warm accent and container fills for a more editorial feel.',
+      updates: {
+        accentColor: 'amber',
+        backgroundColor: 'slate-900',
+        headingTextColor: 'white',
+        secondaryTextColor: 'slate-300',
+        assessmentTextColor: 'white',
+        assessmentBoxColor: 'slate-900',
+        containerColor: 'slate-900/80',
+        buttonColor: 'amber-600',
+        fontFamily: 'poppins',
+        defaultMaterialTheme: 'muted',
+      },
+    },
+    {
+      id: 'emerald-focus',
+      label: 'Emerald Focus',
+      description: 'Calmer accent with strong readability for long content.',
+      updates: {
+        accentColor: 'emerald',
+        backgroundColor: 'zinc-900',
+        headingTextColor: 'white',
+        secondaryTextColor: 'slate-300',
+        assessmentTextColor: 'white',
+        assessmentBoxColor: 'slate-900',
+        containerColor: 'slate-900/80',
+        buttonColor: 'emerald-600',
+        fontFamily: 'nunito',
+        defaultMaterialTheme: 'dark',
+      },
+    },
+  ];
+
+  const ACCENT_SWATCH_HEX = {
+    sky: '#0ea5e9',
+    rose: '#f43f5e',
+    emerald: '#10b981',
+    amber: '#f59e0b',
+    purple: '#a855f7',
+    indigo: '#6366f1',
+    pink: '#ec4899',
+    teal: '#14b8a6',
+  };
   
   const modules = projectData["Current Course"]?.modules || [];
   const assessmentsModule = modules.find(m => m.id === "item-assessments" || m.title === "Assessments");
@@ -48,6 +130,12 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
         ...updates
       }
     });
+  };
+
+  const applyThemePack = (packId) => {
+    const pack = THEME_PACKS.find((p) => p.id === packId);
+    if (!pack) return;
+    updateSettings({ ...pack.updates, visualThemePack: pack.id });
   };
   
   const exportProject = () => {
@@ -234,6 +322,45 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
           </h3>
           
           <div className="space-y-4">
+            <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-xs font-black text-white uppercase tracking-wide">Theme Packs</p>
+                  <p className="text-[10px] text-slate-500">Apply a full set of visual defaults in one click.</p>
+                </div>
+                <div className="text-[10px] text-slate-500 font-mono">
+                  Current: {settings.visualThemePack || 'custom'}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {THEME_PACKS.map((pack) => (
+                  <button
+                    key={pack.id}
+                    onClick={() => applyThemePack(pack.id)}
+                    className={`text-left p-4 rounded-xl border-2 transition-all ${
+                      (settings.visualThemePack || '') === pack.id
+                        ? 'border-white bg-slate-900'
+                        : 'border-slate-800 bg-slate-950 hover:bg-slate-900'
+                    }`}
+                    title="Apply this theme pack"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-white">{pack.label}</p>
+                        <p className="text-[10px] text-slate-500 mt-1">{pack.description}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: ACCENT_SWATCH_HEX[pack.updates.accentColor] || '#0ea5e9' }}
+                        ></span>
+                        <span className="text-[10px] text-slate-400 font-mono">{pack.updates.backgroundColor}</span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Primary Accent Color</label>
               <div className="grid grid-cols-4 gap-2">

@@ -1582,3 +1582,81 @@ export function listActivityTypeGroups() {
       types: groups[category],
     }));
 }
+
+export function validateComposerActivity(activity) {
+  const issues = [];
+  const type = activity?.type || '';
+  const data = activity?.data && typeof activity.data === 'object' ? activity.data : {};
+
+  const addIssue = (level, message) => {
+    issues.push({ level: level === 'error' ? 'error' : 'warn', message: String(message || '').trim() });
+  };
+
+  if (!type || !getActivityDefinition(type)) {
+    addIssue('error', `Unknown activity type: ${type || '(missing)'}`);
+    return issues;
+  }
+
+  if (type === 'embed_block') {
+    if (!String(data.url || '').trim()) addIssue('error', 'Embed URL is missing.');
+  }
+
+  if (type === 'image_block') {
+    if (!String(data.url || '').trim()) addIssue('error', 'Image URL is missing.');
+    if (!String(data.alt || '').trim()) addIssue('warn', 'Alt text is empty (accessibility).');
+  }
+
+  if (type === 'resource_list') {
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (!String(data.title || '').trim()) addIssue('warn', 'Resource list title is empty.');
+    if (items.length === 0) addIssue('warn', 'No resources added yet.');
+    items.forEach((item, idx) => {
+      const label = String(item?.label || '').trim();
+      const viewUrl = String(item?.viewUrl || item?.url || '').trim();
+      const downloadUrl = String(item?.downloadUrl || item?.url || '').trim();
+      const hasDigital = Boolean(item?.digitalContent);
+      if (!label) addIssue('warn', `Resource #${idx + 1}: label is empty.`);
+      if (!viewUrl && !downloadUrl && !hasDigital) addIssue('warn', `Resource #${idx + 1}: missing view/download/read source.`);
+    });
+  }
+
+  if (type === 'rubric_creator') {
+    const rowCount = clampRubricSize(data.rowCount, 3);
+    const colCount = clampRubricSize(data.colCount, 3);
+    if (!String(data.title || '').trim()) addIssue('warn', 'Rubric title is empty.');
+    if (data.rowCount != null && clampRubricSize(data.rowCount, 3) !== Number.parseInt(data.rowCount, 10)) {
+      addIssue('warn', `Rubric row count is clamped to ${rowCount} (allowed ${RUBRIC_MIN_SIZE}-${RUBRIC_MAX_SIZE}).`);
+    }
+    if (data.colCount != null && clampRubricSize(data.colCount, 3) !== Number.parseInt(data.colCount, 10)) {
+      addIssue('warn', `Rubric column count is clamped to ${colCount} (allowed ${RUBRIC_MIN_SIZE}-${RUBRIC_MAX_SIZE}).`);
+    }
+    const rows = Array.isArray(data.rows) ? data.rows : [];
+    const cols = Array.isArray(data.columns) ? data.columns : [];
+    if (rows.length && rows.length !== rowCount) addIssue('warn', 'Rubric rows list does not match row count.');
+    if (cols.length && cols.length !== colCount) addIssue('warn', 'Rubric columns list does not match column count.');
+  }
+
+  if (type === 'knowledge_check') {
+    if (!String(data.prompt || '').trim()) addIssue('warn', 'Knowledge check prompt is empty.');
+    const options = Array.isArray(data.options) ? data.options : [];
+    if (options.length < 2) addIssue('warn', 'Knowledge check should have at least 2 options.');
+  }
+
+  if (type === 'hotspot_image') {
+    if (!String(data.imageUrl || data.url || '').trim()) addIssue('warn', 'Hotspot image URL is empty.');
+    const hotspots = Array.isArray(data.hotspots) ? data.hotspots : [];
+    if (hotspots.length === 0) addIssue('warn', 'No hotspots defined yet.');
+  }
+
+  return issues.filter((issue) => issue && issue.message);
+}
+
+export function validateComposerActivities(activities) {
+  const list = Array.isArray(activities) ? activities : [];
+  return list.map((activity, index) => ({
+    index,
+    id: activity?.id || '',
+    type: activity?.type || '',
+    issues: validateComposerActivity(activity),
+  }));
+}

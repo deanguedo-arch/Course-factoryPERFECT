@@ -29,8 +29,10 @@ import VaultBrowser from './VaultBrowser';
 import { CodeBlock } from './Shared.jsx';
 import GenericDataEditor from './GenericDataEditor.jsx';
 import HotspotEditor from './composer/HotspotEditor.jsx';
+import ComposerSidebarTools from './composer/ComposerSidebarTools.jsx';
 import { buildModuleFrameHTML, cleanModuleScript, getMaterialBadgeLabel, validateModule } from '../utils/generators.js';
 import { getActivityDefinition, listActivityTypeGroups } from '../composer/activityRegistry.js';
+import vaultIndex from '../data/vault.json';
 import {
   buildComposerGridModel,
   clampComposerColSpan,
@@ -225,6 +227,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerImageMaterialId, setModuleManagerImageMaterialId] = useState('');
   const [moduleManagerAssessmentId, setModuleManagerAssessmentId] = useState('');
   const [moduleManagerComposerPreviewNonce, setModuleManagerComposerPreviewNonce] = useState(0);
+  const [moduleManagerComposerSidebarMode, setModuleManagerComposerSidebarMode] = useState('grid'); // 'grid' | 'outline' | 'issues' | 'templates'
   const moduleManagerRichEditorRef = useRef(null);
   const moduleManagerRichEditorSelectionRef = useRef(null);
   const moduleManagerRichEditorUpdateTimerRef = useRef(null);
@@ -332,7 +335,55 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   );
 
   // Assessment Generator Functions
-  const handleVaultSelect = (file) => {
+  const handleVaultSelect = (payload) => {
+    const kind = payload && typeof payload === 'object' ? payload.kind : null;
+    const selectedFile = kind === 'vault-file' ? payload.file : payload;
+    const selectedFolderSegments =
+      kind === 'vault-folder' && payload && Array.isArray(payload.segments) ? payload.segments : null;
+
+    if (
+      selectedFolderSegments &&
+      vaultTargetField &&
+      typeof vaultTargetField === 'object' &&
+      vaultTargetField.target === 'composer-resource-folder-import'
+    ) {
+      if (selectedComposerActivity?.type === 'resource_list') {
+        const items = Array.isArray(selectedComposerActivity.data?.items) ? selectedComposerActivity.data.items : [];
+        const folderPrefix = `/Course-factoryPERFECT/materials/${selectedFolderSegments.join('/')}`.replace(/\/+$/, '');
+        const prefixWithSlash = folderPrefix.endsWith('/') ? folderPrefix : `${folderPrefix}/`;
+        const vaultFiles = Array.isArray(vaultIndex?.files) ? vaultIndex.files : [];
+        const matchingFiles = vaultFiles.filter((file) => String(file?.path || '').startsWith(prefixWithSlash));
+        const existingPaths = new Set(items.map((item) => String(item?.viewUrl || item?.downloadUrl || item?.url || '').trim()));
+        const appended = matchingFiles
+          .map((file) => {
+            const path = String(file?.path || '').trim();
+            if (!path || existingPaths.has(path)) return null;
+            existingPaths.add(path);
+            return {
+              label: file?.title || file?.filename || path.split('/').pop() || 'Resource',
+              viewUrl: path,
+              downloadUrl: path,
+              description: '',
+            };
+          })
+          .filter(Boolean);
+
+        if (appended.length > 0) {
+          updateSelectedComposerActivityData({ items: [...items, ...appended] });
+        }
+      }
+      setIsVaultOpen(false);
+      setVaultTargetField(null);
+      return;
+    }
+
+    const filePath = String(selectedFile?.path || '').trim();
+    if (!filePath) {
+      setIsVaultOpen(false);
+      setVaultTargetField(null);
+      return;
+    }
+
     if (vaultTargetField && typeof vaultTargetField === 'object' && vaultTargetField.target === 'composer-resource') {
       if (selectedComposerActivity?.type === 'resource_list') {
         const items = Array.isArray(selectedComposerActivity.data?.items) ? selectedComposerActivity.data.items : [];
@@ -340,18 +391,18 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         if (Number.isInteger(itemIndex) && itemIndex >= 0 && itemIndex < items.length) {
           const key = vaultTargetField.field === 'downloadUrl' ? 'downloadUrl' : 'viewUrl';
           const nextItems = [...items];
-          nextItems[itemIndex] = { ...(nextItems[itemIndex] || {}), [key]: file.path };
+          nextItems[itemIndex] = { ...(nextItems[itemIndex] || {}), [key]: filePath };
           updateSelectedComposerActivityData({ items: nextItems });
         }
       }
     } else if (vaultTargetField && typeof vaultTargetField === 'object' && vaultTargetField.target === 'composer-image') {
       if (selectedComposerActivity?.type === 'image_block') {
-        updateSelectedComposerActivityData({ url: file.path || '' });
+        updateSelectedComposerActivityData({ url: filePath || '' });
       }
     } else if (vaultTargetField === 'view') {
-      setMaterialForm(prev => ({ ...prev, viewUrl: file.path }));
+      setMaterialForm(prev => ({ ...prev, viewUrl: filePath }));
     } else if (vaultTargetField === 'download') {
-      setMaterialForm(prev => ({ ...prev, downloadUrl: file.path }));
+      setMaterialForm(prev => ({ ...prev, downloadUrl: filePath }));
     }
     setIsVaultOpen(false);
     setVaultTargetField(null);
@@ -1608,6 +1659,40 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     setModuleManagerComposerSelectedIndex(nextActivities.length - 1);
   };
 
+  const addComposerActivityFromTemplate = (templateActivity) => {
+    const base = templateActivity && typeof templateActivity === 'object' ? templateActivity : null;
+    const requestedType = String(base?.type || '').trim();
+    const resolvedType = requestedType && getActivityDefinition(requestedType) ? requestedType : moduleManagerComposerStarterType;
+    const starter = buildComposerStarterActivity(resolvedType);
+
+    let clonedData = starter.data;
+    if (base?.data && typeof base.data === 'object') {
+      try {
+        clonedData = JSON.parse(JSON.stringify(base.data));
+      } catch {
+        clonedData = { ...(base.data || {}) };
+      }
+    }
+
+    const maxRow = moduleManagerGridModel.placements.reduce((largest, placement) => Math.max(largest, placement.row), 0);
+    const requestedSpan = base?.layout?.colSpan ?? starter?.layout?.colSpan ?? 1;
+    const nextActivity = {
+      ...starter,
+      type: resolvedType,
+      data: clonedData && typeof clonedData === 'object' ? clonedData : {},
+      layout: {
+        ...(starter.layout || {}),
+        colSpan: clampComposerColSpan(requestedSpan, moduleManagerComposerMaxColumns),
+        row: Math.max(1, maxRow + 1),
+        col: 1,
+      },
+    };
+
+    const nextActivities = [...moduleManagerComposerActivities, nextActivity];
+    updateComposerActivities(nextActivities);
+    setModuleManagerComposerSelectedIndex(nextActivities.length - 1);
+  };
+
   const addComposerEmptyRowDraft = () => {
     setModuleManagerComposerExtraRows((count) => Math.min(50, count + 1));
   };
@@ -2161,6 +2246,17 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
             >
               <Plus size={12} /> Add Resource
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setVaultTargetField({ target: 'composer-resource-folder-import' });
+                setIsVaultOpen(true);
+              }}
+              className="ml-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-xs text-slate-100 font-bold inline-flex items-center gap-1"
+              title="Select a vault folder and append all its files as resources"
+            >
+              <FolderOpen size={12} /> Import Vault Folder
             </button>
             <div className="pt-3 border-t border-slate-700">
               <label className="block text-[11px] font-bold text-slate-400 uppercase mb-2">Add From Module Bank</label>
@@ -4940,6 +5036,27 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 <h4 className="text-sm font-bold text-white">Activities</h4>
                                                 <span className="text-[11px] text-slate-500">{moduleManagerComposerActivities.length} total</span>
                                             </div>
+                                            <div className="grid grid-cols-4 gap-2 mb-3">
+                                                {[
+                                                    { value: 'grid', label: 'Grid' },
+                                                    { value: 'outline', label: 'Outline' },
+                                                    { value: 'issues', label: 'Issues' },
+                                                    { value: 'templates', label: 'Templates' },
+                                                ].map((tab) => (
+                                                    <button
+                                                        key={tab.value}
+                                                        type="button"
+                                                        onClick={() => setModuleManagerComposerSidebarMode(tab.value)}
+                                                        className={`rounded px-2 py-1 text-[10px] font-black uppercase tracking-wide border transition-colors ${
+                                                            moduleManagerComposerSidebarMode === tab.value
+                                                                ? 'bg-indigo-600 border-indigo-400 text-white'
+                                                                : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        {tab.label}
+                                                    </button>
+                                                ))}
+                                            </div>
                                             <div className="mb-3 p-2 rounded border border-slate-700 bg-slate-900/60">
                                                 <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Grid Columns</label>
                                                 <select
@@ -4955,6 +5072,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 </select>
                                             </div>
 
+                                            {moduleManagerComposerSidebarMode === 'grid' ? (
                                             <div className="max-h-72 overflow-y-auto pr-1">
                                                 <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${moduleManagerComposerMaxColumns}, minmax(0, 1fr))` }}>
                                                     {moduleManagerGridModel.emptySlots.map((slot) => {
@@ -5086,6 +5204,18 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 </div>
                                                 {moduleManagerComposerActivities.length === 0 && <p className="text-xs text-slate-500 mt-1">No activities yet.</p>}
                                             </div>
+                                            ) : (
+                                            <ComposerSidebarTools
+                                                mode={moduleManagerComposerSidebarMode}
+                                                activities={moduleManagerComposerActivities}
+                                                selectedIndex={moduleManagerComposerSelectedIndex}
+                                                selectedActivity={selectedComposerActivity}
+                                                onSelectIndex={setModuleManagerComposerSelectedIndex}
+                                                onDuplicateSelected={duplicateSelectedComposerActivityDraft}
+                                                onDeleteSelected={removeSelectedComposerActivityDraft}
+                                                onInsertActivity={addComposerActivityFromTemplate}
+                                            />
+                                            )}
 
                                             <div className="mt-4 pt-3 border-t border-slate-700">
                                                 <div className="grid grid-cols-3 gap-2">
@@ -5604,6 +5734,13 @@ ${aiDescription}
       {/* VAULT BROWSER MODAL */}
       {isVaultOpen && (
         <VaultBrowser 
+            mode={
+              vaultTargetField &&
+              typeof vaultTargetField === 'object' &&
+              vaultTargetField.target === 'composer-resource-folder-import'
+                ? 'folder'
+                : 'file'
+            }
             onSelect={handleVaultSelect} 
             onClose={() => { setIsVaultOpen(false); setVaultTargetField(null); }} 
         />

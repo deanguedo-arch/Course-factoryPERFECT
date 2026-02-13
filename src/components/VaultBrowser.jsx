@@ -17,7 +17,7 @@ import vaultIndex from '../data/vault.json';
  *
  * Supports folder navigation based on each entry's `path`.
  */
-const VaultBrowser = ({ onSelect, onClose }) => {
+const VaultBrowser = ({ onSelect, onClose, mode = 'file' }) => {
   const [search, setSearch] = useState('');
   const [cwd, setCwd] = useState([]); // path segments under /materials/
 
@@ -98,6 +98,7 @@ const VaultBrowser = ({ onSelect, onClose }) => {
   const goToCrumb = (pathSegments) => setCwd(Array.isArray(pathSegments) ? pathSegments : []);
 
   const isSearchActive = String(search || '').trim().length > 0;
+  const allowFolderSelect = mode === 'folder';
 
   return (
     <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
@@ -147,6 +148,17 @@ const VaultBrowser = ({ onSelect, onClose }) => {
             </button>
           </div>
 
+          {allowFolderSelect && !isSearchActive && (
+            <button
+              type="button"
+              onClick={() => onSelect({ kind: 'vault-folder', segments: cwd })}
+              className="w-full mb-3 px-3 py-2 border-2 border-black bg-white hover:bg-yellow-200 transition-colors text-xs font-black uppercase tracking-wide"
+              title="Select the current folder"
+            >
+              Use This Folder: /materials/{cwd.join('/') || ''}
+            </button>
+          )}
+
           <div className="relative">
             <Search className="absolute left-3 top-3 text-gray-500" size={20} />
             <input
@@ -186,7 +198,7 @@ const VaultBrowser = ({ onSelect, onClose }) => {
           {folderView.files.map((file) => (
             <div
               key={file.id}
-              onClick={() => onSelect(file)}
+              onClick={() => onSelect({ kind: 'vault-file', file })}
               className="group flex items-center justify-between p-3 border-2 border-black hover:bg-blue-600 hover:text-white cursor-pointer transition-all hover:translate-x-1 hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
               title={file.__relPath || file.filename}
             >
