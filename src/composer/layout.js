@@ -307,28 +307,6 @@ function canPlaceCanvas(rect, placed) {
   return !placed.some((candidate) => collides(rect, candidate));
 }
 
-function compactCanvas(placements) {
-  const next = placements
-    .map((item) => ({ ...item }))
-    .sort((a, b) => {
-      if (a.y !== b.y) return a.y - b.y;
-      if (a.x !== b.x) return a.x - b.x;
-      return a.index - b.index;
-    });
-
-  next.forEach((item, idx) => {
-    const others = next.filter((_, otherIdx) => otherIdx !== idx);
-    let targetY = item.y;
-    while (targetY > 0) {
-      const candidate = { ...item, y: targetY - 1 };
-      if (!canPlaceCanvas(candidate, others)) break;
-      targetY -= 1;
-    }
-    item.y = targetY;
-  });
-  return next;
-}
-
 function normalizeCanvasActivities(activities, maxColumns = COMPOSER_DEFAULT_COLUMNS) {
   const nextMax = clampComposerColumns(maxColumns);
   const normalized = Array.isArray(activities)
@@ -368,8 +346,8 @@ function normalizeCanvasActivities(activities, maxColumns = COMPOSER_DEFAULT_COL
     }
   });
 
-  const compacted = compactCanvas(placed);
-  const placementByIndex = new Map(compacted.map((item) => [item.index, item]));
+  // Keep intentional gaps in canvas mode so authors can create breathing room between blocks.
+  const placementByIndex = new Map(placed.map((item) => [item.index, item]));
 
   return normalized.map((activity, index) => {
     const placement = placementByIndex.get(index) || {

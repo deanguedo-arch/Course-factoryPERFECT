@@ -190,6 +190,37 @@ function stripInlineRichFormatting(html) {
   return template.innerHTML;
 }
 
+function normalizeDeleteContentText(value) {
+  return extractRichEditorText(value).replace(/\s+/g, ' ').trim();
+}
+
+function hasActivityUserContent(currentValue, defaultValue) {
+  if (typeof currentValue === 'string') {
+    const normalizedCurrent = normalizeDeleteContentText(currentValue);
+    if (!normalizedCurrent) return false;
+    const normalizedDefault = typeof defaultValue === 'string' ? normalizeDeleteContentText(defaultValue) : '';
+    return normalizedCurrent !== normalizedDefault;
+  }
+  if (Array.isArray(currentValue)) {
+    const defaultList = Array.isArray(defaultValue) ? defaultValue : [];
+    return currentValue.some((item, idx) => hasActivityUserContent(item, defaultList[idx]));
+  }
+  if (currentValue && typeof currentValue === 'object') {
+    const defaultObject = defaultValue && typeof defaultValue === 'object' ? defaultValue : {};
+    return Object.keys(currentValue).some((key) => hasActivityUserContent(currentValue[key], defaultObject[key]));
+  }
+  return false;
+}
+
+function activityRequiresDeleteConfirmation(activity) {
+  if (!activity || typeof activity !== 'object') return false;
+  const definition = getActivityDefinition(activity.type);
+  if (!definition) return false;
+  const currentData = activity.data && typeof activity.data === 'object' ? activity.data : {};
+  const defaultData = definition.createDefaultData ? definition.createDefaultData() : {};
+  return hasActivityUserContent(currentData, defaultData);
+}
+
 function extractMaterialImageAsset(material) {
   if (!material || typeof material !== 'object') return null;
   const imagePattern = /\.(avif|bmp|gif|ico|jpe?g|png|svg|webp)(\?.*)?$/i;
@@ -727,10 +758,32 @@ export default function EditModal({
     setComposerExtraRows((count) => Math.min(50, count + 1));
   };
 
+  const removeActivityByIndex = (index) => {
+    if (!Number.isInteger(index) || index < 0 || index >= activities.length) return;
+    const targetActivity = activities[index];
+    if (!targetActivity) return;
+    if (activityRequiresDeleteConfirmation(targetActivity)) {
+      const label = getActivityDefinition(targetActivity.type)?.label || 'block';
+      const confirmed = window.confirm(`Delete this ${label}?`);
+      if (!confirmed) return;
+    }
+    const nextActivities = activities.filter((_, idx) => idx !== index);
+    updateActivities(nextActivities);
+    if (!nextActivities.length) {
+      setSelectedActivityIndex(0);
+      return;
+    }
+    setSelectedActivityIndex((prevIndex) => {
+      if (!Number.isInteger(prevIndex)) return 0;
+      if (prevIndex > index) return prevIndex - 1;
+      if (prevIndex === index) return Math.min(index, nextActivities.length - 1);
+      return prevIndex;
+    });
+  };
+
   const removeSelectedActivity = () => {
     if (!selectedActivity) return;
-    const nextActivities = activities.filter((_, idx) => idx !== selectedActivityIndex);
-    updateActivities(nextActivities);
+    removeActivityByIndex(selectedActivityIndex);
   };
 
   const moveSelectedActivity = (direction) => {
@@ -2957,6 +3010,9 @@ export default function EditModal({
                                 autoSize
                                 isResizable
                                 isDraggable
+                                compactType={null}
+                                verticalCompact={false}
+                                preventCollision={false}
                                 draggableHandle=".cf-canvas-handle"
                                 onLayoutChange={applyCanvasGridLayout}
                               >
@@ -3038,6 +3094,7 @@ export default function EditModal({
                                 return (
                                   <div
                                     key={activity.id || `${activity.type}-${idx}`}
+                                    className="relative"
                                     style={{
                                       gridColumn: placement
                                         ? `${placement.col} / span ${placement.colSpan}`
@@ -3080,7 +3137,7 @@ export default function EditModal({
                                     <button
                                       type="button"
                                       onClick={() => setSelectedActivityIndex(idx)}
-                                      className={`w-full text-left p-2 rounded border transition-colors ${
+                                      className={`w-full text-left p-2 pr-8 rounded border transition-colors ${
                                         isSelected
                                           ? 'bg-emerald-900/30 border-emerald-600 text-white'
                                           : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
@@ -3089,6 +3146,21 @@ export default function EditModal({
                                       <p className="text-xs font-bold">{def?.label || activity.type}</p>
                                       <p className="text-[10px] text-slate-500 font-mono">{activity.id || `activity-${idx + 1}`}</p>
                                       <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-1">Span {colSpan}</p>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      draggable={false}
+                                      onDragStart={(event) => event.preventDefault()}
+                                      onMouseDown={(event) => event.stopPropagation()}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        removeActivityByIndex(idx);
+                                      }}
+                                      className="absolute top-1.5 right-1.5 inline-flex h-5 w-5 items-center justify-center rounded border border-slate-600/60 bg-slate-900/40 text-slate-300 hover:border-rose-400/70 hover:bg-rose-500/15 hover:text-rose-200 transition-colors"
+                                      title="Delete block"
+                                      aria-label={`Delete ${def?.label || activity.type}`}
+                                    >
+                                      <X size={11} />
                                     </button>
                                   </div>
                                 );

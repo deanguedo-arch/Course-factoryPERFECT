@@ -193,6 +193,37 @@ function stripInlineRichFormatting(html) {
   return template.innerHTML;
 }
 
+function normalizeDeleteContentText(value) {
+  return extractRichEditorText(value).replace(/\s+/g, ' ').trim();
+}
+
+function hasActivityUserContent(currentValue, defaultValue) {
+  if (typeof currentValue === 'string') {
+    const normalizedCurrent = normalizeDeleteContentText(currentValue);
+    if (!normalizedCurrent) return false;
+    const normalizedDefault = typeof defaultValue === 'string' ? normalizeDeleteContentText(defaultValue) : '';
+    return normalizedCurrent !== normalizedDefault;
+  }
+  if (Array.isArray(currentValue)) {
+    const defaultList = Array.isArray(defaultValue) ? defaultValue : [];
+    return currentValue.some((item, idx) => hasActivityUserContent(item, defaultList[idx]));
+  }
+  if (currentValue && typeof currentValue === 'object') {
+    const defaultObject = defaultValue && typeof defaultValue === 'object' ? defaultValue : {};
+    return Object.keys(currentValue).some((key) => hasActivityUserContent(currentValue[key], defaultObject[key]));
+  }
+  return false;
+}
+
+function activityRequiresDeleteConfirmation(activity) {
+  if (!activity || typeof activity !== 'object') return false;
+  const definition = getActivityDefinition(activity.type);
+  if (!definition) return false;
+  const currentData = activity.data && typeof activity.data === 'object' ? activity.data : {};
+  const defaultData = definition.createDefaultData ? definition.createDefaultData() : {};
+  return hasActivityUserContent(currentData, defaultData);
+}
+
 function reorderByIndex(items, fromIndex, toIndex) {
   if (!Array.isArray(items)) return [];
   if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex)) return [...items];
@@ -293,10 +324,14 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerComposerPreviewHeight, setModuleManagerComposerPreviewHeight] = useState(900);
   const [moduleManagerComposerBuilderHeight, setModuleManagerComposerBuilderHeight] = useState(760);
   const [moduleManagerComposerBuilderCellWidth, setModuleManagerComposerBuilderCellWidth] = useState(220);
+  const [moduleManagerComposerCanvasGapRows, setModuleManagerComposerCanvasGapRows] = useState(1);
   const [moduleManagerComposerLockBuilderScale, setModuleManagerComposerLockBuilderScale] = useState(true);
+  const [, setModuleManagerComposerHistoryVersion] = useState(0);
   const moduleManagerRichEditorRef = useRef(null);
   const moduleManagerRichEditorSelectionRef = useRef(null);
   const moduleManagerRichEditorUpdateTimerRef = useRef(null);
+  const moduleManagerComposerHistoryRef = useRef({ past: [], future: [] });
+  const moduleManagerCanvasInteractionRef = useRef({ snapshot: null, changed: false, activeId: null, mode: null });
   const moduleManagerDraftImportRef = useRef(null);
   const [moduleManagerHTML, setModuleManagerHTML] = useState('');
   const [moduleManagerURL, setModuleManagerURL] = useState('');
@@ -398,6 +433,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const moduleManagerPreviewPaneHeight = Math.max(420, Math.min(2000, Number(moduleManagerComposerPreviewHeight) || 900));
   const moduleManagerBuilderPaneHeight = Math.max(360, Math.min(1800, Number(moduleManagerComposerBuilderHeight) || 760));
   const moduleManagerBuilderCellWidth = Math.max(140, Math.min(360, Number(moduleManagerComposerBuilderCellWidth) || 220));
+  const moduleManagerCanvasGapRowCount = Math.max(1, Math.min(12, Number.parseInt(moduleManagerComposerCanvasGapRows, 10) || 1));
   const moduleManagerBuilderCanvasWidth = moduleManagerComposerMaxColumns * moduleManagerBuilderCellWidth;
   const moduleManagerEditorPaneWidth = Math.max(25, 100 - moduleManagerPreviewPaneWidth);
   const moduleManagerBothWorkspacePanesOpen = !moduleManagerComposerLeftPaneCollapsed && !moduleManagerComposerPreviewCollapsed;
@@ -424,6 +460,23 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       })),
     [moduleManagerComposerActivities],
   );
+  const moduleManagerCanvasOccupiedRows = useMemo(
+    () =>
+      moduleManagerCanvasItems.reduce(
+        (largest, item) => Math.max(largest, Math.max(0, Number.parseInt(item.y, 10) || 0) + Math.max(1, Number.parseInt(item.h, 10) || 1)),
+        1,
+      ),
+    [moduleManagerCanvasItems],
+  );
+  const moduleManagerCanvasMarginY = Array.isArray(normalizedModuleManagerLayout.margin) ? normalizedModuleManagerLayout.margin[1] : 12;
+  const moduleManagerCanvasPaddingY = Array.isArray(normalizedModuleManagerLayout.containerPadding)
+    ? normalizedModuleManagerLayout.containerPadding[1]
+    : 12;
+  const moduleManagerCanvasVisibleRows = Math.max(1, moduleManagerCanvasOccupiedRows + Math.max(0, moduleManagerComposerExtraRows || 0));
+  const moduleManagerCanvasMinHeight =
+    moduleManagerCanvasVisibleRows * normalizedModuleManagerLayout.rowHeight +
+    Math.max(0, moduleManagerCanvasVisibleRows - 1) * moduleManagerCanvasMarginY +
+    moduleManagerCanvasPaddingY * 2;
 
   // Assessment Generator Functions
   const handleVaultSelect = (payload) => {
@@ -1182,6 +1235,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     setModuleManagerComposerActivities(nextActivities);
     setModuleManagerComposerExtraRows(nextExtraRows);
     setModuleManagerComposerSelectedIndex(nextSelectedIndex);
+    resetComposerHistory();
     return true;
   };
 
@@ -1441,7 +1495,9 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       }),
     );
     setModuleManagerComposerExtraRows(0);
+    setModuleManagerComposerCanvasGapRows(1);
     setModuleManagerComposerSelectedIndex(0);
+    resetComposerHistory();
     setModuleManagerComposerDraggingIndex(null);
     setModuleManagerComposerDragOverIndex(null);
     setModuleManagerComposerDragOverSlotKey(null);
@@ -1741,14 +1797,143 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     );
   }, [phase1MaterialPreview, projectData]);
 
-  const updateComposerActivities = (nextActivities, nextLayout = moduleManagerComposerLayout) => {
+  const cloneComposerSnapshotData = React.useCallback((value) => {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch {
+      return value;
+    }
+  }, []);
+
+  const buildComposerSnapshot = React.useCallback(
+    ({
+      activities = moduleManagerComposerActivities,
+      layout = moduleManagerComposerLayout,
+      extraRows = moduleManagerComposerExtraRows,
+      selectedIndex = moduleManagerComposerSelectedIndex,
+    } = {}) => ({
+      activities: cloneComposerSnapshotData(Array.isArray(activities) ? activities : []),
+      layout: cloneComposerSnapshotData(normalizeComposerLayout(layout)),
+      extraRows: Math.max(0, Math.min(50, Number.parseInt(extraRows, 10) || 0)),
+      selectedIndex: Math.max(0, Number.parseInt(selectedIndex, 10) || 0),
+    }),
+    [
+      cloneComposerSnapshotData,
+      moduleManagerComposerActivities,
+      moduleManagerComposerExtraRows,
+      moduleManagerComposerLayout,
+      moduleManagerComposerSelectedIndex,
+    ],
+  );
+
+  const getComposerSnapshotSignature = React.useCallback((snapshot) => {
+    if (!snapshot) return '';
+    return JSON.stringify([
+      snapshot.layout || {},
+      snapshot.extraRows || 0,
+      snapshot.selectedIndex || 0,
+      Array.isArray(snapshot.activities) ? snapshot.activities : [],
+    ]);
+  }, []);
+
+  const areComposerSnapshotsEqual = React.useCallback(
+    (left, right) => getComposerSnapshotSignature(left) === getComposerSnapshotSignature(right),
+    [getComposerSnapshotSignature],
+  );
+
+  const bumpComposerHistoryVersion = React.useCallback(() => {
+    setModuleManagerComposerHistoryVersion((version) => version + 1);
+  }, []);
+
+  const resetComposerHistory = React.useCallback(() => {
+    moduleManagerComposerHistoryRef.current = { past: [], future: [] };
+    moduleManagerCanvasInteractionRef.current = { snapshot: null, changed: false, activeId: null, mode: null };
+    bumpComposerHistoryVersion();
+  }, [bumpComposerHistoryVersion]);
+
+  const pushComposerHistorySnapshot = React.useCallback(
+    (snapshot) => {
+      if (!snapshot) return;
+      const nextSnapshot = buildComposerSnapshot(snapshot);
+      const history = moduleManagerComposerHistoryRef.current;
+      const last = history.past[history.past.length - 1];
+      if (last && areComposerSnapshotsEqual(last, nextSnapshot)) return;
+      history.past.push(nextSnapshot);
+      if (history.past.length > 120) {
+        history.past = history.past.slice(history.past.length - 120);
+      }
+      history.future = [];
+      bumpComposerHistoryVersion();
+    },
+    [areComposerSnapshotsEqual, buildComposerSnapshot, bumpComposerHistoryVersion],
+  );
+
+  const applyComposerSnapshot = React.useCallback(
+    (snapshot) => {
+      if (!snapshot || typeof snapshot !== 'object') return;
+      const normalizedLayout = normalizeComposerLayout(snapshot.layout);
+      const normalizedActivities = normalizeComposerActivities(snapshot.activities, {
+        maxColumns: normalizedLayout.maxColumns,
+        mode: normalizedLayout.mode,
+      });
+      const safeSelectedIndex = Math.max(0, Math.min(normalizedActivities.length - 1, Number.parseInt(snapshot.selectedIndex, 10) || 0));
+      const safeExtraRows = Math.max(0, Math.min(50, Number.parseInt(snapshot.extraRows, 10) || 0));
+      setModuleManagerComposerLayout(normalizedLayout);
+      setModuleManagerComposerActivities(normalizedActivities);
+      setModuleManagerComposerExtraRows(safeExtraRows);
+      setModuleManagerComposerSelectedIndex(safeSelectedIndex);
+    },
+    [],
+  );
+
+  const undoComposerDraftChange = React.useCallback(() => {
+    const history = moduleManagerComposerHistoryRef.current;
+    if (!history.past.length) return;
+    const currentSnapshot = buildComposerSnapshot();
+    const previousSnapshot = history.past.pop();
+    history.future.unshift(currentSnapshot);
+    if (history.future.length > 120) {
+      history.future = history.future.slice(0, 120);
+    }
+    applyComposerSnapshot(previousSnapshot);
+    bumpComposerHistoryVersion();
+  }, [applyComposerSnapshot, buildComposerSnapshot, bumpComposerHistoryVersion]);
+
+  const redoComposerDraftChange = React.useCallback(() => {
+    const history = moduleManagerComposerHistoryRef.current;
+    if (!history.future.length) return;
+    const currentSnapshot = buildComposerSnapshot();
+    const nextSnapshot = history.future.shift();
+    history.past.push(currentSnapshot);
+    if (history.past.length > 120) {
+      history.past = history.past.slice(history.past.length - 120);
+    }
+    applyComposerSnapshot(nextSnapshot);
+    bumpComposerHistoryVersion();
+  }, [applyComposerSnapshot, buildComposerSnapshot, bumpComposerHistoryVersion]);
+
+  const moduleManagerComposerCanUndo = moduleManagerComposerHistoryRef.current.past.length > 0;
+  const moduleManagerComposerCanRedo = moduleManagerComposerHistoryRef.current.future.length > 0;
+
+  const updateComposerActivities = (
+    nextActivities,
+    nextLayout = moduleManagerComposerLayout,
+    { recordHistory = true, historySnapshot = null } = {},
+  ) => {
     const normalizedLayout = normalizeComposerLayout(nextLayout);
     const normalizedActivities = normalizeComposerActivities(nextActivities, {
       maxColumns: normalizedLayout.maxColumns,
       mode: normalizedLayout.mode,
     });
+    const nextSignature = JSON.stringify([normalizedLayout, normalizedActivities]);
+    const currentSignature = JSON.stringify([normalizeComposerLayout(moduleManagerComposerLayout), moduleManagerComposerActivities]);
+    if (nextSignature === currentSignature) return false;
+    if (recordHistory) {
+      pushComposerHistorySnapshot(historySnapshot || buildComposerSnapshot());
+    }
     setModuleManagerComposerLayout(normalizedLayout);
     setModuleManagerComposerActivities(normalizedActivities);
+    return true;
   };
 
   const updateComposerMaxColumns = (nextColumns) => {
@@ -1774,6 +1959,35 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     });
     updateComposerActivities(moduleManagerComposerActivities, normalizedLayout);
   };
+
+  useEffect(() => {
+    const handleComposerUndoRedo = (event) => {
+      if (moduleManagerType !== 'composer') return;
+      const target = event.target;
+      const tagName = String(target?.tagName || '').toLowerCase();
+      const isEditableField =
+        Boolean(target?.isContentEditable) || tagName === 'input' || tagName === 'textarea' || tagName === 'select';
+      if (isEditableField) return;
+
+      const key = String(event.key || '').toLowerCase();
+      const withCmd = event.ctrlKey || event.metaKey;
+      if (!withCmd) return;
+
+      const isUndo = key === 'z' && !event.shiftKey;
+      const isRedo = key === 'y' || (key === 'z' && event.shiftKey);
+      if (!isUndo && !isRedo) return;
+
+      event.preventDefault();
+      if (isUndo) {
+        undoComposerDraftChange();
+      } else {
+        redoComposerDraftChange();
+      }
+    };
+
+    window.addEventListener('keydown', handleComposerUndoRedo);
+    return () => window.removeEventListener('keydown', handleComposerUndoRedo);
+  }, [moduleManagerType, redoComposerDraftChange, undoComposerDraftChange]);
 
   const updateSelectedComposerActivityMeta = (metaKey, updates) => {
     if (!selectedComposerActivity) return;
@@ -1963,13 +2177,82 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   };
 
   const addComposerEmptyRowDraft = () => {
+    pushComposerHistorySnapshot(buildComposerSnapshot());
     setModuleManagerComposerExtraRows((count) => Math.min(50, count + 1));
+  };
+
+  const shiftCanvasActivitiesDownFromRow = (startRow, rowCount = moduleManagerCanvasGapRowCount) => {
+    if (!isModuleManagerCanvasMode) return;
+    const clampedStart = Math.max(0, Number.parseInt(startRow, 10) || 0);
+    const clampedRows = Math.max(1, Math.min(12, Number.parseInt(rowCount, 10) || 1));
+    let changed = false;
+
+    const nextActivities = moduleManagerComposerActivities.map((activity) => {
+      const currentY = Number.isInteger(activity?.layout?.y)
+        ? activity.layout.y
+        : Math.max(0, (Number.parseInt(activity?.layout?.row, 10) || 1) - 1);
+      if (currentY < clampedStart) return activity;
+      changed = true;
+      const nextY = currentY + clampedRows;
+      return {
+        ...activity,
+        layout: {
+          ...(activity.layout || {}),
+          y: nextY,
+          row: nextY + 1,
+        },
+      };
+    });
+
+    if (changed) {
+      updateComposerActivities(nextActivities);
+      return;
+    }
+    pushComposerHistorySnapshot(buildComposerSnapshot());
+    setModuleManagerComposerExtraRows((count) => Math.min(50, count + clampedRows));
+  };
+
+  const insertCanvasGapRelativeToSelected = (placement = 'below') => {
+    if (!isModuleManagerCanvasMode || !selectedComposerActivity) return;
+    const selectedY = Number.isInteger(selectedComposerActivity?.layout?.y)
+      ? selectedComposerActivity.layout.y
+      : Math.max(0, (Number.parseInt(selectedComposerActivity?.layout?.row, 10) || 1) - 1);
+    const selectedH = Math.max(1, Number.parseInt(selectedComposerActivity?.layout?.h, 10) || 1);
+    const startRow = placement === 'above' ? selectedY : selectedY + selectedH;
+    shiftCanvasActivitiesDownFromRow(startRow, moduleManagerCanvasGapRowCount);
+  };
+
+  const addCanvasOpenRowsDraft = () => {
+    pushComposerHistorySnapshot(buildComposerSnapshot());
+    setModuleManagerComposerExtraRows((count) => Math.min(50, count + moduleManagerCanvasGapRowCount));
+  };
+
+  const removeComposerActivityByIndex = (index) => {
+    if (!Number.isInteger(index) || index < 0 || index >= moduleManagerComposerActivities.length) return;
+    const targetActivity = moduleManagerComposerActivities[index];
+    if (!targetActivity) return;
+    if (activityRequiresDeleteConfirmation(targetActivity)) {
+      const label = getActivityDefinition(targetActivity.type)?.label || 'block';
+      const confirmed = window.confirm(`Delete this ${label}?`);
+      if (!confirmed) return;
+    }
+    const nextActivities = moduleManagerComposerActivities.filter((_, idx) => idx !== index);
+    updateComposerActivities(nextActivities);
+    if (!nextActivities.length) {
+      setModuleManagerComposerSelectedIndex(0);
+      return;
+    }
+    setModuleManagerComposerSelectedIndex((prevIndex) => {
+      if (!Number.isInteger(prevIndex)) return 0;
+      if (prevIndex > index) return prevIndex - 1;
+      if (prevIndex === index) return Math.min(index, nextActivities.length - 1);
+      return prevIndex;
+    });
   };
 
   const removeSelectedComposerActivityDraft = () => {
     if (!selectedComposerActivity) return;
-    const nextActivities = moduleManagerComposerActivities.filter((_, idx) => idx !== moduleManagerComposerSelectedIndex);
-    updateComposerActivities(nextActivities);
+    removeComposerActivityByIndex(moduleManagerComposerSelectedIndex);
   };
 
   const moveSelectedComposerActivityDraft = (direction) => {
@@ -2008,24 +2291,448 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     setModuleManagerComposerSelectedIndex(fromIndex);
   };
 
-  const applyCanvasGridLayout = (layoutItems) => {
-    if (!Array.isArray(layoutItems)) return;
-    const nextActivities = moduleManagerComposerActivities.map((activity, idx) => {
-      const match = layoutItems.find((item) => String(item.i) === String(idx));
-      if (!match) return activity;
+  const clampCanvasRectToColumns = (rect) => {
+    const h = Math.max(1, Number.parseInt(rect?.h, 10) || 1);
+    const w = Math.max(1, Math.min(moduleManagerComposerMaxColumns, Number.parseInt(rect?.w, 10) || 1));
+    const x = Math.max(0, Math.min(moduleManagerComposerMaxColumns - w, Number.parseInt(rect?.x, 10) || 0));
+    const y = Math.max(0, Number.parseInt(rect?.y, 10) || 0);
+    return { x, y, w, h };
+  };
+
+  const rectsOverlap = (left, right) =>
+    !(
+      left.x + left.w <= right.x ||
+      right.x + right.w <= left.x ||
+      left.y + left.h <= right.y ||
+      right.y + right.h <= left.y
+    );
+
+  const rectOverlapArea = (left, right) => {
+    const overlapX = Math.max(0, Math.min(left.x + left.w, right.x + right.w) - Math.max(left.x, right.x));
+    const overlapY = Math.max(0, Math.min(left.y + left.h, right.y + right.h) - Math.max(left.y, right.y));
+    return overlapX * overlapY;
+  };
+
+  const resolveCanvasAutoFitWithPushLimit = (
+    proposedActivities,
+    activeIndex,
+    { allowShrink = false, baseActivities = proposedActivities, mode = 'drag' } = {},
+  ) => {
+    if (
+      !Array.isArray(proposedActivities) ||
+      !Number.isInteger(activeIndex) ||
+      activeIndex < 0 ||
+      activeIndex >= proposedActivities.length
+    ) {
+      return { activities: proposedActivities, valid: true };
+    }
+
+    let valid = true;
+
+    const nextActivities = proposedActivities.map((activity) => {
+      const layout = clampCanvasRectToColumns(activity?.layout || {});
       return {
         ...activity,
         layout: {
           ...(activity.layout || {}),
-          x: Number.parseInt(match.x, 10) || 0,
-          y: Number.parseInt(match.y, 10) || 0,
-          w: Math.max(1, Number.parseInt(match.w, 10) || 1),
-          h: Math.max(1, Number.parseInt(match.h, 10) || 1),
-          colSpan: Math.max(1, Number.parseInt(match.w, 10) || 1),
+          ...layout,
+          colSpan: layout.w,
+          col: layout.x + 1,
+          row: layout.y + 1,
         },
       };
     });
-    updateComposerActivities(nextActivities);
+    const baseRects = (Array.isArray(baseActivities) ? baseActivities : []).map((activity) =>
+      clampCanvasRectToColumns(activity?.layout || {}),
+    );
+    const activeProposedRect = clampCanvasRectToColumns(nextActivities[activeIndex]?.layout || {});
+    const activeBaseRect = baseRects[activeIndex] || activeProposedRect;
+    const isResize = mode === 'resize';
+    const resizedHorizontally = isResize && activeProposedRect.w !== activeBaseRect.w;
+    const resizedVertically = isResize && activeProposedRect.h !== activeBaseRect.h;
+    const pushUnit = Math.max(1, activeBaseRect.h);
+    const maxPushUnits = isResize && resizedHorizontally && !resizedVertically ? 0 : pushUnit;
+    const shrinkNeighbors = allowShrink && (!isResize || (resizedHorizontally && !resizedVertically));
+    const baseBottomWithoutActive = baseRects.reduce((largest, rect, idx) => {
+      if (idx === activeIndex || !rect) return largest;
+      return Math.max(largest, rect.y + rect.h);
+    }, 0);
+
+    // Drag replace mode: if dropped over another block, swap positions instead of pushing.
+    if (mode === 'drag') {
+      let replaceTargetIndex = -1;
+      let replaceTargetRatio = 0;
+      baseRects.forEach((candidateRect, idx) => {
+        if (idx === activeIndex || !candidateRect) return;
+        if (!rectsOverlap(activeProposedRect, candidateRect)) return;
+        const overlapArea = rectOverlapArea(activeProposedRect, candidateRect);
+        const activeArea = Math.max(1, activeProposedRect.w * activeProposedRect.h);
+        const candidateArea = Math.max(1, candidateRect.w * candidateRect.h);
+        const overlapRatio = overlapArea / Math.max(1, Math.min(activeArea, candidateArea));
+        if (overlapRatio > replaceTargetRatio) {
+          replaceTargetRatio = overlapRatio;
+          replaceTargetIndex = idx;
+        }
+      });
+
+      if (replaceTargetIndex >= 0 && replaceTargetRatio >= 0.65) {
+        const targetBaseRect = baseRects[replaceTargetIndex] || clampCanvasRectToColumns(nextActivities[replaceTargetIndex]?.layout || {});
+        const swappedActivities = nextActivities.map((activity, idx) => {
+          let rect = baseRects[idx] || clampCanvasRectToColumns(activity?.layout || {});
+          if (idx === activeIndex) rect = targetBaseRect;
+          if (idx === replaceTargetIndex) rect = activeBaseRect;
+          return {
+            ...activity,
+            layout: {
+              ...(activity.layout || {}),
+              ...rect,
+              colSpan: rect.w,
+              col: rect.x + 1,
+              row: rect.y + 1,
+            },
+          };
+        });
+        return { activities: swappedActivities, valid: true };
+      }
+
+      const collided = baseRects
+        .map((candidateRect, idx) => ({ candidateRect, idx }))
+        .filter((item) => item.idx !== activeIndex && item.candidateRect)
+        .filter((item) => rectsOverlap(activeProposedRect, item.candidateRect));
+      if (collided.length > 0) {
+        const pushStartY = collided.reduce((smallest, item) => Math.min(smallest, item.candidateRect.y), collided[0].candidateRect.y);
+        const pushedActivities = nextActivities.map((activity, idx) => {
+          const baseRect = baseRects[idx] || clampCanvasRectToColumns(activity?.layout || {});
+          let rect = { ...baseRect };
+          if (idx === activeIndex) {
+            rect = { ...activeProposedRect };
+          } else if (baseRect.y >= pushStartY) {
+            rect = { ...baseRect, y: baseRect.y + maxPushUnits };
+          }
+          return {
+            ...activity,
+            layout: {
+              ...(activity.layout || {}),
+              ...rect,
+              colSpan: rect.w,
+              col: rect.x + 1,
+              row: rect.y + 1,
+            },
+          };
+        });
+        const activeRect = clampCanvasRectToColumns(pushedActivities[activeIndex]?.layout || {});
+        const invalidCollision = pushedActivities.some((activity, idx) => {
+          if (idx === activeIndex) return false;
+          const rect = clampCanvasRectToColumns(activity?.layout || {});
+          return rectsOverlap(activeRect, rect);
+        });
+        if (!invalidCollision) {
+          return { activities: pushedActivities, valid: true };
+        }
+      }
+    }
+
+    if (isResize && resizedHorizontally && !resizedVertically) {
+      const workingRects = baseRects.map((rect, idx) => ({
+        idx,
+        rect: idx === activeIndex ? { ...activeProposedRect } : { ...(rect || clampCanvasRectToColumns(nextActivities[idx]?.layout || {})) },
+      }));
+      const activeRect = workingRects.find((item) => item.idx === activeIndex)?.rect || { ...activeProposedRect };
+      const sameBand = workingRects
+        .filter((item) => item.idx !== activeIndex)
+        .filter((item) => !(item.rect.y + item.rect.h <= activeRect.y || activeRect.y + activeRect.h <= item.rect.y))
+        .sort((a, b) => a.rect.x - b.rect.x || a.idx - b.idx);
+      let cursor = activeRect.x + activeRect.w;
+      for (const item of sameBand) {
+        if (item.rect.x < cursor) {
+          const overlap = cursor - item.rect.x;
+          item.rect.x = cursor;
+          item.rect.w = Math.max(1, item.rect.w - overlap);
+        }
+        if (item.rect.x + item.rect.w > moduleManagerComposerMaxColumns) {
+          valid = false;
+          break;
+        }
+        cursor = item.rect.x + item.rect.w;
+      }
+      if (valid) {
+        const activeAndBand = [{ idx: activeIndex, rect: activeRect }, ...sameBand];
+        for (let i = 0; i < activeAndBand.length; i += 1) {
+          for (let j = i + 1; j < activeAndBand.length; j += 1) {
+            if (rectsOverlap(activeAndBand[i].rect, activeAndBand[j].rect)) {
+              valid = false;
+              break;
+            }
+          }
+          if (!valid) break;
+        }
+      }
+      if (valid) {
+        const rectByIndex = new Map(workingRects.map((item) => [item.idx, item.rect]));
+        const adjusted = nextActivities.map((activity, idx) => {
+          const rect = rectByIndex.get(idx) || clampCanvasRectToColumns(activity?.layout || {});
+          return {
+            ...activity,
+            layout: {
+              ...(activity.layout || {}),
+              ...rect,
+              colSpan: rect.w,
+              col: rect.x + 1,
+              row: rect.y + 1,
+            },
+          };
+        });
+        return { activities: adjusted, valid: true };
+      }
+    }
+
+    if (isResize && resizedVertically && !resizedHorizontally) {
+      const workingRects = baseRects.map((rect, idx) => ({
+        idx,
+        rect: idx === activeIndex ? { ...activeProposedRect } : { ...(rect || clampCanvasRectToColumns(nextActivities[idx]?.layout || {})) },
+      }));
+      const activeRect = workingRects.find((item) => item.idx === activeIndex)?.rect || { ...activeProposedRect };
+      const others = workingRects.filter((item) => item.idx !== activeIndex);
+
+      // First pass: only push blocks that are actually overlapping the resized block.
+      for (const item of others) {
+        if (!rectsOverlap(item.rect, activeRect)) continue;
+        const baseRect = baseRects[item.idx] || item.rect;
+        const nextY = activeRect.y + activeRect.h;
+        if (nextY > baseRect.y + maxPushUnits) {
+          valid = false;
+          break;
+        }
+        item.rect.y = nextY;
+      }
+
+      // Second pass: cascade only when overlaps are real after the first push.
+      if (valid) {
+        let changed = true;
+        let guard = 0;
+        while (changed && guard < 64) {
+          guard += 1;
+          changed = false;
+          const sorted = others.slice().sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x || a.idx - b.idx);
+          for (let i = 0; i < sorted.length; i += 1) {
+            for (let j = i + 1; j < sorted.length; j += 1) {
+              if (!rectsOverlap(sorted[i].rect, sorted[j].rect)) continue;
+              const baseRect = baseRects[sorted[j].idx] || sorted[j].rect;
+              const nextY = sorted[i].rect.y + sorted[i].rect.h;
+              if (nextY > baseRect.y + maxPushUnits) {
+                valid = false;
+                break;
+              }
+              if (nextY !== sorted[j].rect.y) {
+                sorted[j].rect.y = nextY;
+                changed = true;
+              }
+            }
+            if (!valid) break;
+          }
+        }
+      }
+
+      if (valid) {
+        const rectByIndex = new Map(workingRects.map((item) => [item.idx, item.rect]));
+        const adjusted = nextActivities.map((activity, idx) => {
+          const rect = rectByIndex.get(idx) || clampCanvasRectToColumns(activity?.layout || {});
+          return {
+            ...activity,
+            layout: {
+              ...(activity.layout || {}),
+              ...rect,
+              colSpan: rect.w,
+              col: rect.x + 1,
+              row: rect.y + 1,
+            },
+          };
+        });
+        return { activities: adjusted, valid: true };
+      }
+    }
+
+    const placed = [];
+    const order = [activeIndex, ...nextActivities.map((_, idx) => idx).filter((idx) => idx !== activeIndex)];
+    const canPlace = (candidate) => placed.every((item) => !rectsOverlap(candidate, item.rect));
+
+      const tryFitWithinPushLimit = (baseRect) => {
+      const widthCandidates = shrinkNeighbors
+        ? Array.from({ length: Math.max(1, baseRect.w) }, (_, idx) => Math.max(1, baseRect.w - idx))
+        : [Math.max(1, baseRect.w)];
+      const rowOffsets =
+        isResize && resizedHorizontally && !resizedVertically
+          ? [0]
+          : [0, maxPushUnits];
+      for (const nextW of widthCandidates) {
+        const maxX = Math.max(0, moduleManagerComposerMaxColumns - nextW);
+        const preferredX = Math.max(0, Math.min(maxX, baseRect.x));
+        const xCandidates =
+          isResize && resizedVertically && !resizedHorizontally
+            ? [preferredX]
+            : [preferredX, ...Array.from({ length: maxX + 1 }, (_, idx) => idx).filter((x) => x !== preferredX)];
+        for (const rowOffset of rowOffsets) {
+          const candidateY = baseRect.y + rowOffset;
+          for (const candidateX of xCandidates) {
+            const candidate = clampCanvasRectToColumns({
+              ...baseRect,
+              x: candidateX,
+              y: candidateY,
+              w: nextW,
+            });
+            if (canPlace(candidate)) return candidate;
+          }
+        }
+      }
+      return null;
+    };
+
+    order.forEach((idx, orderIdx) => {
+      const current = nextActivities[idx];
+      const proposedRect = clampCanvasRectToColumns(current?.layout || {});
+      let rect = { ...proposedRect };
+      if (orderIdx !== 0) {
+        const baseRect = baseRects[idx] || proposedRect;
+        const fitted = tryFitWithinPushLimit(baseRect);
+        if (fitted) {
+          rect = fitted;
+        } else {
+          valid = false;
+          rect = { ...baseRect };
+        }
+      }
+
+      nextActivities[idx] = {
+        ...current,
+        layout: {
+          ...(current.layout || {}),
+          ...rect,
+          colSpan: rect.w,
+          col: rect.x + 1,
+          row: rect.y + 1,
+        },
+      };
+      placed.push({ index: idx, rect });
+    });
+
+    const nextBottomRow = nextActivities.reduce((largest, activity) => {
+      const rect = clampCanvasRectToColumns(activity?.layout || {});
+      return Math.max(largest, rect.y + rect.h);
+    }, 0);
+    const nextBottomWithoutActive = nextActivities.reduce((largest, activity, idx) => {
+      if (idx === activeIndex) return largest;
+      const rect = clampCanvasRectToColumns(activity?.layout || {});
+      return Math.max(largest, rect.y + rect.h);
+    }, 0);
+    if (nextBottomWithoutActive > baseBottomWithoutActive + maxPushUnits || nextBottomRow < 0) {
+      valid = false;
+    }
+
+    return { activities: nextActivities, valid };
+  };
+
+  const deriveCanvasActivitiesFromLayout = (layoutItems) => {
+    if (!Array.isArray(layoutItems)) return { changed: false, activities: moduleManagerComposerActivities };
+    const itemsByIndex = new Map(
+      layoutItems
+        .map((item) => {
+          const idx = Number.parseInt(item?.i, 10);
+          if (!Number.isInteger(idx)) return null;
+          return [idx, item];
+        })
+        .filter(Boolean),
+    );
+
+    let changed = false;
+    let nextActivities = moduleManagerComposerActivities.map((activity, idx) => {
+      const match = itemsByIndex.get(idx);
+      if (!match) return activity;
+      const nextLayout = clampCanvasRectToColumns({
+        x: Number.parseInt(match.x, 10) || 0,
+        y: Number.parseInt(match.y, 10) || 0,
+        w: Math.max(1, Number.parseInt(match.w, 10) || 1),
+        h: Math.max(1, Number.parseInt(match.h, 10) || 1),
+      });
+      const prevLayout = activity?.layout || {};
+      if (
+        (Number.parseInt(prevLayout.x, 10) || 0) !== nextLayout.x ||
+        (Number.parseInt(prevLayout.y, 10) || 0) !== nextLayout.y ||
+        (Number.parseInt(prevLayout.w, 10) || 1) !== nextLayout.w ||
+        (Number.parseInt(prevLayout.h, 10) || 1) !== nextLayout.h
+      ) {
+        changed = true;
+      }
+      return {
+        ...activity,
+        layout: {
+          ...(activity.layout || {}),
+          ...nextLayout,
+          colSpan: nextLayout.w,
+          col: nextLayout.x + 1,
+          row: nextLayout.y + 1,
+        },
+      };
+    });
+
+    if (
+      (moduleManagerCanvasInteractionRef.current.mode === 'resize' ||
+        moduleManagerCanvasInteractionRef.current.mode === 'drag') &&
+      Number.isInteger(Number.parseInt(moduleManagerCanvasInteractionRef.current.activeId, 10))
+    ) {
+      const interactionMode = moduleManagerCanvasInteractionRef.current.mode;
+      const activeIndex = Number.parseInt(moduleManagerCanvasInteractionRef.current.activeId, 10);
+      const baseActivities =
+        moduleManagerCanvasInteractionRef.current.snapshot?.activities || moduleManagerComposerActivities;
+      const { activities: resolvedActivities, valid } = resolveCanvasAutoFitWithPushLimit(nextActivities, activeIndex, {
+        allowShrink: interactionMode === 'resize',
+        baseActivities,
+        mode: interactionMode,
+      });
+      if (!valid) {
+        // Enforce capped push behavior for drag/resize: reject attempts that require more than one pushed row.
+        return { changed: false, activities: moduleManagerComposerActivities };
+      }
+      const beforeSignature = JSON.stringify(nextActivities);
+      const afterSignature = JSON.stringify(resolvedActivities);
+      if (beforeSignature !== afterSignature) {
+        changed = true;
+      }
+      nextActivities = resolvedActivities;
+    }
+
+    return { changed, activities: nextActivities };
+  };
+
+  const applyCanvasGridLayout = (layoutItems, { recordHistory = false } = {}) => {
+    const { changed, activities } = deriveCanvasActivitiesFromLayout(layoutItems);
+    if (!changed) return false;
+    const didUpdate = updateComposerActivities(activities, moduleManagerComposerLayout, { recordHistory });
+    if (didUpdate && moduleManagerCanvasInteractionRef.current.snapshot) {
+      moduleManagerCanvasInteractionRef.current.changed = true;
+    }
+    return didUpdate;
+  };
+
+  const beginComposerCanvasInteraction = (mode, item) => {
+    if (!isModuleManagerCanvasMode) return;
+    const nextMode = mode === 'resize' ? 'resize' : 'drag';
+    const activeId = String(item?.i ?? '');
+    moduleManagerCanvasInteractionRef.current = {
+      snapshot: buildComposerSnapshot(),
+      changed: false,
+      activeId,
+      mode: nextMode,
+    };
+  };
+
+  const finishComposerCanvasInteraction = (layoutItems) => {
+    const interaction = moduleManagerCanvasInteractionRef.current;
+    if (!interaction.snapshot) return;
+    applyCanvasGridLayout(layoutItems, { recordHistory: false });
+    if (interaction.changed) {
+      pushComposerHistorySnapshot(interaction.snapshot);
+    }
+    moduleManagerCanvasInteractionRef.current = { snapshot: null, changed: false, activeId: null, mode: null };
   };
 
   const duplicateSelectedComposerActivityDraft = () => {
@@ -3819,7 +4526,9 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         }),
       );
       setModuleManagerComposerExtraRows(0);
+      setModuleManagerComposerCanvasGapRows(1);
       setModuleManagerComposerSelectedIndex(0);
+      resetComposerHistory();
       setModuleManagerStatus('success');
       setModuleManagerMessage(`Composer module "${title}" added with ${composerActivities.length} activities.`);
 
@@ -6256,6 +6965,26 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 </div>
                                                 <button
                                                     type="button"
+                                                    onClick={undoComposerDraftChange}
+                                                    disabled={!moduleManagerComposerCanUndo}
+                                                    className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                    title="Undo last composer change"
+                                                >
+                                                    <RotateCcw size={12} />
+                                                    Undo
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={redoComposerDraftChange}
+                                                    disabled={!moduleManagerComposerCanRedo}
+                                                    className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                    title="Redo composer change"
+                                                >
+                                                    <RefreshCw size={12} />
+                                                    Redo
+                                                </button>
+                                                <button
+                                                    type="button"
                                                     onClick={() => setModuleManagerComposerLeftPaneCollapsed((prev) => !prev)}
                                                     className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
                                                 >
@@ -6549,11 +7278,12 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             <div className="overflow-auto pr-1" style={{ maxHeight: `${moduleManagerBuilderPaneHeight}px` }}>
                                                 {isModuleManagerCanvasMode ? (
                                                     <div
-                                                        style={
-                                                            moduleManagerComposerLockBuilderScale
+                                                        style={{
+                                                            minHeight: `${moduleManagerCanvasMinHeight}px`,
+                                                            ...(moduleManagerComposerLockBuilderScale
                                                                 ? { width: `${moduleManagerBuilderCanvasWidth}px`, minWidth: `${moduleManagerBuilderCanvasWidth}px` }
-                                                                : undefined
-                                                        }
+                                                                : {}),
+                                                        }}
                                                     >
                                                         <GridLayout
                                                             className="layout"
@@ -6565,8 +7295,19 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                             autoSize
                                                             isResizable
                                                             isDraggable
+                                                            compactType={null}
+                                                            verticalCompact={false}
+                                                            allowOverlap
+                                                            preventCollision={false}
                                                             draggableHandle=".cf-canvas-handle"
-                                                            onLayoutChange={applyCanvasGridLayout}
+                                                            onDragStart={(_layout, _oldItem, newItem) => beginComposerCanvasInteraction('drag', newItem)}
+                                                            onResizeStart={(_layout, _oldItem, newItem) => beginComposerCanvasInteraction('resize', newItem)}
+                                                            onDragStop={(layoutItems) => finishComposerCanvasInteraction(layoutItems)}
+                                                            onResizeStop={(layoutItems) => finishComposerCanvasInteraction(layoutItems)}
+                                                            onLayoutChange={(layoutItems) => {
+                                                                if (moduleManagerCanvasInteractionRef.current.mode !== 'resize') return;
+                                                                applyCanvasGridLayout(layoutItems, { recordHistory: false });
+                                                            }}
                                                         >
                                                             {moduleManagerComposerActivities.map((activity, idx) => {
                                                                 const def = getActivityDefinition(activity.type);
@@ -6668,6 +7409,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                         return (
                                                             <div
                                                                 key={activity.id || `${activity.type}-${idx}`}
+                                                                className="relative"
                                                                 style={{
                                                                     gridColumn: placement
                                                                         ? `${placement.col} / span ${placement.colSpan}`
@@ -6721,7 +7463,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => setModuleManagerComposerSelectedIndex(idx)}
-                                                                    className={`w-full text-left p-2 rounded border transition-colors ${
+                                                                    className={`w-full text-left p-2 pr-8 rounded border transition-colors ${
                                                                         isSelected
                                                                             ? 'bg-emerald-900/30 border-emerald-600 text-white'
                                                                             : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
@@ -6730,6 +7472,21 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                     <p className="text-xs font-bold">{def?.label || activity.type}</p>
                                                                     <p className="text-[10px] text-slate-500 font-mono">{activity.id || `activity-${idx + 1}`}</p>
                                                                     <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-1">Span {colSpan}</p>
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    draggable={false}
+                                                                    onDragStart={(event) => event.preventDefault()}
+                                                                    onMouseDown={(event) => event.stopPropagation()}
+                                                                    onClick={(event) => {
+                                                                        event.stopPropagation();
+                                                                        removeComposerActivityByIndex(idx);
+                                                                    }}
+                                                                    className="absolute top-1.5 right-1.5 inline-flex h-5 w-5 items-center justify-center rounded border border-slate-600/60 bg-slate-900/40 text-slate-300 hover:border-rose-400/70 hover:bg-rose-500/15 hover:text-rose-200 transition-colors"
+                                                                    title="Delete block"
+                                                                    aria-label={`Delete ${def?.label || activity.type}`}
+                                                                >
+                                                                    <X size={11} />
                                                                 </button>
                                                             </div>
                                                         );
@@ -6845,56 +7602,101 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                         </div>
                                                     </>
                                                 ) : (
-                                                    <div className="grid grid-cols-4 gap-2 mt-2">
-                                                        <label className="text-[10px] text-slate-400">
-                                                            X
-                                                            <input
-                                                                type="number"
-                                                                min="0"
-                                                                value={selectedComposerActivity?.layout?.x || 0}
-                                                                onChange={(e) => updateSelectedComposerActivityCanvasLayout({ x: Number.parseInt(e.target.value, 10) || 0 })}
+                                                    <>
+                                                        <div className="grid grid-cols-4 gap-2 mt-2">
+                                                            <label className="text-[10px] text-slate-400">
+                                                                X
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={selectedComposerActivity?.layout?.x || 0}
+                                                                    onChange={(e) => updateSelectedComposerActivityCanvasLayout({ x: Number.parseInt(e.target.value, 10) || 0 })}
+                                                                    disabled={!selectedComposerActivity}
+                                                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
+                                                                />
+                                                            </label>
+                                                            <label className="text-[10px] text-slate-400">
+                                                                Y
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    value={selectedComposerActivity?.layout?.y || 0}
+                                                                    onChange={(e) => updateSelectedComposerActivityCanvasLayout({ y: Number.parseInt(e.target.value, 10) || 0 })}
+                                                                    disabled={!selectedComposerActivity}
+                                                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
+                                                                />
+                                                            </label>
+                                                            <label className="text-[10px] text-slate-400">
+                                                                W
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    max={moduleManagerComposerMaxColumns}
+                                                                    value={selectedComposerActivity?.layout?.w || 1}
+                                                                    onChange={(e) => {
+                                                                        const nextW = Math.max(1, Number.parseInt(e.target.value, 10) || 1);
+                                                                        updateSelectedComposerActivityCanvasLayout({ w: nextW, colSpan: nextW });
+                                                                    }}
+                                                                    disabled={!selectedComposerActivity}
+                                                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
+                                                                />
+                                                            </label>
+                                                            <label className="text-[10px] text-slate-400">
+                                                                H
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    value={selectedComposerActivity?.layout?.h || 4}
+                                                                    onChange={(e) => updateSelectedComposerActivityCanvasLayout({ h: Math.max(1, Number.parseInt(e.target.value, 10) || 1) })}
+                                                                    disabled={!selectedComposerActivity}
+                                                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
+                                                                />
+                                                            </label>
+                                                        </div>
+                                                        <div className="grid grid-cols-4 gap-2 mt-2">
+                                                            <label className="text-[10px] text-slate-400">
+                                                                Gap Rows
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    max="12"
+                                                                    value={moduleManagerCanvasGapRowCount}
+                                                                    onChange={(e) =>
+                                                                        setModuleManagerComposerCanvasGapRows(
+                                                                            Math.max(1, Math.min(12, Number.parseInt(e.target.value, 10) || 1)),
+                                                                        )
+                                                                    }
+                                                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                                                                />
+                                                            </label>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => insertCanvasGapRelativeToSelected('above')}
                                                                 disabled={!selectedComposerActivity}
-                                                                className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
-                                                            />
-                                                        </label>
-                                                        <label className="text-[10px] text-slate-400">
-                                                            Y
-                                                            <input
-                                                                type="number"
-                                                                min="0"
-                                                                value={selectedComposerActivity?.layout?.y || 0}
-                                                                onChange={(e) => updateSelectedComposerActivityCanvasLayout({ y: Number.parseInt(e.target.value, 10) || 0 })}
+                                                                className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1 mt-5"
+                                                                title="Insert empty rows above the selected block"
+                                                            >
+                                                                <ChevronUp size={12} /> Insert Above
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => insertCanvasGapRelativeToSelected('below')}
                                                                 disabled={!selectedComposerActivity}
-                                                                className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
-                                                            />
-                                                        </label>
-                                                        <label className="text-[10px] text-slate-400">
-                                                            W
-                                                            <input
-                                                                type="number"
-                                                                min="1"
-                                                                max={moduleManagerComposerMaxColumns}
-                                                                value={selectedComposerActivity?.layout?.w || 1}
-                                                                onChange={(e) => {
-                                                                    const nextW = Math.max(1, Number.parseInt(e.target.value, 10) || 1);
-                                                                    updateSelectedComposerActivityCanvasLayout({ w: nextW, colSpan: nextW });
-                                                                }}
-                                                                disabled={!selectedComposerActivity}
-                                                                className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
-                                                            />
-                                                        </label>
-                                                        <label className="text-[10px] text-slate-400">
-                                                            H
-                                                            <input
-                                                                type="number"
-                                                                min="1"
-                                                                value={selectedComposerActivity?.layout?.h || 4}
-                                                                onChange={(e) => updateSelectedComposerActivityCanvasLayout({ h: Math.max(1, Number.parseInt(e.target.value, 10) || 1) })}
-                                                                disabled={!selectedComposerActivity}
-                                                                className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
-                                                            />
-                                                        </label>
-                                                    </div>
+                                                                className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1 mt-5"
+                                                                title="Insert empty rows below the selected block"
+                                                            >
+                                                                <ChevronDown size={12} /> Insert Below
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={addCanvasOpenRowsDraft}
+                                                                className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-white text-xs inline-flex items-center justify-center gap-1 mt-5"
+                                                                title="Add extra open rows at the bottom of canvas"
+                                                            >
+                                                                <Plus size={12} /> Add Bottom Rows
+                                                            </button>
+                                                        </div>
+                                                    </>
                                                 )}
                                                 <div className="flex gap-2 mt-2">
                                                     <button

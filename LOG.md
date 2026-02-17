@@ -262,3 +262,52 @@
     - `/Users/deanguedo/Projects/Course-factoryPERFECT`
   - The iCloud workspace was behind the GitHub-backed repo and tracking a local-path remote (`/Users/deanguedo/Documents/GitHub/Course-factoryPERFECT`) rather than direct GitHub.
   - This mismatch explains why prior changes appeared to be missing when switching workspaces.
+
+## Update (Feb 17, 2026 - Finlit + Composer UX Refinement)
+- Finlit authoring in Module Manager was expanded so template-specific controls are practical during build:
+  - Finlit optional controls are now collapsible.
+  - Finlit options only surface when the effective template is `finlit`.
+  - Additional Learning editing moved from tab-only behavior into an always-available editor block.
+  - Additional Learning supports repeatable link rows with description text.
+- Composer workspace was restructured for faster side-by-side authoring:
+  - Left workspace pane now toggles between `Block Builder` and `Block Editor`.
+  - Left pane and Preview pane can each be collapsed independently.
+  - Preview now stays accessible while switching builder/editor context.
+- Composer sizing controls were added to improve layout stability:
+  - Preview width splitter.
+  - Preview height control.
+  - Builder height control.
+  - Builder block width control.
+  - `Lock Block Scale` option for deterministic puzzle-style block sizing.
+- Builder grid/canvas sizing behavior was hardened:
+  - Fixed-scale mode now uses deterministic width math (`columns x blockWidth`).
+  - Scroll behavior preserves visibility instead of shrinking blocks as panes resize.
+- Canvas reorganization behavior was improved to support insertion workflows:
+  - Disabled forced vertical compaction in canvas layout handling.
+  - Added `Gap Rows`, `Insert Above`, `Insert Below`, and `Add Bottom Rows` controls.
+  - Added canvas min-height growth based on occupied rows + extra rows so lower drops are usable.
+  - Applied non-compacting drag settings in both create and edit canvas grids.
+- Primary files updated:
+  - `src/components/Phase1.jsx`
+  - `src/components/modals/EditModal.jsx`
+  - `src/composer/layout.js`
+
+## Update (Feb 17, 2026 - Canvas Interaction Rules Hardening)
+- Added composer canvas undo/redo support with toolbar buttons and keyboard shortcuts:
+  - Undo: `Ctrl/Cmd + Z`
+  - Redo: `Ctrl/Cmd + Y` and `Ctrl/Cmd + Shift + Z`
+  - History captures drag/resize as single interactions (not every frame update).
+- Reworked drag behavior to reduce accidental cascade effects:
+  - Drag movement can pass through blocks without repeated live push spam.
+  - Drop on strong direct overlap performs replace/swap.
+  - Drop between blocks uses push logic with strict push caps.
+- Added strict push constraints to stop runaway row creation:
+  - One push unit max per interaction.
+  - Added bottom growth guard so collisions cannot keep creating rows repeatedly.
+- Refined axis-specific resize behavior:
+  - Horizontal resize adjusts nearby row neighbors directly.
+  - Vertical resize pushes lower content only when needed.
+- Final fix from this chat:
+  - Vertical resize now pushes rows only on actual overlap collision, not when blocks are merely close.
+- Primary file updated:
+  - `src/components/Phase1.jsx`

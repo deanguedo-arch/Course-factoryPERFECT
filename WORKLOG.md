@@ -160,3 +160,143 @@
   - `out/**`
   - `dist/**`
 - If continuing immediately, next practical pass is targeted UX polish and guardrails around canvas sizing defaults, then fixture expansion for new container combinations.
+
+## Update (2026-02-17 - Finlit + Composer Manageability Pass)
+
+### Requested Outcomes
+- Make finlit-specific options easier to work with while building.
+- Remove dependence on tab switching for Additional Learning authoring.
+- Keep block authoring controls beside live preview.
+- Make builder/preview panes collapsible and resizable.
+- Stop canvas reorg friction when inserting blocks between existing rows.
+
+### Implemented UX Changes
+
+### 1) Finlit optional editing improvements
+- Finlit optional controls now behave as a collapsible authoring block.
+- Finlit options are only shown when the active/effective template is `finlit`.
+- Additional Learning editing was made persistent in authoring flow (not tab-gated only).
+- Additional Learning supports repeatable links with per-link description text.
+
+### 2) Composer workspace restructuring
+- Composer left workspace and preview are now organized side by side.
+- Left workspace pane has a mode toggle:
+  - `Block Builder`
+  - `Block Editor`
+- Both panes support independent collapse/expand controls.
+- Preview remains visible while switching left-pane mode.
+
+### 3) Workspace sizing controls
+- Added Preview Width splitter control.
+- Added Preview Height control.
+- Added Builder Height control.
+- Added Builder Block Width control (`px per column`).
+- Added `Lock Block Scale` to preserve stable block sizing while resizing panes.
+- Builder width math is deterministic in lock mode:
+  - `builderCanvasWidth = maxColumns * blockWidth`
+
+### 4) Canvas reorganization improvements
+- Removed forced canvas compaction in normalization so intentional gaps persist.
+- Applied non-compacting RGL options:
+  - `compactType={null}`
+  - `verticalCompact={false}`
+  - `preventCollision={false}`
+- Added canvas insertion tools in Phase1 builder controls:
+  - `Gap Rows` (1..12)
+  - `Insert Above` (selected block)
+  - `Insert Below` (selected block)
+  - `Add Bottom Rows` (open space at canvas bottom)
+- Added helper to shift canvas items downward from a target row to create insertion space.
+- Added canvas min-height growth from occupied rows + extra rows so bottom drops are available.
+
+### File-Level Notes
+- `src/components/Phase1.jsx`
+  - Workspace/pane layout controls.
+  - Finlit optional/editor UX updates.
+  - Builder scale and viewport controls.
+  - Canvas gap insertion controls and shift logic.
+  - Canvas min-height calculation.
+- `src/components/modals/EditModal.jsx`
+  - Non-compacting canvas grid behavior aligned with Phase1.
+- `src/composer/layout.js`
+  - Removed post-placement canvas compaction step.
+  - Preserved intentional author-created gaps.
+
+### Behavior Notes For Next Session
+- Canvas now supports both direct drag placement and explicit row insertion workflows.
+- If a stricter behavior is desired, `Lock Block Scale` can be forced on by default and/or made non-optional.
+- A future enhancement candidate is explicit drop mode selection:
+  - `Insert` mode (current bias)
+  - `Swap/Replace` mode
+
+### Validation Notes
+- This pass was verified by code inspection and targeted diffs.
+- Full build/lint was not executed in this environment during this pass.
+
+## Update (2026-02-17 - Canvas Drag/Resize Collision Rules + Undo/Redo)
+
+### Requested Behavior (This Sequence)
+- Stop repeated row push while hovering during drag.
+- Cap push behavior to one row/unit.
+- Add undo/redo controls for composer authoring.
+- Support replace-on-top and push-in-between drop semantics.
+- Make resize behavior axis-aware.
+- Final refinement: vertical resize should push only on real overlap, not proximity.
+
+### Implemented
+
+### 1) Undo/redo system for composer workspace
+- Added snapshot-based history with bounded stack sizes.
+- Added toolbar actions in composer workspace:
+  - `Undo`
+  - `Redo`
+- Added keyboard shortcuts:
+  - `Ctrl/Cmd + Z` -> Undo
+  - `Ctrl/Cmd + Y` -> Redo
+  - `Ctrl/Cmd + Shift + Z` -> Redo
+- Interaction batching:
+  - Drag/resize interactions are captured as one history step on stop events.
+
+### 2) Drag movement behavior change
+- Disabled live drag collision mutations to prevent repeated push while hovering.
+- Drag now resolves placement on stop/drop rather than continuously during movement.
+
+### 3) Drop rules
+- Added replace/swap on direct strong overlap drops.
+- Added between-drop push path when overlap is not treated as replace.
+- Added strict push caps so one interaction cannot create runaway rows.
+
+### 4) Resize rules (axis-aware)
+- Horizontal resize:
+  - Actively adjusts neighbors in the same band/row by shifting and shrinking.
+- Vertical resize:
+  - Push logic is applied only where collisions are real.
+  - Final patch enforces overlap-only push; nearby non-overlapping rows no longer move.
+
+### 5) Safety guards
+- Added bottom growth guard for non-active blocks to cap push side effects.
+- Preserved one-unit push limit semantics across drag/resize collision resolution.
+
+### File-Level Detail
+- `src/components/Phase1.jsx`
+  - Added history refs/state and snapshot helpers.
+  - Added undo/redo handlers and shortcut listener.
+  - Added interaction lifecycle handlers (`onDragStart/onDragStop/onResizeStart/onResizeStop`).
+  - Reworked collision resolver for:
+    - replace vs push drop behavior
+    - capped push limits
+    - axis-aware resize outcomes
+    - overlap-only vertical push.
+
+### Validation
+- Build succeeded after each major iteration using repo-local node runtime:
+  - `node node_modules/vite/bin/vite.js build`
+
+### Current Behavioral Intent
+- Drag:
+  - Pass-through during movement.
+  - Replace on strong/direct overlap at drop.
+  - Push-between at drop with hard cap.
+- Resize:
+  - Horizontal -> adjust horizontal neighbors.
+  - Vertical -> push only on actual overlap collisions.
