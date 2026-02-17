@@ -1,6 +1,12 @@
 import { getActivityDefinition } from './activityRegistry.js';
 import { normalizeComposerActivities, normalizeComposerModuleConfig } from './layout.js';
-import { createFinlitHeroFormState, resolveFinlitHeroMediaKind } from '../utils/finlitHero.js';
+import {
+  FINLIT_DEFAULT_ACTIVITIES_TAB_LABEL,
+  FINLIT_DEFAULT_ADDITIONAL_TAB_LABEL,
+  createFinlitHeroFormState,
+  createFinlitTemplateFormState,
+  resolveFinlitHeroMediaKind,
+} from '../utils/finlitHero.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -9,6 +15,15 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function toSafeHref(url) {
+  const raw = String(url || '').trim();
+  if (!raw) return '';
+  if (/^(https?:|mailto:|tel:)/i.test(raw)) return raw;
+  if (/^(\/|\.\/|\.\.\/|#)/.test(raw)) return raw;
+  if (/^materials\//i.test(raw)) return `/${raw}`;
+  return '';
 }
 
 const COMPOSER_BLOCK_FONT_STACKS = {
@@ -2027,10 +2042,13 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
 
   const renderTemplate = () => {
     if (template === 'finlit') {
-      const tabs = activities.filter((activity) => activity?.type === 'tab_group');
-      const firstTabGroup = tabs[0] || null;
-      let activitiesTabHtml = activities.map((activity, idx) => renderActivity(activity, idx, { withLayout: false })).join('\n');
-      let additionalTabHtml = '<p class="text-slate-400 text-sm">No additional learning content.</p>';
+      const finlit = createFinlitTemplateFormState(module?.finlit);
+      const nonTabGroupActivities = activities.filter((activity) => activity?.type !== 'tab_group');
+      let activitiesTabHtml = nonTabGroupActivities.map((activity, idx) => renderActivity(activity, idx, { withLayout: false })).join('\n');
+      let legacyAdditionalTabHtml = '';
+
+      const tabGroups = activities.filter((activity) => activity?.type === 'tab_group');
+      const firstTabGroup = tabGroups[0] || null;
       if (firstTabGroup) {
         const t = Array.isArray(firstTabGroup?.data?.tabs) ? firstTabGroup.data.tabs : [];
         const findTab = (id) => t.find((tab) => String(tab?.id || '').toLowerCase().includes(id));
@@ -2039,13 +2057,49 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
         const renderTabLinked = (tab) => {
           if (!tab) return '';
           const refs = (Array.isArray(tab?.activityIds) ? tab.activityIds : []).map((id) => activityMap.get(String(id || '').trim())).filter(Boolean);
-          const inline = renderInlineActivities(tab?.activities, `${firstTabGroup.id}-${tab?.id || 'tab'}`);
+          const inline = renderInlineActivities(tab?.activities, `${firstTabGroup.id || 'tab-group'}-${tab?.id || 'tab'}`);
           const merged = [...refs, ...inline];
           return merged.length ? merged.map((item, nestedIdx) => renderActivity(item, nestedIdx, { withLayout: false, trail: [firstTabGroup.id] })).join('\n') : '';
         };
-        activitiesTabHtml = renderTabLinked(activitiesTab) || activitiesTabHtml;
-        additionalTabHtml = renderTabLinked(additionalTab) || additionalTabHtml;
+        if (!activitiesTabHtml) {
+          activitiesTabHtml = renderTabLinked(activitiesTab);
+        }
+        legacyAdditionalTabHtml = renderTabLinked(additionalTab);
       }
+
+      const activitiesTabLabel =
+        String(finlit?.activitiesTabLabel || FINLIT_DEFAULT_ACTIVITIES_TAB_LABEL).trim() || FINLIT_DEFAULT_ACTIVITIES_TAB_LABEL;
+      const additionalTabLabel =
+        String(finlit?.additionalTabLabel || FINLIT_DEFAULT_ADDITIONAL_TAB_LABEL).trim() || FINLIT_DEFAULT_ADDITIONAL_TAB_LABEL;
+      const additionalLinks = Array.isArray(finlit?.additionalLinks) ? finlit.additionalLinks : [];
+      const additionalLinksHtml = additionalLinks
+        .map((link, idx) => {
+          const title = String(link?.title || '').trim() || `Resource ${idx + 1}`;
+          const description = String(link?.description || '').trim();
+          const href = toSafeHref(link?.url);
+          const openAttrs = href && !href.startsWith('#') ? ' target="_blank" rel="noopener noreferrer"' : '';
+          return `
+            <article class="rounded-lg border border-slate-700 bg-slate-950/60 p-3">
+              ${
+                href
+                  ? `<a href="${escapeHtml(href)}"${openAttrs} class="text-sm font-bold text-sky-300 hover:text-sky-200 underline">${escapeHtml(title)}</a>`
+                  : `<p class="text-sm font-bold text-slate-200">${escapeHtml(title)}</p>`
+              }
+              ${description ? `<p class="mt-1 text-xs text-slate-400 leading-relaxed">${escapeHtml(description)}</p>` : ''}
+            </article>
+          `;
+        })
+        .join('\n');
+      const additionalTabParts = [];
+      if (additionalLinksHtml) {
+        additionalTabParts.push(`<div class="space-y-2">${additionalLinksHtml}</div>`);
+      }
+      if (legacyAdditionalTabHtml) {
+        additionalTabParts.push(legacyAdditionalTabHtml);
+      }
+      const additionalTabHtml = additionalTabParts.length
+        ? additionalTabParts.join('\n')
+        : '<p class="text-slate-400 text-sm">No additional learning content.</p>';
       const hero = createFinlitHeroFormState(module?.hero);
       const rawHeroMediaUrl = String(hero.mediaUrl || '').trim();
       const heroMediaUrl = /^((https?:)?\/\/|\/|\.\/|\.\.\/|data:image\/|data:video\/|blob:|materials\/)/i.test(rawHeroMediaUrl)
@@ -2070,8 +2124,8 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
             ${heroMediaHtml}
           </header>
           <div class="flex gap-3 border-b border-slate-700 pb-2">
-            <button type="button" data-finlit-tab-trigger="activities" class="px-2 py-1 text-sm font-bold text-slate-200">Activities</button>
-            <button type="button" data-finlit-tab-trigger="additional" class="px-2 py-1 text-sm font-bold text-slate-400">Additional Learning</button>
+            <button type="button" data-finlit-tab-trigger="activities" class="px-2 py-1 text-sm font-bold text-slate-200">${escapeHtml(activitiesTabLabel)}</button>
+            <button type="button" data-finlit-tab-trigger="additional" class="px-2 py-1 text-sm font-bold text-slate-400">${escapeHtml(additionalTabLabel)}</button>
           </div>
           <div data-finlit-tab-panel="activities">${activitiesTabHtml || '<p class="text-slate-400 text-sm">No activities yet.</p>'}</div>
           <div data-finlit-tab-panel="additional" class="hidden">${additionalTabHtml}</div>

@@ -50,7 +50,12 @@ import {
   normalizeComposerActivities,
   normalizeComposerLayout,
 } from '../composer/layout.js';
-import { createFinlitHeroFormState, normalizeFinlitHeroForSave } from '../utils/finlitHero.js';
+import {
+  createFinlitHeroFormState,
+  createFinlitTemplateFormState,
+  normalizeFinlitHeroForSave,
+  normalizeFinlitTemplateForSave,
+} from '../utils/finlitHero.js';
 
 const { useEffect, useMemo, useRef, useState } = React;
 const GridLayout = WidthProvider(ReactGridLayout);
@@ -256,6 +261,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerTemplate, setModuleManagerTemplate] = useState('');
   const [moduleManagerTheme, setModuleManagerTheme] = useState('');
   const [moduleManagerHero, setModuleManagerHero] = useState(() => createFinlitHeroFormState());
+  const [moduleManagerFinlit, setModuleManagerFinlit] = useState(() => createFinlitTemplateFormState());
   const [moduleManagerComposerStarterType, setModuleManagerComposerStarterType] = useState('content_block');
   const moduleManagerActivityTypeGroups = useMemo(() => listActivityTypeGroups(), []);
   const [moduleManagerComposerLayout, setModuleManagerComposerLayout] = useState({
@@ -280,6 +286,14 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerAssessmentId, setModuleManagerAssessmentId] = useState('');
   const [moduleManagerComposerPreviewNonce, setModuleManagerComposerPreviewNonce] = useState(0);
   const [moduleManagerComposerSidebarMode, setModuleManagerComposerSidebarMode] = useState('grid'); // 'grid' | 'outline' | 'issues' | 'templates'
+  const [moduleManagerComposerLeftPaneCollapsed, setModuleManagerComposerLeftPaneCollapsed] = useState(false);
+  const [moduleManagerComposerLeftPaneMode, setModuleManagerComposerLeftPaneMode] = useState('builder'); // 'builder' | 'editor'
+  const [moduleManagerComposerPreviewCollapsed, setModuleManagerComposerPreviewCollapsed] = useState(false);
+  const [moduleManagerComposerPreviewWidth, setModuleManagerComposerPreviewWidth] = useState(55);
+  const [moduleManagerComposerPreviewHeight, setModuleManagerComposerPreviewHeight] = useState(900);
+  const [moduleManagerComposerBuilderHeight, setModuleManagerComposerBuilderHeight] = useState(760);
+  const [moduleManagerComposerBuilderCellWidth, setModuleManagerComposerBuilderCellWidth] = useState(220);
+  const [moduleManagerComposerLockBuilderScale, setModuleManagerComposerLockBuilderScale] = useState(true);
   const moduleManagerRichEditorRef = useRef(null);
   const moduleManagerRichEditorSelectionRef = useRef(null);
   const moduleManagerRichEditorUpdateTimerRef = useRef(null);
@@ -376,6 +390,17 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const moduleManagerComposerMaxColumns = normalizedModuleManagerLayout.maxColumns;
   const moduleManagerComposerLayoutMode = normalizedModuleManagerLayout.mode;
   const isModuleManagerCanvasMode = moduleManagerComposerLayoutMode === 'canvas';
+  const courseTemplateDefault = String(projectData?.['Course Settings']?.templateDefault || 'deck').trim().toLowerCase();
+  const moduleManagerEffectiveTemplate = String(moduleManagerTemplate || courseTemplateDefault || 'deck').trim().toLowerCase();
+  const showModuleManagerFinlitOptions = moduleManagerType === 'composer' && moduleManagerEffectiveTemplate === 'finlit';
+  const moduleManagerFinlitState = createFinlitTemplateFormState(moduleManagerFinlit);
+  const moduleManagerPreviewPaneWidth = Math.max(30, Math.min(75, Number(moduleManagerComposerPreviewWidth) || 55));
+  const moduleManagerPreviewPaneHeight = Math.max(420, Math.min(2000, Number(moduleManagerComposerPreviewHeight) || 900));
+  const moduleManagerBuilderPaneHeight = Math.max(360, Math.min(1800, Number(moduleManagerComposerBuilderHeight) || 760));
+  const moduleManagerBuilderCellWidth = Math.max(140, Math.min(360, Number(moduleManagerComposerBuilderCellWidth) || 220));
+  const moduleManagerBuilderCanvasWidth = moduleManagerComposerMaxColumns * moduleManagerBuilderCellWidth;
+  const moduleManagerEditorPaneWidth = Math.max(25, 100 - moduleManagerPreviewPaneWidth);
+  const moduleManagerBothWorkspacePanesOpen = !moduleManagerComposerLeftPaneCollapsed && !moduleManagerComposerPreviewCollapsed;
   const moduleManagerGridModel = useMemo(
     () =>
       buildComposerGridModel(moduleManagerComposerActivities, moduleManagerComposerMaxColumns, {
@@ -1103,6 +1128,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       template: moduleManagerTemplate,
       theme: moduleManagerTheme,
       hero: createFinlitHeroFormState(moduleManagerHero),
+      finlit: createFinlitTemplateFormState(moduleManagerFinlit),
       composerStarterType: moduleManagerComposerStarterType,
       composerLayout,
       composerActivities,
@@ -1150,6 +1176,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     setModuleManagerTemplate(payload.template || '');
     setModuleManagerTheme(payload.theme || '');
     setModuleManagerHero(createFinlitHeroFormState(payload.hero));
+    setModuleManagerFinlit(createFinlitTemplateFormState(payload.finlit));
     setModuleManagerComposerStarterType(nextStarterType);
     setModuleManagerComposerLayout(nextLayout);
     setModuleManagerComposerActivities(nextActivities);
@@ -1399,6 +1426,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     setModuleManagerTemplate('');
     setModuleManagerTheme('');
     setModuleManagerHero(createFinlitHeroFormState());
+    setModuleManagerFinlit(createFinlitTemplateFormState());
     setModuleManagerComposerLayout({
       mode: 'simple',
       maxColumns: 1,
@@ -1489,6 +1517,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     moduleManagerTemplate,
     moduleManagerTheme,
     moduleManagerHero,
+    moduleManagerFinlit,
     moduleManagerComposerStarterType,
     moduleManagerComposerLayout,
     moduleManagerComposerActivities,
@@ -1572,6 +1601,44 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       [key]: value,
     }));
   };
+  const updateModuleManagerFinlitField = (key, value) => {
+    if (!['activitiesTabLabel', 'additionalTabLabel'].includes(key)) return;
+    setModuleManagerFinlit((prev) => ({
+      ...createFinlitTemplateFormState(prev),
+      [key]: value,
+    }));
+  };
+  const addModuleManagerFinlitLink = () => {
+    setModuleManagerFinlit((prev) => {
+      const next = createFinlitTemplateFormState(prev);
+      return {
+        ...next,
+        additionalLinks: [...next.additionalLinks, { title: '', url: '', description: '' }],
+      };
+    });
+  };
+  const updateModuleManagerFinlitLink = (index, updates) => {
+    setModuleManagerFinlit((prev) => {
+      const next = createFinlitTemplateFormState(prev);
+      const links = Array.isArray(next.additionalLinks) ? next.additionalLinks : [];
+      if (!Number.isInteger(index) || index < 0 || index >= links.length) return next;
+      const nextLinks = links.map((item, idx) => (idx === index ? { ...item, ...updates } : item));
+      return {
+        ...next,
+        additionalLinks: nextLinks,
+      };
+    });
+  };
+  const removeModuleManagerFinlitLink = (index) => {
+    setModuleManagerFinlit((prev) => {
+      const next = createFinlitTemplateFormState(prev);
+      const links = Array.isArray(next.additionalLinks) ? next.additionalLinks : [];
+      return {
+        ...next,
+        additionalLinks: links.filter((_, idx) => idx !== index),
+      };
+    });
+  };
 
   useEffect(() => {
     if (moduleManagerRichEditorUpdateTimerRef.current) {
@@ -1609,6 +1676,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     const moduleId = rawId ? (rawId.startsWith('view-') ? rawId : `view-${rawId}`) : 'view-composer-preview';
     const title = moduleManagerTitle.trim() || moduleId.replace('view-', '').replace(/-/g, ' ') || 'Composer Preview';
     const hero = normalizeFinlitHeroForSave(moduleManagerHero);
+    const finlit = normalizeFinlitTemplateForSave(moduleManagerFinlit);
     const previewModule = {
       id: moduleId,
       title,
@@ -1617,6 +1685,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       template: moduleManagerTemplate || null,
       theme: moduleManagerTheme || null,
       hero,
+      finlit,
       composerLayout: normalizedModuleManagerLayout,
       activities: moduleManagerComposerActivities,
       rawHtml: '',
@@ -1636,6 +1705,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     moduleManagerComposerActivities,
     moduleManagerComposerMaxColumns,
     moduleManagerHero,
+    moduleManagerFinlit,
     moduleManagerID,
     moduleManagerTheme,
     moduleManagerTitle,
@@ -3351,6 +3421,170 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       );
     }
 
+    if (selectedComposerActivity.type === 'tab_group') {
+      const tabSpecs = [
+        { key: 'activities', match: 'activit', defaultId: 'activities', defaultLabel: 'Activities' },
+        { key: 'additional', match: 'additional', defaultId: 'additional', defaultLabel: 'Additional Learning' },
+      ];
+      const sourceTabs = Array.isArray(data.tabs) ? data.tabs : [];
+      const linkableActivities = moduleManagerComposerActivities
+        .map((activity, idx) => {
+          if (idx === moduleManagerComposerSelectedIndex) return null;
+          const id = String(activity?.id || '').trim();
+          if (!id) return null;
+          const definition = getActivityDefinition(activity?.type);
+          const rawLabel = activity?.data?.title || activity?.data?.text || definition?.label || id;
+          const label = String(rawLabel || '').trim() || id;
+          return {
+            id,
+            index: idx,
+            type: activity?.type || '',
+            label,
+          };
+        })
+        .filter(Boolean);
+      const linkableIdSet = new Set(linkableActivities.map((entry) => entry.id));
+      const sanitizeIds = (ids) => {
+        const next = [];
+        const seen = new Set();
+        (Array.isArray(ids) ? ids : []).forEach((idValue) => {
+          const id = String(idValue || '').trim();
+          if (!id || seen.has(id) || !linkableIdSet.has(id)) return;
+          seen.add(id);
+          next.push(id);
+        });
+        return next;
+      };
+      const normalizeTab = (tab, spec) => {
+        const source = tab && typeof tab === 'object' ? tab : {};
+        return {
+          ...source,
+          id: String(source.id || spec.defaultId).trim() || spec.defaultId,
+          label: String(source.label || spec.defaultLabel).trim() || spec.defaultLabel,
+          activityIds: sanitizeIds(source.activityIds),
+          activities: Array.isArray(source.activities) ? source.activities : [],
+        };
+      };
+      const findTabIndex = (tabs, spec) =>
+        tabs.findIndex((tab) => String(tab?.id || '').toLowerCase().includes(spec.match));
+      const getTabValue = (spec) => {
+        const idx = findTabIndex(sourceTabs, spec);
+        return normalizeTab(idx >= 0 ? sourceTabs[idx] : null, spec);
+      };
+      const upsertTab = (spec, updater) => {
+        const currentTabs = Array.isArray(data.tabs) ? data.tabs : [];
+        const idx = findTabIndex(currentTabs, spec);
+        const base = normalizeTab(idx >= 0 ? currentTabs[idx] : null, spec);
+        const updated = normalizeTab(updater ? updater(base) : base, spec);
+        const nextTab = { ...updated, id: spec.defaultId };
+        const nextTabs = [...currentTabs];
+        if (idx >= 0) nextTabs[idx] = nextTab;
+        else nextTabs.push(nextTab);
+        updateSelectedComposerActivityData({
+          tabs: nextTabs,
+          defaultTabId: String(data.defaultTabId || spec.defaultId || 'activities'),
+        });
+      };
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Tab Group Title</label>
+            <input
+              type="text"
+              value={data.title || ''}
+              onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              placeholder="Tab Group"
+            />
+            <p className="text-[11px] text-slate-500 mt-1">
+              Legacy tab-group mapping. Use the module-level FinLit Options panel for primary tab/link editing.
+            </p>
+          </div>
+          {tabSpecs.map((spec) => {
+            const tab = getTabValue(spec);
+            const selectedIds = sanitizeIds(tab.activityIds);
+            return (
+              <div key={`finlit-tab-editor-${spec.key}`} className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 space-y-2">
+                <div className="grid grid-cols-12 gap-2">
+                  <div className="col-span-8">
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Tab Label</label>
+                    <input
+                      type="text"
+                      value={tab.label}
+                      onChange={(e) => upsertTab(spec, (prev) => ({ ...prev, label: e.target.value }))}
+                      className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                      placeholder={spec.defaultLabel}
+                    />
+                  </div>
+                  <div className="col-span-4">
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Tab ID</label>
+                    <div className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-[11px] text-slate-300 font-mono">
+                      {spec.defaultId}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] text-slate-400">{selectedIds.length} linked activities</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => upsertTab(spec, (prev) => ({ ...prev, activityIds: linkableActivities.map((entry) => entry.id) }))}
+                      disabled={linkableActivities.length === 0}
+                      className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-[10px] font-bold text-white"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => upsertTab(spec, (prev) => ({ ...prev, activityIds: [] }))}
+                      disabled={selectedIds.length === 0}
+                      className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-[10px] font-bold text-white"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-44 overflow-y-auto rounded border border-slate-700 bg-slate-950/60 divide-y divide-slate-800">
+                  {linkableActivities.length === 0 ? (
+                    <p className="p-3 text-xs text-slate-500">Add other activities first, then link them to this tab.</p>
+                  ) : (
+                    linkableActivities.map((entry) => {
+                      const checked = selectedIds.includes(entry.id);
+                      return (
+                        <label key={`${spec.key}-${entry.id}`} className="flex items-start gap-2 p-2 cursor-pointer hover:bg-slate-900/70">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              upsertTab(spec, (prev) => {
+                                const current = sanitizeIds(prev.activityIds);
+                                const nextSet = new Set(current);
+                                if (nextSet.has(entry.id)) nextSet.delete(entry.id);
+                                else nextSet.add(entry.id);
+                                const ordered = linkableActivities.map((item) => item.id).filter((id) => nextSet.has(id));
+                                return { ...prev, activityIds: ordered };
+                              })
+                            }
+                            className="mt-0.5 h-4 w-4 rounded border-slate-600 bg-slate-900 text-indigo-500"
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-xs text-slate-200 truncate">{entry.label}</span>
+                            <span className="block text-[10px] text-slate-500 font-mono truncate">
+                              {entry.id} ({entry.type || 'activity'})
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
     const fallbackTemplate = (() => {
       const def = getActivityDefinition(selectedComposerActivity.type);
       if (def && typeof def.createDefaultData === 'function') {
@@ -3409,6 +3643,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       // Create module object with RAW HTML stored as-is
       // No parsing, no CSS extraction, no script extraction
       // The iframe will handle everything
+      const normalizedHero = normalizeFinlitHeroForSave(moduleManagerHero);
+      const normalizedFinlit = normalizeFinlitTemplateForSave(moduleManagerFinlit);
       const newModule = {
         id: moduleId,
         title: title,
@@ -3416,6 +3652,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         mode: 'custom_html',
         template: moduleManagerTemplate || null,
         theme: moduleManagerTheme || null,
+        hero: normalizedHero,
+        finlit: normalizedFinlit,
         activities: [],
         composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12] },
         // Store the COMPLETE raw HTML document - this is the key change
@@ -3431,6 +3669,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           mode: 'custom_html',
           template: moduleManagerTemplate || null,
           theme: moduleManagerTheme || null,
+          hero: normalizedHero,
+          finlit: normalizedFinlit,
           activities: [],
           composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12] },
           rawHtml: rawHtml
@@ -3455,6 +3695,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       setModuleManagerTemplate('');
       setModuleManagerTheme('');
       setModuleManagerHero(createFinlitHeroFormState());
+      setModuleManagerFinlit(createFinlitTemplateFormState());
       setModuleManagerStatus('success');
       setModuleManagerMessage(`Module "${title}" added successfully. It will run in an isolated iframe.`);
       
@@ -3503,6 +3744,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               mode: composerLayout.mode,
             });
       const normalizedHero = normalizeFinlitHeroForSave(moduleManagerHero);
+      const normalizedFinlit = normalizeFinlitTemplateForSave(moduleManagerFinlit);
 
       const newModule = {
         id: moduleId,
@@ -3512,6 +3754,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         template: moduleManagerTemplate || null,
         theme: moduleManagerTheme || null,
         hero: normalizedHero,
+        finlit: normalizedFinlit,
         composerLayout,
         activities: composerActivities,
         rawHtml: '',
@@ -3525,6 +3768,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           template: moduleManagerTemplate || null,
           theme: moduleManagerTheme || null,
           hero: normalizedHero,
+          finlit: normalizedFinlit,
           composerLayout,
           activities: composerActivities,
         }]
@@ -3560,6 +3804,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       setModuleManagerTemplate('');
       setModuleManagerTheme('');
       setModuleManagerHero(createFinlitHeroFormState());
+      setModuleManagerFinlit(createFinlitTemplateFormState());
       setModuleManagerComposerLayout({
         mode: 'simple',
         maxColumns: 1,
@@ -3624,6 +3869,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       }
       
       // Create module object
+      const normalizedHero = normalizeFinlitHeroForSave(moduleManagerHero);
+      const normalizedFinlit = normalizeFinlitTemplateForSave(moduleManagerFinlit);
       const newModule = {
         id: moduleId,
         title: moduleManagerTitle || moduleId.replace('view-', '').replace(/-/g, ' '),
@@ -3631,6 +3878,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         mode: 'custom_html',
         template: moduleManagerTemplate || null,
         theme: moduleManagerTheme || null,
+        hero: normalizedHero,
+        finlit: normalizedFinlit,
         activities: [],
         composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12] },
         url: moduleManagerURL,
@@ -3642,6 +3891,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           mode: 'custom_html',
           template: moduleManagerTemplate || null,
           theme: moduleManagerTheme || null,
+          hero: normalizedHero,
+          finlit: normalizedFinlit,
           activities: [],
           composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12] },
           url: moduleManagerURL,
@@ -3683,6 +3934,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       setModuleManagerTemplate('');
       setModuleManagerTheme('');
       setModuleManagerHero(createFinlitHeroFormState());
+      setModuleManagerFinlit(createFinlitTemplateFormState());
       setModuleManagerStatus('success');
       setModuleManagerMessage(`External link module "${newModule.title}" added successfully.`);
       
@@ -5790,74 +6042,160 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 </div>
                             </div>
 
-                            {moduleManagerType === 'composer' && (
-                                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3 space-y-3">
-                                    <div>
-                                        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wide">FinLit Hero (Optional)</h4>
-                                        <p className="text-[10px] text-slate-500 mt-1">
-                                            Used when this module renders with the FinLit template.
-                                        </p>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Hero Title</label>
-                                            <input
-                                                type="text"
-                                                value={moduleManagerHero.title}
-                                                onChange={(e) => updateModuleManagerHeroField('title', e.target.value)}
-                                                placeholder="Module hero title"
-                                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                                            />
+                            {showModuleManagerFinlitOptions && (
+                                <details className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                                    <summary className="cursor-pointer text-xs font-bold text-slate-300 uppercase tracking-wide">
+                                        FinLit Options
+                                    </summary>
+                                    <div className="mt-3 space-y-3">
+                                        <div className="rounded border border-slate-700 bg-slate-900/60 p-3 space-y-3">
+                                            <div>
+                                                <h4 className="text-[11px] font-bold text-slate-300 uppercase">Hero</h4>
+                                                <p className="text-[10px] text-slate-500 mt-1">Optional header content for FinLit modules.</p>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Hero Title</label>
+                                                    <input
+                                                        type="text"
+                                                        value={moduleManagerHero.title}
+                                                        onChange={(e) => updateModuleManagerHeroField('title', e.target.value)}
+                                                        placeholder="Module hero title"
+                                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Progress Label</label>
+                                                    <input
+                                                        type="text"
+                                                        value={moduleManagerHero.progressLabel}
+                                                        onChange={(e) => updateModuleManagerHeroField('progressLabel', e.target.value)}
+                                                        placeholder="Week 1 of 6"
+                                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Subtitle</label>
+                                                <input
+                                                    type="text"
+                                                    value={moduleManagerHero.subtitle}
+                                                    onChange={(e) => updateModuleManagerHeroField('subtitle', e.target.value)}
+                                                    placeholder="Short supporting line under the hero title"
+                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Media Type</label>
+                                                    <select
+                                                        value={moduleManagerHero.mediaType}
+                                                        onChange={(e) => updateModuleManagerHeroField('mediaType', e.target.value)}
+                                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                    >
+                                                        <option value="auto">Auto Detect</option>
+                                                        <option value="image">Image</option>
+                                                        <option value="video">Video File</option>
+                                                        <option value="embed">Embed URL</option>
+                                                    </select>
+                                                </div>
+                                                <div className="sm:col-span-2">
+                                                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Media URL</label>
+                                                    <input
+                                                        type="text"
+                                                        value={moduleManagerHero.mediaUrl}
+                                                        onChange={(e) => updateModuleManagerHeroField('mediaUrl', e.target.value)}
+                                                        placeholder="https://... /materials/... / YouTube embed URL"
+                                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Progress Label</label>
-                                            <input
-                                                type="text"
-                                                value={moduleManagerHero.progressLabel}
-                                                onChange={(e) => updateModuleManagerHeroField('progressLabel', e.target.value)}
-                                                placeholder="Week 1 of 6"
-                                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                                            />
+
+                                        <div className="rounded border border-slate-700 bg-slate-900/60 p-3 space-y-3">
+                                            <div>
+                                                <h4 className="text-[11px] font-bold text-slate-300 uppercase">Tabs</h4>
+                                                <p className="text-[10px] text-slate-500 mt-1">
+                                                    Control the FinLit tab labels and Additional Learning links.
+                                                </p>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Activities Tab Label</label>
+                                                    <input
+                                                        type="text"
+                                                        value={moduleManagerFinlitState.activitiesTabLabel}
+                                                        onChange={(e) => updateModuleManagerFinlitField('activitiesTabLabel', e.target.value)}
+                                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                        placeholder="Activities"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Additional Tab Label</label>
+                                                    <input
+                                                        type="text"
+                                                        value={moduleManagerFinlitState.additionalTabLabel}
+                                                        onChange={(e) => updateModuleManagerFinlitField('additionalTabLabel', e.target.value)}
+                                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                        placeholder="Additional Learning"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <label className="block text-[11px] font-bold text-slate-400 uppercase">Additional Learning Links</label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={addModuleManagerFinlitLink}
+                                                        className="px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-[10px] font-bold text-white inline-flex items-center gap-1"
+                                                    >
+                                                        <Plus size={12} /> Add Link
+                                                    </button>
+                                                </div>
+                                                {moduleManagerFinlitState.additionalLinks.length === 0 ? (
+                                                    <p className="text-[11px] text-slate-500">No links added yet.</p>
+                                                ) : (
+                                                    moduleManagerFinlitState.additionalLinks.map((link, index) => (
+                                                        <div key={`finlit-link-${index}`} className="rounded border border-slate-700 bg-slate-950/70 p-2 space-y-2">
+                                                            <div className="flex items-center justify-between">
+                                                                <p className="text-[11px] font-bold text-slate-300 uppercase">Link {index + 1}</p>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeModuleManagerFinlitLink(index)}
+                                                                    className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-[10px] font-bold text-white"
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                value={link.title || ''}
+                                                                onChange={(e) => updateModuleManagerFinlitLink(index, { title: e.target.value })}
+                                                                placeholder="Link title"
+                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={link.url || ''}
+                                                                onChange={(e) => updateModuleManagerFinlitLink(index, { url: e.target.value })}
+                                                                placeholder="https://example.com/resource"
+                                                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs font-mono"
+                                                            />
+                                                            <textarea
+                                                                value={link.description || ''}
+                                                                onChange={(e) => updateModuleManagerFinlitLink(index, { description: e.target.value })}
+                                                                placeholder="Short description shown under the link"
+                                                                className="w-full h-16 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                            />
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Subtitle</label>
-                                        <input
-                                            type="text"
-                                            value={moduleManagerHero.subtitle}
-                                            onChange={(e) => updateModuleManagerHeroField('subtitle', e.target.value)}
-                                            placeholder="Short supporting line under the hero title"
-                                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                        <div>
-                                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Media Type</label>
-                                            <select
-                                                value={moduleManagerHero.mediaType}
-                                                onChange={(e) => updateModuleManagerHeroField('mediaType', e.target.value)}
-                                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                                            >
-                                                <option value="auto">Auto Detect</option>
-                                                <option value="image">Image</option>
-                                                <option value="video">Video File</option>
-                                                <option value="embed">Embed URL</option>
-                                            </select>
-                                        </div>
-                                        <div className="sm:col-span-2">
-                                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Media URL</label>
-                                            <input
-                                                type="text"
-                                                value={moduleManagerHero.mediaUrl}
-                                                onChange={(e) => updateModuleManagerHeroField('mediaUrl', e.target.value)}
-                                                placeholder="https://... /materials/... / YouTube embed URL"
-                                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
+                                </details>
                             )}
-                             
+                              
                             {/* Standalone HTML Input */}
                             {moduleManagerType === 'standalone' && (
                                 <>
@@ -5888,12 +6226,185 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                             {/* Composer Module Input */}
                             {moduleManagerType === 'composer' && (
                                 <>
-                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                                        <div className="lg:col-span-5 bg-slate-950 border border-slate-700 rounded-lg p-3">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <h4 className="text-sm font-bold text-white">Activities</h4>
-                                                <span className="text-[11px] text-slate-500">{moduleManagerComposerActivities.length} total</span>
+                                    <div className="space-y-4">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <h4 className="text-sm font-bold text-white">Composer Workspace</h4>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <div className="inline-flex rounded-lg border border-slate-700 bg-slate-900 p-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setModuleManagerComposerLeftPaneMode('builder')}
+                                                        className={`px-2 py-1 text-[10px] font-black uppercase tracking-wide rounded ${
+                                                            moduleManagerComposerLeftPaneMode === 'builder'
+                                                                ? 'bg-indigo-600 text-white'
+                                                                : 'text-slate-300 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        Block Builder
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setModuleManagerComposerLeftPaneMode('editor')}
+                                                        className={`px-2 py-1 text-[10px] font-black uppercase tracking-wide rounded ${
+                                                            moduleManagerComposerLeftPaneMode === 'editor'
+                                                                ? 'bg-indigo-600 text-white'
+                                                                : 'text-slate-300 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        Block Editor
+                                                    </button>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setModuleManagerComposerLeftPaneCollapsed((prev) => !prev)}
+                                                    className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
+                                                >
+                                                    {moduleManagerComposerLeftPaneCollapsed ? (
+                                                        <>
+                                                            <ChevronDown size={12} />
+                                                            Show Left Pane
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <ChevronUp size={12} />
+                                                            Hide Left Pane
+                                                        </>
+                                                    )}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setModuleManagerComposerPreviewCollapsed((prev) => !prev)}
+                                                    className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
+                                                >
+                                                    {moduleManagerComposerPreviewCollapsed ? (
+                                                        <>
+                                                            <ChevronDown size={12} />
+                                                            Show Preview
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <ChevronUp size={12} />
+                                                            Hide Preview
+                                                        </>
+                                                    )}
+                                                </button>
                                             </div>
+                                        </div>
+
+                                        {moduleManagerBothWorkspacePanesOpen && (
+                                            <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                                    <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Preview Width</label>
+                                                    <input
+                                                        type="range"
+                                                        min="30"
+                                                        max="75"
+                                                        value={moduleManagerPreviewPaneWidth}
+                                                        onChange={(e) =>
+                                                            setModuleManagerComposerPreviewWidth(
+                                                                Math.max(30, Math.min(75, Number.parseInt(e.target.value, 10) || 55)),
+                                                            )
+                                                        }
+                                                        className="flex-1 accent-indigo-500"
+                                                    />
+                                                    <p className="text-[11px] text-slate-400 whitespace-nowrap">
+                                                        {moduleManagerPreviewPaneWidth}% preview / {moduleManagerEditorPaneWidth}% left pane
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {!moduleManagerComposerPreviewCollapsed && (
+                                            <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                                    <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Preview Height</label>
+                                                    <input
+                                                        type="range"
+                                                        min="420"
+                                                        max="2000"
+                                                        step="20"
+                                                        value={moduleManagerPreviewPaneHeight}
+                                                        onChange={(e) =>
+                                                            setModuleManagerComposerPreviewHeight(
+                                                                Math.max(420, Math.min(2000, Number.parseInt(e.target.value, 10) || 900)),
+                                                            )
+                                                        }
+                                                        className="flex-1 accent-indigo-500"
+                                                    />
+                                                    <p className="text-[11px] text-slate-400 whitespace-nowrap">{moduleManagerPreviewPaneHeight}px tall</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {!moduleManagerComposerLeftPaneCollapsed && moduleManagerComposerLeftPaneMode === 'builder' && (
+                                            <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3 space-y-3">
+                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                                    <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Builder Height</label>
+                                                    <input
+                                                        type="range"
+                                                        min="360"
+                                                        max="1800"
+                                                        step="20"
+                                                        value={moduleManagerBuilderPaneHeight}
+                                                        onChange={(e) =>
+                                                            setModuleManagerComposerBuilderHeight(
+                                                                Math.max(360, Math.min(1800, Number.parseInt(e.target.value, 10) || 760)),
+                                                            )
+                                                        }
+                                                        className="flex-1 accent-indigo-500"
+                                                    />
+                                                    <p className="text-[11px] text-slate-400 whitespace-nowrap">{moduleManagerBuilderPaneHeight}px tall</p>
+                                                </div>
+                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                                    <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Block Width</label>
+                                                    <input
+                                                        type="range"
+                                                        min="140"
+                                                        max="360"
+                                                        step="10"
+                                                        value={moduleManagerBuilderCellWidth}
+                                                        onChange={(e) =>
+                                                            setModuleManagerComposerBuilderCellWidth(
+                                                                Math.max(140, Math.min(360, Number.parseInt(e.target.value, 10) || 220)),
+                                                            )
+                                                        }
+                                                        className="flex-1 accent-indigo-500"
+                                                    />
+                                                    <p className="text-[11px] text-slate-400 whitespace-nowrap">{moduleManagerBuilderCellWidth}px per column</p>
+                                                </div>
+                                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                                    <label className="inline-flex items-center gap-2 text-[11px] text-slate-300 whitespace-nowrap">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={moduleManagerComposerLockBuilderScale}
+                                                            onChange={(e) => setModuleManagerComposerLockBuilderScale(Boolean(e.target.checked))}
+                                                            className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-indigo-500"
+                                                        />
+                                                        Lock Block Scale
+                                                    </label>
+                                                    <p className="text-[11px] text-slate-500">
+                                                        {moduleManagerComposerMaxColumns} cols x {moduleManagerBuilderCellWidth}px = {moduleManagerBuilderCanvasWidth}px canvas
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {moduleManagerComposerLeftPaneCollapsed && moduleManagerComposerPreviewCollapsed ? (
+                                            <div className="rounded-lg border border-slate-700 bg-slate-950 p-4 text-xs text-slate-400">
+                                                Both panes are collapsed. Use the buttons above to reopen either pane.
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col gap-4 lg:flex-row">
+                                                {!moduleManagerComposerLeftPaneCollapsed && (
+                                                    <div
+                                                        className="bg-slate-950 border border-slate-700 rounded-lg p-3 min-w-0"
+                                                        style={moduleManagerBothWorkspacePanesOpen ? { flex: `${moduleManagerEditorPaneWidth} 1 0%` } : { flex: '1 1 100%' }}
+                                                    >
+                                                        {moduleManagerComposerLeftPaneMode === 'builder' ? (
+                                                            <div className="space-y-3">
+                                                                <div className="flex items-center justify-between">
+                                                                    <h4 className="text-sm font-bold text-white">Block Builder</h4>
+                                                                    <span className="text-[11px] text-slate-500">{moduleManagerComposerActivities.length} total</span>
+                                                                </div>
                                             <div className="grid grid-cols-4 gap-2 mb-3">
                                                 {[
                                                     { value: 'grid', label: 'Grid' },
@@ -6035,52 +6546,68 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             </div>
 
                                             {moduleManagerComposerSidebarMode === 'grid' ? (
-                                            <div className="max-h-72 overflow-y-auto pr-1">
+                                            <div className="overflow-auto pr-1" style={{ maxHeight: `${moduleManagerBuilderPaneHeight}px` }}>
                                                 {isModuleManagerCanvasMode ? (
-                                                    <GridLayout
-                                                        className="layout"
-                                                        layout={moduleManagerCanvasItems}
-                                                        cols={moduleManagerComposerMaxColumns}
-                                                        rowHeight={normalizedModuleManagerLayout.rowHeight}
-                                                        margin={Array.isArray(normalizedModuleManagerLayout.margin) ? normalizedModuleManagerLayout.margin : [12, 12]}
-                                                        containerPadding={Array.isArray(normalizedModuleManagerLayout.containerPadding) ? normalizedModuleManagerLayout.containerPadding : [12, 12]}
-                                                        autoSize
-                                                        isResizable
-                                                        isDraggable
-                                                        draggableHandle=".cf-canvas-handle"
-                                                        onLayoutChange={applyCanvasGridLayout}
+                                                    <div
+                                                        style={
+                                                            moduleManagerComposerLockBuilderScale
+                                                                ? { width: `${moduleManagerBuilderCanvasWidth}px`, minWidth: `${moduleManagerBuilderCanvasWidth}px` }
+                                                                : undefined
+                                                        }
                                                     >
-                                                        {moduleManagerComposerActivities.map((activity, idx) => {
-                                                            const def = getActivityDefinition(activity.type);
-                                                            const isSelected = idx === moduleManagerComposerSelectedIndex;
-                                                            return (
-                                                                <div key={String(idx)} className="overflow-hidden">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => setModuleManagerComposerSelectedIndex(idx)}
-                                                                        className={`w-full h-full text-left p-2 rounded border transition-colors ${
-                                                                            isSelected
-                                                                                ? 'bg-emerald-900/30 border-emerald-600 text-white'
-                                                                                : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
-                                                                        }`}
-                                                                    >
-                                                                        <div className="flex items-center justify-between gap-2">
-                                                                            <p className="text-xs font-bold truncate">{def?.label || activity.type}</p>
-                                                                            <span className="cf-canvas-handle inline-flex items-center justify-center w-5 h-5 rounded bg-slate-800 text-slate-300 text-[10px] font-black cursor-grab active:cursor-grabbing">
-                                                                                ::
-                                                                            </span>
-                                                                        </div>
-                                                                        <p className="text-[10px] text-slate-500 font-mono truncate mt-1">{activity.id || `activity-${idx + 1}`}</p>
-                                                                        <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-1">
-                                                                            x:{activity?.layout?.x || 0} y:{activity?.layout?.y || 0} w:{activity?.layout?.w || 1} h:{activity?.layout?.h || 4}
-                                                                        </p>
-                                                                    </button>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </GridLayout>
+                                                        <GridLayout
+                                                            className="layout"
+                                                            layout={moduleManagerCanvasItems}
+                                                            cols={moduleManagerComposerMaxColumns}
+                                                            rowHeight={normalizedModuleManagerLayout.rowHeight}
+                                                            margin={Array.isArray(normalizedModuleManagerLayout.margin) ? normalizedModuleManagerLayout.margin : [12, 12]}
+                                                            containerPadding={Array.isArray(normalizedModuleManagerLayout.containerPadding) ? normalizedModuleManagerLayout.containerPadding : [12, 12]}
+                                                            autoSize
+                                                            isResizable
+                                                            isDraggable
+                                                            draggableHandle=".cf-canvas-handle"
+                                                            onLayoutChange={applyCanvasGridLayout}
+                                                        >
+                                                            {moduleManagerComposerActivities.map((activity, idx) => {
+                                                                const def = getActivityDefinition(activity.type);
+                                                                const isSelected = idx === moduleManagerComposerSelectedIndex;
+                                                                return (
+                                                                    <div key={String(idx)} className="overflow-hidden">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setModuleManagerComposerSelectedIndex(idx)}
+                                                                            className={`w-full h-full text-left p-2 rounded border transition-colors ${
+                                                                                isSelected
+                                                                                    ? 'bg-emerald-900/30 border-emerald-600 text-white'
+                                                                                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                                                                            }`}
+                                                                        >
+                                                                            <div className="flex items-center justify-between gap-2">
+                                                                                <p className="text-xs font-bold truncate">{def?.label || activity.type}</p>
+                                                                                <span className="cf-canvas-handle inline-flex items-center justify-center w-5 h-5 rounded bg-slate-800 text-slate-300 text-[10px] font-black cursor-grab active:cursor-grabbing">
+                                                                                    ::
+                                                                                </span>
+                                                                            </div>
+                                                                            <p className="text-[10px] text-slate-500 font-mono truncate mt-1">{activity.id || `activity-${idx + 1}`}</p>
+                                                                            <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-1">
+                                                                                x:{activity?.layout?.x || 0} y:{activity?.layout?.y || 0} w:{activity?.layout?.w || 1} h:{activity?.layout?.h || 4}
+                                                                            </p>
+                                                                        </button>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </GridLayout>
+                                                    </div>
                                                 ) : null}
-                                                <div className={`${isModuleManagerCanvasMode ? 'hidden ' : ''}grid gap-2`} style={{ gridTemplateColumns: `repeat(${moduleManagerComposerMaxColumns}, minmax(0, 1fr))` }}>
+                                                <div
+                                                    className={`${isModuleManagerCanvasMode ? 'hidden ' : ''}grid gap-2`}
+                                                    style={{
+                                                        gridTemplateColumns: `repeat(${moduleManagerComposerMaxColumns}, minmax(0, 1fr))`,
+                                                        ...(moduleManagerComposerLockBuilderScale
+                                                            ? { width: `${moduleManagerBuilderCanvasWidth}px`, minWidth: `${moduleManagerBuilderCanvasWidth}px` }
+                                                            : {}),
+                                                    }}
+                                                >
                                                     {moduleManagerGridModel.emptySlots.map((slot) => {
                                                         const isSlotTarget =
                                                             moduleManagerComposerDraggingIndex !== null &&
@@ -6390,49 +6917,58 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     </button>
                                                 </div>
                                             </div>
-                                        </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div>
+                                                                <h4 className="text-sm font-bold text-white mb-3">
+                                                                    {selectedComposerActivity ? (getActivityDefinition(selectedComposerActivity.type)?.label || selectedComposerActivity.type) : 'Activity Editor'}
+                                                                </h4>
+                                                                {renderSelectedComposerActivityStylePanel()}
+                                                                {renderModuleManagerComposerActivityEditor()}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
 
-                                        <div className="lg:col-span-7 bg-slate-950 border border-slate-700 rounded-lg p-4">
-                                            <h4 className="text-sm font-bold text-white mb-3">
-                                                {selectedComposerActivity ? (getActivityDefinition(selectedComposerActivity.type)?.label || selectedComposerActivity.type) : 'Activity Editor'}
-                                            </h4>
-                                            {renderSelectedComposerActivityStylePanel()}
-                                            {renderModuleManagerComposerActivityEditor()}
-                                        </div>
+                                                {!moduleManagerComposerPreviewCollapsed && (
+                                                    <div
+                                                        className="bg-slate-950 border border-slate-700 rounded-lg p-3 min-w-0"
+                                                        style={moduleManagerBothWorkspacePanesOpen ? { flex: `${moduleManagerPreviewPaneWidth} 1 0%` } : { flex: '1 1 100%' }}
+                                                    >
+                                                        <div className="flex items-center justify-between mb-2 gap-2">
+                                                            <h4 className="text-sm font-bold text-white">Live Module Preview</h4>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setModuleManagerComposerPreviewNonce((n) => n + 1)}
+                                                                className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
+                                                                title="Remount preview iframe"
+                                                            >
+                                                                <RefreshCw size={12} />
+                                                                Reset
+                                                            </button>
+                                                        </div>
+                                                        <p className="text-[11px] text-slate-500 mb-3">Preview updates while you build this composer module.</p>
+                                                        <div className="rounded-lg overflow-hidden border border-slate-800 bg-black">
+                                                            {moduleManagerComposerPreviewDoc ? (
+                                                                <iframe
+                                                                    key={`composer-create-preview-${moduleManagerComposerPreviewNonce}`}
+                                                                    srcDoc={moduleManagerComposerPreviewDoc}
+                                                                    className="w-full border-0"
+                                                                    style={{ height: `${moduleManagerPreviewPaneHeight}px` }}
+                                                                    sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-top-navigation-by-user-activation"
+                                                                    title="Composer draft live preview"
+                                                                />
+                                                            ) : (
+                                                                <div className="h-48 flex items-center justify-center text-xs text-slate-500">
+                                                                    Composer preview unavailable.
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-
-                                    <div className="bg-slate-950 border border-slate-700 rounded-lg p-3">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <h4 className="text-sm font-bold text-white">Live Module Preview</h4>
-                                            <button
-                                                type="button"
-                                                onClick={() => setModuleManagerComposerPreviewNonce((n) => n + 1)}
-                                                className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
-                                                title="Remount preview iframe"
-                                            >
-                                                <RefreshCw size={12} />
-                                                Reset
-                                            </button>
-                                        </div>
-                                        <p className="text-[11px] text-slate-500 mb-3">Preview updates while you build this composer module.</p>
-                                        <div className="rounded-lg overflow-hidden border border-slate-800 bg-black">
-                                            {moduleManagerComposerPreviewDoc ? (
-                                                <iframe
-                                                    key={`composer-create-preview-${moduleManagerComposerPreviewNonce}`}
-                                                    srcDoc={moduleManagerComposerPreviewDoc}
-                                                    className="w-full border-0"
-                                                    style={{ minHeight: '420px' }}
-                                                    sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-top-navigation-by-user-activation"
-                                                    title="Composer draft live preview"
-                                                />
-                                            ) : (
-                                                <div className="h-48 flex items-center justify-center text-xs text-slate-500">
-                                                    Composer preview unavailable.
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
                                     <button
                                         onClick={addComposerModule}
                                         className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"

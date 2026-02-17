@@ -31,7 +31,12 @@ import {
 } from '../../composer/layout.js';
 import { isComposerEnabled } from '../../utils/composer.js';
 import { buildModuleFrameHTML } from '../../utils/generators.js';
-import { createFinlitHeroFormState, normalizeFinlitHeroForSave } from '../../utils/finlitHero.js';
+import {
+  createFinlitHeroFormState,
+  createFinlitTemplateFormState,
+  normalizeFinlitHeroForSave,
+  normalizeFinlitTemplateForSave,
+} from '../../utils/finlitHero.js';
 import GenericDataEditor from '../GenericDataEditor.jsx';
 import HotspotEditor from '../composer/HotspotEditor.jsx';
 import ReactGridLayout, { WidthProvider } from 'react-grid-layout';
@@ -328,7 +333,10 @@ export default function EditModal({
   const standaloneMode = editForm.moduleMode || 'custom_html';
   const canUseComposer = composerEnabled || standaloneMode === 'composer';
   const finlitHero = useMemo(() => createFinlitHeroFormState(editForm.hero), [editForm.hero]);
-  const showFinlitHeroControls = editForm.moduleType === 'standalone' && standaloneMode === 'composer';
+  const finlitSettings = useMemo(() => createFinlitTemplateFormState(editForm.finlit), [editForm.finlit]);
+  const courseTemplateDefault = String(projectData?.['Course Settings']?.templateDefault || 'deck').trim().toLowerCase();
+  const editEffectiveTemplate = String(editForm.template || courseTemplateDefault || 'deck').trim().toLowerCase();
+  const showFinlitOptions = editForm.moduleType === 'standalone' && standaloneMode === 'composer' && editEffectiveTemplate === 'finlit';
   const composerLayout = useMemo(() => normalizeComposerLayout(editForm.composerLayout), [editForm.composerLayout]);
   const composerMaxColumns = composerLayout.maxColumns;
   const composerLayoutMode = composerLayout.mode;
@@ -480,6 +488,7 @@ export default function EditModal({
     if (standaloneMode !== 'composer') return '';
     const courseSettings = projectData?.['Course Settings'] || {};
     const hero = normalizeFinlitHeroForSave(finlitHero);
+    const finlit = normalizeFinlitTemplateForSave(finlitSettings);
     const previewModule = {
       id: editForm.id || 'view-composer-preview',
       title: editForm.title || 'Composer Preview',
@@ -488,6 +497,7 @@ export default function EditModal({
       template: editForm.template || null,
       theme: editForm.theme || null,
       hero,
+      finlit,
       composerLayout,
       activities,
       rawHtml: '',
@@ -503,7 +513,7 @@ export default function EditModal({
         __materials: projectData?.['Current Course']?.materials || [],
       }) || ''
     );
-  }, [activities, composerLayout, editForm.id, editForm.template, editForm.theme, editForm.title, finlitHero, projectData, standaloneMode]);
+  }, [activities, composerLayout, editForm.id, editForm.template, editForm.theme, editForm.title, finlitHero, finlitSettings, projectData, standaloneMode]);
 
   const updateActivities = (nextActivities, nextComposerLayout = composerLayout) => {
     const normalizedLayout = normalizeComposerLayout(nextComposerLayout);
@@ -824,6 +834,54 @@ export default function EditModal({
     setEditForm({
       ...editForm,
       hero: nextHero,
+    });
+  };
+
+  const updateFinlitSettingField = (key, value) => {
+    if (!['activitiesTabLabel', 'additionalTabLabel'].includes(key)) return;
+    const nextFinlit = {
+      ...finlitSettings,
+      [key]: value,
+    };
+    setEditForm({
+      ...editForm,
+      finlit: nextFinlit,
+    });
+  };
+
+  const addFinlitLink = () => {
+    const nextLinks = [...(Array.isArray(finlitSettings.additionalLinks) ? finlitSettings.additionalLinks : []), { title: '', url: '', description: '' }];
+    setEditForm({
+      ...editForm,
+      finlit: {
+        ...finlitSettings,
+        additionalLinks: nextLinks,
+      },
+    });
+  };
+
+  const updateFinlitLink = (index, updates) => {
+    const links = Array.isArray(finlitSettings.additionalLinks) ? finlitSettings.additionalLinks : [];
+    if (!Number.isInteger(index) || index < 0 || index >= links.length) return;
+    const nextLinks = links.map((item, idx) => (idx === index ? { ...item, ...updates } : item));
+    setEditForm({
+      ...editForm,
+      finlit: {
+        ...finlitSettings,
+        additionalLinks: nextLinks,
+      },
+    });
+  };
+
+  const removeFinlitLink = (index) => {
+    const links = Array.isArray(finlitSettings.additionalLinks) ? finlitSettings.additionalLinks : [];
+    const nextLinks = links.filter((_, idx) => idx !== index);
+    setEditForm({
+      ...editForm,
+      finlit: {
+        ...finlitSettings,
+        additionalLinks: nextLinks,
+      },
     });
   };
 
@@ -2292,6 +2350,170 @@ export default function EditModal({
       );
     }
 
+    if (selectedActivity.type === 'tab_group') {
+      const tabSpecs = [
+        { key: 'activities', match: 'activit', defaultId: 'activities', defaultLabel: 'Activities' },
+        { key: 'additional', match: 'additional', defaultId: 'additional', defaultLabel: 'Additional Learning' },
+      ];
+      const sourceTabs = Array.isArray(data.tabs) ? data.tabs : [];
+      const linkableActivities = activities
+        .map((activity, idx) => {
+          if (idx === selectedActivityIndex) return null;
+          const id = String(activity?.id || '').trim();
+          if (!id) return null;
+          const definition = getActivityDefinition(activity?.type);
+          const rawLabel = activity?.data?.title || activity?.data?.text || definition?.label || id;
+          const label = String(rawLabel || '').trim() || id;
+          return {
+            id,
+            index: idx,
+            type: activity?.type || '',
+            label,
+          };
+        })
+        .filter(Boolean);
+      const linkableIdSet = new Set(linkableActivities.map((entry) => entry.id));
+      const sanitizeIds = (ids) => {
+        const next = [];
+        const seen = new Set();
+        (Array.isArray(ids) ? ids : []).forEach((idValue) => {
+          const id = String(idValue || '').trim();
+          if (!id || seen.has(id) || !linkableIdSet.has(id)) return;
+          seen.add(id);
+          next.push(id);
+        });
+        return next;
+      };
+      const normalizeTab = (tab, spec) => {
+        const source = tab && typeof tab === 'object' ? tab : {};
+        return {
+          ...source,
+          id: String(source.id || spec.defaultId).trim() || spec.defaultId,
+          label: String(source.label || spec.defaultLabel).trim() || spec.defaultLabel,
+          activityIds: sanitizeIds(source.activityIds),
+          activities: Array.isArray(source.activities) ? source.activities : [],
+        };
+      };
+      const findTabIndex = (tabs, spec) =>
+        tabs.findIndex((tab) => String(tab?.id || '').toLowerCase().includes(spec.match));
+      const getTabValue = (spec) => {
+        const idx = findTabIndex(sourceTabs, spec);
+        return normalizeTab(idx >= 0 ? sourceTabs[idx] : null, spec);
+      };
+      const upsertTab = (spec, updater) => {
+        const currentTabs = Array.isArray(data.tabs) ? data.tabs : [];
+        const idx = findTabIndex(currentTabs, spec);
+        const base = normalizeTab(idx >= 0 ? currentTabs[idx] : null, spec);
+        const updated = normalizeTab(updater ? updater(base) : base, spec);
+        const nextTab = { ...updated, id: spec.defaultId };
+        const nextTabs = [...currentTabs];
+        if (idx >= 0) nextTabs[idx] = nextTab;
+        else nextTabs.push(nextTab);
+        updateSelectedActivityData({
+          tabs: nextTabs,
+          defaultTabId: String(data.defaultTabId || spec.defaultId || 'activities'),
+        });
+      };
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Tab Group Title</label>
+            <input
+              type="text"
+              value={data.title || ''}
+              onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              placeholder="Tab Group"
+            />
+            <p className="text-[11px] text-slate-500 mt-1">
+              Legacy tab-group mapping. Use the module-level FinLit Options panel for primary tab/link editing.
+            </p>
+          </div>
+          {tabSpecs.map((spec) => {
+            const tab = getTabValue(spec);
+            const selectedIds = sanitizeIds(tab.activityIds);
+            return (
+              <div key={`finlit-tab-editor-${spec.key}`} className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 space-y-2">
+                <div className="grid grid-cols-12 gap-2">
+                  <div className="col-span-8">
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Tab Label</label>
+                    <input
+                      type="text"
+                      value={tab.label}
+                      onChange={(e) => upsertTab(spec, (prev) => ({ ...prev, label: e.target.value }))}
+                      className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                      placeholder={spec.defaultLabel}
+                    />
+                  </div>
+                  <div className="col-span-4">
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Tab ID</label>
+                    <div className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-[11px] text-slate-300 font-mono">
+                      {spec.defaultId}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] text-slate-400">{selectedIds.length} linked activities</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => upsertTab(spec, (prev) => ({ ...prev, activityIds: linkableActivities.map((entry) => entry.id) }))}
+                      disabled={linkableActivities.length === 0}
+                      className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-[10px] font-bold text-white"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => upsertTab(spec, (prev) => ({ ...prev, activityIds: [] }))}
+                      disabled={selectedIds.length === 0}
+                      className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-[10px] font-bold text-white"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-44 overflow-y-auto rounded border border-slate-700 bg-slate-950/60 divide-y divide-slate-800">
+                  {linkableActivities.length === 0 ? (
+                    <p className="p-3 text-xs text-slate-500">Add other activities first, then link them to this tab.</p>
+                  ) : (
+                    linkableActivities.map((entry) => {
+                      const checked = selectedIds.includes(entry.id);
+                      return (
+                        <label key={`${spec.key}-${entry.id}`} className="flex items-start gap-2 p-2 cursor-pointer hover:bg-slate-900/70">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              upsertTab(spec, (prev) => {
+                                const current = sanitizeIds(prev.activityIds);
+                                const nextSet = new Set(current);
+                                if (nextSet.has(entry.id)) nextSet.delete(entry.id);
+                                else nextSet.add(entry.id);
+                                const ordered = linkableActivities.map((item) => item.id).filter((id) => nextSet.has(id));
+                                return { ...prev, activityIds: ordered };
+                              })
+                            }
+                            className="mt-0.5 h-4 w-4 rounded border-slate-600 bg-slate-900 text-blue-500"
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-xs text-slate-200 truncate">{entry.label}</span>
+                            <span className="block text-[10px] text-slate-500 font-mono truncate">
+                              {entry.id} ({entry.type || 'activity'})
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
     const fallbackTemplate = (() => {
       const def = getActivityDefinition(selectedActivity.type);
       if (def && typeof def.createDefaultData === 'function') {
@@ -2361,72 +2583,155 @@ export default function EditModal({
                 </div>
               </div>
 
-              {showFinlitHeroControls && (
-                <div className="mb-4 rounded-lg border border-slate-700 bg-slate-950/70 p-3 space-y-3">
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wide">FinLit Hero</h4>
-                    <p className="text-[11px] text-slate-500 mt-1">Used when the module template resolves to FinLit.</p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Hero Title</label>
-                      <input
-                        type="text"
-                        value={finlitHero.title}
-                        onChange={(e) => updateFinlitHeroField('title', e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                        placeholder="Module hero title"
-                      />
+              {showFinlitOptions && (
+                <details className="mb-4 rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                  <summary className="cursor-pointer text-xs font-bold text-slate-300 uppercase tracking-wide">FinLit Options</summary>
+                  <div className="mt-3 space-y-3">
+                    <div className="rounded border border-slate-700 bg-slate-900/60 p-3 space-y-3">
+                      <div>
+                        <h4 className="text-[11px] font-bold text-slate-300 uppercase">Hero</h4>
+                        <p className="text-[11px] text-slate-500 mt-1">Optional header content for FinLit modules.</p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Hero Title</label>
+                          <input
+                            type="text"
+                            value={finlitHero.title}
+                            onChange={(e) => updateFinlitHeroField('title', e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                            placeholder="Module hero title"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Progress Label</label>
+                          <input
+                            type="text"
+                            value={finlitHero.progressLabel}
+                            onChange={(e) => updateFinlitHeroField('progressLabel', e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                            placeholder="Week 1 of 6"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Subtitle</label>
+                        <input
+                          type="text"
+                          value={finlitHero.subtitle}
+                          onChange={(e) => updateFinlitHeroField('subtitle', e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                          placeholder="Short supporting line under the hero title"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Media Type</label>
+                          <select
+                            value={finlitHero.mediaType}
+                            onChange={(e) => updateFinlitHeroField('mediaType', e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                          >
+                            <option value="auto">Auto Detect</option>
+                            <option value="image">Image</option>
+                            <option value="video">Video File</option>
+                            <option value="embed">Embed URL</option>
+                          </select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Media URL</label>
+                          <input
+                            type="text"
+                            value={finlitHero.mediaUrl}
+                            onChange={(e) => updateFinlitHeroField('mediaUrl', e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                            placeholder="https://... /materials/... / YouTube embed URL"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Progress Label</label>
-                      <input
-                        type="text"
-                        value={finlitHero.progressLabel}
-                        onChange={(e) => updateFinlitHeroField('progressLabel', e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                        placeholder="Week 1 of 6"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Subtitle</label>
-                    <input
-                      type="text"
-                      value={finlitHero.subtitle}
-                      onChange={(e) => updateFinlitHeroField('subtitle', e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                      placeholder="Short supporting line under the hero title"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Media Type</label>
-                      <select
-                        value={finlitHero.mediaType}
-                        onChange={(e) => updateFinlitHeroField('mediaType', e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                      >
-                        <option value="auto">Auto Detect</option>
-                        <option value="image">Image</option>
-                        <option value="video">Video File</option>
-                        <option value="embed">Embed URL</option>
-                      </select>
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Media URL</label>
-                      <input
-                        type="text"
-                        value={finlitHero.mediaUrl}
-                        onChange={(e) => updateFinlitHeroField('mediaUrl', e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                        placeholder="https://... /materials/... / YouTube embed URL"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
 
+                    <div className="rounded border border-slate-700 bg-slate-900/60 p-3 space-y-3">
+                      <div>
+                        <h4 className="text-[11px] font-bold text-slate-300 uppercase">Tabs</h4>
+                        <p className="text-[11px] text-slate-500 mt-1">Control tab labels and Additional Learning links.</p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Activities Tab Label</label>
+                          <input
+                            type="text"
+                            value={finlitSettings.activitiesTabLabel}
+                            onChange={(e) => updateFinlitSettingField('activitiesTabLabel', e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                            placeholder="Activities"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Additional Tab Label</label>
+                          <input
+                            type="text"
+                            value={finlitSettings.additionalTabLabel}
+                            onChange={(e) => updateFinlitSettingField('additionalTabLabel', e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                            placeholder="Additional Learning"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase">Additional Learning Links</label>
+                          <button
+                            type="button"
+                            onClick={addFinlitLink}
+                            className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-[10px] font-bold text-white inline-flex items-center gap-1"
+                          >
+                            <Plus size={12} /> Add Link
+                          </button>
+                        </div>
+                        {finlitSettings.additionalLinks.length === 0 ? (
+                          <p className="text-[11px] text-slate-500">No links added yet.</p>
+                        ) : (
+                          finlitSettings.additionalLinks.map((link, index) => (
+                            <div key={`edit-finlit-link-${index}`} className="rounded border border-slate-700 bg-slate-950/70 p-2 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[11px] font-bold text-slate-300 uppercase">Link {index + 1}</p>
+                                <button
+                                  type="button"
+                                  onClick={() => removeFinlitLink(index)}
+                                  className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-[10px] font-bold text-white"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                              <input
+                                type="text"
+                                value={link.title || ''}
+                                onChange={(e) => updateFinlitLink(index, { title: e.target.value })}
+                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                placeholder="Link title"
+                              />
+                              <input
+                                type="text"
+                                value={link.url || ''}
+                                onChange={(e) => updateFinlitLink(index, { url: e.target.value })}
+                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs font-mono"
+                                placeholder="https://example.com/resource"
+                              />
+                              <textarea
+                                value={link.description || ''}
+                                onChange={(e) => updateFinlitLink(index, { description: e.target.value })}
+                                className="w-full h-16 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                placeholder="Short description shown under the link"
+                              />
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </details>
+              )}
               {editForm.moduleType === 'external' && (
                 <div className="space-y-4">
                   <div>

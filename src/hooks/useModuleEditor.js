@@ -4,7 +4,12 @@ import {
   normalizeComposerLayout,
   normalizeComposerModuleConfig,
 } from '../composer/layout.js';
-import { createFinlitHeroFormState, normalizeFinlitHeroForSave } from '../utils/finlitHero.js';
+import {
+  createFinlitHeroFormState,
+  createFinlitTemplateFormState,
+  normalizeFinlitHeroForSave,
+  normalizeFinlitTemplateForSave,
+} from '../utils/finlitHero.js';
 
 const { useCallback, useState } = React;
 
@@ -18,6 +23,7 @@ const DEFAULT_EDIT_FORM = {
   template: null,
   theme: null,
   hero: createFinlitHeroFormState(),
+  finlit: createFinlitTemplateFormState(),
   moduleMode: 'custom_html',
   activities: [],
   composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12] },
@@ -83,6 +89,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         template: normalizeModuleTemplate(item.template),
         theme: normalizeModuleTheme(item.theme),
         hero: createFinlitHeroFormState(item.hero),
+        finlit: createFinlitTemplateFormState(item.finlit),
         moduleMode: item.mode || 'custom_html',
         activities: composerState.activities,
         composerLayout: composerState.composerLayout,
@@ -104,6 +111,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           template: normalizeModuleTemplate(item.template),
           theme: normalizeModuleTheme(item.theme),
           hero: createFinlitHeroFormState(item.hero),
+          finlit: createFinlitTemplateFormState(item.finlit),
           moduleMode: item.mode || 'custom_html',
           activities: composerState.activities,
           composerLayout: composerState.composerLayout,
@@ -145,6 +153,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         template: normalizeModuleTemplate(item.template),
         theme: normalizeModuleTheme(item.theme),
         hero: createFinlitHeroFormState(item.hero),
+        finlit: createFinlitTemplateFormState(item.finlit),
         moduleMode: item.mode || 'custom_html',
         activities: composerState.activities,
         composerLayout: composerState.composerLayout,
@@ -171,6 +180,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       template: normalizeModuleTemplate(item.template),
       theme: normalizeModuleTheme(item.theme),
       hero: createFinlitHeroFormState(item.hero),
+      finlit: createFinlitTemplateFormState(item.finlit),
       moduleMode: item.mode || 'custom_html',
       activities: composerState.activities,
       composerLayout: composerState.composerLayout,
@@ -197,6 +207,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       template: normalizeModuleTemplate(currentModule.template),
       theme: normalizeModuleTheme(currentModule.theme),
       hero: normalizeFinlitHeroForSave(currentModule.hero),
+      finlit: normalizeFinlitTemplateForSave(currentModule.finlit),
       activities: currentComposerState.activities,
       composerLayout: currentComposerState.composerLayout,
       ...(currentModule.type === 'standalone'
@@ -231,6 +242,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
     const nextTemplate = normalizeModuleTemplate(editForm.template);
     const nextTheme = normalizeModuleTheme(editForm.theme);
     const nextHero = normalizeFinlitHeroForSave(editForm.hero);
+    const nextFinlit = normalizeFinlitTemplateForSave(editForm.finlit);
     const nextActivities =
       nextMode === 'composer'
         ? ensureComposerActivities(editForm.activities, nextComposerLayout)
@@ -248,6 +260,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         template: nextTemplate,
         theme: nextTheme,
         hero: nextHero,
+        finlit: nextFinlit,
         activities: nextActivities,
         composerLayout: nextComposerLayout,
         url: editForm.url,
@@ -268,6 +281,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           template: nextTemplate,
           theme: nextTheme,
           hero: nextHero,
+          finlit: nextFinlit,
           activities: nextActivities,
           composerLayout: nextComposerLayout,
           rawHtml: '',
@@ -286,6 +300,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           template: nextTemplate,
           theme: nextTheme,
           hero: nextHero,
+          finlit: nextFinlit,
           activities: nextActivities,
           composerLayout: nextComposerLayout,
           rawHtml: editForm.fullDocument.trim(),
@@ -306,6 +321,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         template: nextTemplate,
         theme: nextTheme,
         hero: nextHero,
+        finlit: nextFinlit,
         activities: nextActivities,
         composerLayout: nextComposerLayout,
         code: {
@@ -348,6 +364,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       const restoredTemplate = normalizeModuleTemplate(version.template ?? items[idx].template);
       const restoredTheme = normalizeModuleTheme(version.theme ?? items[idx].theme);
       const restoredHero = normalizeFinlitHeroForSave(version.hero ?? items[idx].hero);
+      const restoredFinlit = normalizeFinlitTemplateForSave(version.finlit ?? items[idx].finlit);
 
       // Restore the version based on module type
       if (module.type === 'standalone') {
@@ -360,6 +377,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
             template: restoredTemplate,
             theme: restoredTheme,
             hero: restoredHero,
+            finlit: restoredFinlit,
             activities: restoredComposer.activities,
             composerLayout: restoredComposer.composerLayout,
             rawHtml: version.rawHtml,
@@ -375,6 +393,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
             template: restoredTemplate,
             theme: restoredTheme,
             hero: restoredHero,
+            finlit: restoredFinlit,
             activities: restoredComposer.activities,
             composerLayout: restoredComposer.composerLayout,
             rawHtml: '', // Clear rawHtml if reverting to legacy format
@@ -391,6 +410,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           template: restoredTemplate,
           theme: restoredTheme,
           hero: restoredHero,
+          finlit: restoredFinlit,
           activities: restoredComposer.activities,
           composerLayout: restoredComposer.composerLayout,
           url: version.url || '',
@@ -404,6 +424,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           template: restoredTemplate,
           theme: restoredTheme,
           hero: restoredHero,
+          finlit: restoredFinlit,
           activities: restoredComposer.activities,
           composerLayout: restoredComposer.composerLayout,
           code: version.code || {},
