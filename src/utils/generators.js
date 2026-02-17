@@ -54,6 +54,106 @@ export const getFontFamilyGlobal = (fontFamily) => {
   return fonts[fontFamily] || fonts.inter;
 };
 
+function normalizePreviewStorageToken(value, fallback = 'preview') {
+  const raw = String(value || '').trim().toLowerCase();
+  const normalized = raw.replace(/[^a-z0-9:_-]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+  return normalized || fallback;
+}
+
+export function buildPreviewStorageScope(prefix, identity) {
+  const safePrefix = normalizePreviewStorageToken(prefix, 'preview');
+  const safeIdentity = normalizePreviewStorageToken(identity, 'module');
+  return `${safePrefix}:${safeIdentity}`.slice(0, 160);
+}
+
+export function buildScopedStorageBootstrapScript(storageScope) {
+  const scope = normalizePreviewStorageToken(storageScope, '');
+  if (!scope) return '';
+  const safeScope = scope.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return `
+(function() {
+  var scope = '${safeScope}';
+  if (!scope) return;
+  var prefix = 'cf_preview_scope::' + scope + '::';
+  if (window.__cfPreviewStoragePrefix === prefix) return;
+  window.__cfPreviewStoragePrefix = prefix;
+
+  function toScopedKey(key) {
+    var safeKey = key == null ? '' : String(key);
+    return safeKey.indexOf(prefix) === 0 ? safeKey : prefix + safeKey;
+  }
+
+  function patchStorage(storage) {
+    if (!storage) return;
+    var proto = Object.getPrototypeOf(storage);
+    if (!proto) return;
+    if (proto.__cfPreviewStoragePatchedPrefix === prefix) return;
+    if (proto.__cfPreviewStoragePatchedPrefix) return;
+
+    var originalGetItem = typeof proto.getItem === 'function' ? proto.getItem : null;
+    var originalSetItem = typeof proto.setItem === 'function' ? proto.setItem : null;
+    var originalRemoveItem = typeof proto.removeItem === 'function' ? proto.removeItem : null;
+    var originalClear = typeof proto.clear === 'function' ? proto.clear : null;
+    var originalKey = typeof proto.key === 'function' ? proto.key : null;
+
+    if (originalGetItem) {
+      proto.getItem = function(key) {
+        return originalGetItem.call(this, toScopedKey(key));
+      };
+    }
+    if (originalSetItem) {
+      proto.setItem = function(key, value) {
+        return originalSetItem.call(this, toScopedKey(key), value);
+      };
+    }
+    if (originalRemoveItem) {
+      proto.removeItem = function(key) {
+        return originalRemoveItem.call(this, toScopedKey(key));
+      };
+    }
+    if (originalClear && originalKey && originalRemoveItem) {
+      proto.clear = function() {
+        var prefixedKeys = [];
+        for (var i = 0; i < this.length; i += 1) {
+          var current = originalKey.call(this, i);
+          if (typeof current === 'string' && current.indexOf(prefix) === 0) {
+            prefixedKeys.push(current);
+          }
+        }
+        prefixedKeys.forEach(function(current) {
+          originalRemoveItem.call(this, current);
+        }, this);
+      };
+    }
+
+    proto.__cfPreviewStoragePatchedPrefix = prefix;
+  }
+
+  try { patchStorage(window.localStorage); } catch (err) {}
+  try { patchStorage(window.sessionStorage); } catch (err) {}
+})();
+`.trim();
+}
+
+export function buildScopedStorageBootstrapTag(storageScope) {
+  const script = buildScopedStorageBootstrapScript(storageScope);
+  if (!script) return '';
+  return `<script>${script}<\\/script>`;
+}
+
+function injectScopedStorageBootstrapIntoHtml(rawHtml, storageScope) {
+  const input = String(rawHtml || '');
+  const bootstrapTag = buildScopedStorageBootstrapTag(storageScope);
+  if (!bootstrapTag) return input;
+  if (/<head[^>]*>/i.test(input)) {
+    return input.replace(/<head[^>]*>/i, (match) => `${match}${bootstrapTag}`);
+  }
+  if (/<body[^>]*>/i.test(input)) {
+    return input.replace(/<body[^>]*>/i, (match) => `${match}${bootstrapTag}`);
+  }
+  return `${bootstrapTag}${input}`;
+}
+
 export const generateMasterShell = (data) => {
   const {
     courseName = "Course Factory",
@@ -1025,6 +1125,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
   if (!module) return null;
 
   const settings = courseSettings || {};
+  const scopedStorageBootstrapTag = buildScopedStorageBootstrapTag(settings.__storageScope);
   const courseName = settings.courseName || settings.__courseName || "Course";
   const accentColor = settings.accentColor || "sky";
   const backgroundColor = settings.backgroundColor || "slate-900";
@@ -1120,6 +1221,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
       return `<!DOCTYPE html>
 <html>
 <head>
+  ${scopedStorageBootstrapTag}
   <style>
     body { margin: 0; padding: 0; background: ${bgHex}; ${font.css} }
     iframe { width: 100%; height: 100vh; border: none; }
@@ -1134,6 +1236,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
     return `<!DOCTYPE html>
 <html>
 <head>
+  ${scopedStorageBootstrapTag}
   <style>
     body { background: ${bgHex}; color: ${isLightBg ? '#0f172a' : '#e2e8f0'}; ${font.css}; padding: 40px; text-align: center; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     a { color: #0ea5e9; text-decoration: underline; }
@@ -1544,7 +1647,8 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
     moduleCSS = compiledComposer.css || '';
     moduleScript = compiledComposer.script || '';
   } else if (module.rawHtml) {
-    const escapedRawHtml = module.rawHtml
+    const rawHtmlWithScopedStorage = injectScopedStorageBootstrapIntoHtml(module.rawHtml, settings.__storageScope);
+    const escapedRawHtml = rawHtmlWithScopedStorage
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
     moduleContentHTML = `<div class="w-full rounded-xl overflow-hidden border border-slate-700 shadow-2xl">
@@ -1646,6 +1750,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
   <title>${module.title} | ${courseName}</title>
   <script src="https://cdn.tailwindcss.com"><\/script>
   <link href="${font.url}" rel="stylesheet">
+  ${scopedStorageBootstrapTag}
   <style>
     * {
       margin: 0;
@@ -3018,17 +3123,19 @@ export const generateHubPageBeta = ({ projectData, manifest }) => {
 </html>`;
 };
 
-export const generateModuleHtmlBeta = ({ projectData, modules, moduleId }) => {
+export const generateModuleHtmlBeta = ({ projectData, modules, moduleId, renderSettings = null }) => {
   const mod = modules.find(m => m.id === moduleId);
   if (!mod) return null;
 
   const courseSettings = projectData["Course Settings"] || {};
+  const safeRenderSettings = renderSettings && typeof renderSettings === 'object' ? renderSettings : {};
   return buildModuleFrameHTML(mod, {
     ...courseSettings,
     __courseName: courseSettings.courseName || projectData["Current Course"]?.name || "Course",
     __toolkit: projectData["Global Toolkit"] || [],
     __materials: projectData["Current Course"]?.materials || [],
-    ignoreAssetBaseUrl: true // Force relative links for ZIP export
+    ignoreAssetBaseUrl: true, // Force relative links for ZIP export
+    ...safeRenderSettings,
   });
 };
 

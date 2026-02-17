@@ -26,15 +26,16 @@ export function getCompiledModuleHtml({
   moduleId,
   excludedIds = [],
   target = BETA_MULTI_FILE_TARGET,
+  renderSettings = null,
 } = {}) {
   const modulePath = getCompiledModulePath(moduleId);
   if (!modulePath) return null;
   const filesMap = compileProjectToFilesMap({ projectData, excludedIds, target });
-  return filesMap[modulePath] || compileModuleToHtml({ projectData, moduleId });
+  return filesMap[modulePath] || compileModuleToHtml({ projectData, moduleId, renderSettings });
 }
 
-export function compileModuleToHtml({ projectData, moduleId } = {}) {
+export function compileModuleToHtml({ projectData, moduleId, renderSettings = null } = {}) {
   if (!projectData || !moduleId) return null;
   const modules = projectData?.["Current Course"]?.modules || [];
-  return generateModuleHtmlBeta({ projectData, modules, moduleId });
+  return generateModuleHtmlBeta({ projectData, modules, moduleId, renderSettings });
 }

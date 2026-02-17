@@ -7,6 +7,7 @@ import {
   buildSiteHtml,
   generateMasterShell,
   buildModuleFrameHTML,
+  buildPreviewStorageScope,
   validateProject,
   validateModule,
   cleanModuleHTML,
@@ -211,16 +212,31 @@ export function App() {
   // The iframe's srcDoc includes the script, so it runs in the iframe's scope
 
   const currentCourse = projectData["Current Course"] || { name: "Error", modules: [] };
+  const previewStorageScope = React.useMemo(
+    () => buildPreviewStorageScope('phase2-preview', previewModule?.id || previewModule?.title || 'module'),
+    [previewModule?.id, previewModule?.title],
+  );
   const previewSrcDoc = React.useMemo(() => {
     if (!previewModule) return '';
     const courseModules = projectData["Current Course"]?.modules || [];
     const isCourseModule = courseModules.some((m) => m.id === previewModule.id);
     if (isCourseModule) {
-      return compileModuleToHtml({ projectData, moduleId: previewModule.id }) || '';
+      return (
+        compileModuleToHtml({
+          projectData,
+          moduleId: previewModule.id,
+          renderSettings: { __storageScope: previewStorageScope },
+        }) || ''
+      );
     }
     // Keep fallback behavior for non-course items like toolkit previews.
-    return buildModuleFrameHTML(previewModule, projectData['Course Settings']) || '';
-  }, [previewModule, projectData]);
+    return (
+      buildModuleFrameHTML(previewModule, {
+        ...(projectData['Course Settings'] || {}),
+        __storageScope: previewStorageScope,
+      }) || ''
+    );
+  }, [previewModule, previewStorageScope, projectData]);
 
   // Rename Course Function
   const renameCourse = (newName) => {

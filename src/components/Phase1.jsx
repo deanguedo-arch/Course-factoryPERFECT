@@ -33,7 +33,14 @@ import ComposerSidebarTools from './composer/ComposerSidebarTools.jsx';
 import ReactGridLayout, { WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-import { buildModuleFrameHTML, cleanModuleScript, getMaterialBadgeLabel, validateModule } from '../utils/generators.js';
+import {
+  buildModuleFrameHTML,
+  buildPreviewStorageScope,
+  buildScopedStorageBootstrapTag,
+  cleanModuleScript,
+  getMaterialBadgeLabel,
+  validateModule,
+} from '../utils/generators.js';
 import {
   createKnowledgeCheckBuilderQuestion,
   createWorksheetBuilderBlock,
@@ -1725,6 +1732,19 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     selectedComposerActivity?.data?.text,
   ]);
 
+  const moduleManagerComposerPreviewScope = useMemo(
+    () => buildPreviewStorageScope('phase1-composer-preview', moduleManagerID.trim() || moduleManagerTitle.trim() || 'composer'),
+    [moduleManagerID, moduleManagerTitle],
+  );
+  const phase1MaterialPreviewScope = useMemo(
+    () => buildPreviewStorageScope('phase1-material-preview', phase1MaterialPreview?.id || phase1MaterialPreview?.title || 'materials'),
+    [phase1MaterialPreview?.id, phase1MaterialPreview?.title],
+  );
+  const phase1AssessmentPreviewScope = useMemo(
+    () => buildPreviewStorageScope('phase1-assessment-preview', phase1AssessmentPreview?.id || phase1AssessmentPreview?.title || 'assessment'),
+    [phase1AssessmentPreview?.id, phase1AssessmentPreview?.title],
+  );
+
   const moduleManagerComposerPreviewDoc = useMemo(() => {
     if (moduleManagerType !== 'composer') return '';
     const courseSettings = projectData?.['Course Settings'] || {};
@@ -1755,9 +1775,11 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         __courseName: courseSettings.courseName || projectData?.['Current Course']?.name || 'Course',
         __toolkit: projectData?.['Global Toolkit'] || [],
         __materials: projectData?.['Current Course']?.materials || [],
+        __storageScope: moduleManagerComposerPreviewScope,
       }) || ''
     );
   }, [
+    moduleManagerComposerPreviewScope,
     moduleManagerComposerActivities,
     moduleManagerComposerMaxColumns,
     moduleManagerHero,
@@ -1792,10 +1814,11 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         __courseName: courseSettings.courseName || projectData?.['Current Course']?.name || 'Course',
         __toolkit: projectData?.['Global Toolkit'] || [],
         __materials: [previewMaterial],
+        __storageScope: phase1MaterialPreviewScope,
         ignoreAssetBaseUrl: true,
       }) || ''
     );
-  }, [phase1MaterialPreview, projectData]);
+  }, [phase1MaterialPreview, phase1MaterialPreviewScope, projectData]);
 
   const cloneComposerSnapshotData = React.useCallback((value) => {
     try {
@@ -2179,6 +2202,36 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const addComposerEmptyRowDraft = () => {
     pushComposerHistorySnapshot(buildComposerSnapshot());
     setModuleManagerComposerExtraRows((count) => Math.min(50, count + 1));
+  };
+
+  const removeComposerEmptyRowDraft = (targetRow) => {
+    if (isModuleManagerCanvasMode) return;
+    const row = Math.max(1, Number.parseInt(targetRow, 10) || 1);
+
+    let changed = false;
+    const nextActivities = moduleManagerComposerActivities.map((activity, idx) => {
+      const placement = moduleManagerPlacementByIndex.get(idx);
+      if (!placement || placement.row <= row) return activity;
+      changed = true;
+      return {
+        ...activity,
+        layout: {
+          ...(activity.layout || {}),
+          row: Math.max(1, placement.row - 1),
+        },
+      };
+    });
+
+    if (changed) {
+      updateComposerActivities(nextActivities);
+      return;
+    }
+
+    const maxRow = moduleManagerGridModel.placements.reduce((largest, placement) => Math.max(largest, placement.row), 0);
+    if (row > maxRow && moduleManagerComposerExtraRows > 0) {
+      pushComposerHistorySnapshot(buildComposerSnapshot());
+      setModuleManagerComposerExtraRows((count) => Math.max(0, count - 1));
+    }
   };
 
   const shiftCanvasActivitiesDownFromRow = (startRow, rowCount = moduleManagerCanvasGapRowCount) => {
@@ -5409,7 +5462,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                     srcDoc={(() => {
                                                         const safeHtml = phase1AssessmentPreview.html || '<p class="text-slate-500">No HTML content</p>';
                                                         const safeScript = cleanModuleScript(phase1AssessmentPreview.script || '');
-                                                        return `<!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"><\/script><style>body{background:#020617;color:#e2e8f0;padding:20px;}</style></head><body>${safeHtml}<script>${safeScript}<\/script></body></html>`;
+                                                        const scopedStorageBootstrapTag = buildScopedStorageBootstrapTag(phase1AssessmentPreviewScope);
+                                                        return `<!DOCTYPE html><html><head>${scopedStorageBootstrapTag}<script src="https://cdn.tailwindcss.com"><\/script><style>body{background:#020617;color:#e2e8f0;padding:20px;}</style></head><body>${safeHtml}<script>${safeScript}<\/script></body></html>`;
                                                     })()}
                                                     className="w-full border-0"
                                                     style={{ minHeight: '600px' }}
@@ -7357,6 +7411,11 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                         return (
                                                             <div
                                                                 key={slot.key}
+                                                                className={`relative rounded border border-dashed transition-colors ${
+                                                                    isSlotTarget
+                                                                        ? 'border-indigo-400 bg-indigo-500/20'
+                                                                        : 'border-slate-700/80 bg-slate-900/35 hover:border-indigo-500/60 hover:bg-slate-900/60'
+                                                                } cursor-pointer`}
                                                                 style={{ gridColumn: `${slot.col}`, gridRow: `${slot.row}`, minHeight: '58px' }}
                                                                 onDragOver={(event) => {
                                                                     if (!Number.isInteger(moduleManagerComposerDraggingIndex)) return;
@@ -7389,12 +7448,23 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                     if (!selectedComposerActivity) return;
                                                                     moveComposerActivityToGridCell(moduleManagerComposerSelectedIndex, slot.row, slot.col);
                                                                 }}
-                                                                className={`rounded border border-dashed transition-colors ${
-                                                                    isSlotTarget
-                                                                        ? 'border-indigo-400 bg-indigo-500/20'
-                                                                        : 'border-slate-700/80 bg-slate-900/35 hover:border-indigo-500/60 hover:bg-slate-900/60'
-                                                                } cursor-pointer`}
-                                                            />
+                                                            >
+                                                                <button
+                                                                    type="button"
+                                                                    draggable={false}
+                                                                    onDragStart={(event) => event.preventDefault()}
+                                                                    onMouseDown={(event) => event.stopPropagation()}
+                                                                    onClick={(event) => {
+                                                                        event.stopPropagation();
+                                                                        removeComposerEmptyRowDraft(slot.row);
+                                                                    }}
+                                                                    className="absolute top-1.5 right-1.5 inline-flex h-5 w-5 items-center justify-center rounded border border-slate-600/60 bg-slate-900/40 text-slate-300 hover:border-rose-400/70 hover:bg-rose-500/15 hover:text-rose-200 transition-colors"
+                                                                    title="Delete empty row"
+                                                                    aria-label={`Delete empty row ${slot.row}`}
+                                                                >
+                                                                    <X size={11} />
+                                                                </button>
+                                                            </div>
                                                         );
                                                     })}
                                                     {moduleManagerComposerActivities.map((activity, idx) => {

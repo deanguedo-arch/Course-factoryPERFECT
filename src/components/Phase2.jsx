@@ -1,6 +1,6 @@
 ﻿import * as React from 'react';
 import { Box, CheckCircle, Download, Eye, FileCode, FolderOpen, Lock, PenTool, Save, Search, Trash2, X } from 'lucide-react';
-import { cleanModuleScript } from '../utils/generators.js';
+import { buildPreviewStorageScope, buildScopedStorageBootstrapTag, cleanModuleScript } from '../utils/generators.js';
 
 const { useState } = React;
 
@@ -17,6 +17,10 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
   const currentCourse = projectData["Current Course"]?.modules || [];
   const courseMaterials = projectData["Current Course"]?.materials || [];
   const allAssessments = currentCourse.flatMap(m => (m.assessments || []).map(a => ({...a, moduleName: m.title})));
+  const assessmentPreviewStorageScope = React.useMemo(
+    () => buildPreviewStorageScope('phase2-assessment-preview', assessmentPreview?.id || assessmentPreview?.title || 'assessment'),
+    [assessmentPreview?.id, assessmentPreview?.title],
+  );
   
   const items = sourceType === 'MODULE'
     ? currentCourse
@@ -539,7 +543,8 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                   // Sanitize assessment content for preview
                   const safeHtml = assessmentPreview.html || '<p class="text-slate-500">No HTML content</p>';
                   const safeScript = cleanModuleScript(assessmentPreview.script || '');
-                  return `<!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"><\/script><link href="https://fonts.googleapis.com/css?family=Inter:wght@400;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet"><style>body{background:#020617;color:#e2e8f0;font-family:'Inter',sans-serif;padding:20px;}.mono{font-family:'JetBrains Mono',monospace;}.score-btn{background:#0f172a;border:1px solid #1e293b;color:#64748b;transition:all 0.2s;}.score-btn:hover{border-color:#0ea5e9;color:white;}.score-btn.active{background:#0ea5e9;color:#000;font-weight:900;border-color:#0ea5e9;}.rubric-cell{cursor:pointer;transition:all 0.2s;border:1px solid transparent;}.rubric-cell:hover{background:rgba(255,255,255,0.05);}.active-proficient{background:rgba(16,185,129,0.2);border:1px solid #10b981;color:#10b981;}.active-developing{background:rgba(245,158,11,0.2);border:1px solid #f59e0b;color:#f59e0b;}.active-emerging{background:rgba(244,63,94,0.2);border:1px solid #f43f5e;color:#f43f5e;}</style></head><body>${safeHtml}<script>${safeScript}<\/script></body></html>`;
+                  const scopedStorageBootstrapTag = buildScopedStorageBootstrapTag(assessmentPreviewStorageScope);
+                  return `<!DOCTYPE html><html><head>${scopedStorageBootstrapTag}<script src="https://cdn.tailwindcss.com"><\/script><link href="https://fonts.googleapis.com/css?family=Inter:wght@400;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet"><style>body{background:#020617;color:#e2e8f0;font-family:'Inter',sans-serif;padding:20px;}.mono{font-family:'JetBrains Mono',monospace;}.score-btn{background:#0f172a;border:1px solid #1e293b;color:#64748b;transition:all 0.2s;}.score-btn:hover{border-color:#0ea5e9;color:white;}.score-btn.active{background:#0ea5e9;color:#000;font-weight:900;border-color:#0ea5e9;}.rubric-cell{cursor:pointer;transition:all 0.2s;border:1px solid transparent;}.rubric-cell:hover{background:rgba(255,255,255,0.05);}.active-proficient{background:rgba(16,185,129,0.2);border:1px solid #10b981;color:#10b981;}.active-developing{background:rgba(245,158,11,0.2);border:1px solid #f59e0b;color:#f59e0b;}.active-emerging{background:rgba(244,63,94,0.2);border:1px solid #f43f5e;color:#f43f5e;}</style></head><body>${safeHtml}<script>${safeScript}<\/script></body></html>`;
                 })()}
                 className="w-full border-0"
                 style={{ minHeight: '600px' }}

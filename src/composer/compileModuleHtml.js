@@ -2291,6 +2291,7 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
       .cf-composer-activity.cf-title-xl :is(h1,h2,h3,h4) { font-size: 1.75rem !important; }
       .cf-composer-activity.cf-canvas-item { min-height: 0; overflow: hidden; }
       .cf-composer-activity.cf-canvas-item > :first-child { height: 100%; overflow: auto; box-sizing: border-box; }
+      [data-composer-root][data-composer-layout-mode="simple"] textarea { resize: none !important; overflow-y: auto; }
       ${themeCss}
     </style>
     <div class="space-y-6 ${themeClass}" data-template="${escapeHtml(template)}" data-theme="${escapeHtml(theme)}">

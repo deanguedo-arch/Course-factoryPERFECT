@@ -30,7 +30,7 @@ import {
   normalizeComposerLayout,
 } from '../../composer/layout.js';
 import { isComposerEnabled } from '../../utils/composer.js';
-import { buildModuleFrameHTML } from '../../utils/generators.js';
+import { buildModuleFrameHTML, buildPreviewStorageScope } from '../../utils/generators.js';
 import {
   createFinlitHeroFormState,
   createFinlitTemplateFormState,
@@ -515,6 +515,11 @@ export default function EditModal({
     selectedActivity?.data?.text,
   ]);
 
+  const composerPreviewStorageScope = useMemo(
+    () => buildPreviewStorageScope('phase1-edit-composer-preview', editForm.id || editForm.title || 'composer'),
+    [editForm.id, editForm.title],
+  );
+
   const composerPreviewSrcDoc = useMemo(() => {
     if (standaloneMode !== 'composer') return '';
     const courseSettings = projectData?.['Course Settings'] || {};
@@ -542,9 +547,10 @@ export default function EditModal({
         __courseName: courseSettings.courseName || projectData?.['Current Course']?.name || 'Course',
         __toolkit: projectData?.['Global Toolkit'] || [],
         __materials: projectData?.['Current Course']?.materials || [],
+        __storageScope: composerPreviewStorageScope,
       }) || ''
     );
-  }, [activities, composerLayout, editForm.id, editForm.template, editForm.theme, editForm.title, finlitHero, finlitSettings, projectData, standaloneMode]);
+  }, [activities, composerLayout, composerPreviewStorageScope, editForm.id, editForm.template, editForm.theme, editForm.title, finlitHero, finlitSettings, projectData, standaloneMode]);
 
   const updateActivities = (nextActivities, nextComposerLayout = composerLayout) => {
     const normalizedLayout = normalizeComposerLayout(nextComposerLayout);
@@ -756,6 +762,35 @@ export default function EditModal({
 
   const addEmptyRow = () => {
     setComposerExtraRows((count) => Math.min(50, count + 1));
+  };
+
+  const removeEmptyRowAt = (targetRow) => {
+    if (isCanvasMode) return;
+    const row = Math.max(1, Number.parseInt(targetRow, 10) || 1);
+
+    let changed = false;
+    const nextActivities = activities.map((activity, idx) => {
+      const placement = composerPlacementsByIndex.get(idx);
+      if (!placement || placement.row <= row) return activity;
+      changed = true;
+      return {
+        ...activity,
+        layout: {
+          ...(activity.layout || {}),
+          row: Math.max(1, placement.row - 1),
+        },
+      };
+    });
+
+    if (changed) {
+      updateActivities(nextActivities);
+      return;
+    }
+
+    const maxRow = composerGridModel.placements.reduce((largest, placement) => Math.max(largest, placement.row), 0);
+    if (row > maxRow && composerExtraRows > 0) {
+      setComposerExtraRows((count) => Math.max(0, count - 1));
+    }
   };
 
   const removeActivityByIndex = (index) => {
@@ -3055,6 +3090,11 @@ export default function EditModal({
                                 return (
                                   <div
                                     key={slot.key}
+                                    className={`relative rounded border border-dashed transition-colors ${
+                                      isSlotTarget
+                                        ? 'border-indigo-400 bg-indigo-500/20'
+                                        : 'border-slate-700/80 bg-slate-900/35'
+                                    }`}
                                     style={{ gridColumn: `${slot.col}`, gridRow: `${slot.row}`, minHeight: '58px' }}
                                     onDragOver={(event) => {
                                       if (!Number.isInteger(draggingActivityIndex)) return;
@@ -3077,12 +3117,23 @@ export default function EditModal({
                                       setDragOverActivityIndex(null);
                                       setDragOverSlotKey(null);
                                     }}
-                                    className={`rounded border border-dashed transition-colors ${
-                                      isSlotTarget
-                                        ? 'border-indigo-400 bg-indigo-500/20'
-                                        : 'border-slate-700/80 bg-slate-900/35'
-                                    }`}
-                                  />
+                                  >
+                                    <button
+                                      type="button"
+                                      draggable={false}
+                                      onDragStart={(event) => event.preventDefault()}
+                                      onMouseDown={(event) => event.stopPropagation()}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        removeEmptyRowAt(slot.row);
+                                      }}
+                                      className="absolute top-1.5 right-1.5 inline-flex h-5 w-5 items-center justify-center rounded border border-slate-600/60 bg-slate-900/40 text-slate-300 hover:border-rose-400/70 hover:bg-rose-500/15 hover:text-rose-200 transition-colors"
+                                      title="Delete empty row"
+                                      aria-label={`Delete empty row ${slot.row}`}
+                                    >
+                                      <X size={11} />
+                                    </button>
+                                  </div>
                                 );
                               })}
                               {activities.map((activity, idx) => {
