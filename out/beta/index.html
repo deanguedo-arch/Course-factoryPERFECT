@@ -32,8 +32,10 @@
     function setBackground() {
       document.documentElement.style.backgroundColor = '#0f172a';
       document.documentElement.style.background = '#0f172a';
-      document.body.style.backgroundColor = '#0f172a';
-      document.body.style.background = '#0f172a';
+      if (document.body) {
+        document.body.style.backgroundColor = '#0f172a';
+        document.body.style.background = '#0f172a';
+      }
     }
     setBackground();
     if (document.readyState === 'loading') {
@@ -49,7 +51,7 @@
   <header class="mb-12 text-center">
     <h1 class="text-4xl font-black text-white uppercase tracking-tight mb-2">New Course</h1>
     <p class="text-sm text-slate-400">Select a module to begin</p>
-    <p class="text-xs text-slate-500 mt-2 font-mono">Last updated: 2/8/2026</p>
+    <p class="text-xs text-slate-500 mt-2 font-mono">Last updated: 2/17/2026</p>
   </header>
   
   <nav class="space-y-4">

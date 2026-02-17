@@ -385,7 +385,7 @@ export const ACTIVITY_REGISTRY = {
             .cf-title-content font[size='6'] { font-size: 1.5rem; }
             .cf-title-content font[size='7'] { font-size: 1.875rem; }
           </style>
-          <div class="cf-title-content text-white leading-tight">${textHtml || '<h2>Title</h2>'}</div>
+          <div class="cf-title-content text-white leading-tight">${textHtml}</div>
         </article>
       `;
     },
@@ -737,14 +737,14 @@ export const ACTIVITY_REGISTRY = {
     },
     compileToHtml({ data = {}, index = 0, activityId = '' } = {}) {
       const questions = normalizeKnowledgeCheckBuilderQuestions(data);
-      const blockTitle = String(data.title || '').trim() || 'Knowledge Check';
+      const blockTitle = hasOwn(data, 'title') ? String(data.title ?? '').trim() : 'Knowledge Check';
       return `
         <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-kc-block data-kc-id="${escapeHtml(activityId)}">
-          <h3 class="text-lg font-bold text-white mb-4">${escapeHtml(blockTitle)}</h3>
+          ${blockTitle ? `<h3 class="text-lg font-bold text-white mb-4">${escapeHtml(blockTitle)}</h3>` : ''}
           <div class="space-y-4">
             ${questions
               .map((question, questionIdx) => {
-                const prompt = escapeHtml(question.prompt == null ? `Question ${questionIdx + 1}` : String(question.prompt));
+                const prompt = escapeHtml(question.prompt == null ? '' : String(question.prompt));
                 if (question.type === 'short_answer') {
                   const placeholder = escapeHtml(question.placeholder == null ? 'Write your response...' : String(question.placeholder));
                   return `
@@ -1013,6 +1013,81 @@ export const ACTIVITY_REGISTRY = {
             `
               : ''
           }
+        </article>
+      `;
+    },
+  },
+  tab_group: {
+    type: 'tab_group',
+    label: 'Tab Group (Container)',
+    createDefaultData() {
+      return {
+        title: 'Tab Group',
+        tabs: [
+          { id: 'activities', label: 'Activities', activityIds: [], activities: [] },
+          { id: 'additional', label: 'Additional Learning', activityIds: [], activities: [] },
+        ],
+        defaultTabId: 'activities',
+      };
+    },
+    compileToHtml({ data = {} } = {}) {
+      const tabs = Array.isArray(data.tabs) ? data.tabs : [];
+      const title = String(data.title || '').trim();
+      const rows = tabs
+        .map((tab, idx) => {
+          const label = escapeHtml(String(tab?.label || tab?.id || `Tab ${idx + 1}`));
+          const refs = Array.isArray(tab?.activityIds) ? tab.activityIds.filter(Boolean) : [];
+          const inline = Array.isArray(tab?.activities) ? tab.activities.filter(Boolean) : [];
+          return `<li class="rounded border border-slate-700 bg-slate-950/70 px-3 py-2 text-xs text-slate-300">${label} <span class="text-slate-500">(${refs.length} refs, ${inline.length} inline)</span></li>`;
+        })
+        .join('\n');
+      return `
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-tab-group>
+          ${title ? `<h3 class="text-lg font-bold text-white mb-3">${escapeHtml(title)}</h3>` : ''}
+          ${rows ? `<ul class="space-y-2">${rows}</ul>` : '<p class="text-sm text-slate-400">No tabs configured.</p>'}
+        </article>
+      `;
+    },
+  },
+  card_list: {
+    type: 'card_list',
+    label: 'Card List (Container)',
+    createDefaultData() {
+      return {
+        title: 'Card List',
+        cards: [
+          {
+            title: 'New Card',
+            subtitle: '',
+            icon: '',
+            targetActivityId: '',
+            activity: null,
+            activities: [],
+            openMode: 'expand',
+          },
+        ],
+      };
+    },
+    compileToHtml({ data = {} } = {}) {
+      const title = String(data.title || '').trim();
+      const cards = Array.isArray(data.cards) ? data.cards : [];
+      const rows = cards
+        .map((card, idx) => {
+          const openModeRaw = String(card?.openMode || 'expand').trim().toLowerCase();
+          const openMode =
+            openModeRaw === 'modal' ||
+            openModeRaw === 'navigate_section' ||
+            openModeRaw === 'navigate_page'
+              ? openModeRaw
+              : 'expand';
+          const label = escapeHtml(String(card?.title || `Card ${idx + 1}`));
+          return `<li class="rounded border border-slate-700 bg-slate-950/70 px-3 py-2 text-xs text-slate-300">${label} <span class="text-slate-500">(${openMode})</span></li>`;
+        })
+        .join('\n');
+      return `
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-card-list>
+          ${title ? `<h3 class="text-lg font-bold text-white mb-3">${escapeHtml(title)}</h3>` : ''}
+          ${rows ? `<ul class="space-y-2">${rows}</ul>` : '<p class="text-sm text-slate-400">No cards configured.</p>'}
         </article>
       `;
     },
@@ -1288,10 +1363,10 @@ export const ACTIVITY_REGISTRY = {
                 ? blocks
                     .map((block, idx) => {
                       if (block.kind === 'title') {
-                        const titleText = block.title == null ? `Section ${idx + 1}` : String(block.title);
+                        const titleText = block.title == null ? '' : String(block.title);
                         return `
                           <section class="rounded-lg border border-indigo-500/30 bg-indigo-950/20 p-4" data-worksheet-segment data-worksheet-kind="title">
-                            <h4 class="text-sm font-bold uppercase tracking-wide text-indigo-200">${escapeHtml(titleText)}</h4>
+                            ${titleText ? `<h4 class="text-sm font-bold uppercase tracking-wide text-indigo-200">${escapeHtml(titleText)}</h4>` : ''}
                             ${
                               block.showContent && block.content
                                 ? `<p class="mt-2 text-sm text-indigo-100/90 leading-relaxed">${renderSimpleBody(block.content)}</p>`
@@ -1766,6 +1841,8 @@ const ACTIVITY_TYPE_CATEGORIES = {
   callout_block: 'content',
   accordion_block: 'content',
   tabs_block: 'content',
+  tab_group: 'layout',
+  card_list: 'layout',
   step_sequence: 'content',
   checklist_block: 'interactive',
   scenario_branch: 'interactive',
@@ -1887,6 +1964,27 @@ export function validateComposerActivity(activity) {
     if (!blocks.length) addIssue('warn', 'Worksheet has no blocks yet.');
     const fieldBlocks = blocks.filter((block) => block.kind === 'field');
     if (!fieldBlocks.length) addIssue('warn', 'Worksheet should include at least one input field.');
+  }
+
+  if (type === 'tab_group') {
+    const tabs = Array.isArray(data.tabs) ? data.tabs : [];
+    if (!tabs.length) addIssue('warn', 'Tab group has no tabs configured.');
+    tabs.forEach((tab, idx) => {
+      const ids = Array.isArray(tab?.activityIds) ? tab.activityIds.filter(Boolean) : [];
+      const inline = Array.isArray(tab?.activities) ? tab.activities.filter(Boolean) : [];
+      if (!ids.length && !inline.length) addIssue('warn', `Tab #${idx + 1} has no referenced or inline activities.`);
+    });
+  }
+
+  if (type === 'card_list') {
+    const cards = Array.isArray(data.cards) ? data.cards : [];
+    if (!cards.length) addIssue('warn', 'Card list has no cards configured.');
+    cards.forEach((card, idx) => {
+      const hasRef = Boolean(String(card?.targetActivityId || '').trim());
+      const hasInlineSingle = Boolean(card?.activity && typeof card.activity === 'object');
+      const hasInlineMany = Array.isArray(card?.activities) && card.activities.some((item) => item && typeof item === 'object');
+      if (!hasRef && !hasInlineSingle && !hasInlineMany) addIssue('warn', `Card #${idx + 1} has no target activity.`);
+    });
   }
 
   if (type === 'hotspot_image') {

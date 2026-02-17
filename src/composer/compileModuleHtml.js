@@ -1,5 +1,6 @@
 import { getActivityDefinition } from './activityRegistry.js';
 import { normalizeComposerActivities, normalizeComposerModuleConfig } from './layout.js';
+import { createFinlitHeroFormState, resolveFinlitHeroMediaKind } from '../utils/finlitHero.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -1633,19 +1634,331 @@ function buildComposerRuntimeScript() {
   `;
 }
 
-export function compileComposerModule(module) {
+const TEMPLATE_OPTIONS = ['deck', 'finlit', 'coursebook', 'toolkit_dashboard'];
+const THEME_OPTIONS = ['dark_cards', 'finlit_clean', 'coursebook_light', 'toolkit_clean'];
+
+function resolveTemplateValue(value, fallback = 'deck') {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return fallback;
+  return TEMPLATE_OPTIONS.includes(raw) ? raw : fallback;
+}
+
+function resolveThemeValue(value, fallback = 'dark_cards') {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return fallback;
+  return THEME_OPTIONS.includes(raw) ? raw : fallback;
+}
+
+function normalizeActivityStyleMeta(style = {}) {
+  const next = style && typeof style === 'object' ? style : {};
+  const variantRaw = String(next.variant || '').trim().toLowerCase();
+  const paddingRaw = String(next.padding || '').trim().toLowerCase();
+  const titleRaw = String(next.titleVariant || '').trim().toLowerCase();
+  return {
+    border: next.border !== false,
+    variant: variantRaw === 'flat' ? 'flat' : 'card',
+    padding: paddingRaw === 'sm' || paddingRaw === 'lg' ? paddingRaw : 'md',
+    titleVariant: ['xs', 'sm', 'md', 'lg', 'xl'].includes(titleRaw) ? titleRaw : 'md',
+  };
+}
+
+function normalizeActivityBehaviorMeta(behavior = {}) {
+  const next = behavior && typeof behavior === 'object' ? behavior : {};
+  const collapsible = next.collapsible === true;
+  return {
+    collapsible,
+    collapsedByDefault: collapsible ? next.collapsedByDefault === true : false,
+  };
+}
+
+function stripHtml(value) {
+  return String(value || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function slugify(value, fallback = 'item') {
+  const raw = String(value || '').trim().toLowerCase();
+  const slug = raw.replace(/<[^>]*>/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return slug || fallback;
+}
+
+function parseHeadingEntries(html = '', fallbackAnchor = '') {
+  const entries = [];
+  const pattern = /<h([1-4])[^>]*>([\s\S]*?)<\/h\1>/gi;
+  let match = pattern.exec(html);
+  while (match) {
+    const text = stripHtml(match[2]);
+    if (text) {
+      entries.push({
+        level: Number.parseInt(match[1], 10) || 3,
+        text,
+        anchor: fallbackAnchor,
+      });
+    }
+    match = pattern.exec(html);
+  }
+  return entries;
+}
+
+function buildTemplateRuntimeScript() {
+  return `
+    (function() {
+      if (window.__CF_TEMPLATE_RUNTIME_BOUND__) return;
+      window.__CF_TEMPLATE_RUNTIME_BOUND__ = true;
+
+      function closest(el, selector) {
+        while (el) {
+          if (el.matches && el.matches(selector)) return el;
+          el = el.parentElement;
+        }
+        return null;
+      }
+
+      document.addEventListener('click', function(event) {
+        var finlitTab = closest(event.target, '[data-finlit-tab-trigger]');
+        if (finlitTab) {
+          event.preventDefault();
+          var root = closest(finlitTab, '[data-finlit-root]') || document;
+          var nextId = finlitTab.getAttribute('data-finlit-tab-trigger');
+          Array.prototype.slice.call(root.querySelectorAll('[data-finlit-tab-trigger]')).forEach(function(trigger) {
+            var active = trigger.getAttribute('data-finlit-tab-trigger') === nextId;
+            trigger.setAttribute('aria-selected', active ? 'true' : 'false');
+            trigger.classList.toggle('cf-finlit-tab-active', active);
+          });
+          Array.prototype.slice.call(root.querySelectorAll('[data-finlit-tab-panel]')).forEach(function(panel) {
+            panel.classList.toggle('hidden', panel.getAttribute('data-finlit-tab-panel') !== nextId);
+          });
+          return;
+        }
+
+        var expandToggle = closest(event.target, '[data-expand-toggle]');
+        if (expandToggle) {
+          event.preventDefault();
+          var panelId = expandToggle.getAttribute('data-expand-toggle');
+          var root = closest(expandToggle, '[data-composer-root]') || document;
+          var panel = root.querySelector('[data-expand-panel="' + panelId + '"]');
+          if (panel) panel.classList.toggle('hidden');
+          return;
+        }
+
+        var openModal = closest(event.target, '[data-toolkit-open-modal]');
+        if (openModal) {
+          event.preventDefault();
+          var modalRoot = closest(openModal, '[data-toolkit-dashboard]') || document;
+          var modalId = openModal.getAttribute('data-toolkit-open-modal');
+          var modal = modalRoot.querySelector('[data-toolkit-modal-id="' + modalId + '"]');
+          if (modal) modal.classList.remove('hidden');
+          return;
+        }
+
+        var closeModal = closest(event.target, '[data-toolkit-close-modal]') || closest(event.target, '[data-toolkit-modal-backdrop]');
+        if (closeModal) {
+          event.preventDefault();
+          var modal = closest(closeModal, '[data-toolkit-modal-id]');
+          if (modal) modal.classList.add('hidden');
+        }
+      });
+
+      function applyToolkitFilters(root) {
+        var queryInput = root.querySelector('[data-toolkit-query]');
+        var query = String(queryInput && queryInput.value || '').toLowerCase().trim();
+        var activeBtn = root.querySelector('[data-toolkit-category-filter].bg-slate-700');
+        var category = activeBtn ? String(activeBtn.getAttribute('data-toolkit-category-filter') || 'all').toLowerCase() : 'all';
+        Array.prototype.slice.call(root.querySelectorAll('[data-toolkit-card]')).forEach(function(card) {
+          var cardCategory = String(card.getAttribute('data-toolkit-category') || '').toLowerCase();
+          var search = String(card.getAttribute('data-toolkit-search') || '').toLowerCase();
+          var passCategory = category === 'all' || cardCategory === category;
+          var passQuery = !query || search.indexOf(query) !== -1;
+          card.classList.toggle('hidden', !(passCategory && passQuery));
+        });
+      }
+
+      document.addEventListener('click', function(event) {
+        var filterBtn = closest(event.target, '[data-toolkit-category-filter]');
+        if (!filterBtn) return;
+        event.preventDefault();
+        var root = closest(filterBtn, '[data-toolkit-dashboard]') || document;
+        Array.prototype.slice.call(root.querySelectorAll('[data-toolkit-category-filter]')).forEach(function(btn) {
+          btn.classList.remove('bg-slate-700', 'text-white');
+          btn.classList.add('text-slate-300');
+        });
+        filterBtn.classList.add('bg-slate-700', 'text-white');
+        filterBtn.classList.remove('text-slate-300');
+        applyToolkitFilters(root);
+      });
+
+      document.addEventListener('input', function(event) {
+        var queryInput = closest(event.target, '[data-toolkit-query]');
+        if (!queryInput) return;
+        var root = closest(queryInput, '[data-toolkit-dashboard]') || document;
+        applyToolkitFilters(root);
+      });
+
+      Array.prototype.slice.call(document.querySelectorAll('[data-finlit-root]')).forEach(function(root) {
+        var trigger = root.querySelector('[data-finlit-tab-trigger]');
+        if (trigger) trigger.click();
+      });
+    })();
+  `;
+}
+
+export function compileComposerModule(module, { courseSettings = {} } = {}) {
   const { composerLayout, activities } = normalizeComposerModuleConfig(module);
-  const maxColumns = composerLayout.maxColumns;
-  const sections = activities.map((activity, idx) => {
+  const activityMap = new Map();
+  activities.forEach((activity) => {
+    const key = String(activity?.id || '').trim();
+    if (key) activityMap.set(key, activity);
+  });
+
+  const template = resolveTemplateValue(module?.template, resolveTemplateValue(courseSettings?.templateDefault, 'deck'));
+  const theme = resolveThemeValue(module?.theme, resolveThemeValue(courseSettings?.themeDefault, 'dark_cards'));
+  const themeClass = `cf-theme-${theme}`;
+
+  const renderInlineActivities = (list, prefix = 'inline') =>
+    normalizeComposerActivities(
+      (Array.isArray(list) ? list : []).map((item, idx) => ({
+        id: item?.id || `${prefix}-${idx + 1}-${Math.random().toString(36).slice(2, 8)}`,
+        type: item?.type || 'content_block',
+        data: item?.data || {},
+        layout: item?.layout || { colSpan: 1 },
+        style: item?.style || {},
+        behavior: item?.behavior || {},
+      })),
+      { maxColumns: composerLayout.maxColumns, mode: composerLayout.mode },
+    );
+
+  const renderActivity = (activity, idx, { withLayout = true, trail = [] } = {}) => {
+    const activityId = String(activity?.id || `activity-${idx + 1}`);
+    if (trail.includes(activityId)) {
+      return `<section class="rounded-xl border border-rose-500/40 bg-rose-950/20 p-4"><p class="text-rose-300 text-sm">Cycle detected for activity "${escapeHtml(activityId)}".</p></section>`;
+    }
+    const data = activity?.data || {};
+    let compiled = '';
+    if (activity?.type === 'tab_group') {
+      const tabs = Array.isArray(data.tabs) ? data.tabs : [];
+      compiled = `
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-4 cf-template-surface">
+          ${String(data.title || '').trim() ? `<h3 class="text-lg font-bold text-white mb-3">${escapeHtml(String(data.title || ''))}</h3>` : ''}
+          <div class="space-y-2">
+            ${
+              tabs.length
+                ? tabs
+                    .map((tab, tabIdx) => {
+                      const refs = (Array.isArray(tab?.activityIds) ? tab.activityIds : []).map((id) => activityMap.get(String(id || '').trim())).filter(Boolean);
+                      const inline = renderInlineActivities(tab?.activities, `${activityId}-tab-${tabIdx + 1}`);
+                      const content = [...refs, ...inline];
+                      return `
+                        <details class="rounded-lg border border-slate-700 bg-slate-950/60 p-3" ${tabIdx === 0 ? 'open' : ''}>
+                          <summary class="cursor-pointer text-sm font-bold text-slate-200">${escapeHtml(String(tab?.label || tab?.id || `Tab ${tabIdx + 1}`))}</summary>
+                          <div class="mt-3 space-y-3">
+                            ${content.length ? content.map((item, nestedIdx) => renderActivity(item, nestedIdx, { withLayout: false, trail: [...trail, activityId] })).join('\n') : '<p class="text-sm text-slate-400">No linked activities.</p>'}
+                          </div>
+                        </details>
+                      `;
+                    })
+                    .join('\n')
+                : '<p class="text-sm text-slate-400">No tabs configured.</p>'
+            }
+          </div>
+        </article>
+      `;
+    } else if (activity?.type === 'card_list') {
+      const cards = Array.isArray(data.cards) ? data.cards : [];
+      const cardRows = cards
+        .map((card, cardIdx) => {
+          const openModeRaw = String(card?.openMode || 'expand').trim().toLowerCase();
+          const openMode =
+            openModeRaw === 'modal' || openModeRaw === 'navigate_section' || openModeRaw === 'navigate_page' ? openModeRaw : 'expand';
+          const target = activityMap.get(String(card?.targetActivityId || '').trim());
+          const inlineList = renderInlineActivities(
+            [
+              ...(card?.activity && typeof card.activity === 'object' ? [card.activity] : []),
+              ...(Array.isArray(card?.activities) ? card.activities : []),
+            ],
+            `${activityId}-card-${cardIdx + 1}`,
+          );
+          const linkedItems = target ? [target, ...inlineList] : inlineList;
+          const panelId = `${slugify(activityId, 'card-list')}-panel-${cardIdx + 1}`;
+          const content = linkedItems.length
+            ? linkedItems.map((item, nestedIdx) => renderActivity(item, nestedIdx, { withLayout: false, trail: [...trail, activityId] })).join('\n')
+            : '<p class="text-sm text-slate-400">No linked activity.</p>';
+          return `
+            <article class="rounded-lg border border-slate-700 bg-slate-950/60 p-3">
+              <h4 class="text-sm font-bold text-white">${escapeHtml(String(card?.title || `Card ${cardIdx + 1}`))}</h4>
+              ${String(card?.subtitle || '').trim() ? `<p class="mt-1 text-xs text-slate-400">${escapeHtml(String(card.subtitle || ''))}</p>` : ''}
+              <div class="mt-2">
+                ${
+                  openMode === 'expand'
+                    ? `<button type="button" data-expand-toggle="${panelId}" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold uppercase tracking-wide">Open</button>
+                       <div data-expand-panel="${panelId}" class="hidden mt-3">${content}</div>`
+                    : openMode === 'modal'
+                      ? `<button type="button" data-toolkit-open-modal="${panelId}" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold uppercase tracking-wide">Open Modal</button>
+                         <div class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" data-toolkit-modal-id="${panelId}" data-toolkit-modal-backdrop>
+                           <div class="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-950 p-4 max-h-[85vh] custom-scroll">
+                             <div class="flex items-center justify-between mb-3">
+                               <h4 class="text-sm font-bold text-white">${escapeHtml(String(card?.title || `Card ${cardIdx + 1}`))}</h4>
+                               <button type="button" data-toolkit-close-modal class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white">Close</button>
+                             </div>
+                             ${content}
+                           </div>
+                         </div>`
+                      : `<a href="#${panelId}" class="inline-block px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold uppercase tracking-wide">${openMode === 'navigate_page' ? 'Open Page' : 'Go to Section'}</a>
+                         <section id="${panelId}" class="mt-3">${content}</section>`
+                }
+              </div>
+            </article>
+          `;
+        })
+        .join('\n');
+      compiled = `
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-4 cf-template-surface" data-toolkit-dashboard>
+          ${String(data.title || '').trim() ? `<h3 class="text-lg font-bold text-white mb-3">${escapeHtml(String(data.title || ''))}</h3>` : ''}
+          <div class="grid gap-3 md:grid-cols-2">${cardRows || '<p class="text-sm text-slate-400">No cards configured.</p>'}</div>
+        </article>
+      `;
+    } else {
+      const def = getActivityDefinition(activity.type);
+      compiled = def
+        ? def.compileToHtml({
+            data: activity.data,
+            index: idx,
+            activityId: activity.id,
+          })
+        : `<article class="rounded-xl border border-rose-500/30 bg-rose-950/20 p-5"><p class="text-rose-300 text-sm font-semibold">Unknown activity type: ${escapeHtml(activity.type)}</p></article>`;
+    }
+
     const colSpan = activity?.layout?.colSpan || 1;
     const row = Number.isInteger(activity?.layout?.row) ? activity.layout.row : null;
     const col = Number.isInteger(activity?.layout?.col) ? activity.layout.col : null;
-    const sectionGridStyle = col
-      ? `grid-column: ${col} / span ${colSpan};${row ? ` grid-row: ${row};` : ''}`
-      : `grid-column: span ${colSpan} / span ${colSpan};${row ? ` grid-row: ${row};` : ''}`;
+    const x = Number.isInteger(activity?.layout?.x) ? activity.layout.x : Math.max(0, (col || 1) - 1);
+    const y = Number.isInteger(activity?.layout?.y) ? activity.layout.y : Math.max(0, (row || 1) - 1);
+    const w = Number.isInteger(activity?.layout?.w) ? activity.layout.w : colSpan;
+    const h = Number.isInteger(activity?.layout?.h) ? activity.layout.h : 4;
+    const sectionGridStyle =
+      withLayout === false
+        ? ''
+        : composerLayout.mode === 'canvas'
+          ? `grid-column: ${x + 1} / span ${w}; grid-row: ${y + 1} / span ${h};`
+          : col
+            ? `grid-column: ${col} / span ${colSpan};${row ? ` grid-row: ${row};` : ''}`
+            : `grid-column: span ${colSpan} / span ${colSpan};${row ? ` grid-row: ${row};` : ''}`;
+
     const blockStyle = resolveComposerBlockStyle(activity?.data || {});
+    const styleMeta = normalizeActivityStyleMeta(activity?.style || {});
+    const behaviorMeta = normalizeActivityBehaviorMeta(activity?.behavior || {});
     const sectionStyleParts = [sectionGridStyle];
-    const sectionClasses = ['cf-composer-activity'];
+    const sectionClasses = ['cf-composer-activity', `cf-pad-${styleMeta.padding}`, `cf-title-${styleMeta.titleVariant}`];
+    if (withLayout !== false && composerLayout.mode === 'canvas') sectionClasses.push('cf-canvas-item');
+    if (!styleMeta.border) sectionClasses.push('cf-no-border');
+    if (styleMeta.variant === 'flat') sectionClasses.push('cf-variant-flat');
     if (blockStyle.fontFamily) {
       sectionClasses.push('cf-block-font-override');
       sectionStyleParts.push(`--cf-block-font:${blockStyle.fontFamily};`);
@@ -1666,85 +1979,274 @@ export function compileComposerModule(module) {
       sectionClasses.push('cf-block-accent-override');
       sectionStyleParts.push(`--cf-block-accent:${blockStyle.accentColor};`);
     }
-    const sectionStyle = sectionStyleParts.join(' ');
-    const def = getActivityDefinition(activity.type);
-    if (!def) {
-      return `
-        <section
-          data-activity-type="${escapeHtml(activity.type)}"
-          data-activity-id="${escapeHtml(activity.id)}"
-          data-block-theme="${escapeHtml(blockStyle.themeKey)}"
-          data-composer-col-span="${colSpan}"
-          data-composer-row="${row || ''}"
-          data-composer-col="${col || ''}"
-          style="${sectionStyle}"
-          class="${sectionClasses.join(' ')} rounded-xl border border-rose-500/30 bg-rose-950/20 p-5"
-        >
-          <p class="text-rose-300 text-sm font-semibold">Unknown activity type: ${escapeHtml(activity.type)}</p>
-        </section>
-      `;
-    }
-    const compiled = def.compileToHtml({
-      data: activity.data,
-      index: idx,
-      activityId: activity.id,
-    });
+    const sectionStyle = sectionStyleParts.filter(Boolean).join(' ');
+    const headingLabel = stripHtml(activity?.data?.title || activity?.data?.text || getActivityDefinition(activity?.type)?.label || `Activity ${idx + 1}`);
+    const activityHtml = behaviorMeta.collapsible
+      ? `<details class="rounded-xl border border-slate-700/60 bg-slate-950/20" ${behaviorMeta.collapsedByDefault ? '' : 'open'}><summary class="cursor-pointer select-none px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-300">${escapeHtml(headingLabel)}</summary><div class="p-1">${compiled}</div></details>`
+      : compiled;
+
     return `
       <section
+        id="cf-activity-${slugify(activityId, `activity-${idx + 1}`)}"
         data-activity-type="${escapeHtml(activity.type)}"
         data-activity-id="${escapeHtml(activity.id)}"
         data-block-theme="${escapeHtml(blockStyle.themeKey)}"
         data-composer-col-span="${colSpan}"
         data-composer-row="${row || ''}"
         data-composer-col="${col || ''}"
+        data-composer-x="${x}"
+        data-composer-y="${y}"
+        data-composer-w="${w}"
+        data-composer-h="${h}"
         style="${sectionStyle}"
         class="${sectionClasses.join(' ')}"
       >
-        ${compiled}
+        ${activityHtml}
       </section>
     `;
-  });
+  };
+
+  const renderLayout = (list) => {
+    const sections = list.length ? list.map((activity, idx) => renderActivity(activity, idx)).join('\n') : '<p class="text-slate-400" style="grid-column: 1 / -1;">No composer activities added yet.</p>';
+    if (composerLayout.mode === 'canvas') {
+      const rowHeight = Number.parseInt(composerLayout.rowHeight, 10) || 24;
+      const margin = Array.isArray(composerLayout.margin) ? composerLayout.margin : [12, 12];
+      const containerPadding = Array.isArray(composerLayout.containerPadding) ? composerLayout.containerPadding : [12, 12];
+      return `
+        <div class="grid" data-composer-root data-composer-columns="${composerLayout.maxColumns}" data-composer-layout-mode="canvas" style="grid-template-columns: repeat(${composerLayout.maxColumns}, minmax(0, 1fr)); grid-auto-rows: ${rowHeight}px; gap: ${margin[1]}px ${margin[0]}px; padding: ${containerPadding[1]}px ${containerPadding[0]}px;">
+          ${sections}
+        </div>
+      `;
+    }
+    return `
+      <div class="grid gap-6" data-composer-root data-composer-columns="${composerLayout.maxColumns}" data-composer-layout-mode="simple" style="grid-template-columns: repeat(${composerLayout.maxColumns}, minmax(0, 1fr)); grid-auto-flow: row;">
+        ${sections}
+      </div>
+    `;
+  };
+
+  const renderTemplate = () => {
+    if (template === 'finlit') {
+      const tabs = activities.filter((activity) => activity?.type === 'tab_group');
+      const firstTabGroup = tabs[0] || null;
+      let activitiesTabHtml = activities.map((activity, idx) => renderActivity(activity, idx, { withLayout: false })).join('\n');
+      let additionalTabHtml = '<p class="text-slate-400 text-sm">No additional learning content.</p>';
+      if (firstTabGroup) {
+        const t = Array.isArray(firstTabGroup?.data?.tabs) ? firstTabGroup.data.tabs : [];
+        const findTab = (id) => t.find((tab) => String(tab?.id || '').toLowerCase().includes(id));
+        const activitiesTab = findTab('activit');
+        const additionalTab = findTab('additional');
+        const renderTabLinked = (tab) => {
+          if (!tab) return '';
+          const refs = (Array.isArray(tab?.activityIds) ? tab.activityIds : []).map((id) => activityMap.get(String(id || '').trim())).filter(Boolean);
+          const inline = renderInlineActivities(tab?.activities, `${firstTabGroup.id}-${tab?.id || 'tab'}`);
+          const merged = [...refs, ...inline];
+          return merged.length ? merged.map((item, nestedIdx) => renderActivity(item, nestedIdx, { withLayout: false, trail: [firstTabGroup.id] })).join('\n') : '';
+        };
+        activitiesTabHtml = renderTabLinked(activitiesTab) || activitiesTabHtml;
+        additionalTabHtml = renderTabLinked(additionalTab) || additionalTabHtml;
+      }
+      const hero = createFinlitHeroFormState(module?.hero);
+      const rawHeroMediaUrl = String(hero.mediaUrl || '').trim();
+      const heroMediaUrl = /^((https?:)?\/\/|\/|\.\/|\.\.\/|data:image\/|data:video\/|blob:|materials\/)/i.test(rawHeroMediaUrl)
+        ? (/^materials\//i.test(rawHeroMediaUrl) ? `/${rawHeroMediaUrl}` : rawHeroMediaUrl)
+        : '';
+      const heroMediaKind = resolveFinlitHeroMediaKind(hero);
+      const heroTitle = String(hero.title || module?.title || 'Module');
+      const heroMediaHtml =
+        heroMediaUrl && heroMediaKind === 'video'
+          ? `<div class="mt-4 rounded-lg overflow-hidden border border-slate-700 bg-black"><video src="${escapeHtml(heroMediaUrl)}" class="w-full h-auto" controls preload="metadata"></video></div>`
+          : heroMediaUrl && heroMediaKind === 'embed'
+            ? `<div class="mt-4 rounded-lg overflow-hidden border border-slate-700 bg-black aspect-video"><iframe src="${escapeHtml(heroMediaUrl)}" title="${escapeHtml(heroTitle)}" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></div>`
+            : heroMediaUrl
+              ? `<div class="mt-4 rounded-lg overflow-hidden border border-slate-700 bg-black"><img src="${escapeHtml(heroMediaUrl)}" alt="${escapeHtml(heroTitle)}" class="w-full h-auto" loading="lazy" /></div>`
+              : '';
+      return `
+        <section class="space-y-6 rounded-xl border border-slate-700 p-5 cf-template-surface" data-finlit-root>
+          <header class="rounded-xl border border-slate-700 bg-slate-950/40 p-5">
+            <h2 class="text-2xl font-black text-white">${escapeHtml(heroTitle)}</h2>
+            ${String(hero.subtitle || '').trim() ? `<p class="mt-2 text-sm text-slate-300">${escapeHtml(String(hero.subtitle || ''))}</p>` : ''}
+            ${String(hero.progressLabel || '').trim() ? `<p class="mt-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">${escapeHtml(String(hero.progressLabel || ''))}</p>` : ''}
+            ${heroMediaHtml}
+          </header>
+          <div class="flex gap-3 border-b border-slate-700 pb-2">
+            <button type="button" data-finlit-tab-trigger="activities" class="px-2 py-1 text-sm font-bold text-slate-200">Activities</button>
+            <button type="button" data-finlit-tab-trigger="additional" class="px-2 py-1 text-sm font-bold text-slate-400">Additional Learning</button>
+          </div>
+          <div data-finlit-tab-panel="activities">${activitiesTabHtml || '<p class="text-slate-400 text-sm">No activities yet.</p>'}</div>
+          <div data-finlit-tab-panel="additional" class="hidden">${additionalTabHtml}</div>
+        </section>
+      `;
+    }
+
+    if (template === 'coursebook') {
+      const sections = activities.map((activity, idx) => {
+        const anchor = `cb-${slugify(activity?.id || `section-${idx + 1}`, `section-${idx + 1}`)}`;
+        const html = renderActivity(activity, idx, { withLayout: false });
+        const titleText = activity?.type === 'title_block' ? stripHtml(activity?.data?.textHtml || activity?.data?.text || '') : stripHtml(activity?.data?.title || '');
+        return {
+          anchor,
+          html: `<section id="${anchor}">${html}</section>`,
+          entries: [
+            ...(titleText ? [{ level: 2, text: titleText, anchor }] : []),
+            ...parseHeadingEntries(html, anchor),
+          ],
+        };
+      });
+      const seen = new Set();
+      const toc = sections
+        .flatMap((section) => section.entries)
+        .filter((entry) => {
+          const key = `${entry.anchor}:${entry.text.toLowerCase()}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      return `
+        <section class="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+          <aside class="rounded-xl border border-slate-700 bg-slate-900/70 p-4 h-max sticky top-4 cf-template-surface">
+            <h3 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Contents</h3>
+            <nav class="space-y-2">
+              ${toc.length ? toc.map((entry) => `<a href="#${entry.anchor}" class="block text-sm text-slate-200 hover:text-white" style="padding-left:${Math.max(0, entry.level - 2) * 0.75}rem;">${escapeHtml(entry.text)}</a>`).join('\n') : '<p class="text-sm text-slate-400">No headings found.</p>'}
+            </nav>
+          </aside>
+          <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6 cf-template-surface cf-prose">
+            <div class="space-y-6">${sections.map((item) => item.html).join('\n')}</div>
+          </article>
+        </section>
+      `;
+    }
+
+    if (template === 'toolkit_dashboard') {
+      const cards = [];
+      const cardListActivities = activities.filter((activity) => activity?.type === 'card_list');
+      if (cardListActivities.length) {
+        cardListActivities.forEach((activity, listIdx) => {
+          const sourceCards = Array.isArray(activity?.data?.cards) ? activity.data.cards : [];
+          sourceCards.forEach((card, cardIdx) => {
+            cards.push({
+              id: `tool-card-${listIdx + 1}-${cardIdx + 1}`,
+              title: String(card?.title || `Tool ${cardIdx + 1}`),
+              subtitle: String(card?.subtitle || ''),
+              category: String(card?.category || 'General'),
+              openMode: String(card?.openMode || 'expand').trim().toLowerCase(),
+              linked: (() => {
+                const target = activityMap.get(String(card?.targetActivityId || '').trim());
+                const inlineList = renderInlineActivities(
+                  [
+                    ...(card?.activity && typeof card.activity === 'object' ? [card.activity] : []),
+                    ...(Array.isArray(card?.activities) ? card.activities : []),
+                  ],
+                  `tool-inline-${listIdx + 1}-${cardIdx + 1}`,
+                );
+                return target ? [target, ...inlineList] : inlineList;
+              })(),
+            });
+          });
+        });
+      } else {
+        activities.forEach((activity, idx) => {
+          cards.push({
+            id: `tool-card-auto-${idx + 1}`,
+            title: stripHtml(activity?.data?.title || activity?.data?.text || getActivityDefinition(activity?.type)?.label || `Tool ${idx + 1}`),
+            subtitle: '',
+            category: getActivityDefinition(activity?.type)?.label || 'General',
+            openMode: 'expand',
+            linked: [activity],
+          });
+        });
+      }
+      const normalizedCards = cards.map((card) => ({
+        ...card,
+        openMode:
+          card.openMode === 'modal' || card.openMode === 'navigate_section' || card.openMode === 'navigate_page' ? card.openMode : 'expand',
+      }));
+      const cardHtml = normalizedCards
+        .map((card) => {
+          const panelId = `${card.id}-panel`;
+          const linkedItems = Array.isArray(card.linked) ? card.linked : [];
+          const content = linkedItems.length
+            ? linkedItems.map((item, nestedIdx) => renderActivity(item, nestedIdx, { withLayout: false, trail: [card.id] })).join('\n')
+            : '<p class="text-sm text-slate-400">No linked activity.</p>';
+          const searchText = `${card.title} ${card.subtitle} ${card.category}`.trim().toLowerCase();
+          const categorySlug = slugify(card.category, 'general');
+          return `
+            <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-4 cf-toolkit-card cf-template-surface" data-toolkit-card data-toolkit-category="${categorySlug}" data-toolkit-search="${escapeHtml(searchText)}">
+              <h4 class="text-sm font-bold text-white">${escapeHtml(card.title)}</h4>
+              ${card.subtitle ? `<p class="mt-1 text-xs text-slate-400">${escapeHtml(card.subtitle)}</p>` : ''}
+              <div class="mt-3">
+                ${
+                  card.openMode === 'expand'
+                    ? `<button type="button" data-expand-toggle="${panelId}" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-bold uppercase tracking-wide text-white">Open</button><div class="hidden mt-3" data-expand-panel="${panelId}">${content}</div>`
+                    : card.openMode === 'modal'
+                      ? `<button type="button" data-toolkit-open-modal="${panelId}" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-bold uppercase tracking-wide text-white">Open Modal</button><div class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" data-toolkit-modal-id="${panelId}" data-toolkit-modal-backdrop><div class="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-950 p-4 max-h-[85vh] custom-scroll"><div class="flex items-center justify-between mb-3"><h4 class="text-sm font-bold text-white">${escapeHtml(card.title)}</h4><button type="button" data-toolkit-close-modal class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white">Close</button></div>${content}</div></div>`
+                      : `<a href="#${panelId}" class="inline-block px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-bold uppercase tracking-wide text-white">${card.openMode === 'navigate_page' ? 'Open Page' : 'Go to Section'}</a><section id="${panelId}" class="mt-3">${content}</section>`
+                }
+              </div>
+            </article>
+          `;
+        })
+        .join('\n');
+      return `
+        <section class="space-y-4" data-toolkit-dashboard>
+          <div class="flex flex-wrap gap-2">
+            <input type="search" data-toolkit-query class="flex-1 min-w-56 rounded border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-white" placeholder="Search tools..." />
+            <button type="button" data-toolkit-category-filter="all" class="px-3 py-2 rounded bg-slate-700 text-white text-xs font-bold">All</button>
+          </div>
+          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">${cardHtml || '<p class="text-slate-400 text-sm">No tools configured.</p>'}</div>
+        </section>
+      `;
+    }
+
+    return renderLayout(activities);
+  };
+
+  const themeCss =
+    theme === 'finlit_clean'
+      ? `.cf-theme-finlit_clean { --cf-surface:#ffffff; --cf-border:#d1d5db; --cf-text:#0f172a; } .cf-theme-finlit_clean .cf-template-surface{background:var(--cf-surface);border-color:var(--cf-border);color:var(--cf-text);} .cf-theme-finlit_clean .cf-finlit-tab-active{color:#0284c7!important;border-color:#0284c7!important;}`
+      : theme === 'coursebook_light'
+        ? `.cf-theme-coursebook_light { --cf-surface:#ffffff; --cf-border:#d1d5db; --cf-text:#111827; } .cf-theme-coursebook_light .cf-template-surface{background:var(--cf-surface);border-color:var(--cf-border);color:var(--cf-text);} .cf-theme-coursebook_light .cf-prose{font-family:Georgia, "Times New Roman", serif;line-height:1.75;}`
+        : theme === 'toolkit_clean'
+          ? `.cf-theme-toolkit_clean { --cf-surface:#ffffff; --cf-border:#d1d5db; --cf-text:#111827; } .cf-theme-toolkit_clean .cf-template-surface{background:var(--cf-surface);border-color:var(--cf-border);color:var(--cf-text);}`
+          : `.cf-theme-dark_cards { --cf-surface:rgba(15, 23, 42, 0.72); --cf-border:rgba(71, 85, 105, 0.65); --cf-text:#e2e8f0; } .cf-theme-dark_cards .cf-template-surface{background:var(--cf-surface);border-color:var(--cf-border);color:var(--cf-text);}`;
 
   const html = `
     <style>
-      .cf-composer-activity {
-        position: relative;
-      }
+      .cf-composer-activity { position: relative; }
       .cf-composer-activity.cf-block-font-override,
-      .cf-composer-activity.cf-block-font-override * {
-        font-family: var(--cf-block-font);
-      }
-      .cf-composer-activity.cf-block-text-override :is(h1, h2, h3, h4, h5, h6, p, span, div, li, ul, ol, label, summary, small, strong, em, blockquote, pre, a, button, input, textarea, select) {
-        color: var(--cf-block-text);
-      }
-      .cf-composer-activity.cf-block-bg-override > :first-child {
-        background: var(--cf-block-bg);
-      }
+      .cf-composer-activity.cf-block-font-override * { font-family: var(--cf-block-font); }
+      .cf-composer-activity.cf-block-text-override :is(h1, h2, h3, h4, h5, h6, p, span, div, li, ul, ol, label, summary, small, strong, em, blockquote, pre, a, button, input, textarea, select) { color: var(--cf-block-text); }
+      .cf-composer-activity.cf-block-bg-override > :first-child { background: var(--cf-block-bg); }
       .cf-composer-activity.cf-block-border-override > :first-child,
-      .cf-composer-activity.cf-block-border-override > :first-child [class*='border-'] {
-        border-color: var(--cf-block-border);
-      }
+      .cf-composer-activity.cf-block-border-override > :first-child [class*='border-'] { border-color: var(--cf-block-border); }
       .cf-composer-activity.cf-block-accent-override a,
       .cf-composer-activity.cf-block-accent-override [class*='text-indigo'],
       .cf-composer-activity.cf-block-accent-override [class*='text-sky'],
       .cf-composer-activity.cf-block-accent-override [class*='text-emerald'],
-      .cf-composer-activity.cf-block-accent-override [class*='text-cyan'] {
-        color: var(--cf-block-accent);
-      }
+      .cf-composer-activity.cf-block-accent-override [class*='text-cyan'] { color: var(--cf-block-accent); }
+      .cf-composer-activity.cf-no-border > :first-child,
+      .cf-composer-activity.cf-no-border > :first-child [class*='border-'] { border: 0 !important; box-shadow: none !important; }
+      .cf-composer-activity.cf-variant-flat > :first-child { background: transparent !important; }
+      .cf-composer-activity.cf-pad-sm > :first-child { padding: 0.5rem !important; }
+      .cf-composer-activity.cf-pad-md > :first-child { padding: 1rem !important; }
+      .cf-composer-activity.cf-pad-lg > :first-child { padding: 1.5rem !important; }
+      .cf-composer-activity.cf-title-xs :is(h1,h2,h3,h4) { font-size: 0.875rem !important; }
+      .cf-composer-activity.cf-title-sm :is(h1,h2,h3,h4) { font-size: 1rem !important; }
+      .cf-composer-activity.cf-title-md :is(h1,h2,h3,h4) { font-size: 1.125rem !important; }
+      .cf-composer-activity.cf-title-lg :is(h1,h2,h3,h4) { font-size: 1.375rem !important; }
+      .cf-composer-activity.cf-title-xl :is(h1,h2,h3,h4) { font-size: 1.75rem !important; }
+      .cf-composer-activity.cf-canvas-item { min-height: 0; overflow: hidden; }
+      .cf-composer-activity.cf-canvas-item > :first-child { height: 100%; overflow: auto; box-sizing: border-box; }
+      ${themeCss}
     </style>
-    <div
-      class="grid gap-6"
-      data-composer-root
-      data-composer-columns="${maxColumns}"
-      style="grid-template-columns: repeat(${maxColumns}, minmax(0, 1fr)); grid-auto-flow: row;"
-    >
-      ${sections.length ? sections.join('\n') : '<p class="text-slate-400" style="grid-column: 1 / -1;">No composer activities added yet.</p>'}
+    <div class="space-y-6 ${themeClass}" data-template="${escapeHtml(template)}" data-theme="${escapeHtml(theme)}">
+      ${renderTemplate()}
     </div>
   `;
 
   return {
     html,
     css: '',
-    script: buildComposerRuntimeScript(),
+    script: `${buildComposerRuntimeScript()}\n${buildTemplateRuntimeScript()}`,
   };
 }

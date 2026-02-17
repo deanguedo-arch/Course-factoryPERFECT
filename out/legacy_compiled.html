@@ -161,8 +161,10 @@
             function setBackground() {
                 document.documentElement.style.backgroundColor = '#0f172a';
                 document.documentElement.style.background = '#0f172a';
-                document.body.style.backgroundColor = '#0f172a';
-                document.body.style.background = '#0f172a';
+                if (document.body) {
+                    document.body.style.backgroundColor = '#0f172a';
+                    document.body.style.background = '#0f172a';
+                }
             }
             setBackground();
             if (document.readyState === 'loading') {
@@ -692,10 +694,10 @@
             <!-- INLINE ASSESSMENT NAVIGATION SCRIPTS -->
             <script>
             (function() {
-              console.log('ðŸ”§ [INLINE] Initializing assessment navigation functions...');
+              console.log('Initializing assessment navigation functions...');
               
               window.showAssessment = function(index) {
-                console.log('ðŸ“‹ [INLINE] Showing assessment:', index);
+                console.log('Showing assessment:', index);
                 var listEl = document.getElementById('assessment-list');
                 var targetEl = document.getElementById('assessment-' + index);
                 
@@ -706,13 +708,13 @@
                 if (targetEl) {
                   targetEl.classList.remove('hidden');
                 } else {
-                  console.error('âŒ Assessment container not found:', 'assessment-' + index);
+                  console.error('Error: Assessment container not found:', 'assessment-' + index);
                 }
                 window.scrollTo(0, 0);
               };
               
               window.backToAssessmentList = function() {
-                console.log('â¬…ï¸ [INLINE] Returning to assessment list');
+                console.log('[INLINE] Returning to assessment list');
                 document.querySelectorAll('.assessment-container').forEach(function(c) {
                   c.classList.add('hidden');
                 });
@@ -723,7 +725,7 @@
               
               // Global Toolkit Menu Toggle
               window.toggleToolkitMenu = function() {
-                console.log('ðŸ”§ [INLINE] Toggling toolkit menu');
+                console.log('[INLINE] Toggling toolkit menu');
                 var dropdown = document.getElementById('toolkit-dropdown');
                 if (dropdown) {
                   dropdown.classList.toggle('hidden');
@@ -734,8 +736,8 @@
               var toolkitState = JSON.parse(localStorage.getItem('mf_toolkit') || '{}');
               
               window.toggleTool = function(toolId) {
-                console.log('ðŸ”§ [INLINE] Toggling tool:', toolId);
-                console.log('ðŸ”§ [DEBUG] Looking for element ID:', 'feat-' + toolId);
+                console.log('[INLINE] Toggling tool:', toolId);
+                console.log('[DEBUG] Looking for element ID:', 'feat-' + toolId);
                 
                 toolkitState[toolId] = !toolkitState[toolId];
                 localStorage.setItem('mf_toolkit', JSON.stringify(toolkitState));
@@ -743,17 +745,17 @@
                 var toolElement = document.getElementById('feat-' + toolId);
                 var toggleButton = document.getElementById('toggle-' + toolId);
                 
-                console.log('ðŸ”§ [DEBUG] Tool element found:', !!toolElement);
-                console.log('ðŸ”§ [DEBUG] Toggle button found:', !!toggleButton);
-                console.log('ðŸ”§ [DEBUG] New state:', toolkitState[toolId]);
+                console.log('[DEBUG] Tool element found:', !!toolElement);
+                console.log('[DEBUG] Toggle button found:', !!toggleButton);
+                console.log('[DEBUG] New state:', toolkitState[toolId]);
                 
                 if (toolElement) {
                   if (toolkitState[toolId]) {
                     toolElement.classList.remove('hidden');
-                    console.log('ðŸ”§ [DEBUG] Showing tool');
+                    console.log('[DEBUG] Showing tool');
                   } else {
                     toolElement.classList.add('hidden');
-                    console.log('ðŸ”§ [DEBUG] Hiding tool');
+                    console.log('[DEBUG] Hiding tool');
                   }
                 }
                 
@@ -763,20 +765,20 @@
                     toggleButton.classList.add('bg-emerald-600');
                     var dot = toggleButton.querySelector('div');
                     if (dot) dot.classList.add('translate-x-4');
-                    console.log('ðŸ”§ [DEBUG] Toggle ON visual');
+                    console.log('[DEBUG] Toggle ON visual');
                   } else {
                     toggleButton.classList.remove('bg-emerald-600');
                     toggleButton.classList.add('bg-slate-600');
                     var dot = toggleButton.querySelector('div');
                     if (dot) dot.classList.remove('translate-x-4');
-                    console.log('ðŸ”§ [DEBUG] Toggle OFF visual');
+                    console.log('[DEBUG] Toggle OFF visual');
                   }
                 }
               };
               
               // Initialize toolkit state on load
               window.initializeToolkit = function() {
-                console.log('ðŸ”§ [INLINE] Initializing toolkit state');
+                console.log('[INLINE] Initializing toolkit state');
                 Object.keys(toolkitState).forEach(function(toolId) {
                   if (toolkitState[toolId]) {
                     var toolElement = document.getElementById('feat-' + toolId);
@@ -799,7 +801,7 @@
                 window.initializeToolkit();
               }
               
-              console.log('âœ… [INLINE] Assessment navigation + toolkit functions ready!');
+              console.log('[INLINE] Assessment navigation + toolkit functions ready!');
             })();
             </script>
         </div>
@@ -6101,22 +6103,38 @@
                           ? getPdfEmbedUrl(url)
                           : (function(u) {
                               if (!u) return u;
-                              if (u.indexOf('docs.google.com/viewer') !== -1) return u;
-                              var isDrive = u.indexOf('drive.google.com') !== -1;
-                              var isIframe = false;
-                              try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
+                              var clean = String(u).trim();
+                              if (!clean) return clean;
+                              if (clean.indexOf('docs.google.com/viewer') !== -1) return clean;
+                              var isDrive = clean.indexOf('drive.google.com') !== -1;
+                              if (isDrive) {
+                                var driveIdMatch = clean.match(//file/d/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+                                if (driveIdMatch && driveIdMatch[1]) {
+                                  return 'https://drive.google.com/file/d/' + driveIdMatch[1] + '/preview';
+                                }
+                                if (clean.indexOf('/view') !== -1) {
+                                  return clean.replace('/view', '/preview');
+                                }
+                                return clean;
+                              }
+                              if (/^(/|./|../|blob:|data:)/i.test(clean)) {
+                                return clean;
+                              }
+                              var sameOrigin = false;
+                              try {
+                                var parsed = new URL(clean, window.location.href);
+                                sameOrigin = parsed.origin === window.location.origin;
+                              } catch (e) {}
+                              if (sameOrigin) return clean;
                               var ref = '';
                               try { ref = document.referrer || ''; } catch (e) { ref = ''; }
                               var isSites = /sites\.google\.com/i.test(ref);
                               try { isSites = isSites || /sites\.google\.com/i.test(window.top.location.host || ''); } catch (e) {}
-                              var forceViewer = isIframe || isSites || window.CF_FORCE_PDF_VIEWER === true;
-                              if (forceViewer && !isDrive) {
-                                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(u);
+                              var forceViewer = isSites || window.CF_FORCE_PDF_VIEWER === true;
+                              if (forceViewer && /^https?:///i.test(clean)) {
+                                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(clean);
                               }
-                              if (isDrive && u.indexOf('/view') !== -1) {
-                                return u.replace('/view', '/preview');
-                              }
-                              return u;
+                              return clean;
                             })(url);
                         document.getElementById('pdf-frame').src = embedUrl || '';
                         document.getElementById('viewer-title').innerText = 'VIEWING: ' + title;
@@ -6267,15 +6285,15 @@
             }
         });
         
-        console.log('ðŸ“– Digital Reader initialized with event delegation');
+        console.log('Digital Reader initialized with event delegation');
         
 
         
         (function() {
-          console.log('ðŸ”§ Initializing assessment navigation functions...');
+          console.log('Initializing assessment navigation functions...');
           
           window.showAssessment = function(index) {
-            console.log('ðŸ“‹ Showing assessment:', index);
+            console.log('Showing assessment:', index);
             var listEl = document.getElementById('assessment-list');
             var targetEl = document.getElementById('assessment-' + index);
             
@@ -6286,13 +6304,13 @@
             if (targetEl) {
               targetEl.classList.remove('hidden');
             } else {
-              console.error('Assessment container not found:', 'assessment-' + index);
+              console.error('Error: Assessment container not found:', 'assessment-' + index);
             }
             window.scrollTo(0, 0);
           };
           
           window.backToAssessmentList = function() {
-            console.log('â¬…ï¸ Returning to assessment list');
+            console.log('[INLINE] Returning to assessment list');
             document.querySelectorAll('.assessment-container').forEach(function(c) {
               c.classList.add('hidden');
             });
@@ -6301,7 +6319,7 @@
             window.scrollTo(0, 0);
           };
           
-          console.log('âœ… Assessment navigation functions ready!');
+          console.log('Assessment navigation functions ready!');
         })();
         
         
@@ -6576,7 +6594,7 @@
         
         // --- CORE NAVIGATION LOGIC ---
         function switchView(view) {
-            console.log('ðŸ”„ [switchView] Switching to view:', view);
+            console.log('[switchView] Switching to view:', view);
             
             // 1. Close sidebar on mobile after selecting a view
             if (window.innerWidth <= 768) {
@@ -6596,16 +6614,16 @@
             
             // 3. Hide All Views (both native divs and iframe containers)
             const allViews = document.querySelectorAll('[id^="view-"]');
-            console.log('ðŸ”„ [switchView] Hiding', allViews.length, 'views');
+            console.log('[switchView] Hiding', allViews.length, 'views');
             allViews.forEach(v => v.classList.add('hidden'));
 
             // 4. Show Target View
             const target = document.getElementById('view-' + view);
             if(target) {
                 target.classList.remove('hidden');
-                console.log('âœ… [switchView] Showing view:', 'view-' + view);
+                console.log('[switchView] Showing view:', 'view-' + view);
             } else {
-                console.error('âŒ [switchView] View not found:', 'view-' + view);
+                console.error('Error: [switchView] View not found:', 'view-' + view);
             }
             
             // Backward compatibility: Call module init if available
@@ -6626,18 +6644,38 @@
         }
         function getPdfEmbedUrl(url) {
             if (!url) return url;
-            if (url.indexOf('docs.google.com/viewer') !== -1) return url;
-            var isDrive = url.indexOf('drive.google.com') !== -1;
-            var isIframe = false;
-            try { isIframe = window.self !== window.top; } catch (e) { isIframe = true; }
-            var forceViewer = isIframe || isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
-            if (forceViewer && !isDrive) {
-                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(url);
+            var clean = String(url).trim();
+            if (!clean) return clean;
+            if (clean.indexOf('docs.google.com/viewer') !== -1) return clean;
+            var isDrive = clean.indexOf('drive.google.com') !== -1;
+            if (isDrive) {
+                var driveIdMatch = clean.match(//file/d/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+                if (driveIdMatch && driveIdMatch[1]) {
+                    return 'https://drive.google.com/file/d/' + driveIdMatch[1] + '/preview';
+                }
+                if (clean.indexOf('/view') !== -1) {
+                    return clean.replace('/view', '/preview');
+                }
+                return clean;
             }
-            if (isDrive && url.indexOf('/view') !== -1) {
-                return url.replace('/view', '/preview');
+            if (/^(/|./|../|blob:|data:)/i.test(clean)) {
+                return clean;
             }
-            return url;
+            var isSameOrigin = false;
+            try {
+                var parsed = new URL(clean, window.location.href);
+                isSameOrigin = parsed.origin === window.location.origin;
+            } catch (e) {
+                isSameOrigin = false;
+            }
+            if (isSameOrigin) {
+                return clean;
+            }
+            var forceViewer = isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
+            if (forceViewer && /^https?:///i.test(clean)) {
+                return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(clean);
+            }
+            return clean;
         }
 
         function openPDF(url, title) {
@@ -6715,7 +6753,7 @@
                             course: 'New Course',
                             state: state
                         }));
-                        console.log('ðŸ’¾ [Autosave] Saved', Object.keys(state).length, 'fields');
+                        console.log('[Autosave] Saved', Object.keys(state).length, 'fields');
                     }
                 } catch(e) {
                     console.warn('Autosave failed:', e);
@@ -6737,7 +6775,7 @@
                         if (state) {
                             restoreInputState(state);
                             const savedDate = new Date(timestamp);
-                            console.log('ðŸ“‚ [Autosave] Restored from', savedDate.toLocaleString());
+                            console.log('[Autosave] Restored from', savedDate.toLocaleString());
                         }
                     }
                 } catch(e) {
@@ -6748,7 +6786,7 @@
             // Mark work as exported (disables unsaved warning)
             window.markWorkSaved = function() {
                 hasExported = true;
-                console.log('âœ… [Autosave] Work marked as saved/exported');
+                console.log('[Autosave] Work marked as saved/exported');
             };
             
             // Initialize on DOM ready
@@ -6776,7 +6814,7 @@
                     }
                 });
                 
-                console.log('ðŸ”§ [Autosave] Initialized for course: New Course');
+                console.log('[Autosave] Initialized for course: New Course');
             }
             
             if (document.readyState === 'loading') {

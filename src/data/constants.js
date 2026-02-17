@@ -2,7 +2,7 @@
 // NOTE: Keep stable; changes affect defaults and legacy template display.
 
 export const PROJECT_DATA = {
-  projectSchemaVersion: 2,
+  projectSchemaVersion: 3,
   "Current Course": {
     name: "Mental Fitness",
     modules: [
@@ -311,6 +311,8 @@ export const PROJECT_DATA = {
     containerColor: "slate-900/80",
     fontFamily: "inter",
     customCSS: "",
+    templateDefault: "deck",
+    themeDefault: "dark_cards",
     compilationDefaults: {
       includeMaterials: true,
       includeAssessments: true,

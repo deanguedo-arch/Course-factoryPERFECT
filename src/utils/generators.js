@@ -775,10 +775,10 @@ function enrichComposerModuleResources(module, courseMaterials = []) {
   };
 }
 
-export function extractModuleContent(module, courseMaterials = []) {
+export function extractModuleContent(module, courseMaterials = [], courseSettings = {}) {
   if (module?.mode === 'composer') {
     const composerModule = enrichComposerModuleResources(module, courseMaterials);
-    const compiled = compileComposerModule(composerModule);
+    const compiled = compileComposerModule(composerModule, { courseSettings });
     return {
       html: compiled.html || '',
       css: compiled.css || '',
@@ -1539,7 +1539,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
       ${assessmentScripts}`;
   } else if (module.mode === 'composer') {
     const composerModule = enrichComposerModuleResources(module, courseMaterials);
-    const compiledComposer = compileComposerModule(composerModule);
+    const compiledComposer = compileComposerModule(composerModule, { courseSettings: settings });
     moduleContentHTML = compiledComposer.html || '';
     moduleCSS = compiledComposer.css || '';
     moduleScript = compiledComposer.script || '';
@@ -2512,7 +2512,11 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
       } else if (item.mode === 'composer') {
         // Render composer modules directly in the compiled legacy shell so report/download/print actions
         // are not limited by iframe sandbox restrictions.
-        const moduleContent = extractModuleContent(item, projectData["Current Course"]?.materials || []);
+        const moduleContent = extractModuleContent(
+          item,
+          projectData["Current Course"]?.materials || [],
+          projectData["Course Settings"] || {},
+        );
         if (!moduleContent.html) {
           return;
         }
@@ -2540,7 +2544,7 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
         } 
         // PRIORITY 2: Fallback for legacy modules (parsed html/css/script)
         else {
-          const moduleContent = extractModuleContent(item);
+          const moduleContent = extractModuleContent(item, projectData["Current Course"]?.materials || [], projectData["Course Settings"] || {});
           if (!moduleContent.html) {
             // No content to render
             return;

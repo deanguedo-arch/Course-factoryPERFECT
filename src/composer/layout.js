@@ -2,6 +2,14 @@ export const COMPOSER_MIN_COLUMNS = 1;
 export const COMPOSER_MAX_COLUMNS = 4;
 export const COMPOSER_DEFAULT_COLUMNS = 1;
 export const COMPOSER_DEFAULT_COL_SPAN = 1;
+export const COMPOSER_DEFAULT_MODE = 'simple';
+export const COMPOSER_DEFAULT_ROW_HEIGHT = 24;
+export const COMPOSER_DEFAULT_MARGIN = [12, 12];
+export const COMPOSER_DEFAULT_CONTAINER_PADDING = [12, 12];
+
+const ACTIVITY_PADDING_VALUES = ['sm', 'md', 'lg'];
+const ACTIVITY_VARIANT_VALUES = ['card', 'flat'];
+const ACTIVITY_TITLE_VARIANT_VALUES = ['xs', 'sm', 'md', 'lg', 'xl'];
 
 function toInteger(value, fallback) {
   const parsed = Number.parseInt(value, 10);
@@ -14,6 +22,17 @@ function toPositiveInteger(value, fallback = 1) {
   return Math.max(1, parsed);
 }
 
+function toNonNegativeInteger(value, fallback = 0) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(0, parsed);
+}
+
+function clampInteger(value, min, max, fallback) {
+  const parsed = toInteger(value, fallback);
+  return Math.max(min, Math.min(max, parsed));
+}
+
 function isFiniteInteger(value) {
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed);
@@ -21,6 +40,102 @@ function isFiniteInteger(value) {
 
 function slotKey(row, col) {
   return `${row}:${col}`;
+}
+
+function normalizeSpacingPair(value, fallback = [12, 12]) {
+  const source = Array.isArray(value) ? value : fallback;
+  const first = clampInteger(source[0], 0, 200, fallback[0]);
+  const second = clampInteger(source[1], 0, 200, fallback[1]);
+  return [first, second];
+}
+
+function normalizeComposerLayoutMode(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  return raw === 'canvas' ? 'canvas' : 'simple';
+}
+
+function normalizeActivityVariant(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  return ACTIVITY_VARIANT_VALUES.includes(raw) ? raw : 'card';
+}
+
+function normalizeActivityPadding(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  return ACTIVITY_PADDING_VALUES.includes(raw) ? raw : 'md';
+}
+
+function normalizeActivityTitleVariant(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  return ACTIVITY_TITLE_VARIANT_VALUES.includes(raw) ? raw : 'md';
+}
+
+function normalizeActivityStyle(style) {
+  const next = style && typeof style === 'object' ? { ...style } : {};
+  next.border = next.border !== false;
+  next.variant = normalizeActivityVariant(next.variant);
+  next.padding = normalizeActivityPadding(next.padding);
+  next.titleVariant = normalizeActivityTitleVariant(next.titleVariant);
+  return next;
+}
+
+function normalizeActivityBehavior(behavior) {
+  const next = behavior && typeof behavior === 'object' ? { ...behavior } : {};
+  next.collapsible = next.collapsible === true;
+  next.collapsedByDefault = next.collapsible ? next.collapsedByDefault === true : false;
+  return next;
+}
+
+export function clampComposerColumns(value) {
+  const next = toInteger(value, COMPOSER_DEFAULT_COLUMNS);
+  return Math.max(COMPOSER_MIN_COLUMNS, Math.min(COMPOSER_MAX_COLUMNS, next));
+}
+
+export function clampComposerColSpan(value, maxColumns = COMPOSER_DEFAULT_COLUMNS) {
+  const nextMax = clampComposerColumns(maxColumns);
+  const next = toInteger(value, COMPOSER_DEFAULT_COL_SPAN);
+  return Math.max(COMPOSER_DEFAULT_COL_SPAN, Math.min(nextMax, next));
+}
+
+export function clampComposerRow(value) {
+  return toPositiveInteger(value, 1);
+}
+
+export function clampComposerColStart(value, maxColumns = COMPOSER_DEFAULT_COLUMNS, colSpan = COMPOSER_DEFAULT_COL_SPAN) {
+  const nextMax = clampComposerColumns(maxColumns);
+  const nextSpan = clampComposerColSpan(colSpan, nextMax);
+  const maxStartCol = Math.max(1, nextMax - nextSpan + 1);
+  const parsed = toPositiveInteger(value, 1);
+  return Math.min(parsed, maxStartCol);
+}
+
+export function clampCanvasW(value, maxColumns = COMPOSER_DEFAULT_COLUMNS) {
+  return clampComposerColSpan(value, maxColumns);
+}
+
+export function clampCanvasX(value, maxColumns = COMPOSER_DEFAULT_COLUMNS, w = COMPOSER_DEFAULT_COL_SPAN) {
+  const nextMax = clampComposerColumns(maxColumns);
+  const nextW = clampCanvasW(w, nextMax);
+  const maxStart = Math.max(0, nextMax - nextW);
+  const parsed = toNonNegativeInteger(value, 0);
+  return Math.min(parsed, maxStart);
+}
+
+export function clampCanvasY(value) {
+  return toNonNegativeInteger(value, 0);
+}
+
+export function clampCanvasH(value) {
+  return toPositiveInteger(value, 4);
+}
+
+export function normalizeComposerLayout(layout) {
+  const next = layout && typeof layout === 'object' ? { ...layout } : {};
+  next.mode = normalizeComposerLayoutMode(next.mode);
+  next.maxColumns = clampComposerColumns(next.maxColumns);
+  next.rowHeight = clampInteger(next.rowHeight, 8, 200, COMPOSER_DEFAULT_ROW_HEIGHT);
+  next.margin = normalizeSpacingPair(next.margin, COMPOSER_DEFAULT_MARGIN);
+  next.containerPadding = normalizeSpacingPair(next.containerPadding, COMPOSER_DEFAULT_CONTAINER_PADDING);
+  return next;
 }
 
 function canPlace(occupied, row, col, colSpan, maxColumns) {
@@ -64,13 +179,8 @@ function findNextAvailableCell(occupied, startRow, startCol, colSpan, maxColumns
   }
 }
 
-function normalizeComposerActivityShape(activity, index, maxColumns = COMPOSER_DEFAULT_COLUMNS) {
-  const next = activity && typeof activity === 'object' ? { ...activity } : {};
-  const layout = next.layout && typeof next.layout === 'object' ? { ...next.layout } : {};
-
-  next.type = next.type || 'content_block';
-  next.id = next.id || `activity-${index + 1}`;
-  next.data = next.data && typeof next.data === 'object' ? next.data : {};
+function normalizeSimpleLayout(rawLayout, maxColumns) {
+  const layout = rawLayout && typeof rawLayout === 'object' ? { ...rawLayout } : {};
   layout.colSpan = clampComposerColSpan(layout.colSpan, maxColumns);
 
   if (isFiniteInteger(layout.row)) {
@@ -85,14 +195,45 @@ function normalizeComposerActivityShape(activity, index, maxColumns = COMPOSER_D
     delete layout.col;
   }
 
-  next.layout = layout;
+  layout.w = clampCanvasW(layout.w ?? layout.colSpan, maxColumns);
+  layout.x = clampCanvasX(layout.x ?? ((layout.col || 1) - 1), maxColumns, layout.w);
+  layout.y = clampCanvasY(layout.y ?? ((layout.row || 1) - 1));
+  layout.h = clampCanvasH(layout.h);
+  return layout;
+}
+
+function normalizeCanvasLayout(rawLayout, maxColumns) {
+  const layout = rawLayout && typeof rawLayout === 'object' ? { ...rawLayout } : {};
+  layout.w = clampCanvasW(layout.w ?? layout.colSpan, maxColumns);
+  layout.h = clampCanvasH(layout.h);
+  layout.x = clampCanvasX(layout.x ?? ((layout.col || 1) - 1), maxColumns, layout.w);
+  layout.y = clampCanvasY(layout.y ?? ((layout.row || 1) - 1));
+  layout.colSpan = clampComposerColSpan(layout.colSpan ?? layout.w, maxColumns);
+  layout.col = clampComposerColStart((layout.col || layout.x + 1), maxColumns, layout.colSpan);
+  layout.row = clampComposerRow(layout.row || layout.y + 1);
+  return layout;
+}
+
+function normalizeComposerActivityShape(activity, index, maxColumns = COMPOSER_DEFAULT_COLUMNS, mode = COMPOSER_DEFAULT_MODE) {
+  const next = activity && typeof activity === 'object' ? { ...activity } : {};
+  next.type = next.type || 'content_block';
+  next.id = next.id || `activity-${index + 1}`;
+  next.data = next.data && typeof next.data === 'object' ? next.data : {};
+  next.style = normalizeActivityStyle(next.style);
+  next.behavior = normalizeActivityBehavior(next.behavior);
+
+  if (mode === 'canvas') {
+    next.layout = normalizeCanvasLayout(next.layout, maxColumns);
+  } else {
+    next.layout = normalizeSimpleLayout(next.layout, maxColumns);
+  }
   return next;
 }
 
 function packComposerActivities(activities, maxColumns = COMPOSER_DEFAULT_COLUMNS, { fixedPlacement } = {}) {
   const nextMax = clampComposerColumns(maxColumns);
   const nextActivities = Array.isArray(activities)
-    ? activities.map((activity, idx) => normalizeComposerActivityShape(activity, idx, nextMax))
+    ? activities.map((activity, idx) => normalizeComposerActivityShape(activity, idx, nextMax, 'simple'))
     : [];
 
   if (nextActivities.length === 0) return [];
@@ -149,54 +290,127 @@ function packComposerActivities(activities, maxColumns = COMPOSER_DEFAULT_COLUMN
         colSpan: placement.colSpan,
         row: placement.row,
         col: placement.col,
+        w: clampCanvasW(activity?.layout?.w ?? placement.colSpan, nextMax),
+        h: clampCanvasH(activity?.layout?.h),
+        x: clampCanvasX(activity?.layout?.x ?? placement.col - 1, nextMax, activity?.layout?.w ?? placement.colSpan),
+        y: clampCanvasY(activity?.layout?.y ?? placement.row - 1),
       },
     };
   });
 }
 
-export function clampComposerColumns(value) {
-  const next = toInteger(value, COMPOSER_DEFAULT_COLUMNS);
-  return Math.max(COMPOSER_MIN_COLUMNS, Math.min(COMPOSER_MAX_COLUMNS, next));
+function collides(a, b) {
+  return !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
 }
 
-export function clampComposerColSpan(value, maxColumns = COMPOSER_DEFAULT_COLUMNS) {
-  const nextMax = clampComposerColumns(maxColumns);
-  const next = toInteger(value, COMPOSER_DEFAULT_COL_SPAN);
-  return Math.max(COMPOSER_DEFAULT_COL_SPAN, Math.min(nextMax, next));
+function canPlaceCanvas(rect, placed) {
+  return !placed.some((candidate) => collides(rect, candidate));
 }
 
-export function clampComposerRow(value) {
-  return toPositiveInteger(value, 1);
-}
+function compactCanvas(placements) {
+  const next = placements
+    .map((item) => ({ ...item }))
+    .sort((a, b) => {
+      if (a.y !== b.y) return a.y - b.y;
+      if (a.x !== b.x) return a.x - b.x;
+      return a.index - b.index;
+    });
 
-export function clampComposerColStart(value, maxColumns = COMPOSER_DEFAULT_COLUMNS, colSpan = COMPOSER_DEFAULT_COL_SPAN) {
-  const nextMax = clampComposerColumns(maxColumns);
-  const nextSpan = clampComposerColSpan(colSpan, nextMax);
-  const maxStartCol = Math.max(1, nextMax - nextSpan + 1);
-  const parsed = toPositiveInteger(value, 1);
-  return Math.min(parsed, maxStartCol);
-}
-
-export function normalizeComposerLayout(layout) {
-  const next = layout && typeof layout === 'object' ? { ...layout } : {};
-  next.maxColumns = clampComposerColumns(next.maxColumns);
+  next.forEach((item, idx) => {
+    const others = next.filter((_, otherIdx) => otherIdx !== idx);
+    let targetY = item.y;
+    while (targetY > 0) {
+      const candidate = { ...item, y: targetY - 1 };
+      if (!canPlaceCanvas(candidate, others)) break;
+      targetY -= 1;
+    }
+    item.y = targetY;
+  });
   return next;
 }
 
-export function normalizeComposerActivity(activity, index, maxColumns = COMPOSER_DEFAULT_COLUMNS) {
-  return normalizeComposerActivityShape(activity, index, maxColumns);
+function normalizeCanvasActivities(activities, maxColumns = COMPOSER_DEFAULT_COLUMNS) {
+  const nextMax = clampComposerColumns(maxColumns);
+  const normalized = Array.isArray(activities)
+    ? activities.map((activity, idx) => normalizeComposerActivityShape(activity, idx, nextMax, 'canvas'))
+    : [];
+
+  if (!normalized.length) return [];
+
+  const sorted = normalized
+    .map((activity, index) => ({
+      index,
+      x: clampCanvasX(activity.layout?.x, nextMax, activity.layout?.w),
+      y: clampCanvasY(activity.layout?.y),
+      w: clampCanvasW(activity.layout?.w, nextMax),
+      h: clampCanvasH(activity.layout?.h),
+    }))
+    .sort((a, b) => {
+      if (a.y !== b.y) return a.y - b.y;
+      if (a.x !== b.x) return a.x - b.x;
+      return a.index - b.index;
+    });
+
+  const placed = [];
+  sorted.forEach((item) => {
+    let y = item.y;
+    let x = item.x;
+    const rect = { ...item };
+
+    while (true) {
+      rect.x = clampCanvasX(x, nextMax, rect.w);
+      rect.y = clampCanvasY(y);
+      if (canPlaceCanvas(rect, placed)) {
+        placed.push({ ...rect });
+        break;
+      }
+      y += 1;
+    }
+  });
+
+  const compacted = compactCanvas(placed);
+  const placementByIndex = new Map(compacted.map((item) => [item.index, item]));
+
+  return normalized.map((activity, index) => {
+    const placement = placementByIndex.get(index) || {
+      x: 0,
+      y: 0,
+      w: 1,
+      h: 4,
+    };
+    const colSpan = clampComposerColSpan(activity?.layout?.colSpan ?? placement.w, nextMax);
+    return {
+      ...activity,
+      layout: {
+        ...(activity.layout || {}),
+        x: placement.x,
+        y: placement.y,
+        w: placement.w,
+        h: placement.h,
+        colSpan,
+        col: clampComposerColStart(activity?.layout?.col || placement.x + 1, nextMax, colSpan),
+        row: clampComposerRow(activity?.layout?.row || placement.y + 1),
+      },
+    };
+  });
 }
 
-export function normalizeComposerActivities(activities, { maxColumns = COMPOSER_DEFAULT_COLUMNS } = {}) {
+export function normalizeComposerActivity(activity, index, maxColumns = COMPOSER_DEFAULT_COLUMNS, mode = COMPOSER_DEFAULT_MODE) {
+  return normalizeComposerActivityShape(activity, index, maxColumns, mode);
+}
+
+export function normalizeComposerActivities(activities, { maxColumns = COMPOSER_DEFAULT_COLUMNS, mode = COMPOSER_DEFAULT_MODE } = {}) {
   const nextMax = clampComposerColumns(maxColumns);
+  const nextMode = normalizeComposerLayoutMode(mode);
   if (!Array.isArray(activities)) return [];
-  return packComposerActivities(activities, nextMax);
+  return nextMode === 'canvas' ? normalizeCanvasActivities(activities, nextMax) : packComposerActivities(activities, nextMax);
 }
 
 export function normalizeComposerModuleConfig(moduleLike) {
   const composerLayout = normalizeComposerLayout(moduleLike?.composerLayout);
   const activities = normalizeComposerActivities(moduleLike?.activities, {
     maxColumns: composerLayout.maxColumns,
+    mode: composerLayout.mode,
   });
   return { composerLayout, activities };
 }
@@ -207,7 +421,7 @@ export function buildComposerGridModel(
   { includeTrailingRow = true, trailingRows = 0 } = {},
 ) {
   const nextMax = clampComposerColumns(maxColumns);
-  const normalized = normalizeComposerActivities(activities, { maxColumns: nextMax });
+  const normalized = normalizeComposerActivities(activities, { maxColumns: nextMax, mode: 'simple' });
   const placements = normalized.map((activity, index) => ({
     index,
     row: clampComposerRow(activity?.layout?.row || 1),
@@ -254,7 +468,7 @@ export function moveComposerActivityToCell(
   { maxColumns = COMPOSER_DEFAULT_COLUMNS } = {},
 ) {
   const nextMax = clampComposerColumns(maxColumns);
-  const normalized = normalizeComposerActivities(activities, { maxColumns: nextMax });
+  const normalized = normalizeComposerActivities(activities, { maxColumns: nextMax, mode: 'simple' });
   if (!Number.isInteger(fromIndex) || fromIndex < 0 || fromIndex >= normalized.length) {
     return { activities: normalized, toIndex: fromIndex, changed: false };
   }
@@ -313,11 +527,11 @@ export function moveComposerActivityToInsertion(
   targetIndex = Math.max(0, Math.min(next.length, targetIndex));
 
   if (targetIndex === fromIndex) {
-    return { activities: normalizeComposerActivities(activities, { maxColumns }), toIndex: fromIndex, changed: false };
+    return { activities: normalizeComposerActivities(activities, { maxColumns, mode: 'simple' }), toIndex: fromIndex, changed: false };
   }
 
   next.splice(targetIndex, 0, moved);
-  const normalized = normalizeComposerActivities(next, { maxColumns });
+  const normalized = normalizeComposerActivities(next, { maxColumns, mode: 'simple' });
   return {
     activities: normalized,
     toIndex: targetIndex,

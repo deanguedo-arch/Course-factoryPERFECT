@@ -31,10 +31,15 @@ import {
 } from '../../composer/layout.js';
 import { isComposerEnabled } from '../../utils/composer.js';
 import { buildModuleFrameHTML } from '../../utils/generators.js';
+import { createFinlitHeroFormState, normalizeFinlitHeroForSave } from '../../utils/finlitHero.js';
 import GenericDataEditor from '../GenericDataEditor.jsx';
 import HotspotEditor from '../composer/HotspotEditor.jsx';
+import ReactGridLayout, { WidthProvider } from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
 
 const { useEffect, useMemo, useRef, useState } = React;
+const GridLayout = WidthProvider(ReactGridLayout);
 
 function createActivity(type) {
   const def = getActivityDefinition(type);
@@ -102,6 +107,22 @@ const BLOCK_THEME_PREVIEW_COLORS = {
   sunset: { textColor: '#ffedd5', containerBg: '#9a3412' },
   mono: { textColor: '#f8fafc', containerBg: '#111827' },
 };
+
+const MODULE_TEMPLATE_OPTIONS = [
+  { value: '', label: 'Use Course Default' },
+  { value: 'deck', label: 'Deck' },
+  { value: 'finlit', label: 'FinLit' },
+  { value: 'coursebook', label: 'Coursebook' },
+  { value: 'toolkit_dashboard', label: 'Toolkit Dashboard' },
+];
+
+const MODULE_THEME_OPTIONS = [
+  { value: '', label: 'Use Course Default' },
+  { value: 'dark_cards', label: 'Dark Cards' },
+  { value: 'finlit_clean', label: 'FinLit Clean' },
+  { value: 'coursebook_light', label: 'Coursebook Light' },
+  { value: 'toolkit_clean', label: 'Toolkit Clean' },
+];
 
 function normalizeThemeValue(value) {
   const raw = String(value || '').trim().toLowerCase();
@@ -306,11 +327,15 @@ export default function EditModal({
   const composerEnabled = isComposerEnabled(projectData);
   const standaloneMode = editForm.moduleMode || 'custom_html';
   const canUseComposer = composerEnabled || standaloneMode === 'composer';
+  const finlitHero = useMemo(() => createFinlitHeroFormState(editForm.hero), [editForm.hero]);
+  const showFinlitHeroControls = editForm.moduleType === 'standalone' && standaloneMode === 'composer';
   const composerLayout = useMemo(() => normalizeComposerLayout(editForm.composerLayout), [editForm.composerLayout]);
   const composerMaxColumns = composerLayout.maxColumns;
+  const composerLayoutMode = composerLayout.mode;
+  const isCanvasMode = composerLayoutMode === 'canvas';
   const activities = useMemo(
-    () => normalizeComposerActivities(editForm.activities, { maxColumns: composerMaxColumns }),
-    [editForm.activities, composerMaxColumns],
+    () => normalizeComposerActivities(editForm.activities, { maxColumns: composerMaxColumns, mode: composerLayout.mode }),
+    [editForm.activities, composerLayout.mode, composerMaxColumns],
   );
   const activityTypes = useMemo(() => listActivityTypes(), []);
   const activityTypeGroups = useMemo(() => listActivityTypeGroups(), []);
@@ -454,11 +479,15 @@ export default function EditModal({
   const composerPreviewSrcDoc = useMemo(() => {
     if (standaloneMode !== 'composer') return '';
     const courseSettings = projectData?.['Course Settings'] || {};
+    const hero = normalizeFinlitHeroForSave(finlitHero);
     const previewModule = {
       id: editForm.id || 'view-composer-preview',
       title: editForm.title || 'Composer Preview',
       type: 'standalone',
       mode: 'composer',
+      template: editForm.template || null,
+      theme: editForm.theme || null,
+      hero,
       composerLayout,
       activities,
       rawHtml: '',
@@ -474,12 +503,13 @@ export default function EditModal({
         __materials: projectData?.['Current Course']?.materials || [],
       }) || ''
     );
-  }, [activities, composerLayout, editForm.id, editForm.title, projectData, standaloneMode]);
+  }, [activities, composerLayout, editForm.id, editForm.template, editForm.theme, editForm.title, finlitHero, projectData, standaloneMode]);
 
   const updateActivities = (nextActivities, nextComposerLayout = composerLayout) => {
     const normalizedLayout = normalizeComposerLayout(nextComposerLayout);
     const normalizedActivities = normalizeComposerActivities(nextActivities, {
       maxColumns: normalizedLayout.maxColumns,
+      mode: normalizedLayout.mode,
     });
     setEditForm({
       ...editForm,
@@ -496,8 +526,78 @@ export default function EditModal({
     });
     const normalizedActivities = normalizeComposerActivities(activities, {
       maxColumns: normalizedLayout.maxColumns,
+      mode: normalizedLayout.mode,
     });
     updateActivities(normalizedActivities, normalizedLayout);
+  };
+
+  const updateComposerLayoutMode = (nextMode) => {
+    const normalizedLayout = normalizeComposerLayout({
+      ...(editForm.composerLayout || {}),
+      mode: nextMode,
+    });
+    updateActivities(activities, normalizedLayout);
+  };
+
+  const updateComposerCanvasMetric = (key, value) => {
+    const normalizedLayout = normalizeComposerLayout({
+      ...(editForm.composerLayout || {}),
+      [key]: value,
+    });
+    updateActivities(activities, normalizedLayout);
+  };
+
+  const updateSelectedActivityMeta = (metaKey, updates) => {
+    if (!selectedActivity) return;
+    const nextActivities = activities.map((activity, idx) =>
+      idx === selectedActivityIndex
+        ? {
+            ...activity,
+            [metaKey]: {
+              ...((activity && typeof activity === 'object' ? activity[metaKey] : {}) || {}),
+              ...updates,
+            },
+          }
+        : activity,
+    );
+    updateActivities(nextActivities);
+  };
+
+  const updateSelectedActivityCanvasLayout = (updates) => {
+    if (!selectedActivity) return;
+    const nextActivities = activities.map((activity, idx) =>
+      idx === selectedActivityIndex
+        ? {
+            ...activity,
+            layout: {
+              ...(activity.layout || {}),
+              ...updates,
+            },
+          }
+        : activity,
+    );
+    updateActivities(nextActivities);
+  };
+
+  const applyCanvasGridLayout = (layoutItems) => {
+    if (!Array.isArray(layoutItems)) return;
+    const nextActivities = activities.map((activity, idx) => {
+      const match = layoutItems.find((item) => String(item.i) === String(idx));
+      if (!match) return activity;
+      const nextW = Math.max(1, Number.parseInt(match.w, 10) || 1);
+      return {
+        ...activity,
+        layout: {
+          ...(activity.layout || {}),
+          x: Number.parseInt(match.x, 10) || 0,
+          y: Number.parseInt(match.y, 10) || 0,
+          w: nextW,
+          h: Math.max(1, Number.parseInt(match.h, 10) || 1),
+          colSpan: nextW,
+        },
+      };
+    });
+    updateActivities(nextActivities);
   };
 
   const updateSelectedActivityData = (updates) => {
@@ -590,12 +690,24 @@ export default function EditModal({
     const activity = createActivity(newActivityType);
     if (!activity) return;
     const maxRow = composerGridModel.placements.reduce((largest, placement) => Math.max(largest, placement.row), 0);
-    activity.layout = {
-      ...(activity.layout || {}),
-      colSpan: clampComposerColSpan(activity?.layout?.colSpan, composerMaxColumns),
-      row: Math.max(1, maxRow + 1),
-      col: 1,
-    };
+    if (isCanvasMode) {
+      const maxY = activities.reduce((largest, item) => Math.max(largest, Number(item?.layout?.y) || 0), 0);
+      activity.layout = {
+        ...(activity.layout || {}),
+        colSpan: clampComposerColSpan(activity?.layout?.colSpan, composerMaxColumns),
+        x: 0,
+        y: maxY + 1,
+        w: 1,
+        h: 4,
+      };
+    } else {
+      activity.layout = {
+        ...(activity.layout || {}),
+        colSpan: clampComposerColSpan(activity?.layout?.colSpan, composerMaxColumns),
+        row: Math.max(1, maxRow + 1),
+        col: 1,
+      };
+    }
     const nextActivities = [...activities, activity];
     updateActivities(nextActivities);
     setSelectedActivityIndex(nextActivities.length - 1);
@@ -612,6 +724,7 @@ export default function EditModal({
   };
 
   const moveSelectedActivity = (direction) => {
+    if (isCanvasMode) return;
     if (!selectedActivity || !selectedPlacement) return;
     const colSpan = clampComposerColSpan(selectedActivity?.layout?.colSpan, composerMaxColumns);
     const maxStartCol = Math.max(1, composerMaxColumns - colSpan + 1);
@@ -632,6 +745,7 @@ export default function EditModal({
   };
 
   const moveActivityToCell = (fromIndex, targetRow, targetCol) => {
+    if (isCanvasMode) return;
     if (!Number.isInteger(fromIndex) || !Number.isInteger(targetRow) || !Number.isInteger(targetCol)) return;
     const result = moveComposerActivityToCell(activities, fromIndex, targetRow, targetCol, {
       maxColumns: composerMaxColumns,
@@ -652,8 +766,15 @@ export default function EditModal({
       },
       layout: {
         ...(selectedActivity.layout || {}),
-        row: basePlacement.row + 1,
-        col: basePlacement.col,
+        ...(isCanvasMode
+          ? {
+              x: Number.isInteger(selectedActivity?.layout?.x) ? selectedActivity.layout.x : 0,
+              y: (Number.isInteger(selectedActivity?.layout?.y) ? selectedActivity.layout.y : 0) + 1,
+            }
+          : {
+              row: basePlacement.row + 1,
+              col: basePlacement.col,
+            }),
       },
     };
     const nextActivities = [...activities];
@@ -663,6 +784,7 @@ export default function EditModal({
   };
 
   const updateSelectedActivitySpan = (nextSpan) => {
+    if (isCanvasMode) return;
     if (!selectedActivity) return;
     const clamped = clampComposerColSpan(nextSpan, composerMaxColumns);
     const nextActivities = activities.map((activity, idx) =>
@@ -683,12 +805,25 @@ export default function EditModal({
     const normalizedLayout = normalizeComposerLayout(editForm.composerLayout);
     const normalizedActivities = normalizeComposerActivities(editForm.activities, {
       maxColumns: normalizedLayout.maxColumns,
+      mode: normalizedLayout.mode,
     });
     setEditForm({
       ...editForm,
       moduleMode: mode,
       composerLayout: normalizedLayout,
       activities: normalizedActivities,
+    });
+  };
+
+  const updateFinlitHeroField = (key, value) => {
+    if (!['title', 'subtitle', 'progressLabel', 'mediaUrl', 'mediaType'].includes(key)) return;
+    const nextHero = {
+      ...finlitHero,
+      [key]: value,
+    };
+    setEditForm({
+      ...editForm,
+      hero: nextHero,
     });
   };
 
@@ -771,6 +906,8 @@ export default function EditModal({
   const renderSelectedActivityStylePanel = () => {
     if (!selectedActivity) return null;
     const data = selectedActivity.data || {};
+    const styleMeta = selectedActivity.style || {};
+    const behaviorMeta = selectedActivity.behavior || {};
     const themeValue = normalizeThemeValue(data.blockTheme);
     const themePreview = getThemePreviewColors(themeValue);
     const effectiveFill =
@@ -843,6 +980,78 @@ export default function EditModal({
               className="h-6 w-10 cursor-pointer border border-slate-600 rounded bg-transparent"
               title="Block container background color"
               aria-label="Block container background color"
+            />
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Variant</label>
+            <select
+              value={styleMeta.variant === 'flat' ? 'flat' : 'card'}
+              onChange={(e) => updateSelectedActivityMeta('style', { variant: e.target.value })}
+              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+            >
+              <option value="card">Card</option>
+              <option value="flat">Flat</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Padding</label>
+            <select
+              value={styleMeta.padding || 'md'}
+              onChange={(e) => updateSelectedActivityMeta('style', { padding: e.target.value })}
+              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+            >
+              <option value="sm">Small</option>
+              <option value="md">Medium</option>
+              <option value="lg">Large</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Title Scale</label>
+            <select
+              value={styleMeta.titleVariant || 'md'}
+              onChange={(e) => updateSelectedActivityMeta('style', { titleVariant: e.target.value })}
+              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+            >
+              {['xs', 'sm', 'md', 'lg', 'xl'].map((value) => (
+                <option key={`modal-title-variant-${value}`} value={value}>
+                  {value.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </div>
+          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+            <span>Border</span>
+            <input
+              type="checkbox"
+              checked={styleMeta.border !== false}
+              onChange={(e) => updateSelectedActivityMeta('style', { border: e.target.checked })}
+              className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-blue-500"
+            />
+          </label>
+          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+            <span>Collapsible</span>
+            <input
+              type="checkbox"
+              checked={behaviorMeta.collapsible === true}
+              onChange={(e) =>
+                updateSelectedActivityMeta('behavior', {
+                  collapsible: e.target.checked,
+                  collapsedByDefault: e.target.checked ? behaviorMeta.collapsedByDefault === true : false,
+                })
+              }
+              className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-blue-500"
+            />
+          </label>
+          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+            <span>Start Collapsed</span>
+            <input
+              type="checkbox"
+              checked={behaviorMeta.collapsedByDefault === true}
+              disabled={behaviorMeta.collapsible !== true}
+              onChange={(e) => updateSelectedActivityMeta('behavior', { collapsedByDefault: e.target.checked })}
+              className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-blue-500 disabled:opacity-40"
             />
           </label>
         </div>
@@ -1216,14 +1425,6 @@ export default function EditModal({
                 return (
                   <div
                     key={`kc-question-${qIdx}`}
-                    draggable
-                    onDragStart={(event) => {
-                      setDraggingKnowledgeQuestionIndex(qIdx);
-                      if (event.dataTransfer) {
-                        event.dataTransfer.effectAllowed = 'move';
-                        event.dataTransfer.setData('text/plain', String(qIdx));
-                      }
-                    }}
                     onDragOver={(event) => {
                       event.preventDefault();
                       if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
@@ -1244,7 +1445,7 @@ export default function EditModal({
                     className={`space-y-2 rounded border p-3 ${isDropTarget ? 'border-indigo-500 bg-indigo-500/15' : 'border-slate-700 bg-slate-900/70'}`}
                   >
                     <div className="grid grid-cols-12 gap-2 items-center">
-                      <p className="col-span-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Question {qIdx + 1}</p>
+                      <p className="col-span-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">Question {qIdx + 1}</p>
                       <select
                         value={isShortAnswer ? 'short_answer' : 'multiple_choice'}
                         onChange={(e) => {
@@ -1267,11 +1468,30 @@ export default function EditModal({
                           });
                           updateSelectedActivityData({ questions: nextQuestions });
                         }}
-                        className="col-span-4 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                        className="col-span-3 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
                       >
                         <option value="multiple_choice">Multiple Choice</option>
                         <option value="short_answer">Short Answer</option>
                       </select>
+                      <button
+                        type="button"
+                        draggable
+                        onDragStart={(event) => {
+                          setDraggingKnowledgeQuestionIndex(qIdx);
+                          if (event.dataTransfer) {
+                            event.dataTransfer.effectAllowed = 'move';
+                            event.dataTransfer.setData('text/plain', String(qIdx));
+                          }
+                        }}
+                        onDragEnd={() => {
+                          setDraggingKnowledgeQuestionIndex(null);
+                          setDragOverKnowledgeQuestionIndex(null);
+                        }}
+                        className="col-span-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded p-2 text-xs font-black cursor-grab active:cursor-grabbing"
+                        title="Drag to reorder"
+                      >
+                        ::
+                      </button>
                       <button
                         type="button"
                         onClick={() => moveKnowledgeQuestion(qIdx, Math.max(0, qIdx - 1))}
@@ -1293,7 +1513,7 @@ export default function EditModal({
                       <button
                         type="button"
                         onClick={() => updateSelectedActivityData({ questions: questions.filter((_, idx) => idx !== qIdx) })}
-                        className="col-span-2 bg-rose-600 hover:bg-rose-500 text-white rounded p-2 text-xs"
+                        className="col-span-3 bg-rose-600 hover:bg-rose-500 text-white rounded p-2 text-xs"
                         title="Delete question"
                       >
                         Delete
@@ -1444,14 +1664,6 @@ export default function EditModal({
                 return (
                   <div
                     key={`worksheet-block-${blockIdx}`}
-                    draggable
-                    onDragStart={(event) => {
-                      setDraggingWorksheetBlockIndex(blockIdx);
-                      if (event.dataTransfer) {
-                        event.dataTransfer.effectAllowed = 'move';
-                        event.dataTransfer.setData('text/plain', String(blockIdx));
-                      }
-                    }}
                     onDragOver={(event) => {
                       event.preventDefault();
                       if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
@@ -1472,7 +1684,7 @@ export default function EditModal({
                     className={`space-y-2 rounded border p-3 ${isDropTarget ? 'border-indigo-500 bg-indigo-500/15' : 'border-slate-700 bg-slate-900/70'}`}
                   >
                     <div className="grid grid-cols-12 gap-2 items-center">
-                      <p className="col-span-4 text-[11px] font-bold uppercase tracking-wide text-slate-400">Block {blockIdx + 1}</p>
+                      <p className="col-span-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">Block {blockIdx + 1}</p>
                       <select
                         value={isTitle ? 'title' : 'field'}
                         onChange={(e) => {
@@ -1492,11 +1704,30 @@ export default function EditModal({
                           });
                           updateSelectedActivityData({ blocks: nextBlocks });
                         }}
-                        className="col-span-4 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                        className="col-span-3 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
                       >
                         <option value="field">Field</option>
                         <option value="title">Title + Instructions</option>
                       </select>
+                      <button
+                        type="button"
+                        draggable
+                        onDragStart={(event) => {
+                          setDraggingWorksheetBlockIndex(blockIdx);
+                          if (event.dataTransfer) {
+                            event.dataTransfer.effectAllowed = 'move';
+                            event.dataTransfer.setData('text/plain', String(blockIdx));
+                          }
+                        }}
+                        onDragEnd={() => {
+                          setDraggingWorksheetBlockIndex(null);
+                          setDragOverWorksheetBlockIndex(null);
+                        }}
+                        className="col-span-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded p-2 text-xs font-black cursor-grab active:cursor-grabbing"
+                        title="Drag to reorder"
+                      >
+                        ::
+                      </button>
                       <button
                         type="button"
                         onClick={() => moveWorksheetBlock(blockIdx, Math.max(0, blockIdx - 1))}
@@ -1518,7 +1749,7 @@ export default function EditModal({
                       <button
                         type="button"
                         onClick={() => updateSelectedActivityData({ blocks: blocks.filter((_, idx) => idx !== blockIdx) })}
-                        className="col-span-2 bg-rose-600 hover:bg-rose-500 text-white rounded p-2 text-xs"
+                        className="col-span-3 bg-rose-600 hover:bg-rose-500 text-white rounded p-2 text-xs"
                         title="Delete block"
                       >
                         Delete
@@ -2099,6 +2330,103 @@ export default function EditModal({
                 />
               </div>
 
+              <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Template Override</label>
+                  <select
+                    value={editForm.template || ''}
+                    onChange={(e) => setEditForm({ ...editForm, template: e.target.value || null })}
+                    className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  >
+                    {MODULE_TEMPLATE_OPTIONS.map((option) => (
+                      <option key={`edit-template-${option.value || 'default'}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Theme Override</label>
+                  <select
+                    value={editForm.theme || ''}
+                    onChange={(e) => setEditForm({ ...editForm, theme: e.target.value || null })}
+                    className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  >
+                    {MODULE_THEME_OPTIONS.map((option) => (
+                      <option key={`edit-theme-${option.value || 'default'}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {showFinlitHeroControls && (
+                <div className="mb-4 rounded-lg border border-slate-700 bg-slate-950/70 p-3 space-y-3">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wide">FinLit Hero</h4>
+                    <p className="text-[11px] text-slate-500 mt-1">Used when the module template resolves to FinLit.</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Hero Title</label>
+                      <input
+                        type="text"
+                        value={finlitHero.title}
+                        onChange={(e) => updateFinlitHeroField('title', e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                        placeholder="Module hero title"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Progress Label</label>
+                      <input
+                        type="text"
+                        value={finlitHero.progressLabel}
+                        onChange={(e) => updateFinlitHeroField('progressLabel', e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                        placeholder="Week 1 of 6"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Subtitle</label>
+                    <input
+                      type="text"
+                      value={finlitHero.subtitle}
+                      onChange={(e) => updateFinlitHeroField('subtitle', e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                      placeholder="Short supporting line under the hero title"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Media Type</label>
+                      <select
+                        value={finlitHero.mediaType}
+                        onChange={(e) => updateFinlitHeroField('mediaType', e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                      >
+                        <option value="auto">Auto Detect</option>
+                        <option value="image">Image</option>
+                        <option value="video">Video File</option>
+                        <option value="embed">Embed URL</option>
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Media URL</label>
+                      <input
+                        type="text"
+                        value={finlitHero.mediaUrl}
+                        onChange={(e) => updateFinlitHeroField('mediaUrl', e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                        placeholder="https://... /materials/... / YouTube embed URL"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {editForm.moduleType === 'external' && (
                 <div className="space-y-4">
                   <div>
@@ -2188,6 +2516,31 @@ export default function EditModal({
                             <span className="text-[11px] text-slate-500">{activities.length} total</span>
                           </div>
                           <div className="mb-3 p-2 rounded border border-slate-700 bg-slate-900/60">
+                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Layout Mode</label>
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                              <button
+                                type="button"
+                                onClick={() => updateComposerLayoutMode('simple')}
+                                className={`rounded px-2 py-1 text-[10px] font-black uppercase tracking-wide border ${
+                                  composerLayoutMode === 'simple'
+                                    ? 'bg-blue-600 border-blue-400 text-white'
+                                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'
+                                }`}
+                              >
+                                Simple
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => updateComposerLayoutMode('canvas')}
+                                className={`rounded px-2 py-1 text-[10px] font-black uppercase tracking-wide border ${
+                                  composerLayoutMode === 'canvas'
+                                    ? 'bg-blue-600 border-blue-400 text-white'
+                                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'
+                                }`}
+                              >
+                                Canvas
+                              </button>
+                            </div>
                             <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Grid Columns</label>
                             <select
                               value={composerMaxColumns}
@@ -2200,10 +2553,139 @@ export default function EditModal({
                                 </option>
                               ))}
                             </select>
+                            {isCanvasMode ? (
+                              <div className="grid grid-cols-5 gap-2 mt-2">
+                                <label className="text-[10px] text-slate-400">
+                                  Row H
+                                  <input
+                                    type="number"
+                                    min="8"
+                                    max="200"
+                                    value={composerLayout.rowHeight}
+                                    onChange={(e) => updateComposerCanvasMetric('rowHeight', e.target.value)}
+                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                                  />
+                                </label>
+                                <label className="text-[10px] text-slate-400">
+                                  Gap X
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="200"
+                                    value={Array.isArray(composerLayout.margin) ? composerLayout.margin[0] : 12}
+                                    onChange={(e) =>
+                                      updateComposerCanvasMetric('margin', [
+                                        Number.parseInt(e.target.value, 10) || 0,
+                                        Array.isArray(composerLayout.margin) ? composerLayout.margin[1] : 12,
+                                      ])
+                                    }
+                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                                  />
+                                </label>
+                                <label className="text-[10px] text-slate-400">
+                                  Gap Y
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="200"
+                                    value={Array.isArray(composerLayout.margin) ? composerLayout.margin[1] : 12}
+                                    onChange={(e) =>
+                                      updateComposerCanvasMetric('margin', [
+                                        Array.isArray(composerLayout.margin) ? composerLayout.margin[0] : 12,
+                                        Number.parseInt(e.target.value, 10) || 0,
+                                      ])
+                                    }
+                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                                  />
+                                </label>
+                                <label className="text-[10px] text-slate-400">
+                                  Pad X
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="200"
+                                    value={Array.isArray(composerLayout.containerPadding) ? composerLayout.containerPadding[0] : 12}
+                                    onChange={(e) =>
+                                      updateComposerCanvasMetric('containerPadding', [
+                                        Number.parseInt(e.target.value, 10) || 0,
+                                        Array.isArray(composerLayout.containerPadding) ? composerLayout.containerPadding[1] : 12,
+                                      ])
+                                    }
+                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                                  />
+                                </label>
+                                <label className="text-[10px] text-slate-400">
+                                  Pad Y
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="200"
+                                    value={Array.isArray(composerLayout.containerPadding) ? composerLayout.containerPadding[1] : 12}
+                                    onChange={(e) =>
+                                      updateComposerCanvasMetric('containerPadding', [
+                                        Array.isArray(composerLayout.containerPadding) ? composerLayout.containerPadding[0] : 12,
+                                        Number.parseInt(e.target.value, 10) || 0,
+                                      ])
+                                    }
+                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                                  />
+                                </label>
+                              </div>
+                            ) : null}
                           </div>
 
                           <div className="max-h-72 overflow-y-auto pr-1">
-                            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${composerMaxColumns}, minmax(0, 1fr))` }}>
+                            {isCanvasMode ? (
+                              <GridLayout
+                                className="layout"
+                                layout={activities.map((activity, idx) => ({
+                                  i: String(idx),
+                                  x: Number.isInteger(activity?.layout?.x) ? activity.layout.x : 0,
+                                  y: Number.isInteger(activity?.layout?.y) ? activity.layout.y : 0,
+                                  w: Math.max(1, Math.min(composerMaxColumns, Number.parseInt(activity?.layout?.w, 10) || Number.parseInt(activity?.layout?.colSpan, 10) || 1)),
+                                  h: Math.max(1, Number.parseInt(activity?.layout?.h, 10) || 4),
+                                }))}
+                                cols={composerMaxColumns}
+                                rowHeight={composerLayout.rowHeight}
+                                margin={Array.isArray(composerLayout.margin) ? composerLayout.margin : [12, 12]}
+                                containerPadding={Array.isArray(composerLayout.containerPadding) ? composerLayout.containerPadding : [12, 12]}
+                                autoSize
+                                isResizable
+                                isDraggable
+                                draggableHandle=".cf-canvas-handle"
+                                onLayoutChange={applyCanvasGridLayout}
+                              >
+                                {activities.map((activity, idx) => {
+                                  const def = getActivityDefinition(activity.type);
+                                  const isSelected = idx === selectedActivityIndex;
+                                  return (
+                                    <div key={String(idx)} className="overflow-hidden">
+                                      <button
+                                        type="button"
+                                        onClick={() => setSelectedActivityIndex(idx)}
+                                        className={`w-full h-full text-left p-2 rounded border transition-colors ${
+                                          isSelected
+                                            ? 'bg-emerald-900/30 border-emerald-600 text-white'
+                                            : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
+                                        }`}
+                                      >
+                                        <div className="flex items-center justify-between gap-2">
+                                          <p className="text-xs font-bold truncate">{def?.label || activity.type}</p>
+                                          <span className="cf-canvas-handle inline-flex items-center justify-center w-5 h-5 rounded bg-slate-800 text-slate-300 text-[10px] font-black cursor-grab active:cursor-grabbing">
+                                            ::
+                                          </span>
+                                        </div>
+                                        <p className="text-[10px] text-slate-500 font-mono truncate mt-1">{activity.id || `activity-${idx + 1}`}</p>
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-1">
+                                          x:{activity?.layout?.x || 0} y:{activity?.layout?.y || 0} w:{activity?.layout?.w || 1} h:{activity?.layout?.h || 4}
+                                        </p>
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </GridLayout>
+                            ) : null}
+                            <div className={`${isCanvasMode ? 'hidden ' : ''}grid gap-2`} style={{ gridTemplateColumns: `repeat(${composerMaxColumns}, minmax(0, 1fr))` }}>
                               {composerGridModel.emptySlots.map((slot) => {
                                 const isSlotTarget =
                                   draggingActivityIndex !== null &&
@@ -2338,69 +2820,124 @@ export default function EditModal({
                                 <Plus size={12} /> Add
                               </button>
                             </div>
-                            <button
-                              type="button"
-                              onClick={addEmptyRow}
-                              className="w-full mt-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1.5 text-white text-xs inline-flex items-center justify-center gap-1"
-                              title="Add one open row of empty drop targets"
-                            >
-                              <Plus size={12} /> Add Open Row
-                            </button>
-                            <div className="grid grid-cols-2 gap-2 mt-2">
-                              <label className="text-[11px] font-bold text-slate-400 uppercase self-center">Selected Span</label>
-                              <select
-                                value={selectedActivity?.layout?.colSpan || 1}
-                                onChange={(e) => updateSelectedActivitySpan(e.target.value)}
-                                disabled={!selectedActivity}
-                                className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs disabled:opacity-40"
-                              >
-                                {Array.from({ length: composerMaxColumns }, (_, idx) => idx + 1).map((span) => (
-                                  <option key={span} value={span}>
-                                    Span {span}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="grid grid-cols-4 gap-2 mt-2">
-                              <button
-                                type="button"
-                                onClick={() => moveSelectedActivity('left')}
-                                disabled={!selectedActivity || !selectedPlacement || selectedPlacement.col <= 1}
-                                className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
-                                title="Move left"
-                              >
-                                <ChevronLeft size={12} /> Left
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => moveSelectedActivity('right')}
-                                disabled={
-                                  !selectedActivity ||
-                                  !selectedPlacement ||
-                                  selectedPlacement.col >= Math.max(1, composerMaxColumns - (selectedActivity?.layout?.colSpan || 1) + 1)
-                                }
-                                className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
-                                title="Move right"
-                              >
-                                <ChevronRight size={12} /> Right
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => moveSelectedActivity('up')}
-                                disabled={!selectedActivity || !selectedPlacement || selectedPlacement.row <= 1}
-                                className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
-                              >
-                                <ChevronUp size={12} /> Up
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => moveSelectedActivity('down')}
-                                disabled={!selectedActivity}
-                                className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
-                              >
-                                <ChevronDown size={12} /> Down
-                              </button>
-                            </div>
+                            {!isCanvasMode ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={addEmptyRow}
+                                  className="w-full mt-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1.5 text-white text-xs inline-flex items-center justify-center gap-1"
+                                  title="Add one open row of empty drop targets"
+                                >
+                                  <Plus size={12} /> Add Open Row
+                                </button>
+                                <div className="grid grid-cols-2 gap-2 mt-2">
+                                  <label className="text-[11px] font-bold text-slate-400 uppercase self-center">Selected Span</label>
+                                  <select
+                                    value={selectedActivity?.layout?.colSpan || 1}
+                                    onChange={(e) => updateSelectedActivitySpan(e.target.value)}
+                                    disabled={!selectedActivity}
+                                    className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs disabled:opacity-40"
+                                  >
+                                    {Array.from({ length: composerMaxColumns }, (_, idx) => idx + 1).map((span) => (
+                                      <option key={span} value={span}>
+                                        Span {span}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="grid grid-cols-4 gap-2 mt-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => moveSelectedActivity('left')}
+                                    disabled={!selectedActivity || !selectedPlacement || selectedPlacement.col <= 1}
+                                    className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                                    title="Move left"
+                                  >
+                                    <ChevronLeft size={12} /> Left
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveSelectedActivity('right')}
+                                    disabled={
+                                      !selectedActivity ||
+                                      !selectedPlacement ||
+                                      selectedPlacement.col >= Math.max(1, composerMaxColumns - (selectedActivity?.layout?.colSpan || 1) + 1)
+                                    }
+                                    className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                                    title="Move right"
+                                  >
+                                    <ChevronRight size={12} /> Right
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveSelectedActivity('up')}
+                                    disabled={!selectedActivity || !selectedPlacement || selectedPlacement.row <= 1}
+                                    className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                                  >
+                                    <ChevronUp size={12} /> Up
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveSelectedActivity('down')}
+                                    disabled={!selectedActivity}
+                                    className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
+                                  >
+                                    <ChevronDown size={12} /> Down
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="grid grid-cols-4 gap-2 mt-2">
+                                <label className="text-[10px] text-slate-400">
+                                  X
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={selectedActivity?.layout?.x || 0}
+                                    onChange={(e) => updateSelectedActivityCanvasLayout({ x: Number.parseInt(e.target.value, 10) || 0 })}
+                                    disabled={!selectedActivity}
+                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
+                                  />
+                                </label>
+                                <label className="text-[10px] text-slate-400">
+                                  Y
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={selectedActivity?.layout?.y || 0}
+                                    onChange={(e) => updateSelectedActivityCanvasLayout({ y: Number.parseInt(e.target.value, 10) || 0 })}
+                                    disabled={!selectedActivity}
+                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
+                                  />
+                                </label>
+                                <label className="text-[10px] text-slate-400">
+                                  W
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max={composerMaxColumns}
+                                    value={selectedActivity?.layout?.w || 1}
+                                    onChange={(e) => {
+                                      const nextW = Math.max(1, Number.parseInt(e.target.value, 10) || 1);
+                                      updateSelectedActivityCanvasLayout({ w: nextW, colSpan: nextW });
+                                    }}
+                                    disabled={!selectedActivity}
+                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
+                                  />
+                                </label>
+                                <label className="text-[10px] text-slate-400">
+                                  H
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={selectedActivity?.layout?.h || 4}
+                                    onChange={(e) => updateSelectedActivityCanvasLayout({ h: Math.max(1, Number.parseInt(e.target.value, 10) || 1) })}
+                                    disabled={!selectedActivity}
+                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
+                                  />
+                                </label>
+                              </div>
+                            )}
                             <div className="flex gap-2 mt-2">
                               <button
                                 type="button"

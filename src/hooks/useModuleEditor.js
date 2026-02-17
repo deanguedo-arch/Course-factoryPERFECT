@@ -4,6 +4,7 @@ import {
   normalizeComposerLayout,
   normalizeComposerModuleConfig,
 } from '../composer/layout.js';
+import { createFinlitHeroFormState, normalizeFinlitHeroForSave } from '../utils/finlitHero.js';
 
 const { useCallback, useState } = React;
 
@@ -14,16 +15,38 @@ const DEFAULT_EDIT_FORM = {
   id: '',
   section: '',
   moduleType: '',
+  template: null,
+  theme: null,
+  hero: createFinlitHeroFormState(),
   moduleMode: 'custom_html',
   activities: [],
-  composerLayout: { maxColumns: 1 },
+  composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12] },
   url: '',
   linkType: 'iframe',
   fullDocument: '',
 };
 
-function ensureComposerActivities(activities, maxColumns = 1) {
-  const normalized = normalizeComposerActivities(activities, { maxColumns });
+const MODULE_TEMPLATE_OPTIONS = ['deck', 'finlit', 'coursebook', 'toolkit_dashboard'];
+const MODULE_THEME_OPTIONS = ['dark_cards', 'finlit_clean', 'coursebook_light', 'toolkit_clean'];
+
+function normalizeModuleTemplate(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return null;
+  return MODULE_TEMPLATE_OPTIONS.includes(raw) ? raw : null;
+}
+
+function normalizeModuleTheme(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return null;
+  return MODULE_THEME_OPTIONS.includes(raw) ? raw : null;
+}
+
+function ensureComposerActivities(activities, composerLayout = { maxColumns: 1, mode: 'simple' }) {
+  const normalizedLayout = normalizeComposerLayout(composerLayout);
+  const normalized = normalizeComposerActivities(activities, {
+    maxColumns: normalizedLayout.maxColumns,
+    mode: normalizedLayout.mode,
+  });
   if (normalized.length > 0) return normalized;
   return [
     {
@@ -57,6 +80,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         id: item.id,
         section: 'Current Course',
         moduleType: 'external',
+        template: normalizeModuleTemplate(item.template),
+        theme: normalizeModuleTheme(item.theme),
+        hero: createFinlitHeroFormState(item.hero),
         moduleMode: item.mode || 'custom_html',
         activities: composerState.activities,
         composerLayout: composerState.composerLayout,
@@ -75,6 +101,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           id: item.id,
           section: 'Current Course',
           moduleType: 'standalone',
+          template: normalizeModuleTemplate(item.template),
+          theme: normalizeModuleTheme(item.theme),
+          hero: createFinlitHeroFormState(item.hero),
           moduleMode: item.mode || 'custom_html',
           activities: composerState.activities,
           composerLayout: composerState.composerLayout,
@@ -113,6 +142,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         id: item.id,
         section: 'Current Course',
         moduleType: 'standalone',
+        template: normalizeModuleTemplate(item.template),
+        theme: normalizeModuleTheme(item.theme),
+        hero: createFinlitHeroFormState(item.hero),
         moduleMode: item.mode || 'custom_html',
         activities: composerState.activities,
         composerLayout: composerState.composerLayout,
@@ -136,6 +168,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       id: item.id,
       section: 'Current Course',
       moduleType: 'legacy',
+      template: normalizeModuleTemplate(item.template),
+      theme: normalizeModuleTheme(item.theme),
+      hero: createFinlitHeroFormState(item.hero),
       moduleMode: item.mode || 'custom_html',
       activities: composerState.activities,
       composerLayout: composerState.composerLayout,
@@ -159,6 +194,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       timestamp: new Date().toISOString(),
       title: currentModule.title,
       mode: currentModule.mode || 'custom_html',
+      template: normalizeModuleTemplate(currentModule.template),
+      theme: normalizeModuleTheme(currentModule.theme),
+      hero: normalizeFinlitHeroForSave(currentModule.hero),
       activities: currentComposerState.activities,
       composerLayout: currentComposerState.composerLayout,
       ...(currentModule.type === 'standalone'
@@ -190,10 +228,16 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
 
     const nextMode = editForm.moduleMode === 'composer' ? 'composer' : 'custom_html';
     const nextComposerLayout = normalizeComposerLayout(editForm.composerLayout);
+    const nextTemplate = normalizeModuleTemplate(editForm.template);
+    const nextTheme = normalizeModuleTheme(editForm.theme);
+    const nextHero = normalizeFinlitHeroForSave(editForm.hero);
     const nextActivities =
       nextMode === 'composer'
-        ? ensureComposerActivities(editForm.activities, nextComposerLayout.maxColumns)
-        : normalizeComposerActivities(editForm.activities, { maxColumns: nextComposerLayout.maxColumns });
+        ? ensureComposerActivities(editForm.activities, nextComposerLayout)
+        : normalizeComposerActivities(editForm.activities, {
+            maxColumns: nextComposerLayout.maxColumns,
+            mode: nextComposerLayout.mode,
+          });
 
     // Handle external link modules
     if (editForm.moduleType === 'external') {
@@ -201,6 +245,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         ...items[idx],
         title: editForm.title,
         mode: nextMode,
+        template: nextTemplate,
+        theme: nextTheme,
+        hero: nextHero,
         activities: nextActivities,
         composerLayout: nextComposerLayout,
         url: editForm.url,
@@ -218,6 +265,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           ...items[idx],
           title: editForm.title,
           mode: 'composer',
+          template: nextTemplate,
+          theme: nextTheme,
+          hero: nextHero,
           activities: nextActivities,
           composerLayout: nextComposerLayout,
           rawHtml: '',
@@ -233,6 +283,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           ...items[idx],
           title: editForm.title,
           mode: 'custom_html',
+          template: nextTemplate,
+          theme: nextTheme,
+          hero: nextHero,
           activities: nextActivities,
           composerLayout: nextComposerLayout,
           rawHtml: editForm.fullDocument.trim(),
@@ -250,6 +303,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         ...items[idx],
         title: editForm.title,
         mode: nextMode,
+        template: nextTemplate,
+        theme: nextTheme,
+        hero: nextHero,
         activities: nextActivities,
         composerLayout: nextComposerLayout,
         code: {
@@ -289,6 +345,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         composerLayout: version.composerLayout || fallbackComposer.composerLayout,
         activities: Array.isArray(version.activities) ? version.activities : fallbackComposer.activities,
       });
+      const restoredTemplate = normalizeModuleTemplate(version.template ?? items[idx].template);
+      const restoredTheme = normalizeModuleTheme(version.theme ?? items[idx].theme);
+      const restoredHero = normalizeFinlitHeroForSave(version.hero ?? items[idx].hero);
 
       // Restore the version based on module type
       if (module.type === 'standalone') {
@@ -298,6 +357,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
             ...items[idx],
             title: version.title,
             mode: version.mode || items[idx].mode || 'custom_html',
+            template: restoredTemplate,
+            theme: restoredTheme,
+            hero: restoredHero,
             activities: restoredComposer.activities,
             composerLayout: restoredComposer.composerLayout,
             rawHtml: version.rawHtml,
@@ -310,6 +372,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
             ...items[idx],
             title: version.title,
             mode: version.mode || items[idx].mode || 'custom_html',
+            template: restoredTemplate,
+            theme: restoredTheme,
+            hero: restoredHero,
             activities: restoredComposer.activities,
             composerLayout: restoredComposer.composerLayout,
             rawHtml: '', // Clear rawHtml if reverting to legacy format
@@ -323,6 +388,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           ...items[idx],
           title: version.title,
           mode: version.mode || items[idx].mode || 'custom_html',
+          template: restoredTemplate,
+          theme: restoredTheme,
+          hero: restoredHero,
           activities: restoredComposer.activities,
           composerLayout: restoredComposer.composerLayout,
           url: version.url || '',
@@ -333,6 +401,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           ...items[idx],
           title: version.title,
           mode: version.mode || items[idx].mode || 'custom_html',
+          template: restoredTemplate,
+          theme: restoredTheme,
+          hero: restoredHero,
           activities: restoredComposer.activities,
           composerLayout: restoredComposer.composerLayout,
           code: version.code || {},

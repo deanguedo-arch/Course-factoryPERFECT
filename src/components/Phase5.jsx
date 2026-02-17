@@ -13,6 +13,8 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
     backgroundColor: "slate-900", // Default dark background
     fontFamily: "inter", // Default font
     customCSS: "",
+    templateDefault: "deck",
+    themeDefault: "dark_cards",
     compilationDefaults: {
       includeMaterials: true,
       includeAssessments: true,
@@ -95,6 +97,20 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
         defaultMaterialTheme: 'dark',
       },
     },
+  ];
+
+  const COURSE_TEMPLATE_OPTIONS = [
+    { value: 'deck', label: 'Deck' },
+    { value: 'finlit', label: 'FinLit' },
+    { value: 'coursebook', label: 'Coursebook' },
+    { value: 'toolkit_dashboard', label: 'Toolkit Dashboard' },
+  ];
+
+  const COURSE_THEME_OPTIONS = [
+    { value: 'dark_cards', label: 'Dark Cards' },
+    { value: 'finlit_clean', label: 'FinLit Clean' },
+    { value: 'coursebook_light', label: 'Coursebook Light' },
+    { value: 'toolkit_clean', label: 'Toolkit Clean' },
   ];
 
   const ACCENT_SWATCH_HEX = {
@@ -311,6 +327,37 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
                 className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm"
                 placeholder="Dr. Smith"
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Default Template</label>
+                <select
+                  value={settings.templateDefault || 'deck'}
+                  onChange={(e) => updateSettings({ templateDefault: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm"
+                >
+                  {COURSE_TEMPLATE_OPTIONS.map((option) => (
+                    <option key={`course-template-${option.value}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Default Theme</label>
+                <select
+                  value={settings.themeDefault || 'dark_cards'}
+                  onChange={(e) => updateSettings({ themeDefault: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm"
+                >
+                  {COURSE_THEME_OPTIONS.map((option) => (
+                    <option key={`course-theme-${option.value}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>

@@ -44,8 +44,10 @@
       function setBackground() {
         document.documentElement.style.backgroundColor = '#0f172a';
         document.documentElement.style.background = '#0f172a';
-        document.body.style.backgroundColor = '#0f172a';
-        document.body.style.background = '#0f172a';
+        if (document.body) {
+          document.body.style.backgroundColor = '#0f172a';
+          document.body.style.background = '#0f172a';
+        }
       }
       setBackground();
       if (document.readyState === 'loading') {

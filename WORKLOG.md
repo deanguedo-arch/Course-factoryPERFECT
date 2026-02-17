@@ -109,3 +109,54 @@
 - Expand validation rules for more activity types as you find recurring authoring errors.
 - Add a "duplicate + insert below" convenience action and/or drag handles in Outline view.
 
+## Update (2026-02-17)
+
+### Scope Completed In This Session
+- Fixed M0 regressions:
+  - Cleared text no longer auto-reappears for `title_block`, `knowledge_check`, and worksheet title blocks.
+  - Space key/input editing works in worksheet and knowledge-check editors (drag now starts from handle only).
+- Implemented template/layout foundation and editor parity:
+  - Course defaults: `templateDefault`, `themeDefault`.
+  - Module overrides: `template`, `theme`.
+  - Composer layout modes: `simple` + `canvas`.
+  - Activity metadata support: `layout`, `style`, `behavior`.
+- Added container activity support:
+  - `tab_group` and `card_list`.
+  - `card_list` now supports reference target, single inline activity, and inline `activities[]`.
+- Added template compiler pipeline support:
+  - `deck`, `finlit`, `coursebook`, `toolkit_dashboard`.
+  - Theme packs: `dark_cards`, `finlit_clean`, `coursebook_light`, `toolkit_clean`.
+- Upgraded create/edit UIs:
+  - `Phase1` and `EditModal` now both support template/theme overrides, layout mode toggle, canvas controls, and activity style/behavior controls.
+  - Canvas drag/resize integrated with `react-grid-layout`.
+- Added canvas overlap safety fix:
+  - In canvas output, each cell now clips/scrolls internal content instead of spilling into neighboring cells.
+
+### Key Files Touched
+- `src/components/Phase1.jsx`
+- `src/components/modals/EditModal.jsx`
+- `src/components/Phase5.jsx`
+- `src/composer/activityRegistry.js`
+- `src/composer/compileModuleHtml.js`
+- `src/composer/layout.js`
+- `src/hooks/useModuleEditor.js`
+- `src/utils/migrations.js`
+- `src/utils/generators.js`
+- `src/data/constants.js`
+- `scripts/release_gate.mjs`
+- `package.json`
+
+### Validation Results
+- `build`: passed
+- `exports:verify`: passed
+- `exports:parity`: passed
+- `exports:fixtures`: passed
+- `release:check`: passed
+
+### Notes For Next Chat
+- Repo-wide lint is still noisy due many pre-existing issues (including generated `.vite` deps and legacy code); not fully addressed in this session.
+- Export baseline and generated output artifacts were refreshed during verification:
+  - `baselines/exports_baseline.json`
+  - `out/**`
+  - `dist/**`
+- If continuing immediately, next practical pass is targeted UX polish and guardrails around canvas sizing defaults, then fixture expansion for new container combinations.
