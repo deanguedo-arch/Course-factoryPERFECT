@@ -29,6 +29,13 @@ import {
   normalizeComposerActivities,
   normalizeComposerLayout,
 } from '../../composer/layout.js';
+import {
+  applyTemplateLayoutProfile,
+  captureTemplateLayoutProfile,
+  cloneTemplateLayoutProfile,
+  normalizeTemplateLayoutProfiles,
+  resolveTemplateKey,
+} from '../../composer/templateLayoutProfiles.js';
 import { isComposerEnabled } from '../../utils/composer.js';
 import { buildModuleFrameHTML, buildPreviewStorageScope } from '../../utils/generators.js';
 import {
@@ -376,6 +383,10 @@ export default function EditModal({
     () => normalizeComposerActivities(editForm.activities, { maxColumns: composerMaxColumns, mode: composerLayout.mode }),
     [editForm.activities, composerLayout.mode, composerMaxColumns],
   );
+  const normalizedTemplateLayoutProfiles = useMemo(
+    () => normalizeTemplateLayoutProfiles(editForm.templateLayoutProfiles, { activities }),
+    [activities, editForm.templateLayoutProfiles],
+  );
   const activityTypes = useMemo(() => listActivityTypes(), []);
   const activityTypeGroups = useMemo(() => listActivityTypeGroups(), []);
   const moduleBankMaterials = useMemo(
@@ -552,17 +563,89 @@ export default function EditModal({
     );
   }, [activities, composerLayout, composerPreviewStorageScope, editForm.id, editForm.template, editForm.theme, editForm.title, finlitHero, finlitSettings, projectData, standaloneMode]);
 
+  const buildTemplateLayoutProfilesForComposerState = ({
+    templateOverride = editForm.template,
+    nextComposerLayout = composerLayout,
+    nextActivities = activities,
+    templateProfiles = normalizedTemplateLayoutProfiles,
+  } = {}) => {
+    const resolvedTemplateKey = resolveTemplateKey(templateOverride, courseTemplateDefault);
+    const capturedProfile = captureTemplateLayoutProfile(nextComposerLayout, nextActivities);
+    return normalizeTemplateLayoutProfiles(
+      {
+        ...(templateProfiles && typeof templateProfiles === 'object' ? templateProfiles : {}),
+        [resolvedTemplateKey]: capturedProfile,
+      },
+      { activities: nextActivities },
+    );
+  };
+
   const updateActivities = (nextActivities, nextComposerLayout = composerLayout) => {
     const normalizedLayout = normalizeComposerLayout(nextComposerLayout);
     const normalizedActivities = normalizeComposerActivities(nextActivities, {
       maxColumns: normalizedLayout.maxColumns,
       mode: normalizedLayout.mode,
     });
+    const nextTemplateLayoutProfiles = buildTemplateLayoutProfilesForComposerState({
+      templateOverride: editForm.template,
+      nextComposerLayout: normalizedLayout,
+      nextActivities: normalizedActivities,
+    });
     setEditForm({
       ...editForm,
       moduleMode: 'composer',
       composerLayout: normalizedLayout,
       activities: normalizedActivities,
+      templateLayoutProfiles: nextTemplateLayoutProfiles,
+    });
+  };
+
+  const handleTemplateChange = (nextTemplateOverrideRaw) => {
+    const nextTemplateOverride = String(nextTemplateOverrideRaw || '').trim() || null;
+    if (standaloneMode !== 'composer') {
+      setEditForm({ ...editForm, template: nextTemplateOverride });
+      return;
+    }
+
+    const currentTemplateKey = resolveTemplateKey(editForm.template, courseTemplateDefault);
+    const nextTemplateKey = resolveTemplateKey(nextTemplateOverride, courseTemplateDefault);
+    const activeProfile = captureTemplateLayoutProfile(composerLayout, activities);
+    const baseProfiles = normalizeTemplateLayoutProfiles(editForm.templateLayoutProfiles, { activities });
+    const profilesWithCurrent = normalizeTemplateLayoutProfiles(
+      {
+        ...(baseProfiles && typeof baseProfiles === 'object' ? baseProfiles : {}),
+        [currentTemplateKey]: activeProfile,
+      },
+      { activities },
+    );
+    const targetProfileSource =
+      profilesWithCurrent[nextTemplateKey] || profilesWithCurrent[currentTemplateKey] || activeProfile;
+    const targetProfile = cloneTemplateLayoutProfile(targetProfileSource);
+    const profilesWithTarget = normalizeTemplateLayoutProfiles(
+      {
+        ...(profilesWithCurrent && typeof profilesWithCurrent === 'object' ? profilesWithCurrent : {}),
+        [nextTemplateKey]: targetProfile,
+      },
+      { activities },
+    );
+    const applied = applyTemplateLayoutProfile(activities, targetProfile, composerLayout.mode, composerLayout.maxColumns);
+    const nextTemplateLayoutProfiles = buildTemplateLayoutProfilesForComposerState({
+      templateOverride: nextTemplateOverride,
+      nextComposerLayout: applied.composerLayout,
+      nextActivities: applied.activities,
+      templateProfiles: profilesWithTarget,
+    });
+    setEditForm({
+      ...editForm,
+      template: nextTemplateOverride,
+      moduleMode: 'composer',
+      composerLayout: applied.composerLayout,
+      activities: applied.activities,
+      templateLayoutProfiles: nextTemplateLayoutProfiles,
+    });
+    setSelectedActivityIndex((prev) => {
+      const maxIndex = Math.max(0, applied.activities.length - 1);
+      return Math.max(0, Math.min(maxIndex, Number.parseInt(prev, 10) || 0));
     });
   };
 
@@ -933,11 +1016,20 @@ export default function EditModal({
       maxColumns: normalizedLayout.maxColumns,
       mode: normalizedLayout.mode,
     });
+    const nextTemplateLayoutProfiles =
+      mode === 'composer'
+        ? buildTemplateLayoutProfilesForComposerState({
+            templateOverride: editForm.template,
+            nextComposerLayout: normalizedLayout,
+            nextActivities: normalizedActivities,
+          })
+        : normalizeTemplateLayoutProfiles(editForm.templateLayoutProfiles, { activities: normalizedActivities });
     setEditForm({
       ...editForm,
       moduleMode: mode,
       composerLayout: normalizedLayout,
       activities: normalizedActivities,
+      templateLayoutProfiles: nextTemplateLayoutProfiles,
     });
   };
 
@@ -2673,7 +2765,7 @@ export default function EditModal({
                   <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Template Override</label>
                   <select
                     value={editForm.template || ''}
-                    onChange={(e) => setEditForm({ ...editForm, template: e.target.value || null })}
+                    onChange={(e) => handleTemplateChange(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
                   >
                     {MODULE_TEMPLATE_OPTIONS.map((option) => (

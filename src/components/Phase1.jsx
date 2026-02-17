@@ -58,6 +58,13 @@ import {
   normalizeComposerLayout,
 } from '../composer/layout.js';
 import {
+  applyTemplateLayoutProfile,
+  captureTemplateLayoutProfile,
+  cloneTemplateLayoutProfile,
+  normalizeTemplateLayoutProfiles,
+  resolveTemplateKey,
+} from '../composer/templateLayoutProfiles.js';
+import {
   createFinlitHeroFormState,
   createFinlitTemplateFormState,
   normalizeFinlitHeroForSave,
@@ -297,6 +304,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   // MODULE MANAGER STATE
   const [moduleManagerType, setModuleManagerType] = useState('standalone'); // 'standalone' | 'composer' | 'external'
   const [moduleManagerTemplate, setModuleManagerTemplate] = useState('');
+  const [moduleManagerTemplateLayoutProfiles, setModuleManagerTemplateLayoutProfiles] = useState({});
   const [moduleManagerTheme, setModuleManagerTheme] = useState('');
   const [moduleManagerHero, setModuleManagerHero] = useState(() => createFinlitHeroFormState());
   const [moduleManagerFinlit, setModuleManagerFinlit] = useState(() => createFinlitTemplateFormState());
@@ -434,8 +442,12 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const moduleManagerComposerLayoutMode = normalizedModuleManagerLayout.mode;
   const isModuleManagerCanvasMode = moduleManagerComposerLayoutMode === 'canvas';
   const courseTemplateDefault = String(projectData?.['Course Settings']?.templateDefault || 'deck').trim().toLowerCase();
-  const moduleManagerEffectiveTemplate = String(moduleManagerTemplate || courseTemplateDefault || 'deck').trim().toLowerCase();
+  const moduleManagerEffectiveTemplate = resolveTemplateKey(moduleManagerTemplate, courseTemplateDefault);
   const showModuleManagerFinlitOptions = moduleManagerType === 'composer' && moduleManagerEffectiveTemplate === 'finlit';
+  const normalizedModuleManagerTemplateProfiles = useMemo(
+    () => normalizeTemplateLayoutProfiles(moduleManagerTemplateLayoutProfiles, { activities: moduleManagerComposerActivities }),
+    [moduleManagerTemplateLayoutProfiles, moduleManagerComposerActivities],
+  );
   const moduleManagerFinlitState = createFinlitTemplateFormState(moduleManagerFinlit);
   const moduleManagerPreviewPaneWidth = Math.max(30, Math.min(75, Number(moduleManagerComposerPreviewWidth) || 55));
   const moduleManagerPreviewPaneHeight = Math.max(420, Math.min(2000, Number(moduleManagerComposerPreviewHeight) || 900));
@@ -1178,8 +1190,20 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       maxColumns: composerLayout.maxColumns,
       mode: composerLayout.mode,
     });
+    const templateLayoutProfiles = normalizeTemplateLayoutProfiles(
+      {
+        ...(normalizedModuleManagerTemplateProfiles && typeof normalizedModuleManagerTemplateProfiles === 'object'
+          ? normalizedModuleManagerTemplateProfiles
+          : {}),
+        [resolveTemplateKey(moduleManagerTemplate, courseTemplateDefault)]: captureTemplateLayoutProfile(
+          composerLayout,
+          composerActivities,
+        ),
+      },
+      { activities: composerActivities },
+    );
     return {
-      version: 1,
+      version: 2,
       type: moduleManagerType,
       moduleId: moduleManagerID,
       title: moduleManagerTitle,
@@ -1193,6 +1217,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       composerStarterType: moduleManagerComposerStarterType,
       composerLayout,
       composerActivities,
+      templateLayoutProfiles,
       composerExtraRows: moduleManagerComposerExtraRows,
       composerSelectedIndex: moduleManagerComposerSelectedIndex,
     };
@@ -1227,6 +1252,14 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       : 0;
     const requestedExtraRows = Number.parseInt(payload.composerExtraRows, 10);
     const nextExtraRows = Number.isInteger(requestedExtraRows) ? Math.max(0, Math.min(requestedExtraRows, 50)) : 0;
+    const loadedTemplateProfiles = normalizeTemplateLayoutProfiles(payload.templateLayoutProfiles, { activities: nextActivities });
+    const nextTemplateProfiles = normalizeTemplateLayoutProfiles(
+      {
+        ...(loadedTemplateProfiles && typeof loadedTemplateProfiles === 'object' ? loadedTemplateProfiles : {}),
+        [resolveTemplateKey(payload.template, courseTemplateDefault)]: captureTemplateLayoutProfile(nextLayout, nextActivities),
+      },
+      { activities: nextActivities },
+    );
 
     setModuleManagerType(nextType);
     setModuleManagerID(payload.moduleId || '');
@@ -1239,6 +1272,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     setModuleManagerHero(createFinlitHeroFormState(payload.hero));
     setModuleManagerFinlit(createFinlitTemplateFormState(payload.finlit));
     setModuleManagerComposerStarterType(nextStarterType);
+    setModuleManagerTemplateLayoutProfiles(nextTemplateProfiles);
     setModuleManagerComposerLayout(nextLayout);
     setModuleManagerComposerActivities(nextActivities);
     setModuleManagerComposerExtraRows(nextExtraRows);
@@ -1284,7 +1318,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     try {
       const payload = {
         kind: 'course-factory-module-draft',
-        version: 1,
+        version: 2,
         exportedAt: new Date().toISOString(),
         draft,
       };
@@ -1486,6 +1520,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     setModuleManagerURL('');
     setModuleManagerLinkType('iframe');
     setModuleManagerTemplate('');
+    setModuleManagerTemplateLayoutProfiles({});
     setModuleManagerTheme('');
     setModuleManagerHero(createFinlitHeroFormState());
     setModuleManagerFinlit(createFinlitTemplateFormState());
@@ -1580,6 +1615,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     moduleManagerURL,
     moduleManagerLinkType,
     moduleManagerTemplate,
+    moduleManagerTemplateLayoutProfiles,
     moduleManagerTheme,
     moduleManagerHero,
     moduleManagerFinlit,
@@ -1659,6 +1695,31 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const selectedComposerPlacement = selectedComposerActivity
     ? moduleManagerPlacementByIndex.get(moduleManagerComposerSelectedIndex) || null
     : null;
+  const buildTemplateLayoutProfilesForComposerState = React.useCallback(
+    ({
+      templateOverride = moduleManagerTemplate,
+      composerLayout = moduleManagerComposerLayout,
+      activities = moduleManagerComposerActivities,
+      templateProfiles = normalizedModuleManagerTemplateProfiles,
+    } = {}) => {
+      const resolvedTemplateKey = resolveTemplateKey(templateOverride, courseTemplateDefault);
+      const capturedProfile = captureTemplateLayoutProfile(composerLayout, activities);
+      return normalizeTemplateLayoutProfiles(
+        {
+          ...(templateProfiles && typeof templateProfiles === 'object' ? templateProfiles : {}),
+          [resolvedTemplateKey]: capturedProfile,
+        },
+        { activities },
+      );
+    },
+    [
+      courseTemplateDefault,
+      moduleManagerComposerActivities,
+      moduleManagerComposerLayout,
+      moduleManagerTemplate,
+      normalizedModuleManagerTemplateProfiles,
+    ],
+  );
   const updateModuleManagerHeroField = (key, value) => {
     if (!['title', 'subtitle', 'progressLabel', 'mediaUrl', 'mediaType'].includes(key)) return;
     setModuleManagerHero((prev) => ({
@@ -1836,11 +1897,19 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       layout = moduleManagerComposerLayout,
       extraRows = moduleManagerComposerExtraRows,
       selectedIndex = moduleManagerComposerSelectedIndex,
+      templateOverride = moduleManagerTemplate,
+      templateLayoutProfiles = normalizedModuleManagerTemplateProfiles,
     } = {}) => ({
       activities: cloneComposerSnapshotData(Array.isArray(activities) ? activities : []),
       layout: cloneComposerSnapshotData(normalizeComposerLayout(layout)),
       extraRows: Math.max(0, Math.min(50, Number.parseInt(extraRows, 10) || 0)),
       selectedIndex: Math.max(0, Number.parseInt(selectedIndex, 10) || 0),
+      templateOverride: typeof templateOverride === 'string' ? templateOverride : '',
+      templateLayoutProfiles: cloneComposerSnapshotData(
+        normalizeTemplateLayoutProfiles(templateLayoutProfiles, {
+          activities: Array.isArray(activities) ? activities : [],
+        }),
+      ),
     }),
     [
       cloneComposerSnapshotData,
@@ -1848,6 +1917,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       moduleManagerComposerExtraRows,
       moduleManagerComposerLayout,
       moduleManagerComposerSelectedIndex,
+      moduleManagerTemplate,
+      normalizedModuleManagerTemplateProfiles,
     ],
   );
 
@@ -1857,6 +1928,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       snapshot.layout || {},
       snapshot.extraRows || 0,
       snapshot.selectedIndex || 0,
+      snapshot.templateOverride || '',
+      snapshot.templateLayoutProfiles || {},
       Array.isArray(snapshot.activities) ? snapshot.activities : [],
     ]);
   }, []);
@@ -1903,12 +1976,29 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       });
       const safeSelectedIndex = Math.max(0, Math.min(normalizedActivities.length - 1, Number.parseInt(snapshot.selectedIndex, 10) || 0));
       const safeExtraRows = Math.max(0, Math.min(50, Number.parseInt(snapshot.extraRows, 10) || 0));
+      const nextTemplateOverride =
+        typeof snapshot.templateOverride === 'string' ? snapshot.templateOverride : moduleManagerTemplate;
+      const normalizedSnapshotProfiles = normalizeTemplateLayoutProfiles(snapshot.templateLayoutProfiles, {
+        activities: normalizedActivities,
+      });
+      const nextTemplateProfiles = normalizeTemplateLayoutProfiles(
+        {
+          ...(normalizedSnapshotProfiles && typeof normalizedSnapshotProfiles === 'object' ? normalizedSnapshotProfiles : {}),
+          [resolveTemplateKey(nextTemplateOverride, courseTemplateDefault)]: captureTemplateLayoutProfile(
+            normalizedLayout,
+            normalizedActivities,
+          ),
+        },
+        { activities: normalizedActivities },
+      );
       setModuleManagerComposerLayout(normalizedLayout);
       setModuleManagerComposerActivities(normalizedActivities);
       setModuleManagerComposerExtraRows(safeExtraRows);
       setModuleManagerComposerSelectedIndex(safeSelectedIndex);
+      setModuleManagerTemplate(nextTemplateOverride);
+      setModuleManagerTemplateLayoutProfiles(nextTemplateProfiles);
     },
-    [],
+    [courseTemplateDefault, moduleManagerTemplate],
   );
 
   const undoComposerDraftChange = React.useCallback(() => {
@@ -1943,22 +2033,94 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const updateComposerActivities = (
     nextActivities,
     nextLayout = moduleManagerComposerLayout,
-    { recordHistory = true, historySnapshot = null } = {},
+    { recordHistory = true, historySnapshot = null, templateOverride = moduleManagerTemplate, templateProfiles = null } = {},
   ) => {
     const normalizedLayout = normalizeComposerLayout(nextLayout);
     const normalizedActivities = normalizeComposerActivities(nextActivities, {
       maxColumns: normalizedLayout.maxColumns,
       mode: normalizedLayout.mode,
     });
+    const baseProfiles = normalizeTemplateLayoutProfiles(
+      templateProfiles != null ? templateProfiles : moduleManagerTemplateLayoutProfiles,
+      { activities: normalizedActivities },
+    );
+    const nextTemplateProfiles = normalizeTemplateLayoutProfiles(
+      {
+        ...(baseProfiles && typeof baseProfiles === 'object' ? baseProfiles : {}),
+        [resolveTemplateKey(templateOverride, courseTemplateDefault)]: captureTemplateLayoutProfile(
+          normalizedLayout,
+          normalizedActivities,
+        ),
+      },
+      { activities: normalizedActivities },
+    );
     const nextSignature = JSON.stringify([normalizedLayout, normalizedActivities]);
     const currentSignature = JSON.stringify([normalizeComposerLayout(moduleManagerComposerLayout), moduleManagerComposerActivities]);
-    if (nextSignature === currentSignature) return false;
+    if (nextSignature === currentSignature) {
+      const currentProfiles = normalizeTemplateLayoutProfiles(moduleManagerTemplateLayoutProfiles, {
+        activities: normalizedActivities,
+      });
+      if (JSON.stringify(currentProfiles) !== JSON.stringify(nextTemplateProfiles)) {
+        setModuleManagerTemplateLayoutProfiles(nextTemplateProfiles);
+      }
+      return false;
+    }
     if (recordHistory) {
       pushComposerHistorySnapshot(historySnapshot || buildComposerSnapshot());
     }
     setModuleManagerComposerLayout(normalizedLayout);
     setModuleManagerComposerActivities(normalizedActivities);
+    setModuleManagerTemplateLayoutProfiles(nextTemplateProfiles);
     return true;
+  };
+
+  const handleModuleManagerTemplateChange = (nextTemplateOverrideRaw) => {
+    const nextTemplateOverride = String(nextTemplateOverrideRaw || '').trim();
+    if (moduleManagerType !== 'composer') {
+      setModuleManagerTemplate(nextTemplateOverride);
+      return;
+    }
+    const currentLayout = normalizeComposerLayout(moduleManagerComposerLayout);
+    const currentActivities = normalizeComposerActivities(moduleManagerComposerActivities, {
+      maxColumns: currentLayout.maxColumns,
+      mode: currentLayout.mode,
+    });
+    const currentTemplateKey = resolveTemplateKey(moduleManagerTemplate, courseTemplateDefault);
+    const nextTemplateKey = resolveTemplateKey(nextTemplateOverride, courseTemplateDefault);
+    const activeProfile = captureTemplateLayoutProfile(currentLayout, currentActivities);
+    const baseProfiles = normalizeTemplateLayoutProfiles(moduleManagerTemplateLayoutProfiles, { activities: currentActivities });
+    const profilesWithCurrent = normalizeTemplateLayoutProfiles(
+      {
+        ...(baseProfiles && typeof baseProfiles === 'object' ? baseProfiles : {}),
+        [currentTemplateKey]: activeProfile,
+      },
+      { activities: currentActivities },
+    );
+    const targetProfileSource =
+      profilesWithCurrent[nextTemplateKey] || profilesWithCurrent[currentTemplateKey] || activeProfile;
+    const targetProfile = cloneTemplateLayoutProfile(targetProfileSource);
+    const profilesWithTarget = normalizeTemplateLayoutProfiles(
+      {
+        ...(profilesWithCurrent && typeof profilesWithCurrent === 'object' ? profilesWithCurrent : {}),
+        [nextTemplateKey]: targetProfile,
+      },
+      { activities: currentActivities },
+    );
+    const applied = applyTemplateLayoutProfile(
+      currentActivities,
+      targetProfile,
+      currentLayout.mode,
+      currentLayout.maxColumns,
+    );
+    updateComposerActivities(applied.activities, applied.composerLayout, {
+      templateOverride: nextTemplateOverride,
+      templateProfiles: profilesWithTarget,
+    });
+    setModuleManagerTemplate(nextTemplateOverride);
+    setModuleManagerComposerSelectedIndex((prevIndex) => {
+      const maxIndex = Math.max(0, applied.activities.length - 1);
+      return Math.max(0, Math.min(maxIndex, Number.parseInt(prevIndex, 10) || 0));
+    });
   };
 
   const updateComposerMaxColumns = (nextColumns) => {
@@ -4446,6 +4608,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         finlit: normalizedFinlit,
         activities: [],
         composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12], simpleMatchTallestRow: false },
+        templateLayoutProfiles: {},
         // Store the COMPLETE raw HTML document - this is the key change
         rawHtml: rawHtml,
         // Keep these for backward compatibility (empty for new modules)
@@ -4463,6 +4626,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           finlit: normalizedFinlit,
           activities: [],
           composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12], simpleMatchTallestRow: false },
+          templateLayoutProfiles: {},
           rawHtml: rawHtml
         }]
       };
@@ -4483,6 +4647,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       setModuleManagerID('');
       setModuleManagerTitle('');
       setModuleManagerTemplate('');
+      setModuleManagerTemplateLayoutProfiles({});
       setModuleManagerTheme('');
       setModuleManagerHero(createFinlitHeroFormState());
       setModuleManagerFinlit(createFinlitTemplateFormState());
@@ -4535,6 +4700,11 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
             });
       const normalizedHero = normalizeFinlitHeroForSave(moduleManagerHero);
       const normalizedFinlit = normalizeFinlitTemplateForSave(moduleManagerFinlit);
+      const templateLayoutProfiles = buildTemplateLayoutProfilesForComposerState({
+        templateOverride: moduleManagerTemplate,
+        composerLayout,
+        activities: composerActivities,
+      });
 
       const newModule = {
         id: moduleId,
@@ -4547,6 +4717,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         finlit: normalizedFinlit,
         composerLayout,
         activities: composerActivities,
+        templateLayoutProfiles,
         rawHtml: '',
         html: '',
         css: '',
@@ -4561,6 +4732,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           finlit: normalizedFinlit,
           composerLayout,
           activities: composerActivities,
+          templateLayoutProfiles,
         }]
       };
 
@@ -4592,6 +4764,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       setModuleManagerID('');
       setModuleManagerTitle('');
       setModuleManagerTemplate('');
+      setModuleManagerTemplateLayoutProfiles({});
       setModuleManagerTheme('');
       setModuleManagerHero(createFinlitHeroFormState());
       setModuleManagerFinlit(createFinlitTemplateFormState());
@@ -4675,6 +4848,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         finlit: normalizedFinlit,
         activities: [],
         composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12], simpleMatchTallestRow: false },
+        templateLayoutProfiles: {},
         url: moduleManagerURL,
         linkType: moduleManagerLinkType,
         // Initialize history with version 1 (original state)
@@ -4688,6 +4862,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           finlit: normalizedFinlit,
           activities: [],
           composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12], simpleMatchTallestRow: false },
+          templateLayoutProfiles: {},
           url: moduleManagerURL,
           linkType: moduleManagerLinkType
         }]
@@ -4725,6 +4900,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       setModuleManagerID('');
       setModuleManagerTitle('');
       setModuleManagerTemplate('');
+      setModuleManagerTemplateLayoutProfiles({});
       setModuleManagerTheme('');
       setModuleManagerHero(createFinlitHeroFormState());
       setModuleManagerFinlit(createFinlitTemplateFormState());
@@ -6810,7 +6986,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                     <label className="block text-xs font-bold text-slate-300 uppercase mb-2">Template Override</label>
                                     <select
                                         value={moduleManagerTemplate}
-                                        onChange={(e) => setModuleManagerTemplate(e.target.value)}
+                                        onChange={(e) => handleModuleManagerTemplateChange(e.target.value)}
                                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white text-xs"
                                     >
                                         {MODULE_TEMPLATE_OPTIONS.map((option) => (

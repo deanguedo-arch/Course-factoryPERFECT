@@ -2045,7 +2045,8 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
     if (template === 'finlit') {
       const finlit = createFinlitTemplateFormState(module?.finlit);
       const nonTabGroupActivities = activities.filter((activity) => activity?.type !== 'tab_group');
-      let activitiesTabHtml = nonTabGroupActivities.map((activity, idx) => renderActivity(activity, idx, { withLayout: false })).join('\n');
+      const hasDirectActivities = nonTabGroupActivities.length > 0;
+      let activitiesTabHtml = hasDirectActivities ? renderLayout(nonTabGroupActivities) : '';
       let legacyAdditionalTabHtml = '';
 
       const tabGroups = activities.filter((activity) => activity?.type === 'tab_group');
@@ -2062,7 +2063,7 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
           const merged = [...refs, ...inline];
           return merged.length ? merged.map((item, nestedIdx) => renderActivity(item, nestedIdx, { withLayout: false, trail: [firstTabGroup.id] })).join('\n') : '';
         };
-        if (!activitiesTabHtml) {
+        if (!hasDirectActivities) {
           activitiesTabHtml = renderTabLinked(activitiesTab);
         }
         legacyAdditionalTabHtml = renderTabLinked(additionalTab);

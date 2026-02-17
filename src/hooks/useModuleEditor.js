@@ -4,6 +4,7 @@ import {
   normalizeComposerLayout,
   normalizeComposerModuleConfig,
 } from '../composer/layout.js';
+import { normalizeTemplateLayoutProfiles } from '../composer/templateLayoutProfiles.js';
 import {
   createFinlitHeroFormState,
   createFinlitTemplateFormState,
@@ -27,6 +28,7 @@ const DEFAULT_EDIT_FORM = {
   moduleMode: 'custom_html',
   activities: [],
   composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12], simpleMatchTallestRow: false },
+  templateLayoutProfiles: {},
   url: '',
   linkType: 'iframe',
   fullDocument: '',
@@ -76,6 +78,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
 
   const openEditModule = useCallback((item) => {
     const composerState = normalizeComposerModuleConfig(item);
+    const templateLayoutProfiles = normalizeTemplateLayoutProfiles(item?.templateLayoutProfiles, {
+      activities: composerState.activities,
+    });
 
     // Handle external link modules
     if (item.type === 'external') {
@@ -93,6 +98,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         moduleMode: item.mode || 'custom_html',
         activities: composerState.activities,
         composerLayout: composerState.composerLayout,
+        templateLayoutProfiles,
       });
       setEditingModule(item.id);
       return;
@@ -115,6 +121,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           moduleMode: item.mode || 'custom_html',
           activities: composerState.activities,
           composerLayout: composerState.composerLayout,
+          templateLayoutProfiles,
           hasRawHtml: true, // Flag to indicate this uses rawHtml format
         });
         setEditingModule(item.id);
@@ -157,6 +164,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         moduleMode: item.mode || 'custom_html',
         activities: composerState.activities,
         composerLayout: composerState.composerLayout,
+        templateLayoutProfiles,
         hasRawHtml: false,
       });
       setEditingModule(item.id);
@@ -184,6 +192,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       moduleMode: item.mode || 'custom_html',
       activities: composerState.activities,
       composerLayout: composerState.composerLayout,
+      templateLayoutProfiles,
     });
     setEditingModule(item.id);
   }, []);
@@ -198,6 +207,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
     const currentModule = { ...items[idx] }; // Create a copy to avoid mutation issues
     const history = currentModule.history || [];
     const currentComposerState = normalizeComposerModuleConfig(currentModule);
+    const currentTemplateLayoutProfiles = normalizeTemplateLayoutProfiles(currentModule.templateLayoutProfiles, {
+      activities: currentComposerState.activities,
+    });
 
     // Create history snapshot (only save if content actually changed)
     const newSnapshot = {
@@ -210,6 +222,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       finlit: normalizeFinlitTemplateForSave(currentModule.finlit),
       activities: currentComposerState.activities,
       composerLayout: currentComposerState.composerLayout,
+      templateLayoutProfiles: currentTemplateLayoutProfiles,
       ...(currentModule.type === 'standalone'
         ? // Use rawHtml if available (new format), otherwise use legacy fields
           currentModule.rawHtml
@@ -250,6 +263,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
             maxColumns: nextComposerLayout.maxColumns,
             mode: nextComposerLayout.mode,
           });
+    const nextTemplateLayoutProfiles = normalizeTemplateLayoutProfiles(editForm.templateLayoutProfiles, {
+      activities: nextActivities,
+    });
 
     // Handle external link modules
     if (editForm.moduleType === 'external') {
@@ -263,6 +279,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         finlit: nextFinlit,
         activities: nextActivities,
         composerLayout: nextComposerLayout,
+        templateLayoutProfiles: nextTemplateLayoutProfiles,
         url: editForm.url,
         linkType: editForm.linkType || 'iframe',
         type: 'external',
@@ -284,6 +301,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           finlit: nextFinlit,
           activities: nextActivities,
           composerLayout: nextComposerLayout,
+          templateLayoutProfiles: nextTemplateLayoutProfiles,
           rawHtml: '',
           html: '',
           css: '',
@@ -303,6 +321,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           finlit: nextFinlit,
           activities: nextActivities,
           composerLayout: nextComposerLayout,
+          templateLayoutProfiles: nextTemplateLayoutProfiles,
           rawHtml: editForm.fullDocument.trim(),
           html: '',
           css: '',
@@ -324,6 +343,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         finlit: nextFinlit,
         activities: nextActivities,
         composerLayout: nextComposerLayout,
+        templateLayoutProfiles: nextTemplateLayoutProfiles,
         code: {
           id: items[idx].code?.id || editForm.id,
           html: editForm.html,
@@ -365,6 +385,10 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       const restoredTheme = normalizeModuleTheme(version.theme ?? items[idx].theme);
       const restoredHero = normalizeFinlitHeroForSave(version.hero ?? items[idx].hero);
       const restoredFinlit = normalizeFinlitTemplateForSave(version.finlit ?? items[idx].finlit);
+      const restoredTemplateLayoutProfiles = normalizeTemplateLayoutProfiles(
+        version.templateLayoutProfiles ?? items[idx].templateLayoutProfiles,
+        { activities: restoredComposer.activities },
+      );
 
       // Restore the version based on module type
       if (module.type === 'standalone') {
@@ -380,6 +404,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
             finlit: restoredFinlit,
             activities: restoredComposer.activities,
             composerLayout: restoredComposer.composerLayout,
+            templateLayoutProfiles: restoredTemplateLayoutProfiles,
             rawHtml: version.rawHtml,
             html: '',
             css: '',
@@ -396,6 +421,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
             finlit: restoredFinlit,
             activities: restoredComposer.activities,
             composerLayout: restoredComposer.composerLayout,
+            templateLayoutProfiles: restoredTemplateLayoutProfiles,
             rawHtml: '', // Clear rawHtml if reverting to legacy format
             html: version.html || '',
             css: version.css || '',
@@ -413,6 +439,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           finlit: restoredFinlit,
           activities: restoredComposer.activities,
           composerLayout: restoredComposer.composerLayout,
+          templateLayoutProfiles: restoredTemplateLayoutProfiles,
           url: version.url || '',
           linkType: version.linkType || 'iframe',
         };
@@ -427,6 +454,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           finlit: restoredFinlit,
           activities: restoredComposer.activities,
           composerLayout: restoredComposer.composerLayout,
+          templateLayoutProfiles: restoredTemplateLayoutProfiles,
           code: version.code || {},
         };
       }
