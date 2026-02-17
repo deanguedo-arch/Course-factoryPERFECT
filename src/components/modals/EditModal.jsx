@@ -594,6 +594,14 @@ export default function EditModal({
     updateActivities(activities, normalizedLayout);
   };
 
+  const updateComposerSimpleMatchTallestRow = (enabled) => {
+    const normalizedLayout = normalizeComposerLayout({
+      ...(editForm.composerLayout || {}),
+      simpleMatchTallestRow: enabled === true,
+    });
+    updateActivities(activities, normalizedLayout);
+  };
+
   const updateSelectedActivityMeta = (metaKey, updates) => {
     if (!selectedActivity) return;
     const nextActivities = activities.map((activity, idx) =>
@@ -761,6 +769,26 @@ export default function EditModal({
   };
 
   const addEmptyRow = () => {
+    if (!isCanvasMode && selectedPlacement) {
+      const insertAfterRow = Math.max(1, Number.parseInt(selectedPlacement.row, 10) || 1);
+      let changed = false;
+      const nextActivities = activities.map((activity, idx) => {
+        const placement = composerPlacementsByIndex.get(idx);
+        if (!placement || placement.row <= insertAfterRow) return activity;
+        changed = true;
+        return {
+          ...activity,
+          layout: {
+            ...(activity.layout || {}),
+            row: placement.row + 1,
+          },
+        };
+      });
+      if (changed) {
+        updateActivities(nextActivities);
+        return;
+      }
+    }
     setComposerExtraRows((count) => Math.min(50, count + 1));
   };
 
@@ -3024,7 +3052,30 @@ export default function EditModal({
                                   />
                                 </label>
                               </div>
-                            ) : null}
+                            ) : (
+                              <label className="mt-2 flex items-center justify-between gap-3 rounded border border-slate-700 bg-slate-900/70 px-2 py-2 text-[10px] text-slate-300">
+                                <div>
+                                  <p className="font-black uppercase tracking-wide text-slate-200">Match Tallest Block Per Row</p>
+                                  <p className="text-slate-500">Keep row cards the same height in simple mode.</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => updateComposerSimpleMatchTallestRow(!(composerLayout.simpleMatchTallestRow === true))}
+                                  className={`inline-flex h-5 w-9 items-center rounded-full border transition-colors ${
+                                    composerLayout.simpleMatchTallestRow === true
+                                      ? 'border-blue-300 bg-blue-500'
+                                      : 'border-slate-600 bg-slate-800'
+                                  }`}
+                                  aria-label="Toggle simple row height matching"
+                                >
+                                  <span
+                                    className={`mx-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                                      composerLayout.simpleMatchTallestRow === true ? 'translate-x-4' : ''
+                                    }`}
+                                  />
+                                </button>
+                              </label>
+                            )}
                           </div>
 
                           <div className="max-h-72 overflow-y-auto pr-1">
@@ -3254,7 +3305,7 @@ export default function EditModal({
                                   type="button"
                                   onClick={addEmptyRow}
                                   className="w-full mt-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1.5 text-white text-xs inline-flex items-center justify-center gap-1"
-                                  title="Add one open row of empty drop targets"
+                                  title="Add one open row below the selected block (or at bottom if none selected)"
                                 >
                                   <Plus size={12} /> Add Open Row
                                 </button>

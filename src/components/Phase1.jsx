@@ -308,6 +308,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     rowHeight: 24,
     margin: [12, 12],
     containerPadding: [12, 12],
+    simpleMatchTallestRow: false,
   });
   const [moduleManagerComposerActivities, setModuleManagerComposerActivities] = useState([]);
   const [moduleManagerComposerExtraRows, setModuleManagerComposerExtraRows] = useState(0);
@@ -1494,6 +1495,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       rowHeight: 24,
       margin: [12, 12],
       containerPadding: [12, 12],
+      simpleMatchTallestRow: false,
     });
     setModuleManagerComposerActivities(
       normalizeComposerActivities([buildComposerStarterActivity(moduleManagerComposerStarterType)], {
@@ -1983,6 +1985,14 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     updateComposerActivities(moduleManagerComposerActivities, normalizedLayout);
   };
 
+  const updateComposerSimpleMatchTallestRow = (enabled) => {
+    const normalizedLayout = normalizeComposerLayout({
+      ...(moduleManagerComposerLayout || {}),
+      simpleMatchTallestRow: enabled === true,
+    });
+    updateComposerActivities(moduleManagerComposerActivities, normalizedLayout);
+  };
+
   useEffect(() => {
     const handleComposerUndoRedo = (event) => {
       if (moduleManagerType !== 'composer') return;
@@ -2200,6 +2210,26 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   };
 
   const addComposerEmptyRowDraft = () => {
+    if (!isModuleManagerCanvasMode && selectedComposerPlacement) {
+      const insertAfterRow = Math.max(1, Number.parseInt(selectedComposerPlacement.row, 10) || 1);
+      let changed = false;
+      const nextActivities = moduleManagerComposerActivities.map((activity, idx) => {
+        const placement = moduleManagerPlacementByIndex.get(idx);
+        if (!placement || placement.row <= insertAfterRow) return activity;
+        changed = true;
+        return {
+          ...activity,
+          layout: {
+            ...(activity.layout || {}),
+            row: placement.row + 1,
+          },
+        };
+      });
+      if (changed) {
+        updateComposerActivities(nextActivities);
+        return;
+      }
+    }
     pushComposerHistorySnapshot(buildComposerSnapshot());
     setModuleManagerComposerExtraRows((count) => Math.min(50, count + 1));
   };
@@ -4415,7 +4445,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         hero: normalizedHero,
         finlit: normalizedFinlit,
         activities: [],
-        composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12] },
+        composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12], simpleMatchTallestRow: false },
         // Store the COMPLETE raw HTML document - this is the key change
         rawHtml: rawHtml,
         // Keep these for backward compatibility (empty for new modules)
@@ -4432,7 +4462,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           hero: normalizedHero,
           finlit: normalizedFinlit,
           activities: [],
-          composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12] },
+          composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12], simpleMatchTallestRow: false },
           rawHtml: rawHtml
         }]
       };
@@ -4571,6 +4601,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         rowHeight: 24,
         margin: [12, 12],
         containerPadding: [12, 12],
+        simpleMatchTallestRow: false,
       });
       setModuleManagerComposerActivities(
         normalizeComposerActivities([buildComposerStarterActivity(moduleManagerComposerStarterType)], {
@@ -4643,7 +4674,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         hero: normalizedHero,
         finlit: normalizedFinlit,
         activities: [],
-        composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12] },
+        composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12], simpleMatchTallestRow: false },
         url: moduleManagerURL,
         linkType: moduleManagerLinkType,
         // Initialize history with version 1 (original state)
@@ -4656,7 +4687,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           hero: normalizedHero,
           finlit: normalizedFinlit,
           activities: [],
-          composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12] },
+          composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12], simpleMatchTallestRow: false },
           url: moduleManagerURL,
           linkType: moduleManagerLinkType
         }]
@@ -7325,7 +7356,30 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                             />
                                                         </label>
                                                     </div>
-                                                ) : null}
+                                                ) : (
+                                                    <label className="mt-2 flex items-center justify-between gap-3 rounded border border-slate-700 bg-slate-900/70 px-2 py-2 text-[10px] text-slate-300">
+                                                        <div>
+                                                            <p className="font-black uppercase tracking-wide text-slate-200">Match Tallest Block Per Row</p>
+                                                            <p className="text-slate-500">Keep row cards the same height in simple mode.</p>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => updateComposerSimpleMatchTallestRow(!(normalizedModuleManagerLayout.simpleMatchTallestRow === true))}
+                                                            className={`inline-flex h-5 w-9 items-center rounded-full border transition-colors ${
+                                                                normalizedModuleManagerLayout.simpleMatchTallestRow === true
+                                                                    ? 'border-indigo-300 bg-indigo-500'
+                                                                    : 'border-slate-600 bg-slate-800'
+                                                            }`}
+                                                            aria-label="Toggle simple row height matching"
+                                                        >
+                                                            <span
+                                                                className={`mx-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                                                                    normalizedModuleManagerLayout.simpleMatchTallestRow === true ? 'translate-x-4' : ''
+                                                                }`}
+                                                            />
+                                                        </button>
+                                                    </label>
+                                                )}
                                             </div>
 
                                             {moduleManagerComposerSidebarMode === 'grid' ? (
@@ -7611,7 +7665,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                             type="button"
                                                             onClick={addComposerEmptyRowDraft}
                                                             className="w-full mt-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1.5 text-white text-xs inline-flex items-center justify-center gap-1"
-                                                            title="Add one open row of empty drop targets"
+                                                            title="Add one open row below the selected block (or at bottom if none selected)"
                                                         >
                                                             <Plus size={12} /> Add Open Row
                                                         </button>

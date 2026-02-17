@@ -2033,8 +2033,9 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
         </div>
       `;
     }
+    const simpleMatchTallestRow = composerLayout.simpleMatchTallestRow === true;
     return `
-      <div class="grid gap-6" data-composer-root data-composer-columns="${composerLayout.maxColumns}" data-composer-layout-mode="simple" style="grid-template-columns: repeat(${composerLayout.maxColumns}, minmax(0, 1fr)); grid-auto-flow: row;">
+      <div class="grid gap-6" data-composer-root data-composer-columns="${composerLayout.maxColumns}" data-composer-layout-mode="simple" data-composer-simple-match-tallest-row="${simpleMatchTallestRow ? 'true' : 'false'}" style="grid-template-columns: repeat(${composerLayout.maxColumns}, minmax(0, 1fr)); grid-auto-flow: row;">
         ${sections}
       </div>
     `;
@@ -2291,6 +2292,9 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
       .cf-composer-activity.cf-title-xl :is(h1,h2,h3,h4) { font-size: 1.75rem !important; }
       .cf-composer-activity.cf-canvas-item { min-height: 0; overflow: hidden; }
       .cf-composer-activity.cf-canvas-item > :first-child { height: 100%; overflow: auto; box-sizing: border-box; }
+      [data-composer-root][data-composer-layout-mode="simple"][data-composer-simple-match-tallest-row="true"] { align-items: stretch; }
+      [data-composer-root][data-composer-layout-mode="simple"][data-composer-simple-match-tallest-row="true"] > .cf-composer-activity { height: 100%; }
+      [data-composer-root][data-composer-layout-mode="simple"][data-composer-simple-match-tallest-row="true"] > .cf-composer-activity > :first-child { height: 100%; box-sizing: border-box; }
       [data-composer-root][data-composer-layout-mode="simple"] textarea { resize: none !important; overflow-y: auto; }
       ${themeCss}
     </style>

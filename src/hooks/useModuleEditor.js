@@ -26,7 +26,7 @@ const DEFAULT_EDIT_FORM = {
   finlit: createFinlitTemplateFormState(),
   moduleMode: 'custom_html',
   activities: [],
-  composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12] },
+  composerLayout: { mode: 'simple', maxColumns: 1, rowHeight: 24, margin: [12, 12], containerPadding: [12, 12], simpleMatchTallestRow: false },
   url: '',
   linkType: 'iframe',
   fullDocument: '',

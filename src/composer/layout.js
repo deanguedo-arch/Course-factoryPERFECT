@@ -6,6 +6,7 @@ export const COMPOSER_DEFAULT_MODE = 'simple';
 export const COMPOSER_DEFAULT_ROW_HEIGHT = 24;
 export const COMPOSER_DEFAULT_MARGIN = [12, 12];
 export const COMPOSER_DEFAULT_CONTAINER_PADDING = [12, 12];
+export const COMPOSER_DEFAULT_SIMPLE_MATCH_TALLEST_ROW = false;
 
 const ACTIVITY_PADDING_VALUES = ['sm', 'md', 'lg'];
 const ACTIVITY_VARIANT_VALUES = ['card', 'flat'];
@@ -135,6 +136,7 @@ export function normalizeComposerLayout(layout) {
   next.rowHeight = clampInteger(next.rowHeight, 8, 200, COMPOSER_DEFAULT_ROW_HEIGHT);
   next.margin = normalizeSpacingPair(next.margin, COMPOSER_DEFAULT_MARGIN);
   next.containerPadding = normalizeSpacingPair(next.containerPadding, COMPOSER_DEFAULT_CONTAINER_PADDING);
+  next.simpleMatchTallestRow = next.simpleMatchTallestRow === true;
   return next;
 }
 
