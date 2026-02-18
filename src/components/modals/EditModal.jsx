@@ -7,6 +7,7 @@ import {
   Clock,
   Copy,
   Edit,
+  FolderOpen,
   Plus,
   RefreshCw,
   RotateCcw,
@@ -19,6 +20,7 @@ import {
   getActivityDefinition,
   listActivityTypeGroups,
   listActivityTypes,
+  normalizeFillableChartData,
   normalizeKnowledgeCheckBuilderQuestions,
   normalizeWorksheetBuilderBlocks,
 } from '../../composer/activityRegistry.js';
@@ -39,6 +41,7 @@ import {
 import { isComposerEnabled } from '../../utils/composer.js';
 import { buildModuleFrameHTML, buildPreviewStorageScope } from '../../utils/generators.js';
 import {
+  FINLIT_CORE_TAB_IDS,
   createFinlitHeroFormState,
   createFinlitTemplateFormState,
   normalizeFinlitHeroForSave,
@@ -46,6 +49,7 @@ import {
 } from '../../utils/finlitHero.js';
 import GenericDataEditor from '../GenericDataEditor.jsx';
 import HotspotEditor from '../composer/HotspotEditor.jsx';
+import VaultBrowser from '../VaultBrowser.jsx';
 import ReactGridLayout, { WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -148,6 +152,15 @@ function getThemePreviewColors(themeValue) {
 function normalizeColorInputValue(value, fallback = '#0f172a') {
   const raw = String(value || '').trim();
   return /^#[0-9a-f]{6}$/i.test(raw) ? raw : fallback;
+}
+
+function normalizeEditorTabToken(value, fallback = 'tab') {
+  const raw = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return raw || fallback;
 }
 
 function extractRichEditorText(html) {
@@ -383,6 +396,24 @@ export default function EditModal({
     () => normalizeComposerActivities(editForm.activities, { maxColumns: composerMaxColumns, mode: composerLayout.mode }),
     [editForm.activities, composerLayout.mode, composerMaxColumns],
   );
+  const finlitLinkableActivities = useMemo(
+    () =>
+      activities
+        .map((activity) => {
+          const id = String(activity?.id || '').trim();
+          if (!id || activity?.type === 'tab_group') return null;
+          const definition = getActivityDefinition(activity?.type);
+          const rawLabel = activity?.data?.title || activity?.data?.text || definition?.label || id;
+          const label = String(rawLabel || '').trim() || id;
+          return {
+            id,
+            type: activity?.type || '',
+            label,
+          };
+        })
+        .filter(Boolean),
+    [activities],
+  );
   const normalizedTemplateLayoutProfiles = useMemo(
     () => normalizeTemplateLayoutProfiles(editForm.templateLayoutProfiles, { activities }),
     [activities, editForm.templateLayoutProfiles],
@@ -420,9 +451,14 @@ export default function EditModal({
   const [draggingWorksheetBlockIndex, setDraggingWorksheetBlockIndex] = useState(null);
   const [dragOverWorksheetBlockIndex, setDragOverWorksheetBlockIndex] = useState(null);
   const [composerPreviewNonce, setComposerPreviewNonce] = useState(0);
+  const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [vaultTargetField, setVaultTargetField] = useState(null);
   const richEditorRef = useRef(null);
   const richEditorSelectionRef = useRef(null);
   const richEditorUpdateTimerRef = useRef(null);
+  const composerPreviewIframeRef = useRef(null);
+  const composerPreviewTargetActivityIdRef = useRef('');
+  const composerPreviewShouldFollowRef = useRef(false);
   const composerGridModel = useMemo(
     () =>
       buildComposerGridModel(activities, composerMaxColumns, {
@@ -562,6 +598,44 @@ export default function EditModal({
       }) || ''
     );
   }, [activities, composerLayout, composerPreviewStorageScope, editForm.id, editForm.template, editForm.theme, editForm.title, finlitHero, finlitSettings, projectData, standaloneMode]);
+
+  const scrollComposerPreviewToActivity = React.useCallback((activityId) => {
+    const targetId = String(activityId || '').trim();
+    if (!targetId) return false;
+    const iframe = composerPreviewIframeRef.current;
+    const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
+    if (!doc) return false;
+    const escaped = targetId.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    const target = doc.querySelector(`[data-activity-id="${escaped}"]`);
+    if (!target || typeof target.scrollIntoView !== 'function') return false;
+    target.scrollIntoView({ block: 'center', inline: 'nearest' });
+    return true;
+  }, []);
+
+  useEffect(() => {
+    composerPreviewTargetActivityIdRef.current = String(selectedActivity?.id || '').trim();
+  }, [selectedActivity?.id]);
+
+  useEffect(() => {
+    if (standaloneMode !== 'composer') {
+      composerPreviewShouldFollowRef.current = false;
+      return;
+    }
+    composerPreviewShouldFollowRef.current = true;
+  }, [standaloneMode, selectedActivity?.id, activities]);
+
+  useEffect(() => {
+    if (standaloneMode !== 'composer') return;
+    if (!composerPreviewShouldFollowRef.current) return;
+    const targetId = String(selectedActivity?.id || '').trim();
+    if (!targetId) return;
+    const timer = setTimeout(() => {
+      if (scrollComposerPreviewToActivity(targetId)) {
+        composerPreviewShouldFollowRef.current = false;
+      }
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [composerPreviewSrcDoc, selectedActivity?.id, scrollComposerPreviewToActivity, standaloneMode]);
 
   const buildTemplateLayoutProfilesForComposerState = ({
     templateOverride = editForm.template,
@@ -1045,52 +1119,132 @@ export default function EditModal({
     });
   };
 
-  const updateFinlitSettingField = (key, value) => {
-    if (!['activitiesTabLabel', 'additionalTabLabel'].includes(key)) return;
-    const nextFinlit = {
-      ...finlitSettings,
-      [key]: value,
-    };
-    setEditForm({
-      ...editForm,
-      finlit: nextFinlit,
-    });
+  const sanitizeFinlitTabActivityIds = (ids) => {
+    const valid = new Set(finlitLinkableActivities.map((entry) => entry.id));
+    const seen = new Set();
+    return (Array.isArray(ids) ? ids : [])
+      .map((item) => String(item || '').trim())
+      .filter((id) => id && valid.has(id) && !seen.has(id) && seen.add(id));
   };
 
-  const addFinlitLink = () => {
-    const nextLinks = [...(Array.isArray(finlitSettings.additionalLinks) ? finlitSettings.additionalLinks : []), { title: '', url: '', description: '' }];
+  const updateFinlitTabs = (updater) => {
+    const tabs = Array.isArray(finlitSettings.tabs) ? finlitSettings.tabs : [];
+    const draftTabs = tabs.map((tab) => ({
+      ...tab,
+      activityIds: Array.isArray(tab.activityIds) ? [...tab.activityIds] : [],
+      links: Array.isArray(tab.links) ? tab.links.map((link) => ({ ...link })) : [],
+    }));
+    const updatedTabs = typeof updater === 'function' ? updater(draftTabs) : draftTabs;
     setEditForm({
       ...editForm,
       finlit: {
         ...finlitSettings,
-        additionalLinks: nextLinks,
+        tabs: Array.isArray(updatedTabs) ? updatedTabs : draftTabs,
       },
     });
   };
 
-  const updateFinlitLink = (index, updates) => {
-    const links = Array.isArray(finlitSettings.additionalLinks) ? finlitSettings.additionalLinks : [];
-    if (!Number.isInteger(index) || index < 0 || index >= links.length) return;
-    const nextLinks = links.map((item, idx) => (idx === index ? { ...item, ...updates } : item));
-    setEditForm({
-      ...editForm,
-      finlit: {
-        ...finlitSettings,
-        additionalLinks: nextLinks,
-      },
+  const addFinlitTab = () => {
+    updateFinlitTabs((tabs) => {
+      const existing = new Set(tabs.map((tab) => String(tab?.id || '').trim()));
+      const base = normalizeEditorTabToken(`tab-${tabs.length + 1}`, `tab-${tabs.length + 1}`);
+      let nextId = base;
+      let suffix = 2;
+      while (existing.has(nextId)) {
+        nextId = `${base}-${suffix}`;
+        suffix += 1;
+      }
+      return [
+        ...tabs,
+        {
+          id: nextId,
+          label: `Tab ${tabs.length + 1}`,
+          activityIds: [],
+          links: [],
+        },
+      ];
     });
   };
 
-  const removeFinlitLink = (index) => {
-    const links = Array.isArray(finlitSettings.additionalLinks) ? finlitSettings.additionalLinks : [];
-    const nextLinks = links.filter((_, idx) => idx !== index);
-    setEditForm({
-      ...editForm,
-      finlit: {
-        ...finlitSettings,
-        additionalLinks: nextLinks,
-      },
-    });
+  const updateFinlitTab = (tabId, updates) => {
+    const targetId = String(tabId || '').trim();
+    if (!targetId) return;
+    updateFinlitTabs((tabs) =>
+      tabs.map((tab) => {
+        if (String(tab?.id || '').trim() !== targetId) return tab;
+        const nextLabel = updates && Object.prototype.hasOwnProperty.call(updates, 'label') ? String(updates.label || '') : tab.label;
+        const nextIds =
+          updates && Object.prototype.hasOwnProperty.call(updates, 'activityIds')
+            ? sanitizeFinlitTabActivityIds(updates.activityIds)
+            : sanitizeFinlitTabActivityIds(tab.activityIds);
+        return {
+          ...tab,
+          ...updates,
+          label: nextLabel,
+          activityIds: nextIds,
+        };
+      }),
+    );
+  };
+
+  const removeFinlitTab = (tabId) => {
+    const targetId = String(tabId || '').trim();
+    if (!targetId || FINLIT_CORE_TAB_IDS.includes(targetId)) return;
+    updateFinlitTabs((tabs) => tabs.filter((tab) => String(tab?.id || '').trim() !== targetId));
+  };
+
+  const addFinlitTabLink = (tabId) => {
+    const targetId = String(tabId || '').trim();
+    if (!targetId) return;
+    updateFinlitTabs((tabs) =>
+      tabs.map((tab) =>
+        String(tab?.id || '').trim() === targetId
+          ? { ...tab, links: [...(Array.isArray(tab.links) ? tab.links : []), { title: '', url: '', description: '' }] }
+          : tab,
+      ),
+    );
+  };
+
+  const updateFinlitTabLink = (tabId, index, updates) => {
+    const targetId = String(tabId || '').trim();
+    if (!targetId) return;
+    updateFinlitTabs((tabs) =>
+      tabs.map((tab) => {
+        if (String(tab?.id || '').trim() !== targetId) return tab;
+        const links = Array.isArray(tab.links) ? tab.links : [];
+        if (!Number.isInteger(index) || index < 0 || index >= links.length) return tab;
+        return {
+          ...tab,
+          links: links.map((link, linkIdx) => (linkIdx === index ? { ...link, ...updates } : link)),
+        };
+      }),
+    );
+  };
+
+  const removeFinlitTabLink = (tabId, index) => {
+    const targetId = String(tabId || '').trim();
+    if (!targetId) return;
+    updateFinlitTabs((tabs) =>
+      tabs.map((tab) => {
+        if (String(tab?.id || '').trim() !== targetId) return tab;
+        const links = Array.isArray(tab.links) ? tab.links : [];
+        return {
+          ...tab,
+          links: links.filter((_, linkIdx) => linkIdx !== index),
+        };
+      }),
+    );
+  };
+
+  const handleVaultSelect = (payload) => {
+    const kind = payload && typeof payload === 'object' ? payload.kind : null;
+    const selectedFile = kind === 'vault-file' ? payload.file : payload;
+    const filePath = String(selectedFile?.path || '').trim();
+    if (vaultTargetField && typeof vaultTargetField === 'object' && vaultTargetField.target === 'finlit-hero-media' && filePath) {
+      updateFinlitHeroField('mediaUrl', filePath);
+    }
+    setIsVaultOpen(false);
+    setVaultTargetField(null);
   };
 
   const queueRichEditorUpdate = (html, text, immediate = false) => {
@@ -1909,6 +2063,29 @@ export default function EditModal({
         const nextBlocks = reorderByIndex(blocks, fromIndex, toIndex);
         updateSelectedActivityData({ blocks: nextBlocks });
       };
+      const setWorksheetBlockField = (blockIdx, updates) => {
+        const nextBlocks = blocks.map((item, idx) => (idx === blockIdx ? { ...item, ...updates } : item));
+        updateSelectedActivityData({ blocks: nextBlocks });
+      };
+      const runWorksheetHelperRichCommand = (blockIdx, command, value = null) => {
+        const editor = document.querySelector(`[data-edit-worksheet-helper-editor="${blockIdx}"]`);
+        if (!(editor instanceof HTMLElement)) return;
+        editor.focus();
+        if (command === 'createLink') {
+          const url = window.prompt('Enter URL');
+          if (!url) return;
+          document.execCommand('createLink', false, url);
+        } else {
+          document.execCommand(command, false, value);
+        }
+        const html = editor.innerHTML || '';
+        const text = editor.innerText || '';
+        setWorksheetBlockField(blockIdx, {
+          helperMode: 'rich',
+          helperHtml: html,
+          helperText: text,
+        });
+      };
       return (
         <div className="space-y-3">
           <div>
@@ -2063,50 +2240,92 @@ export default function EditModal({
                         </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-12 gap-2">
-                        <div className="col-span-5">
-                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Field Label</label>
-                          <input
-                            type="text"
-                            value={block.label || ''}
-                            onChange={(e) => {
-                              const nextBlocks = blocks.map((item, idx) => (idx === blockIdx ? { ...item, label: e.target.value } : item));
-                              updateSelectedActivityData({ blocks: nextBlocks });
-                            }}
-                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
-                            placeholder="Field label"
-                          />
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-12 gap-2">
+                          <div className="col-span-5">
+                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Field Label</label>
+                            <input
+                              type="text"
+                              value={block.label || ''}
+                              onChange={(e) => setWorksheetBlockField(blockIdx, { label: e.target.value })}
+                              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                              placeholder="Field label"
+                            />
+                          </div>
+                          <div className="col-span-3">
+                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Input Type</label>
+                            <select
+                              value={block.fieldType || 'text'}
+                              onChange={(e) => setWorksheetBlockField(blockIdx, { fieldType: e.target.value || 'text' })}
+                              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                            >
+                              <option value="text">Text</option>
+                              <option value="textarea">Textarea</option>
+                              <option value="number">Number</option>
+                            </select>
+                          </div>
+                          <div className="col-span-4">
+                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Placeholder</label>
+                            <input
+                              type="text"
+                              value={block.placeholder || ''}
+                              onChange={(e) => setWorksheetBlockField(blockIdx, { placeholder: e.target.value })}
+                              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                              placeholder="Optional placeholder"
+                            />
+                          </div>
                         </div>
-                        <div className="col-span-3">
-                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Input Type</label>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Prompt Mode</label>
                           <select
-                            value={block.fieldType || 'text'}
-                            onChange={(e) => {
-                              const nextBlocks = blocks.map((item, idx) =>
-                                idx === blockIdx ? { ...item, fieldType: e.target.value || 'text' } : item,
-                              );
-                              updateSelectedActivityData({ blocks: nextBlocks });
-                            }}
+                            value={block.helperMode === 'rich' ? 'rich' : 'plain'}
+                            onChange={(e) => setWorksheetBlockField(blockIdx, { helperMode: e.target.value === 'rich' ? 'rich' : 'plain' })}
                             className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
                           >
-                            <option value="text">Text</option>
-                            <option value="textarea">Textarea</option>
-                            <option value="number">Number</option>
+                            <option value="plain">Plain Prompt</option>
+                            <option value="rich">Rich Prompt</option>
                           </select>
                         </div>
-                        <div className="col-span-4">
-                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Placeholder</label>
-                          <input
-                            type="text"
-                            value={block.placeholder || ''}
-                            onChange={(e) => {
-                              const nextBlocks = blocks.map((item, idx) => (idx === blockIdx ? { ...item, placeholder: e.target.value } : item));
-                              updateSelectedActivityData({ blocks: nextBlocks });
-                            }}
-                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
-                            placeholder="Optional placeholder"
-                          />
-                        </div>
+                        {block.helperMode === 'rich' ? (
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-1">
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'bold')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">B</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'italic')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs italic">I</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'underline')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs underline">U</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'insertUnorderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">• List</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'createLink')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Link</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'removeFormat')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Clear</button>
+                            </div>
+                            <div className="rounded border border-slate-700 bg-slate-950">
+                              <div
+                                data-edit-worksheet-helper-editor={blockIdx}
+                                contentEditable
+                                suppressContentEditableWarning
+                                className="cf-rich-editor min-h-[120px] p-2 text-xs text-white outline-none"
+                                dangerouslySetInnerHTML={{ __html: block.helperHtml || '' }}
+                                onInput={(event) => {
+                                  const html = event.currentTarget.innerHTML || '';
+                                  const text = event.currentTarget.innerText || '';
+                                  setWorksheetBlockField(blockIdx, {
+                                    helperMode: 'rich',
+                                    helperHtml: html,
+                                    helperText: text,
+                                  });
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Prompt Text</label>
+                            <textarea
+                              value={block.helperText || ''}
+                              onChange={(e) => setWorksheetBlockField(blockIdx, { helperText: e.target.value })}
+                              className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                              placeholder="Add context/instructions shown above this field."
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2130,6 +2349,205 @@ export default function EditModal({
             >
               <Plus size={12} /> Add Field
             </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedActivity.type === 'fillable_chart') {
+      const chart = normalizeFillableChartData(data);
+      const updateChart = (updates = {}) => {
+        const source = {
+          ...data,
+          rowCount: updates?.rowCount ?? chart.rowCount,
+          colCount: updates?.colCount ?? chart.colCount,
+          showRowLabels: updates?.showRowLabels ?? chart.showRowLabels,
+          rowLabelHeader: updates?.rowLabelHeader ?? chart.rowLabelHeader,
+          rows: updates?.rows ?? chart.rows,
+          columns: updates?.columns ?? chart.columns,
+          cells: updates?.cells ?? chart.cells,
+        };
+        updateSelectedActivityData(normalizeFillableChartData(source));
+      };
+      return (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Chart Title</label>
+            <input
+              type="text"
+              value={data.title || ''}
+              onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
+              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              placeholder="Fillable Chart"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-300 mb-1">Description</label>
+            <textarea
+              value={data.description || ''}
+              onChange={(e) => updateSelectedActivityData({ description: e.target.value })}
+              className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              placeholder="Explain how students should use the chart."
+            />
+          </div>
+          <div className="grid grid-cols-12 gap-2">
+            <div className="col-span-3">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Rows</label>
+              <input
+                type="number"
+                min="1"
+                max="8"
+                value={chart.rowCount}
+                onChange={(e) => updateChart({ rowCount: Math.max(1, Math.min(8, Number.parseInt(e.target.value, 10) || 1)) })}
+                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+              />
+            </div>
+            <div className="col-span-3">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Columns</label>
+              <input
+                type="number"
+                min="1"
+                max="8"
+                value={chart.colCount}
+                onChange={(e) => updateChart({ colCount: Math.max(1, Math.min(8, Number.parseInt(e.target.value, 10) || 1)) })}
+                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+              />
+            </div>
+            <div className="col-span-3">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Row Label Column</label>
+              <label className="inline-flex items-center gap-2 rounded border border-slate-700 bg-slate-950 px-2 py-2 text-xs text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={chart.showRowLabels !== false}
+                  onChange={(e) => updateChart({ showRowLabels: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                Show
+              </label>
+            </div>
+            <div className="col-span-3">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Column A Header</label>
+              <input
+                type="text"
+                value={chart.rowLabelHeader || ''}
+                onChange={(e) => updateChart({ rowLabelHeader: e.target.value })}
+                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs disabled:opacity-50"
+                placeholder="Rows"
+                disabled={chart.showRowLabels === false}
+              />
+            </div>
+            <div className="col-span-12 flex items-end justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  const rowCount = chart.rowCount;
+                  const nextColumns = [
+                    { id: 'col-pros', label: 'Pros' },
+                    { id: 'col-cons', label: 'Cons' },
+                  ];
+                  const nextCells = Array.from({ length: rowCount }, (_, rowIdx) => {
+                    const existingRow = Array.isArray(chart.cells[rowIdx]) ? chart.cells[rowIdx] : [];
+                    return [
+                      { ...(existingRow[0] || {}), editable: true, placeholder: 'Add a pro...' },
+                      { ...(existingRow[1] || {}), editable: true, placeholder: 'Add a con...' },
+                    ];
+                  });
+                  updateChart({
+                    colCount: 2,
+                    columns: nextColumns,
+                    cells: nextCells,
+                  });
+                }}
+                className="px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white"
+              >
+                Apply Pros/Cons Preset
+              </button>
+            </div>
+          </div>
+          <div className="rounded border border-slate-700 bg-slate-900/60 p-2 space-y-2">
+            <label className="block text-[11px] font-bold text-slate-400 uppercase">Column Labels</label>
+            {chart.columns.map((column, colIdx) => (
+              <input
+                key={`chart-col-${colIdx}`}
+                type="text"
+                value={column.label || ''}
+                onChange={(e) => {
+                  const nextColumns = chart.columns.map((item, idx) => (idx === colIdx ? { ...item, label: e.target.value } : item));
+                  updateChart({ columns: nextColumns });
+                }}
+                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                placeholder={`Column ${colIdx + 1}`}
+              />
+            ))}
+          </div>
+          <div className="rounded border border-slate-700 bg-slate-900/60 p-2 space-y-2">
+            <label className="block text-[11px] font-bold text-slate-400 uppercase">Cells</label>
+            {chart.rows.map((row, rowIdx) => (
+              <div key={`chart-cell-row-${rowIdx}`} className="rounded border border-slate-700 bg-slate-950/60 p-2 space-y-2">
+                {chart.showRowLabels !== false && (
+                  <div className="grid grid-cols-12 gap-2 items-center">
+                    <span className="col-span-2 text-[11px] font-bold text-slate-400 uppercase">Row Label</span>
+                    <input
+                      type="text"
+                      value={row.label || ''}
+                      onChange={(e) => {
+                        const nextRows = chart.rows.map((item, idx) => (idx === rowIdx ? { ...item, label: e.target.value } : item));
+                        updateChart({ rows: nextRows });
+                      }}
+                      className="col-span-10 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                      placeholder={`Row ${rowIdx + 1}`}
+                    />
+                  </div>
+                )}
+                {chart.columns.map((column, colIdx) => {
+                  const cell = chart.cells[rowIdx][colIdx];
+                  return (
+                    <div key={`chart-cell-${rowIdx}-${colIdx}`} className="grid grid-cols-12 gap-2 items-center">
+                      <p className="col-span-3 text-[11px] text-slate-400 truncate">{column.label || `Column ${colIdx + 1}`}</p>
+                      <input
+                        type="text"
+                        value={cell.label || ''}
+                        onChange={(e) => {
+                          const nextCells = chart.cells.map((items, rIdx) =>
+                            items.map((item, cIdx) => (rIdx === rowIdx && cIdx === colIdx ? { ...item, label: e.target.value } : item)),
+                          );
+                          updateChart({ cells: nextCells });
+                        }}
+                        className="col-span-4 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                        placeholder="Cell label/content"
+                      />
+                      <label className="col-span-2 inline-flex items-center gap-1 text-[11px] text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={cell.editable !== false}
+                          onChange={(e) => {
+                            const nextCells = chart.cells.map((items, rIdx) =>
+                              items.map((item, cIdx) => (rIdx === rowIdx && cIdx === colIdx ? { ...item, editable: e.target.checked } : item)),
+                            );
+                            updateChart({ cells: nextCells });
+                          }}
+                          className="w-4 h-4"
+                        />
+                        Editable
+                      </label>
+                      <input
+                        type="text"
+                        value={cell.placeholder || ''}
+                        onChange={(e) => {
+                          const nextCells = chart.cells.map((items, rIdx) =>
+                            items.map((item, cIdx) => (rIdx === rowIdx && cIdx === colIdx ? { ...item, placeholder: e.target.value } : item)),
+                          );
+                          updateChart({ cells: nextCells });
+                        }}
+                        className="col-span-3 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                        placeholder="Placeholder"
+                        disabled={cell.editable === false}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
       );
@@ -2848,93 +3266,189 @@ export default function EditModal({
                         </div>
                         <div className="md:col-span-2">
                           <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Media URL</label>
-                          <input
-                            type="text"
-                            value={finlitHero.mediaUrl}
-                            onChange={(e) => updateFinlitHeroField('mediaUrl', e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                            placeholder="https://... /materials/... / YouTube embed URL"
-                          />
+                          <div className="grid grid-cols-12 gap-2">
+                            <input
+                              type="text"
+                              value={finlitHero.mediaUrl}
+                              onChange={(e) => updateFinlitHeroField('mediaUrl', e.target.value)}
+                              className="col-span-9 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                              placeholder="https://... /materials/... / YouTube embed URL"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVaultTargetField({ target: 'finlit-hero-media' });
+                                setIsVaultOpen(true);
+                              }}
+                              className="col-span-3 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
+                              title="Select hero media from vault"
+                            >
+                              <FolderOpen size={11} /> Vault
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     <div className="rounded border border-slate-700 bg-slate-900/60 p-3 space-y-3">
-                      <div>
-                        <h4 className="text-[11px] font-bold text-slate-300 uppercase">Tabs</h4>
-                        <p className="text-[11px] text-slate-500 mt-1">Control tab labels and Additional Learning links.</p>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="flex items-center justify-between gap-2">
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Activities Tab Label</label>
-                          <input
-                            type="text"
-                            value={finlitSettings.activitiesTabLabel}
-                            onChange={(e) => updateFinlitSettingField('activitiesTabLabel', e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                            placeholder="Activities"
-                          />
+                          <h4 className="text-[11px] font-bold text-slate-300 uppercase">Tabs</h4>
+                          <p className="text-[11px] text-slate-500 mt-1">Add custom tabs, link activities, and add optional resource links.</p>
                         </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Additional Tab Label</label>
-                          <input
-                            type="text"
-                            value={finlitSettings.additionalTabLabel}
-                            onChange={(e) => updateFinlitSettingField('additionalTabLabel', e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                            placeholder="Additional Learning"
-                          />
-                        </div>
+                        <button
+                          type="button"
+                          onClick={addFinlitTab}
+                          className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-[10px] font-bold text-white inline-flex items-center gap-1"
+                        >
+                          <Plus size={12} /> Add Tab
+                        </button>
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-[11px] font-bold text-slate-400 uppercase">Additional Learning Links</label>
-                          <button
-                            type="button"
-                            onClick={addFinlitLink}
-                            className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-[10px] font-bold text-white inline-flex items-center gap-1"
-                          >
-                            <Plus size={12} /> Add Link
-                          </button>
-                        </div>
-                        {finlitSettings.additionalLinks.length === 0 ? (
-                          <p className="text-[11px] text-slate-500">No links added yet.</p>
-                        ) : (
-                          finlitSettings.additionalLinks.map((link, index) => (
-                            <div key={`edit-finlit-link-${index}`} className="rounded border border-slate-700 bg-slate-950/70 p-2 space-y-2">
+                      <div className="space-y-3">
+                        {finlitSettings.tabs.map((tab, tabIndex) => {
+                          const tabId = String(tab?.id || `tab-${tabIndex + 1}`);
+                          const selectedIds = sanitizeFinlitTabActivityIds(tab?.activityIds);
+                          const isCoreTab = FINLIT_CORE_TAB_IDS.includes(tabId);
+                          const tabLinks = Array.isArray(tab?.links) ? tab.links : [];
+                          return (
+                            <div key={`edit-finlit-tab-${tabId}`} className="rounded border border-slate-700 bg-slate-950/70 p-3 space-y-2">
                               <div className="flex items-center justify-between">
-                                <p className="text-[11px] font-bold text-slate-300 uppercase">Link {index + 1}</p>
-                                <button
-                                  type="button"
-                                  onClick={() => removeFinlitLink(index)}
-                                  className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-[10px] font-bold text-white"
-                                >
-                                  Remove
-                                </button>
+                                <p className="text-[11px] font-bold text-slate-300 uppercase">
+                                  {isCoreTab ? `${tabId} (core)` : `Tab ${tabIndex + 1}`}
+                                </p>
+                                {!isCoreTab && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeFinlitTab(tabId)}
+                                    className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-[10px] font-bold text-white"
+                                  >
+                                    Remove Tab
+                                  </button>
+                                )}
                               </div>
-                              <input
-                                type="text"
-                                value={link.title || ''}
-                                onChange={(e) => updateFinlitLink(index, { title: e.target.value })}
-                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                                placeholder="Link title"
-                              />
-                              <input
-                                type="text"
-                                value={link.url || ''}
-                                onChange={(e) => updateFinlitLink(index, { url: e.target.value })}
-                                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs font-mono"
-                                placeholder="https://example.com/resource"
-                              />
-                              <textarea
-                                value={link.description || ''}
-                                onChange={(e) => updateFinlitLink(index, { description: e.target.value })}
-                                className="w-full h-16 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                                placeholder="Short description shown under the link"
-                              />
+                              <div className="grid grid-cols-12 gap-2">
+                                <div className="col-span-8">
+                                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Tab Label</label>
+                                  <input
+                                    type="text"
+                                    value={tab?.label || ''}
+                                    onChange={(e) => updateFinlitTab(tabId, { label: e.target.value })}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                    placeholder={`Tab ${tabIndex + 1}`}
+                                  />
+                                </div>
+                                <div className="col-span-4">
+                                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Tab ID</label>
+                                  <div className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-[11px] text-slate-300 font-mono">
+                                    {tabId}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <p className="text-[11px] text-slate-400">{selectedIds.length} linked activities</p>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateFinlitTab(tabId, { activityIds: finlitLinkableActivities.map((entry) => entry.id) })}
+                                    disabled={finlitLinkableActivities.length === 0}
+                                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-[10px] font-bold text-white"
+                                  >
+                                    Select All
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateFinlitTab(tabId, { activityIds: [] })}
+                                    disabled={selectedIds.length === 0}
+                                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-[10px] font-bold text-white"
+                                  >
+                                    Clear
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="max-h-44 overflow-y-auto rounded border border-slate-700 bg-slate-900/40 divide-y divide-slate-800">
+                                {finlitLinkableActivities.length === 0 ? (
+                                  <p className="p-3 text-xs text-slate-500">Add other composer activities first, then link them here.</p>
+                                ) : (
+                                  finlitLinkableActivities.map((entry) => {
+                                    const checked = selectedIds.includes(entry.id);
+                                    return (
+                                      <label key={`${tabId}-activity-${entry.id}`} className="flex items-start gap-2 p-2 cursor-pointer hover:bg-slate-900/70">
+                                        <input
+                                          type="checkbox"
+                                          checked={checked}
+                                          onChange={() => {
+                                            const nextSet = new Set(selectedIds);
+                                            if (nextSet.has(entry.id)) nextSet.delete(entry.id);
+                                            else nextSet.add(entry.id);
+                                            const ordered = finlitLinkableActivities.map((item) => item.id).filter((id) => nextSet.has(id));
+                                            updateFinlitTab(tabId, { activityIds: ordered });
+                                          }}
+                                          className="mt-0.5 h-4 w-4 rounded border-slate-600 bg-slate-900 text-blue-500"
+                                        />
+                                        <span className="min-w-0">
+                                          <span className="block text-xs text-slate-200 truncate">{entry.label}</span>
+                                          <span className="block text-[10px] text-slate-500 font-mono truncate">
+                                            {entry.id} ({entry.type || 'activity'})
+                                          </span>
+                                        </span>
+                                      </label>
+                                    );
+                                  })
+                                )}
+                              </div>
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <label className="block text-[11px] font-bold text-slate-400 uppercase">Tab Links</label>
+                                  <button
+                                    type="button"
+                                    onClick={() => addFinlitTabLink(tabId)}
+                                    className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-[10px] font-bold text-white inline-flex items-center gap-1"
+                                  >
+                                    <Plus size={12} /> Add Link
+                                  </button>
+                                </div>
+                                {tabLinks.length === 0 ? (
+                                  <p className="text-[11px] text-slate-500">No links added yet.</p>
+                                ) : (
+                                  tabLinks.map((link, index) => (
+                                    <div key={`${tabId}-link-${index}`} className="rounded border border-slate-700 bg-slate-950/70 p-2 space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <p className="text-[11px] font-bold text-slate-300 uppercase">Link {index + 1}</p>
+                                        <button
+                                          type="button"
+                                          onClick={() => removeFinlitTabLink(tabId, index)}
+                                          className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-[10px] font-bold text-white"
+                                        >
+                                          Remove
+                                        </button>
+                                      </div>
+                                      <input
+                                        type="text"
+                                        value={link?.title || ''}
+                                        onChange={(e) => updateFinlitTabLink(tabId, index, { title: e.target.value })}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                        placeholder="Link title"
+                                      />
+                                      <input
+                                        type="text"
+                                        value={link?.url || ''}
+                                        onChange={(e) => updateFinlitTabLink(tabId, index, { url: e.target.value })}
+                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs font-mono"
+                                        placeholder="https://example.com/resource"
+                                      />
+                                      <textarea
+                                        value={link?.description || ''}
+                                        onChange={(e) => updateFinlitTabLink(tabId, index, { description: e.target.value })}
+                                        className="w-full h-16 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                        placeholder="Short description shown under the link"
+                                      />
+                                    </div>
+                                  ))
+                                )}
+                              </div>
                             </div>
-                          ))
-                        )}
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -3546,7 +4060,10 @@ export default function EditModal({
                           <h4 className="text-sm font-bold text-white">Live Module Preview</h4>
                           <button
                             type="button"
-                            onClick={() => setComposerPreviewNonce((n) => n + 1)}
+                            onClick={() => {
+                              composerPreviewShouldFollowRef.current = false;
+                              setComposerPreviewNonce((n) => n + 1);
+                            }}
                             className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
                             title="Remount preview iframe"
                           >
@@ -3558,12 +4075,21 @@ export default function EditModal({
                         <div className="rounded-lg overflow-hidden border border-slate-800 bg-black">
                           {composerPreviewSrcDoc ? (
                             <iframe
+                              ref={composerPreviewIframeRef}
                               key={`composer-edit-preview-${editForm.id || 'draft'}-${composerPreviewNonce}`}
                               srcDoc={composerPreviewSrcDoc}
                               className="w-full border-0"
                               style={{ minHeight: '420px' }}
                               sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-top-navigation-by-user-activation"
                               title="Composer live preview"
+                              onLoad={() => {
+                                if (!composerPreviewShouldFollowRef.current) return;
+                                const targetId = composerPreviewTargetActivityIdRef.current;
+                                if (!targetId) return;
+                                if (scrollComposerPreviewToActivity(targetId)) {
+                                  composerPreviewShouldFollowRef.current = false;
+                                }
+                              }}
                             />
                           ) : (
                             <div className="h-48 flex items-center justify-center text-xs text-slate-500">
@@ -3639,6 +4165,17 @@ export default function EditModal({
             </div>
           </div>
         </div>
+      )}
+
+      {isVaultOpen && (
+        <VaultBrowser
+          mode="file"
+          onSelect={handleVaultSelect}
+          onClose={() => {
+            setIsVaultOpen(false);
+            setVaultTargetField(null);
+          }}
+        />
       )}
 
       {moduleHistory && (

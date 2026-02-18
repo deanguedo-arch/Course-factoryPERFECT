@@ -1,8 +1,6 @@
 import { getActivityDefinition } from './activityRegistry.js';
 import { normalizeComposerActivities, normalizeComposerModuleConfig } from './layout.js';
 import {
-  FINLIT_DEFAULT_ACTIVITIES_TAB_LABEL,
-  FINLIT_DEFAULT_ADDITIONAL_TAB_LABEL,
   createFinlitHeroFormState,
   createFinlitTemplateFormState,
   resolveFinlitHeroMediaKind,
@@ -2044,18 +2042,14 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
   const renderTemplate = () => {
     if (template === 'finlit') {
       const finlit = createFinlitTemplateFormState(module?.finlit);
+      const finlitTabs = Array.isArray(finlit?.tabs) ? finlit.tabs : [];
       const nonTabGroupActivities = activities.filter((activity) => activity?.type !== 'tab_group');
-      const hasDirectActivities = nonTabGroupActivities.length > 0;
-      let activitiesTabHtml = hasDirectActivities ? renderLayout(nonTabGroupActivities) : '';
-      let legacyAdditionalTabHtml = '';
 
       const tabGroups = activities.filter((activity) => activity?.type === 'tab_group');
       const firstTabGroup = tabGroups[0] || null;
+      const legacyTabGroups = [];
       if (firstTabGroup) {
         const t = Array.isArray(firstTabGroup?.data?.tabs) ? firstTabGroup.data.tabs : [];
-        const findTab = (id) => t.find((tab) => String(tab?.id || '').toLowerCase().includes(id));
-        const activitiesTab = findTab('activit');
-        const additionalTab = findTab('additional');
         const renderTabLinked = (tab) => {
           if (!tab) return '';
           const refs = (Array.isArray(tab?.activityIds) ? tab.activityIds : []).map((id) => activityMap.get(String(id || '').trim())).filter(Boolean);
@@ -2063,45 +2057,101 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
           const merged = [...refs, ...inline];
           return merged.length ? merged.map((item, nestedIdx) => renderActivity(item, nestedIdx, { withLayout: false, trail: [firstTabGroup.id] })).join('\n') : '';
         };
-        if (!hasDirectActivities) {
-          activitiesTabHtml = renderTabLinked(activitiesTab);
-        }
-        legacyAdditionalTabHtml = renderTabLinked(additionalTab);
+        t.forEach((tab) => {
+          legacyTabGroups.push({
+            id: String(tab?.id || '').trim().toLowerCase(),
+            html: renderTabLinked(tab),
+          });
+        });
       }
 
-      const activitiesTabLabel =
-        String(finlit?.activitiesTabLabel || FINLIT_DEFAULT_ACTIVITIES_TAB_LABEL).trim() || FINLIT_DEFAULT_ACTIVITIES_TAB_LABEL;
-      const additionalTabLabel =
-        String(finlit?.additionalTabLabel || FINLIT_DEFAULT_ADDITIONAL_TAB_LABEL).trim() || FINLIT_DEFAULT_ADDITIONAL_TAB_LABEL;
-      const additionalLinks = Array.isArray(finlit?.additionalLinks) ? finlit.additionalLinks : [];
-      const additionalLinksHtml = additionalLinks
-        .map((link, idx) => {
-          const title = String(link?.title || '').trim() || `Resource ${idx + 1}`;
-          const description = String(link?.description || '').trim();
-          const href = toSafeHref(link?.url);
-          const openAttrs = href && !href.startsWith('#') ? ' target="_blank" rel="noopener noreferrer"' : '';
-          return `
-            <article class="rounded-lg border border-slate-700 bg-slate-950/60 p-3">
-              ${
-                href
-                  ? `<a href="${escapeHtml(href)}"${openAttrs} class="text-sm font-bold text-sky-300 hover:text-sky-200 underline">${escapeHtml(title)}</a>`
-                  : `<p class="text-sm font-bold text-slate-200">${escapeHtml(title)}</p>`
-              }
-              ${description ? `<p class="mt-1 text-xs text-slate-400 leading-relaxed">${escapeHtml(description)}</p>` : ''}
-            </article>
-          `;
-        })
-        .join('\n');
-      const additionalTabParts = [];
-      if (additionalLinksHtml) {
-        additionalTabParts.push(`<div class="space-y-2">${additionalLinksHtml}</div>`);
+      const getLegacyTabHtml = (tabId) => {
+        const target = String(tabId || '').trim().toLowerCase();
+        if (!target) return '';
+        let match = legacyTabGroups.find((tab) => tab.id === target);
+        if (!match && target === 'activities') {
+          match = legacyTabGroups.find((tab) => tab.id.includes('activit'));
+        }
+        if (!match && target === 'additional') {
+          match = legacyTabGroups.find((tab) => tab.id.includes('additional'));
+        }
+        if (!match) {
+          match = legacyTabGroups.find((tab) => tab.id && target.includes(tab.id));
+        }
+        return match?.html || '';
+      };
+
+      const renderFinlitLinks = (links) =>
+        (Array.isArray(links) ? links : [])
+          .map((link, idx) => {
+            const title = String(link?.title || '').trim() || `Resource ${idx + 1}`;
+            const description = String(link?.description || '').trim();
+            const href = toSafeHref(link?.url);
+            const openAttrs = href && !href.startsWith('#') ? ' target="_blank" rel="noopener noreferrer"' : '';
+            return `
+              <article class="rounded-lg border border-slate-700 bg-slate-950/60 p-3">
+                ${
+                  href
+                    ? `<a href="${escapeHtml(href)}"${openAttrs} class="text-sm font-bold text-sky-300 hover:text-sky-200 underline">${escapeHtml(title)}</a>`
+                    : `<p class="text-sm font-bold text-slate-200">${escapeHtml(title)}</p>`
+                }
+                ${description ? `<p class="mt-1 text-xs text-slate-400 leading-relaxed">${escapeHtml(description)}</p>` : ''}
+              </article>
+            `;
+          })
+          .join('\n');
+
+      const referencedActivityIds = new Set(
+        finlitTabs
+          .flatMap((tab) => (Array.isArray(tab?.activityIds) ? tab.activityIds : []))
+          .map((id) => String(id || '').trim())
+          .filter(Boolean),
+      );
+      const unlinkedDirectActivities = nonTabGroupActivities.filter((activity) => {
+        const id = String(activity?.id || '').trim();
+        return id && !referencedActivityIds.has(id);
+      });
+      const unlinkedDirectActivitiesHtml = unlinkedDirectActivities.length ? renderLayout(unlinkedDirectActivities) : '';
+
+      const renderedTabs = finlitTabs.map((tab, tabIndex) => {
+        const tabId = String(tab?.id || `tab-${tabIndex + 1}`).trim() || `tab-${tabIndex + 1}`;
+        const tabLabel = String(tab?.label || tabId || `Tab ${tabIndex + 1}`).trim() || `Tab ${tabIndex + 1}`;
+        const linkedActivities = (Array.isArray(tab?.activityIds) ? tab.activityIds : [])
+          .map((id) => activityMap.get(String(id || '').trim()))
+          .filter(Boolean);
+        const linkedHtml = linkedActivities.length
+          ? linkedActivities.map((item, nestedIdx) => renderActivity(item, nestedIdx, { withLayout: false, trail: [] })).join('\n')
+          : '';
+        const legacyHtml = getLegacyTabHtml(tabId);
+        const linksHtml = renderFinlitLinks(tab?.links);
+        const panelParts = [];
+
+        if (linkedHtml) panelParts.push(linkedHtml);
+        if (tabId === 'activities' && unlinkedDirectActivitiesHtml) panelParts.push(unlinkedDirectActivitiesHtml);
+        if (legacyHtml) panelParts.push(legacyHtml);
+        if (linksHtml) panelParts.push(`<div class="space-y-2">${linksHtml}</div>`);
+
+        const panelHtml =
+          panelParts.length > 0
+            ? panelParts.join('\n')
+            : `<p class="text-slate-400 text-sm">No ${escapeHtml(tabLabel.toLowerCase() || 'tab')} content.</p>`;
+
+        return {
+          tabId,
+          tabLabel,
+          panelHtml,
+          isActive: tabIndex === 0,
+        };
+      });
+
+      if (renderedTabs.length === 0) {
+        renderedTabs.push({
+          tabId: 'activities',
+          tabLabel: String(finlit?.activitiesTabLabel || 'Activities'),
+          panelHtml: unlinkedDirectActivitiesHtml || '<p class="text-slate-400 text-sm">No activities yet.</p>',
+          isActive: true,
+        });
       }
-      if (legacyAdditionalTabHtml) {
-        additionalTabParts.push(legacyAdditionalTabHtml);
-      }
-      const additionalTabHtml = additionalTabParts.length
-        ? additionalTabParts.join('\n')
-        : '<p class="text-slate-400 text-sm">No additional learning content.</p>';
       const hero = createFinlitHeroFormState(module?.hero);
       const rawHeroMediaUrl = String(hero.mediaUrl || '').trim();
       const heroMediaUrl = /^((https?:)?\/\/|\/|\.\/|\.\.\/|data:image\/|data:video\/|blob:|materials\/)/i.test(rawHeroMediaUrl)
@@ -2125,12 +2175,30 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
             ${String(hero.progressLabel || '').trim() ? `<p class="mt-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">${escapeHtml(String(hero.progressLabel || ''))}</p>` : ''}
             ${heroMediaHtml}
           </header>
-          <div class="flex gap-3 border-b border-slate-700 pb-2">
-            <button type="button" data-finlit-tab-trigger="activities" class="px-2 py-1 text-sm font-bold text-slate-200">${escapeHtml(activitiesTabLabel)}</button>
-            <button type="button" data-finlit-tab-trigger="additional" class="px-2 py-1 text-sm font-bold text-slate-400">${escapeHtml(additionalTabLabel)}</button>
+          <div class="flex flex-wrap gap-3 border-b border-slate-700 pb-2">
+            ${renderedTabs
+              .map(
+                (tab) => `
+                  <button
+                    type="button"
+                    data-finlit-tab-trigger="${escapeHtml(tab.tabId)}"
+                    class="px-2 py-1 text-sm font-bold ${tab.isActive ? 'text-slate-200 cf-finlit-tab-active' : 'text-slate-400'}"
+                  >
+                    ${escapeHtml(tab.tabLabel)}
+                  </button>
+                `,
+              )
+              .join('\n')}
           </div>
-          <div data-finlit-tab-panel="activities">${activitiesTabHtml || '<p class="text-slate-400 text-sm">No activities yet.</p>'}</div>
-          <div data-finlit-tab-panel="additional" class="hidden">${additionalTabHtml}</div>
+          ${renderedTabs
+            .map(
+              (tab) => `
+                <div data-finlit-tab-panel="${escapeHtml(tab.tabId)}" class="${tab.isActive ? '' : 'hidden'}">
+                  ${tab.panelHtml}
+                </div>
+              `,
+            )
+            .join('\n')}
         </section>
       `;
     }

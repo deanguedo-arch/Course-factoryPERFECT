@@ -58,6 +58,34 @@ const activityFixtures = [
     marker: 'data-submission-download',
     data: { title: 'Submit', buttonLabel: 'Generate Submission' },
   },
+  {
+    type: 'fillable_chart',
+    marker: 'data-fillable-chart-block',
+    data: {
+      title: 'Fixture Chart',
+      description: 'Fill the chart',
+      rowCount: 2,
+      colCount: 2,
+      rows: [
+        { id: 'r1', label: 'Row A' },
+        { id: 'r2', label: 'Row B' },
+      ],
+      columns: [
+        { id: 'c1', label: 'Pros' },
+        { id: 'c2', label: 'Cons' },
+      ],
+      cells: [
+        [
+          { label: '', editable: true, placeholder: 'Type pro...' },
+          { label: '', editable: true, placeholder: 'Type con...' },
+        ],
+        [
+          { label: 'Static note', editable: false, placeholder: '' },
+          { label: '', editable: true, placeholder: 'Type con...' },
+        ],
+      ],
+    },
+  },
 ];
 
 const layoutFixture = {

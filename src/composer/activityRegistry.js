@@ -117,6 +117,14 @@ function normalizeWorksheetFieldType(value) {
   return 'text';
 }
 
+function normalizeWorksheetHelperMode(value, block = null) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'rich') return 'rich';
+  if (raw === 'plain') return 'plain';
+  if (block && String(block?.helperHtml || block?.promptHtml || '').trim()) return 'rich';
+  return 'plain';
+}
+
 function hasOwn(obj, key) {
   return Boolean(obj && typeof obj === 'object' && Object.prototype.hasOwnProperty.call(obj, key));
 }
@@ -141,6 +149,9 @@ export function createWorksheetBuilderBlock(kind = 'field') {
     label: 'Field Label',
     fieldType: 'text',
     placeholder: '',
+    helperMode: 'plain',
+    helperText: '',
+    helperHtml: '',
   };
 }
 
@@ -162,11 +173,93 @@ function normalizeWorksheetFieldBlock(block) {
   const label = block?.label == null ? '' : String(block.label);
   const placeholder = block?.placeholder == null ? '' : String(block.placeholder);
   const rawFieldType = block?.fieldType || block?.inputType || (block?.type !== 'field' ? block?.type : '');
+  const helperTextSource = Object.prototype.hasOwnProperty.call(block || {}, 'helperText') ? block?.helperText : block?.prompt;
+  const helperHtmlSource = Object.prototype.hasOwnProperty.call(block || {}, 'helperHtml') ? block?.helperHtml : block?.promptHtml;
+  const helperText = helperTextSource == null ? '' : String(helperTextSource);
+  const helperHtml = sanitizeRichHtml(helperHtmlSource == null ? '' : String(helperHtmlSource));
+  const helperMode = normalizeWorksheetHelperMode(block?.helperMode, block);
   return {
     kind: 'field',
     label,
     fieldType: normalizeWorksheetFieldType(rawFieldType),
     placeholder,
+    helperMode,
+    helperText,
+    helperHtml,
+  };
+}
+
+const FILLABLE_CHART_MIN_SIZE = 1;
+const FILLABLE_CHART_MAX_SIZE = 8;
+
+function clampFillableChartSize(value, fallback = 2) {
+  const parsed = Number.parseInt(value, 10);
+  const base = Number.isFinite(parsed) ? parsed : Number.parseInt(fallback, 10);
+  const normalized = Number.isFinite(base) ? base : 2;
+  return Math.max(FILLABLE_CHART_MIN_SIZE, Math.min(FILLABLE_CHART_MAX_SIZE, normalized));
+}
+
+function normalizeFillableChartCell(cell) {
+  if (cell && typeof cell === 'object' && !Array.isArray(cell)) {
+    return {
+      label: cell.label == null ? '' : String(cell.label),
+      editable: cell.editable !== false,
+      placeholder: cell.placeholder == null ? '' : String(cell.placeholder),
+    };
+  }
+  const text = cell == null ? '' : String(cell);
+  if (text.trim()) {
+    return {
+      label: text,
+      editable: false,
+      placeholder: '',
+    };
+  }
+  return {
+    label: '',
+    editable: true,
+    placeholder: 'Type your response...',
+  };
+}
+
+export function normalizeFillableChartData(data = {}) {
+  const rowCount = clampFillableChartSize(data.rowCount, Array.isArray(data.rows) ? data.rows.length : 2);
+  const colCount = clampFillableChartSize(data.colCount, Array.isArray(data.columns) ? data.columns.length : 2);
+  const showRowLabels = data?.showRowLabels !== false;
+  const hasRowLabelHeader = Object.prototype.hasOwnProperty.call(data || {}, 'rowLabelHeader');
+  const rowLabelHeader = hasRowLabelHeader ? String(data?.rowLabelHeader ?? '') : 'Rows';
+  const rows = Array.from({ length: rowCount }, (_, rowIdx) => {
+    const raw = Array.isArray(data.rows) ? data.rows[rowIdx] : null;
+    const fallbackLabel = `Row ${rowIdx + 1}`;
+    const hasLabel = Boolean(raw && typeof raw === 'object' && Object.prototype.hasOwnProperty.call(raw, 'label'));
+    return {
+      id: String(raw?.id || `row-${rowIdx + 1}`),
+      label: hasLabel ? String(raw?.label ?? '') : fallbackLabel,
+    };
+  });
+  const columns = Array.from({ length: colCount }, (_, colIdx) => {
+    const raw = Array.isArray(data.columns) ? data.columns[colIdx] : null;
+    const fallbackLabel = `Column ${colIdx + 1}`;
+    const hasLabel = Boolean(raw && typeof raw === 'object' && Object.prototype.hasOwnProperty.call(raw, 'label'));
+    return {
+      id: String(raw?.id || `col-${colIdx + 1}`),
+      label: hasLabel ? String(raw?.label ?? '') : fallbackLabel,
+    };
+  });
+  const cells = rows.map((_, rowIdx) =>
+    columns.map((__, colIdx) => {
+      const raw = Array.isArray(data.cells) && Array.isArray(data.cells[rowIdx]) ? data.cells[rowIdx][colIdx] : null;
+      return normalizeFillableChartCell(raw);
+    }),
+  );
+  return {
+    rowCount,
+    colCount,
+    showRowLabels,
+    rowLabelHeader,
+    rows,
+    columns,
+    cells,
   };
 }
 
@@ -1379,10 +1472,20 @@ export const ACTIVITY_REGISTRY = {
                       const label = escapeHtml(labelValue);
                       const type = normalizeWorksheetFieldType(block?.fieldType || block?.inputType || block?.type);
                       const placeholder = escapeHtml(block?.placeholder || '');
+                      const helperMode = normalizeWorksheetHelperMode(block?.helperMode, block);
+                      const helperText = block?.helperText == null ? '' : String(block.helperText);
+                      const helperHtml = sanitizeRichHtml(block?.helperHtml || '');
+                      const helperMarkup =
+                        helperMode === 'rich' && helperHtml
+                          ? `<div class="cf-rich-editor text-sm text-slate-300 leading-relaxed mb-2">${helperHtml}</div>`
+                          : helperText
+                            ? `<p class="text-xs text-slate-400 leading-relaxed mb-2">${renderSimpleBody(helperText)}</p>`
+                            : '';
                       if (type === 'textarea') {
                         return `
                           <div data-worksheet-segment data-worksheet-kind="field">
                             <label class="block text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">${label}</label>
+                            ${helperMarkup}
                             <textarea class="w-full min-h-24 rounded border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-200" placeholder="${placeholder}"></textarea>
                           </div>
                         `;
@@ -1391,6 +1494,7 @@ export const ACTIVITY_REGISTRY = {
                         return `
                           <div data-worksheet-segment data-worksheet-kind="field">
                             <label class="block text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">${label}</label>
+                            ${helperMarkup}
                             <input type="number" class="w-full rounded border border-slate-700 bg-slate-950/70 p-2 text-sm text-slate-200" placeholder="${placeholder}" />
                           </div>
                         `;
@@ -1398,6 +1502,7 @@ export const ACTIVITY_REGISTRY = {
                       return `
                         <div data-worksheet-segment data-worksheet-kind="field">
                           <label class="block text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">${label}</label>
+                          ${helperMarkup}
                           <input type="text" class="w-full rounded border border-slate-700 bg-slate-950/70 p-2 text-sm text-slate-200" placeholder="${placeholder}" />
                         </div>
                       `;
@@ -1405,6 +1510,116 @@ export const ACTIVITY_REGISTRY = {
                     .join('\n')
                 : '<p class="text-sm text-slate-400">No worksheet blocks yet.</p>'
             }
+          </div>
+        </article>
+      `;
+    },
+  },
+  fillable_chart: {
+    type: 'fillable_chart',
+    label: 'Fillable Chart',
+    createDefaultData() {
+      return {
+        title: 'Fillable Chart',
+        description: 'Label each cell and choose whether students can edit it.',
+        rowCount: 2,
+        colCount: 2,
+        showRowLabels: true,
+        rowLabelHeader: 'Rows',
+        rows: [
+          { id: 'row-1', label: 'Row 1' },
+          { id: 'row-2', label: 'Row 2' },
+        ],
+        columns: [
+          { id: 'col-1', label: 'Column 1' },
+          { id: 'col-2', label: 'Column 2' },
+        ],
+        cells: [
+          [
+            { label: '', editable: true, placeholder: 'Type your response...' },
+            { label: '', editable: true, placeholder: 'Type your response...' },
+          ],
+          [
+            { label: '', editable: true, placeholder: 'Type your response...' },
+            { label: '', editable: true, placeholder: 'Type your response...' },
+          ],
+        ],
+      };
+    },
+    compileToHtml({ data = {} } = {}) {
+      const chart = normalizeFillableChartData(data);
+      const title = String(data.title || '').trim();
+      const description = String(data.description || '').trim();
+      const rowHeaderHtml = chart.showRowLabels
+        ? `
+            <th class="p-3 border-b border-slate-700 text-left font-bold uppercase tracking-wide text-slate-400 w-40">
+              ${escapeHtml(chart.rowLabelHeader || '') || '&nbsp;'}
+            </th>
+          `
+        : '';
+      const headHtml = chart.columns
+        .map(
+          (column) => `
+            <th class="p-3 border-b border-l border-slate-700 text-left font-bold uppercase tracking-wide text-slate-300">
+              ${escapeHtml(column.label || '') || '&nbsp;'}
+            </th>
+          `,
+        )
+        .join('\n');
+      const rowsHtml = chart.rows
+        .map((row, rowIdx) => {
+          const cellsHtml = chart.columns
+            .map((_, colIdx) => {
+              const cell = chart.cells[rowIdx][colIdx];
+              if (cell.editable) {
+                return `
+                  <td class="p-3 border-b border-l border-slate-800 align-top">
+                    ${cell.label ? `<p class="text-xs text-slate-400 mb-2">${renderSimpleBody(cell.label)}</p>` : ''}
+                    <textarea
+                      class="w-full min-h-24 rounded border border-slate-700 bg-slate-950/70 p-2 text-sm text-slate-200"
+                      placeholder="${escapeHtml(cell.placeholder || 'Type your response...')}"
+                    ></textarea>
+                  </td>
+                `;
+              }
+              return `
+                <td class="p-3 border-b border-l border-slate-800 align-top">
+                  <div class="text-sm text-slate-200 leading-relaxed">${renderSimpleBody(cell.label || '')}</div>
+                </td>
+              `;
+            })
+            .join('\n');
+          const rowLabelCellHtml = chart.showRowLabels
+            ? `
+                <th class="p-3 border-b border-slate-800 bg-slate-950/80 text-left text-slate-100 font-bold uppercase tracking-wide">
+                  ${escapeHtml(row.label || '') || '&nbsp;'}
+                </th>
+              `
+            : '';
+          return `
+            <tr>
+              ${rowLabelCellHtml}
+              ${cellsHtml}
+            </tr>
+          `;
+        })
+        .join('\n');
+      return `
+        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6" data-fillable-chart-block>
+          ${title ? `<h3 class="text-lg font-bold text-white">${escapeHtml(title)}</h3>` : ''}
+          ${description ? `<p class="text-sm text-slate-300 mt-2">${renderSimpleBody(description)}</p>` : ''}
+          <div class="mt-4 overflow-x-auto rounded-lg border border-slate-700">
+            <table class="min-w-full border-collapse text-xs">
+              <thead class="bg-slate-900/80">
+                <tr>
+                  ${rowHeaderHtml}
+                  ${headHtml}
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
           </div>
         </article>
       `;
@@ -1850,6 +2065,7 @@ const ACTIVITY_TYPE_CATEGORIES = {
   flashcard_deck: 'interactive',
   reflection_journal: 'interactive',
   worksheet_form: 'assessment',
+  fillable_chart: 'interactive',
   portfolio_evidence: 'assessment',
   path_map: 'interactive',
   hotspot_image: 'interactive',
@@ -1964,6 +2180,24 @@ export function validateComposerActivity(activity) {
     if (!blocks.length) addIssue('warn', 'Worksheet has no blocks yet.');
     const fieldBlocks = blocks.filter((block) => block.kind === 'field');
     if (!fieldBlocks.length) addIssue('warn', 'Worksheet should include at least one input field.');
+  }
+
+  if (type === 'fillable_chart') {
+    const chart = normalizeFillableChartData(data);
+    if (!chart.rows.length) addIssue('warn', 'Fillable chart needs at least one row.');
+    if (!chart.columns.length) addIssue('warn', 'Fillable chart needs at least one column.');
+    const rawRows = Array.isArray(data.rows) ? data.rows : [];
+    const rawColumns = Array.isArray(data.columns) ? data.columns : [];
+    if (rawRows.length && rawRows.length !== chart.rowCount) addIssue('warn', 'Fillable chart rows list does not match row count.');
+    if (rawColumns.length && rawColumns.length !== chart.colCount) addIssue('warn', 'Fillable chart columns list does not match column count.');
+    const rawCells = Array.isArray(data.cells) ? data.cells : [];
+    const hasCellRowMismatch = rawCells.length > 0 && rawCells.length !== chart.rowCount;
+    const hasCellColumnMismatch = rawCells.some((row) => Array.isArray(row) && row.length !== chart.colCount);
+    if (hasCellRowMismatch || hasCellColumnMismatch) {
+      addIssue('warn', 'Fillable chart cells grid does not match row/column counts.');
+    }
+    const editableCount = chart.cells.flat().filter((cell) => cell.editable).length;
+    if (!editableCount) addIssue('warn', 'Fillable chart has no editable cells for student responses.');
   }
 
   if (type === 'tab_group') {
