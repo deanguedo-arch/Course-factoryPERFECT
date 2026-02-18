@@ -1,7 +1,7 @@
 export const FINLIT_HERO_MEDIA_TYPES = ['auto', 'image', 'video', 'embed'];
 export const FINLIT_DEFAULT_ACTIVITIES_TAB_LABEL = 'Activities';
 export const FINLIT_DEFAULT_ADDITIONAL_TAB_LABEL = 'Additional Learning';
-export const FINLIT_CORE_TAB_IDS = ['activities', 'additional'];
+export const FINLIT_CORE_TAB_IDS = ['activities'];
 
 function normalizeIdToken(value, fallback = 'tab') {
   const raw = String(value || '')
@@ -86,6 +86,19 @@ function normalizeFinlitLink(linkLike) {
   };
 }
 
+function cloneFinlitTabActivities(activitiesLike) {
+  if (!Array.isArray(activitiesLike)) return [];
+  return activitiesLike
+    .filter((activity) => activity && typeof activity === 'object')
+    .map((activity) => {
+      try {
+        return JSON.parse(JSON.stringify(activity));
+      } catch {
+        return { ...activity };
+      }
+    });
+}
+
 function normalizeFinlitTab(tabLike, index = 0) {
   const source = tabLike && typeof tabLike === 'object' ? tabLike : {};
   const rawId = toStringValue(source.id || source.key || source.slug || `tab-${index + 1}`);
@@ -101,6 +114,9 @@ function normalizeFinlitTab(tabLike, index = 0) {
     id,
     label,
     activityIds,
+    ...(Object.prototype.hasOwnProperty.call(source, 'activities')
+      ? { activities: cloneFinlitTabActivities(source.activities) }
+      : {}),
     links,
   };
 }
@@ -173,6 +189,9 @@ function ensureCoreFinlitTabs(rawTabs, source) {
       activityIds: Array.from(
         new Set((Array.isArray(tab.activityIds) ? tab.activityIds : []).map((item) => toStringValue(item).trim()).filter(Boolean)),
       ),
+      ...(Object.prototype.hasOwnProperty.call(tab, 'activities')
+        ? { activities: cloneFinlitTabActivities(tab.activities) }
+        : {}),
       links: (Array.isArray(tab.links) ? tab.links : []).map((item) => normalizeFinlitLink(item)),
     };
   });
@@ -224,10 +243,19 @@ export function normalizeFinlitTemplateForSave(finlitLike) {
         id,
         label,
         activityIds,
+        ...(Object.prototype.hasOwnProperty.call(tab || {}, 'activities')
+          ? { activities: cloneFinlitTabActivities(tab?.activities) }
+          : {}),
         links,
       };
     })
-    .filter((tab) => tab.label || tab.activityIds.length > 0 || tab.links.length > 0);
+    .filter(
+      (tab) =>
+        tab.label ||
+        tab.activityIds.length > 0 ||
+        tab.links.length > 0 ||
+        (Array.isArray(tab.activities) && tab.activities.length > 0),
+    );
 
   const activitiesTab = tabs.find((tab) => tab.id === 'activities') || {
     id: 'activities',
@@ -259,9 +287,7 @@ export function normalizeFinlitTemplateForSave(finlitLike) {
 
   const next = {};
   const defaultTabs = createFinlitTemplateFormState(null).tabs;
-  const hasTabOverrides =
-    JSON.stringify(tabs) !== JSON.stringify(defaultTabs) ||
-    tabs.some((tab) => !FINLIT_CORE_TAB_IDS.includes(tab.id));
+  const hasTabOverrides = JSON.stringify(tabs) !== JSON.stringify(defaultTabs);
   if (hasTabOverrides) next.tabs = tabs;
   if (activitiesTabLabel !== FINLIT_DEFAULT_ACTIVITIES_TAB_LABEL) next.activitiesTabLabel = activitiesTabLabel;
   if (additionalTabLabel !== FINLIT_DEFAULT_ADDITIONAL_TAB_LABEL) next.additionalTabLabel = additionalTabLabel;

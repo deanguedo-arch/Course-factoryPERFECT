@@ -47,6 +47,7 @@ import {
   normalizeFinlitHeroForSave,
   normalizeFinlitTemplateForSave,
 } from '../../utils/finlitHero.js';
+import { resolveFinlitTabComposerState } from '../../utils/finlitTabActivities.js';
 import GenericDataEditor from '../GenericDataEditor.jsx';
 import HotspotEditor from '../composer/HotspotEditor.jsx';
 import VaultBrowser from '../VaultBrowser.jsx';
@@ -388,6 +389,8 @@ export default function EditModal({
   const courseTemplateDefault = String(projectData?.['Course Settings']?.templateDefault || 'deck').trim().toLowerCase();
   const editEffectiveTemplate = String(editForm.template || courseTemplateDefault || 'deck').trim().toLowerCase();
   const showFinlitOptions = editForm.moduleType === 'standalone' && standaloneMode === 'composer' && editEffectiveTemplate === 'finlit';
+  const isFinlitComposer = showFinlitOptions;
+  const [finlitAuthoringTabId, setFinlitAuthoringTabId] = useState('activities');
   const composerLayout = useMemo(() => normalizeComposerLayout(editForm.composerLayout), [editForm.composerLayout]);
   const composerMaxColumns = composerLayout.maxColumns;
   const composerLayoutMode = composerLayout.mode;
@@ -396,9 +399,31 @@ export default function EditModal({
     () => normalizeComposerActivities(editForm.activities, { maxColumns: composerMaxColumns, mode: composerLayout.mode }),
     [editForm.activities, composerLayout.mode, composerMaxColumns],
   );
+  const resolvedFinlitComposerState = useMemo(
+    () =>
+      resolveFinlitTabComposerState({
+        finlit: finlitSettings,
+        moduleActivities: activities,
+        composerLayout,
+        activeTabId: finlitAuthoringTabId,
+        activeTabActivities: activities,
+      }),
+    [activities, composerLayout, finlitAuthoringTabId, finlitSettings],
+  );
+  const canonicalComposerActivities = useMemo(
+    () =>
+      Array.isArray(resolvedFinlitComposerState?.canonicalActivities)
+        ? resolvedFinlitComposerState.canonicalActivities
+        : [],
+    [resolvedFinlitComposerState],
+  );
+  const activeFinlitTabId = useMemo(
+    () => (isFinlitComposer ? resolvedFinlitComposerState?.activeTabId || 'activities' : 'activities'),
+    [isFinlitComposer, resolvedFinlitComposerState],
+  );
   const finlitLinkableActivities = useMemo(
     () =>
-      activities
+      (isFinlitComposer ? canonicalComposerActivities : activities)
         .map((activity) => {
           const id = String(activity?.id || '').trim();
           if (!id || activity?.type === 'tab_group') return null;
@@ -412,11 +437,14 @@ export default function EditModal({
           };
         })
         .filter(Boolean),
-    [activities],
+    [activities, canonicalComposerActivities, isFinlitComposer],
   );
   const normalizedTemplateLayoutProfiles = useMemo(
-    () => normalizeTemplateLayoutProfiles(editForm.templateLayoutProfiles, { activities }),
-    [activities, editForm.templateLayoutProfiles],
+    () =>
+      normalizeTemplateLayoutProfiles(editForm.templateLayoutProfiles, {
+        activities: isFinlitComposer ? canonicalComposerActivities : activities,
+      }),
+    [activities, canonicalComposerActivities, editForm.templateLayoutProfiles, isFinlitComposer],
   );
   const activityTypes = useMemo(() => listActivityTypes(), []);
   const activityTypeGroups = useMemo(() => listActivityTypeGroups(), []);
@@ -475,6 +503,7 @@ export default function EditModal({
   useEffect(() => {
     setSelectedActivityIndex(0);
     setComposerExtraRows(0);
+    setFinlitAuthoringTabId('activities');
   }, [editingModule, standaloneMode]);
 
   useEffect(() => {
@@ -492,6 +521,54 @@ export default function EditModal({
       setSelectedActivityIndex(Math.max(activities.length - 1, 0));
     }
   }, [activities.length, selectedActivityIndex]);
+
+  useEffect(() => {
+    if (!isFinlitComposer) {
+      if (finlitAuthoringTabId !== 'activities') {
+        setFinlitAuthoringTabId('activities');
+      }
+      return;
+    }
+    const nextTabId = String(resolvedFinlitComposerState?.activeTabId || 'activities').trim() || 'activities';
+    if (nextTabId !== finlitAuthoringTabId) {
+      setFinlitAuthoringTabId(nextTabId);
+    }
+    const nextTabsSignature = JSON.stringify(resolvedFinlitComposerState?.finlit?.tabs || []);
+    const currentTabsSignature = JSON.stringify(finlitSettings?.tabs || []);
+    const nextActivities = Array.isArray(resolvedFinlitComposerState?.activeTabActivities)
+      ? resolvedFinlitComposerState.activeTabActivities
+      : [];
+    const nextActivitiesSignature = JSON.stringify(nextActivities);
+    const currentActivitiesSignature = JSON.stringify(activities);
+    if (nextTabsSignature === currentTabsSignature && nextActivitiesSignature === currentActivitiesSignature) return;
+    setEditForm((prev) => {
+      const prevFinlit = createFinlitTemplateFormState(prev.finlit);
+      const prevActivities = normalizeComposerActivities(prev.activities, {
+        maxColumns: composerMaxColumns,
+        mode: composerLayout.mode,
+      });
+      if (
+        JSON.stringify(prevFinlit?.tabs || []) === nextTabsSignature &&
+        JSON.stringify(prevActivities) === nextActivitiesSignature
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        finlit: resolvedFinlitComposerState.finlit,
+        activities: nextActivities,
+      };
+    });
+  }, [
+    activities,
+    composerLayout.mode,
+    composerMaxColumns,
+    finlitAuthoringTabId,
+    finlitSettings,
+    isFinlitComposer,
+    resolvedFinlitComposerState,
+    setEditForm,
+  ]);
 
   useEffect(
     () => () => {
@@ -570,8 +647,19 @@ export default function EditModal({
   const composerPreviewSrcDoc = useMemo(() => {
     if (standaloneMode !== 'composer') return '';
     const courseSettings = projectData?.['Course Settings'] || {};
+    const resolvedFinlitState = resolveFinlitTabComposerState({
+      finlit: finlitSettings,
+      moduleActivities: activities,
+      composerLayout,
+      activeTabId: finlitAuthoringTabId,
+      activeTabActivities: activities,
+    });
     const hero = normalizeFinlitHeroForSave(finlitHero);
-    const finlit = normalizeFinlitTemplateForSave(finlitSettings);
+    const finlit = normalizeFinlitTemplateForSave(resolvedFinlitState.finlit);
+    const previewActivities =
+      isFinlitComposer && Array.isArray(resolvedFinlitState.canonicalActivities)
+        ? resolvedFinlitState.canonicalActivities
+        : activities;
     const previewModule = {
       id: editForm.id || 'view-composer-preview',
       title: editForm.title || 'Composer Preview',
@@ -582,7 +670,8 @@ export default function EditModal({
       hero,
       finlit,
       composerLayout,
-      activities,
+      activities: previewActivities,
+      ...(isFinlitComposer ? { finlitActiveTabId: resolvedFinlitState.activeTabId } : {}),
       rawHtml: '',
       html: '',
       css: '',
@@ -597,20 +686,55 @@ export default function EditModal({
         __storageScope: composerPreviewStorageScope,
       }) || ''
     );
-  }, [activities, composerLayout, composerPreviewStorageScope, editForm.id, editForm.template, editForm.theme, editForm.title, finlitHero, finlitSettings, projectData, standaloneMode]);
+  }, [
+    activities,
+    composerLayout,
+    composerPreviewStorageScope,
+    editForm.id,
+    editForm.template,
+    editForm.theme,
+    editForm.title,
+    finlitAuthoringTabId,
+    finlitHero,
+    finlitSettings,
+    isFinlitComposer,
+    projectData,
+    standaloneMode,
+  ]);
 
-  const scrollComposerPreviewToActivity = React.useCallback((activityId) => {
-    const targetId = String(activityId || '').trim();
-    if (!targetId) return false;
-    const iframe = composerPreviewIframeRef.current;
-    const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
-    if (!doc) return false;
-    const escaped = targetId.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    const target = doc.querySelector(`[data-activity-id="${escaped}"]`);
-    if (!target || typeof target.scrollIntoView !== 'function') return false;
-    target.scrollIntoView({ block: 'center', inline: 'nearest' });
-    return true;
-  }, []);
+  const scrollComposerPreviewToActivity = React.useCallback(
+    (activityId) => {
+      const targetId = String(activityId || '').trim();
+      if (!targetId) return false;
+      const iframe = composerPreviewIframeRef.current;
+      const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
+      if (!doc) return false;
+      const escapedActivityId = targetId.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const activeTabId = isFinlitComposer ? String(activeFinlitTabId || '').trim() : '';
+      let panelRoot = doc;
+      if (activeTabId) {
+        const escapedTabId = activeTabId.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        const trigger = doc.querySelector(`[data-finlit-tab-trigger="${escapedTabId}"]`);
+        if (trigger instanceof HTMLElement) {
+          trigger.click();
+        }
+        const panel = doc.querySelector(`[data-finlit-tab-panel="${escapedTabId}"]`);
+        if (panel) {
+          panelRoot = panel;
+        }
+      }
+      const targetInPanel = panelRoot.querySelector?.(`[data-activity-id="${escapedActivityId}"]`) || null;
+      if (targetInPanel && typeof targetInPanel.scrollIntoView === 'function') {
+        targetInPanel.scrollIntoView({ block: 'center', inline: 'nearest' });
+        return true;
+      }
+      const fallbackTarget = doc.querySelector(`[data-activity-id="${escapedActivityId}"]`);
+      if (!fallbackTarget || typeof fallbackTarget.scrollIntoView !== 'function') return false;
+      fallbackTarget.scrollIntoView({ block: 'center', inline: 'nearest' });
+      return true;
+    },
+    [activeFinlitTabId, isFinlitComposer],
+  );
 
   useEffect(() => {
     composerPreviewTargetActivityIdRef.current = String(selectedActivity?.id || '').trim();
@@ -622,7 +746,7 @@ export default function EditModal({
       return;
     }
     composerPreviewShouldFollowRef.current = true;
-  }, [standaloneMode, selectedActivity?.id, activities]);
+  }, [standaloneMode, selectedActivity?.id]);
 
   useEffect(() => {
     if (standaloneMode !== 'composer') return;
@@ -640,7 +764,7 @@ export default function EditModal({
   const buildTemplateLayoutProfilesForComposerState = ({
     templateOverride = editForm.template,
     nextComposerLayout = composerLayout,
-    nextActivities = activities,
+    nextActivities = isFinlitComposer ? canonicalComposerActivities : activities,
     templateProfiles = normalizedTemplateLayoutProfiles,
   } = {}) => {
     const resolvedTemplateKey = resolveTemplateKey(templateOverride, courseTemplateDefault);
@@ -654,43 +778,83 @@ export default function EditModal({
     );
   };
 
-  const updateActivities = (nextActivities, nextComposerLayout = composerLayout) => {
+  const updateActivities = (nextActivities, nextComposerLayout = composerLayout, { templateOverride = editForm.template } = {}) => {
     const normalizedLayout = normalizeComposerLayout(nextComposerLayout);
-    const normalizedActivities = normalizeComposerActivities(nextActivities, {
+    const targetTemplateKey = resolveTemplateKey(templateOverride, courseTemplateDefault);
+    const shouldSyncFinlit = editForm.moduleType === 'standalone' && standaloneMode === 'composer' && targetTemplateKey === 'finlit';
+    let normalizedActivities = normalizeComposerActivities(nextActivities, {
       maxColumns: normalizedLayout.maxColumns,
       mode: normalizedLayout.mode,
     });
+    let nextFinlitState = finlitSettings;
+    let nextFinlitAuthoringTabId = finlitAuthoringTabId;
+    let profileActivities = normalizedActivities;
+    if (shouldSyncFinlit) {
+      const resolved = resolveFinlitTabComposerState({
+        finlit: finlitSettings,
+        moduleActivities: activities,
+        composerLayout: normalizedLayout,
+        activeTabId: finlitAuthoringTabId,
+        activeTabActivities: normalizedActivities,
+      });
+      nextFinlitState = resolved.finlit;
+      nextFinlitAuthoringTabId = resolved.activeTabId;
+      profileActivities = Array.isArray(resolved.canonicalActivities) ? resolved.canonicalActivities : normalizedActivities;
+      normalizedActivities = Array.isArray(resolved.activeTabActivities) ? resolved.activeTabActivities : normalizedActivities;
+    }
     const nextTemplateLayoutProfiles = buildTemplateLayoutProfilesForComposerState({
-      templateOverride: editForm.template,
+      templateOverride,
       nextComposerLayout: normalizedLayout,
-      nextActivities: normalizedActivities,
+      nextActivities: profileActivities,
     });
-    setEditForm({
-      ...editForm,
+    composerPreviewShouldFollowRef.current = true;
+    setEditForm((prev) => ({
+      ...prev,
       moduleMode: 'composer',
       composerLayout: normalizedLayout,
       activities: normalizedActivities,
+      ...(shouldSyncFinlit ? { finlit: nextFinlitState } : {}),
       templateLayoutProfiles: nextTemplateLayoutProfiles,
-    });
+    }));
+    if (shouldSyncFinlit && nextFinlitAuthoringTabId !== finlitAuthoringTabId) {
+      setFinlitAuthoringTabId(nextFinlitAuthoringTabId);
+    }
   };
 
   const handleTemplateChange = (nextTemplateOverrideRaw) => {
     const nextTemplateOverride = String(nextTemplateOverrideRaw || '').trim() || null;
     if (standaloneMode !== 'composer') {
-      setEditForm({ ...editForm, template: nextTemplateOverride });
+      setEditForm((prev) => ({ ...prev, template: nextTemplateOverride }));
       return;
     }
 
     const currentTemplateKey = resolveTemplateKey(editForm.template, courseTemplateDefault);
     const nextTemplateKey = resolveTemplateKey(nextTemplateOverride, courseTemplateDefault);
-    const activeProfile = captureTemplateLayoutProfile(composerLayout, activities);
-    const baseProfiles = normalizeTemplateLayoutProfiles(editForm.templateLayoutProfiles, { activities });
+    const isCurrentFinlitComposer = currentTemplateKey === 'finlit';
+    const isNextFinlitComposer = nextTemplateKey === 'finlit';
+    let templateSourceActivities = activities;
+    let templateSourceFinlit = finlitSettings;
+    if (isCurrentFinlitComposer) {
+      const resolvedCurrentFinlit = resolveFinlitTabComposerState({
+        finlit: finlitSettings,
+        moduleActivities: activities,
+        composerLayout,
+        activeTabId: finlitAuthoringTabId,
+        activeTabActivities: activities,
+      });
+      templateSourceFinlit = resolvedCurrentFinlit.finlit;
+      if (!isNextFinlitComposer && Array.isArray(resolvedCurrentFinlit.canonicalActivities)) {
+        templateSourceActivities = resolvedCurrentFinlit.canonicalActivities;
+      }
+    }
+    const activeProfile = captureTemplateLayoutProfile(composerLayout, templateSourceActivities);
+    const baseProfiles = normalizeTemplateLayoutProfiles(editForm.templateLayoutProfiles, { activities: templateSourceActivities });
     const profilesWithCurrent = normalizeTemplateLayoutProfiles(
       {
         ...(baseProfiles && typeof baseProfiles === 'object' ? baseProfiles : {}),
         [currentTemplateKey]: activeProfile,
       },
-      { activities },
+      { activities: templateSourceActivities },
     );
     const targetProfileSource =
       profilesWithCurrent[nextTemplateKey] || profilesWithCurrent[currentTemplateKey] || activeProfile;
@@ -700,25 +864,65 @@ export default function EditModal({
         ...(profilesWithCurrent && typeof profilesWithCurrent === 'object' ? profilesWithCurrent : {}),
         [nextTemplateKey]: targetProfile,
       },
-      { activities },
+      { activities: templateSourceActivities },
     );
-    const applied = applyTemplateLayoutProfile(activities, targetProfile, composerLayout.mode, composerLayout.maxColumns);
+    const applied = applyTemplateLayoutProfile(
+      templateSourceActivities,
+      targetProfile,
+      composerLayout.mode,
+      composerLayout.maxColumns,
+    );
     const nextTemplateLayoutProfiles = buildTemplateLayoutProfilesForComposerState({
       templateOverride: nextTemplateOverride,
       nextComposerLayout: applied.composerLayout,
       nextActivities: applied.activities,
       templateProfiles: profilesWithTarget,
     });
-    setEditForm({
-      ...editForm,
+    let nextFinlit = templateSourceFinlit;
+    let nextActivities = applied.activities;
+    let nextAuthoringTabId = finlitAuthoringTabId;
+    if (!isCurrentFinlitComposer && isNextFinlitComposer) {
+      const resolvedIntoFinlit = resolveFinlitTabComposerState({
+        finlit: finlitSettings,
+        moduleActivities: applied.activities,
+        composerLayout: applied.composerLayout,
+        activeTabId: 'activities',
+        activeTabActivities: applied.activities,
+      });
+      nextFinlit = resolvedIntoFinlit.finlit;
+      nextAuthoringTabId = resolvedIntoFinlit.activeTabId;
+      nextActivities = Array.isArray(resolvedIntoFinlit.activeTabActivities)
+        ? resolvedIntoFinlit.activeTabActivities
+        : nextActivities;
+    } else if (isCurrentFinlitComposer && isNextFinlitComposer) {
+      const resolvedStayFinlit = resolveFinlitTabComposerState({
+        finlit: templateSourceFinlit,
+        moduleActivities: activities,
+        composerLayout: applied.composerLayout,
+        activeTabId: finlitAuthoringTabId,
+        activeTabActivities: applied.activities,
+      });
+      nextFinlit = resolvedStayFinlit.finlit;
+      nextAuthoringTabId = resolvedStayFinlit.activeTabId;
+      nextActivities = Array.isArray(resolvedStayFinlit.activeTabActivities)
+        ? resolvedStayFinlit.activeTabActivities
+        : nextActivities;
+    } else if (isCurrentFinlitComposer && !isNextFinlitComposer) {
+      nextAuthoringTabId = 'activities';
+    }
+    composerPreviewShouldFollowRef.current = false;
+    setEditForm((prev) => ({
+      ...prev,
       template: nextTemplateOverride,
       moduleMode: 'composer',
+      finlit: nextFinlit,
       composerLayout: applied.composerLayout,
-      activities: applied.activities,
+      activities: nextActivities,
       templateLayoutProfiles: nextTemplateLayoutProfiles,
-    });
+    }));
+    setFinlitAuthoringTabId(nextAuthoringTabId);
     setSelectedActivityIndex((prev) => {
-      const maxIndex = Math.max(0, applied.activities.length - 1);
+      const maxIndex = Math.max(0, nextActivities.length - 1);
       return Math.max(0, Math.min(maxIndex, Number.parseInt(prev, 10) || 0));
     });
   };
@@ -1090,33 +1294,61 @@ export default function EditModal({
       maxColumns: normalizedLayout.maxColumns,
       mode: normalizedLayout.mode,
     });
+    const templateKey = resolveTemplateKey(editForm.template, courseTemplateDefault);
+    const enteringFinlitComposer = mode === 'composer' && templateKey === 'finlit';
+    let nextFinlit = finlitSettings;
+    let nextActivities = normalizedActivities;
+    let nextAuthoringTabId = finlitAuthoringTabId;
+    if (enteringFinlitComposer) {
+      const resolved = resolveFinlitTabComposerState({
+        finlit: finlitSettings,
+        moduleActivities: normalizedActivities,
+        composerLayout: normalizedLayout,
+        activeTabId: finlitAuthoringTabId,
+        activeTabActivities: normalizedActivities,
+      });
+      nextFinlit = resolved.finlit;
+      nextAuthoringTabId = resolved.activeTabId;
+      nextActivities = Array.isArray(resolved.activeTabActivities) ? resolved.activeTabActivities : nextActivities;
+    } else if (mode !== 'composer' && isFinlitComposer) {
+      nextActivities = Array.isArray(canonicalComposerActivities) ? canonicalComposerActivities : nextActivities;
+      nextAuthoringTabId = 'activities';
+    }
+    const profileActivities =
+      enteringFinlitComposer && Array.isArray(canonicalComposerActivities) && canonicalComposerActivities.length > 0
+        ? canonicalComposerActivities
+        : nextActivities;
     const nextTemplateLayoutProfiles =
       mode === 'composer'
         ? buildTemplateLayoutProfilesForComposerState({
             templateOverride: editForm.template,
             nextComposerLayout: normalizedLayout,
-            nextActivities: normalizedActivities,
+            nextActivities: profileActivities,
           })
-        : normalizeTemplateLayoutProfiles(editForm.templateLayoutProfiles, { activities: normalizedActivities });
-    setEditForm({
-      ...editForm,
+        : normalizeTemplateLayoutProfiles(editForm.templateLayoutProfiles, { activities: nextActivities });
+    composerPreviewShouldFollowRef.current = false;
+    setEditForm((prev) => ({
+      ...prev,
       moduleMode: mode,
+      finlit: nextFinlit,
       composerLayout: normalizedLayout,
-      activities: normalizedActivities,
+      activities: nextActivities,
       templateLayoutProfiles: nextTemplateLayoutProfiles,
-    });
+    }));
+    setFinlitAuthoringTabId(nextAuthoringTabId);
   };
 
   const updateFinlitHeroField = (key, value) => {
     if (!['title', 'subtitle', 'progressLabel', 'mediaUrl', 'mediaType'].includes(key)) return;
+    composerPreviewShouldFollowRef.current = false;
     const nextHero = {
       ...finlitHero,
       [key]: value,
     };
-    setEditForm({
-      ...editForm,
+    setEditForm((prev) => ({
+      ...prev,
       hero: nextHero,
-    });
+    }));
   };
 
   const sanitizeFinlitTabActivityIds = (ids) => {
@@ -1128,20 +1360,22 @@ export default function EditModal({
   };
 
   const updateFinlitTabs = (updater) => {
+    composerPreviewShouldFollowRef.current = false;
     const tabs = Array.isArray(finlitSettings.tabs) ? finlitSettings.tabs : [];
     const draftTabs = tabs.map((tab) => ({
       ...tab,
       activityIds: Array.isArray(tab.activityIds) ? [...tab.activityIds] : [],
+      activities: Array.isArray(tab.activities) ? tab.activities.map((activity) => ({ ...activity })) : [],
       links: Array.isArray(tab.links) ? tab.links.map((link) => ({ ...link })) : [],
     }));
     const updatedTabs = typeof updater === 'function' ? updater(draftTabs) : draftTabs;
-    setEditForm({
-      ...editForm,
+    setEditForm((prev) => ({
+      ...prev,
       finlit: {
         ...finlitSettings,
         tabs: Array.isArray(updatedTabs) ? updatedTabs : draftTabs,
       },
-    });
+    }));
   };
 
   const addFinlitTab = () => {
@@ -1160,6 +1394,7 @@ export default function EditModal({
           id: nextId,
           label: `Tab ${tabs.length + 1}`,
           activityIds: [],
+          activities: [],
           links: [],
         },
       ];
@@ -1191,6 +1426,9 @@ export default function EditModal({
     const targetId = String(tabId || '').trim();
     if (!targetId || FINLIT_CORE_TAB_IDS.includes(targetId)) return;
     updateFinlitTabs((tabs) => tabs.filter((tab) => String(tab?.id || '').trim() !== targetId));
+    if (finlitAuthoringTabId === targetId) {
+      setFinlitAuthoringTabId('activities');
+    }
   };
 
   const addFinlitTabLink = (tabId) => {
@@ -1234,6 +1472,26 @@ export default function EditModal({
         };
       }),
     );
+  };
+
+  const openFinlitTabInComposer = (tabId) => {
+    const targetId = String(tabId || '').trim();
+    if (!targetId) return;
+    const resolved = resolveFinlitTabComposerState({
+      finlit: finlitSettings,
+      moduleActivities: activities,
+      composerLayout,
+      activeTabId: targetId,
+    });
+    composerPreviewShouldFollowRef.current = false;
+    setEditForm((prev) => ({
+      ...prev,
+      moduleMode: 'composer',
+      finlit: resolved.finlit,
+      activities: Array.isArray(resolved.activeTabActivities) ? resolved.activeTabActivities : [],
+    }));
+    setFinlitAuthoringTabId(resolved.activeTabId);
+    setSelectedActivityIndex(0);
   };
 
   const handleVaultSelect = (payload) => {
@@ -3294,7 +3552,7 @@ export default function EditModal({
                       <div className="flex items-center justify-between gap-2">
                         <div>
                           <h4 className="text-[11px] font-bold text-slate-300 uppercase">Tabs</h4>
-                          <p className="text-[11px] text-slate-500 mt-1">Add custom tabs, link activities, and add optional resource links.</p>
+                          <p className="text-[11px] text-slate-500 mt-1">Each tab can have its own block arrangement. Open a tab in the builder to edit its content.</p>
                         </div>
                         <button
                           type="button"
@@ -3310,21 +3568,40 @@ export default function EditModal({
                           const selectedIds = sanitizeFinlitTabActivityIds(tab?.activityIds);
                           const isCoreTab = FINLIT_CORE_TAB_IDS.includes(tabId);
                           const tabLinks = Array.isArray(tab?.links) ? tab.links : [];
+                          const tabActivityCount = Array.isArray(tab?.activities) ? tab.activities.length : 0;
+                          const isActiveAuthoringTab = activeFinlitTabId === tabId;
                           return (
                             <div key={`edit-finlit-tab-${tabId}`} className="rounded border border-slate-700 bg-slate-950/70 p-3 space-y-2">
                               <div className="flex items-center justify-between">
-                                <p className="text-[11px] font-bold text-slate-300 uppercase">
-                                  {isCoreTab ? `${tabId} (core)` : `Tab ${tabIndex + 1}`}
-                                </p>
-                                {!isCoreTab && (
+                                <div>
+                                  <p className="text-[11px] font-bold text-slate-300 uppercase">
+                                    {isCoreTab ? `${tabId} (core)` : `Tab ${tabIndex + 1}`}
+                                  </p>
+                                  <p className="text-[10px] text-slate-500">
+                                    {tabActivityCount} block{tabActivityCount === 1 ? '' : 's'}
+                                    {isActiveAuthoringTab ? ' • currently editing' : ''}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
                                   <button
                                     type="button"
-                                    onClick={() => removeFinlitTab(tabId)}
-                                    className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-[10px] font-bold text-white"
+                                    onClick={() => openFinlitTabInComposer(tabId)}
+                                    className={`px-2 py-1 rounded text-[10px] font-bold text-white ${
+                                      isActiveAuthoringTab ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-blue-600 hover:bg-blue-500'
+                                    }`}
                                   >
-                                    Remove Tab
+                                    {isActiveAuthoringTab ? 'Editing This Tab' : 'Open In Builder'}
                                   </button>
-                                )}
+                                  {!isCoreTab && (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeFinlitTab(tabId)}
+                                      className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-[10px] font-bold text-white"
+                                    >
+                                      Remove Tab
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                               <div className="grid grid-cols-12 gap-2">
                                 <div className="col-span-8">

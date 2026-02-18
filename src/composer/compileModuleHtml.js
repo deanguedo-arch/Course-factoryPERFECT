@@ -1816,7 +1816,22 @@ function buildTemplateRuntimeScript() {
       });
 
       Array.prototype.slice.call(document.querySelectorAll('[data-finlit-root]')).forEach(function(root) {
-        var trigger = root.querySelector('[data-finlit-tab-trigger]');
+        var trigger = root.querySelector('[data-finlit-tab-trigger][aria-selected="true"]');
+        if (!trigger) {
+          trigger = root.querySelector('[data-finlit-tab-trigger].cf-finlit-tab-active');
+        }
+        if (!trigger) {
+          var visiblePanel = root.querySelector('[data-finlit-tab-panel]:not(.hidden)');
+          if (visiblePanel) {
+            var panelId = visiblePanel.getAttribute('data-finlit-tab-panel');
+            if (panelId) {
+              trigger = root.querySelector('[data-finlit-tab-trigger="' + panelId + '"]');
+            }
+          }
+        }
+        if (!trigger) {
+          trigger = root.querySelector('[data-finlit-tab-trigger]');
+        }
         if (trigger) trigger.click();
       });
     })();
@@ -2043,6 +2058,7 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
     if (template === 'finlit') {
       const finlit = createFinlitTemplateFormState(module?.finlit);
       const finlitTabs = Array.isArray(finlit?.tabs) ? finlit.tabs : [];
+      const requestedFinlitTabId = String(module?.finlitActiveTabId || module?.__finlitActiveTabId || '').trim();
       const nonTabGroupActivities = activities.filter((activity) => activity?.type !== 'tab_group');
 
       const tabGroups = activities.filter((activity) => activity?.type === 'tab_group');
@@ -2116,18 +2132,30 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
       const renderedTabs = finlitTabs.map((tab, tabIndex) => {
         const tabId = String(tab?.id || `tab-${tabIndex + 1}`).trim() || `tab-${tabIndex + 1}`;
         const tabLabel = String(tab?.label || tabId || `Tab ${tabIndex + 1}`).trim() || `Tab ${tabIndex + 1}`;
-        const linkedActivities = (Array.isArray(tab?.activityIds) ? tab.activityIds : [])
-          .map((id) => activityMap.get(String(id || '').trim()))
-          .filter(Boolean);
-        const linkedHtml = linkedActivities.length
-          ? linkedActivities.map((item, nestedIdx) => renderActivity(item, nestedIdx, { withLayout: false, trail: [] })).join('\n')
-          : '';
+        const hasLocalTabActivities = Object.prototype.hasOwnProperty.call(tab || {}, 'activities');
+        const localTabActivities = hasLocalTabActivities
+          ? normalizeComposerActivities(Array.isArray(tab?.activities) ? tab.activities : [], {
+              maxColumns: composerLayout.maxColumns,
+              mode: composerLayout.mode,
+            })
+          : [];
+        const localTabHtml = localTabActivities.length ? renderLayout(localTabActivities) : '';
+        const linkedActivities =
+          hasLocalTabActivities
+            ? []
+            : (Array.isArray(tab?.activityIds) ? tab.activityIds : [])
+                .map((id) => activityMap.get(String(id || '').trim()))
+                .filter(Boolean);
+        const linkedHtml = linkedActivities.length ? renderLayout(linkedActivities) : '';
         const legacyHtml = getLegacyTabHtml(tabId);
         const linksHtml = renderFinlitLinks(tab?.links);
         const panelParts = [];
 
+        if (localTabHtml) panelParts.push(localTabHtml);
         if (linkedHtml) panelParts.push(linkedHtml);
-        if (tabId === 'activities' && unlinkedDirectActivitiesHtml) panelParts.push(unlinkedDirectActivitiesHtml);
+        if (tabId === 'activities' && !hasLocalTabActivities && !localTabHtml && unlinkedDirectActivitiesHtml) {
+          panelParts.push(unlinkedDirectActivitiesHtml);
+        }
         if (legacyHtml) panelParts.push(legacyHtml);
         if (linksHtml) panelParts.push(`<div class="space-y-2">${linksHtml}</div>`);
 
@@ -2140,7 +2168,7 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
           tabId,
           tabLabel,
           panelHtml,
-          isActive: tabIndex === 0,
+          isActive: false,
         };
       });
 
@@ -2152,6 +2180,12 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
           isActive: true,
         });
       }
+      const resolvedActiveTabId = renderedTabs.some((tab) => tab.tabId === requestedFinlitTabId)
+        ? requestedFinlitTabId
+        : renderedTabs[0]?.tabId || 'activities';
+      renderedTabs.forEach((tab) => {
+        tab.isActive = tab.tabId === resolvedActiveTabId;
+      });
       const hero = createFinlitHeroFormState(module?.hero);
       const rawHeroMediaUrl = String(hero.mediaUrl || '').trim();
       const heroMediaUrl = /^((https?:)?\/\/|\/|\.\/|\.\.\/|data:image\/|data:video\/|blob:|materials\/)/i.test(rawHeroMediaUrl)

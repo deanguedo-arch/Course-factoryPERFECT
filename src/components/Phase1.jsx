@@ -72,6 +72,7 @@ import {
   normalizeFinlitHeroForSave,
   normalizeFinlitTemplateForSave,
 } from '../utils/finlitHero.js';
+import { resolveFinlitTabComposerState } from '../utils/finlitTabActivities.js';
 
 const { useEffect, useMemo, useRef, useState } = React;
 const GridLayout = WidthProvider(ReactGridLayout);
@@ -319,6 +320,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerTheme, setModuleManagerTheme] = useState('');
   const [moduleManagerHero, setModuleManagerHero] = useState(() => createFinlitHeroFormState());
   const [moduleManagerFinlit, setModuleManagerFinlit] = useState(() => createFinlitTemplateFormState());
+  const [moduleManagerFinlitAuthoringTabId, setModuleManagerFinlitAuthoringTabId] = useState('activities');
   const [moduleManagerComposerStarterType, setModuleManagerComposerStarterType] = useState('content_block');
   const moduleManagerActivityTypeGroups = useMemo(() => listActivityTypeGroups(), []);
   const [moduleManagerComposerLayout, setModuleManagerComposerLayout] = useState({
@@ -458,14 +460,45 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const courseTemplateDefault = String(projectData?.['Course Settings']?.templateDefault || 'deck').trim().toLowerCase();
   const moduleManagerEffectiveTemplate = resolveTemplateKey(moduleManagerTemplate, courseTemplateDefault);
   const showModuleManagerFinlitOptions = moduleManagerType === 'composer' && moduleManagerEffectiveTemplate === 'finlit';
+  const isModuleManagerFinlitComposer = showModuleManagerFinlitOptions;
   const normalizedModuleManagerTemplateProfiles = useMemo(
     () => normalizeTemplateLayoutProfiles(moduleManagerTemplateLayoutProfiles, { activities: moduleManagerComposerActivities }),
     [moduleManagerTemplateLayoutProfiles, moduleManagerComposerActivities],
   );
   const moduleManagerFinlitState = createFinlitTemplateFormState(moduleManagerFinlit);
+  const moduleManagerResolvedFinlitComposerState = useMemo(
+    () =>
+      resolveFinlitTabComposerState({
+        finlit: moduleManagerFinlitState,
+        moduleActivities: moduleManagerComposerActivities,
+        composerLayout: normalizedModuleManagerLayout,
+        activeTabId: moduleManagerFinlitAuthoringTabId,
+        activeTabActivities: moduleManagerComposerActivities,
+      }),
+    [
+      moduleManagerComposerActivities,
+      moduleManagerFinlitAuthoringTabId,
+      moduleManagerFinlitState,
+      normalizedModuleManagerLayout,
+    ],
+  );
+  const moduleManagerCanonicalComposerActivities = useMemo(
+    () =>
+      Array.isArray(moduleManagerResolvedFinlitComposerState?.canonicalActivities)
+        ? moduleManagerResolvedFinlitComposerState.canonicalActivities
+        : [],
+    [moduleManagerResolvedFinlitComposerState],
+  );
+  const moduleManagerActiveFinlitTabId = useMemo(
+    () =>
+      isModuleManagerFinlitComposer
+        ? moduleManagerResolvedFinlitComposerState?.activeTabId || 'activities'
+        : 'activities',
+    [isModuleManagerFinlitComposer, moduleManagerResolvedFinlitComposerState],
+  );
   const moduleManagerFinlitLinkableActivities = useMemo(
     () =>
-      moduleManagerComposerActivities
+      (isModuleManagerFinlitComposer ? moduleManagerCanonicalComposerActivities : moduleManagerComposerActivities)
         .map((activity) => {
           const id = String(activity?.id || '').trim();
           if (!id || activity?.type === 'tab_group') return null;
@@ -479,7 +512,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           };
         })
         .filter(Boolean),
-    [moduleManagerComposerActivities],
+    [isModuleManagerFinlitComposer, moduleManagerCanonicalComposerActivities, moduleManagerComposerActivities],
   );
   const moduleManagerPreviewPaneWidth = Math.max(30, Math.min(75, Number(moduleManagerComposerPreviewWidth) || 55));
   const moduleManagerPreviewPaneHeight = Math.max(420, Math.min(2000, Number(moduleManagerComposerPreviewHeight) || 900));
@@ -1223,10 +1256,21 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
 
   const buildModuleManagerDraftPayload = () => {
     const composerLayout = normalizeComposerLayout(moduleManagerComposerLayout);
-    const composerActivities = normalizeComposerActivities(moduleManagerComposerActivities, {
+    const activeComposerActivities = normalizeComposerActivities(moduleManagerComposerActivities, {
       maxColumns: composerLayout.maxColumns,
       mode: composerLayout.mode,
     });
+    const resolvedFinlitComposerState = resolveFinlitTabComposerState({
+      finlit: moduleManagerFinlitState,
+      moduleActivities: activeComposerActivities,
+      composerLayout,
+      activeTabId: moduleManagerFinlitAuthoringTabId,
+      activeTabActivities: activeComposerActivities,
+    });
+    const composerActivities =
+      isModuleManagerFinlitComposer && Array.isArray(resolvedFinlitComposerState.canonicalActivities)
+        ? resolvedFinlitComposerState.canonicalActivities
+        : activeComposerActivities;
     const templateLayoutProfiles = normalizeTemplateLayoutProfiles(
       {
         ...(normalizedModuleManagerTemplateProfiles && typeof normalizedModuleManagerTemplateProfiles === 'object'
@@ -1250,11 +1294,12 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       template: moduleManagerTemplate,
       theme: moduleManagerTheme,
       hero: createFinlitHeroFormState(moduleManagerHero),
-      finlit: createFinlitTemplateFormState(moduleManagerFinlit),
+      finlit: resolvedFinlitComposerState.finlit,
       composerStarterType: moduleManagerComposerStarterType,
       composerLayout,
       composerActivities,
       templateLayoutProfiles,
+      finlitAuthoringTabId: resolvedFinlitComposerState.activeTabId,
       composerExtraRows: moduleManagerComposerExtraRows,
       composerSelectedIndex: moduleManagerComposerSelectedIndex,
     };
@@ -1312,6 +1357,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     setModuleManagerTemplateLayoutProfiles(nextTemplateProfiles);
     setModuleManagerComposerLayout(nextLayout);
     setModuleManagerComposerActivities(nextActivities);
+    setModuleManagerFinlitAuthoringTabId(String(payload.finlitAuthoringTabId || 'activities').trim() || 'activities');
     setModuleManagerComposerExtraRows(nextExtraRows);
     setModuleManagerComposerSelectedIndex(nextSelectedIndex);
     resetComposerHistory();
@@ -1561,6 +1607,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     setModuleManagerTheme('');
     setModuleManagerHero(createFinlitHeroFormState());
     setModuleManagerFinlit(createFinlitTemplateFormState());
+    setModuleManagerFinlitAuthoringTabId('activities');
     setModuleManagerComposerLayout({
       mode: 'simple',
       maxColumns: 1,
@@ -1732,11 +1779,49 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const selectedComposerPlacement = selectedComposerActivity
     ? moduleManagerPlacementByIndex.get(moduleManagerComposerSelectedIndex) || null
     : null;
+  useEffect(() => {
+    if (!isModuleManagerFinlitComposer) {
+      if (moduleManagerFinlitAuthoringTabId !== 'activities') {
+        setModuleManagerFinlitAuthoringTabId('activities');
+      }
+      return;
+    }
+    const resolved = resolveFinlitTabComposerState({
+      finlit: moduleManagerFinlitState,
+      moduleActivities: moduleManagerComposerActivities,
+      composerLayout: normalizedModuleManagerLayout,
+      activeTabId: moduleManagerFinlitAuthoringTabId,
+      activeTabActivities: moduleManagerComposerActivities,
+    });
+    const nextTabId = String(resolved?.activeTabId || 'activities').trim() || 'activities';
+    if (nextTabId !== moduleManagerFinlitAuthoringTabId) {
+      setModuleManagerFinlitAuthoringTabId(nextTabId);
+    }
+    const nextTabsSignature = JSON.stringify(resolved?.finlit?.tabs || []);
+    const currentTabsSignature = JSON.stringify(moduleManagerFinlitState?.tabs || []);
+    if (nextTabsSignature !== currentTabsSignature) {
+      setModuleManagerFinlit(resolved.finlit);
+    }
+    const nextActivities = Array.isArray(resolved?.activeTabActivities) ? resolved.activeTabActivities : [];
+    if (JSON.stringify(nextActivities) !== JSON.stringify(moduleManagerComposerActivities)) {
+      setModuleManagerComposerActivities(nextActivities);
+    }
+    setModuleManagerComposerSelectedIndex((prevIndex) => {
+      const maxIndex = Math.max(0, nextActivities.length - 1);
+      return Math.max(0, Math.min(maxIndex, Number.parseInt(prevIndex, 10) || 0));
+    });
+  }, [
+    isModuleManagerFinlitComposer,
+    moduleManagerComposerActivities,
+    moduleManagerFinlitAuthoringTabId,
+    moduleManagerFinlitState,
+    normalizedModuleManagerLayout,
+  ]);
   const buildTemplateLayoutProfilesForComposerState = React.useCallback(
     ({
       templateOverride = moduleManagerTemplate,
       composerLayout = moduleManagerComposerLayout,
-      activities = moduleManagerComposerActivities,
+      activities = isModuleManagerFinlitComposer ? moduleManagerCanonicalComposerActivities : moduleManagerComposerActivities,
       templateProfiles = normalizedModuleManagerTemplateProfiles,
     } = {}) => {
       const resolvedTemplateKey = resolveTemplateKey(templateOverride, courseTemplateDefault);
@@ -1751,6 +1836,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     },
     [
       courseTemplateDefault,
+      isModuleManagerFinlitComposer,
+      moduleManagerCanonicalComposerActivities,
       moduleManagerComposerActivities,
       moduleManagerComposerLayout,
       moduleManagerTemplate,
@@ -1759,6 +1846,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   );
   const updateModuleManagerHeroField = (key, value) => {
     if (!['title', 'subtitle', 'progressLabel', 'mediaUrl', 'mediaType'].includes(key)) return;
+    moduleManagerComposerPreviewShouldFollowRef.current = false;
     setModuleManagerHero((prev) => ({
       ...createFinlitHeroFormState(prev),
       [key]: value,
@@ -1772,12 +1860,14 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       .filter((id) => id && valid.has(id) && !seen.has(id) && seen.add(id));
   };
   const updateModuleManagerFinlitTabs = (updater) => {
+    moduleManagerComposerPreviewShouldFollowRef.current = false;
     setModuleManagerFinlit((prev) => {
       const next = createFinlitTemplateFormState(prev);
       const tabs = Array.isArray(next.tabs) ? next.tabs : [];
       const draftTabs = tabs.map((tab) => ({
         ...tab,
         activityIds: Array.isArray(tab.activityIds) ? [...tab.activityIds] : [],
+        activities: Array.isArray(tab.activities) ? tab.activities.map((activity) => ({ ...activity })) : [],
         links: Array.isArray(tab.links) ? tab.links.map((link) => ({ ...link })) : [],
       }));
       const updatedTabs = typeof updater === 'function' ? updater(draftTabs) : draftTabs;
@@ -1803,6 +1893,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           id: nextId,
           label: `Tab ${tabs.length + 1}`,
           activityIds: [],
+          activities: [],
           links: [],
         },
       ];
@@ -1832,6 +1923,9 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     const targetId = String(tabId || '').trim();
     if (!targetId || FINLIT_CORE_TAB_IDS.includes(targetId)) return;
     updateModuleManagerFinlitTabs((tabs) => tabs.filter((tab) => String(tab?.id || '').trim() !== targetId));
+    if (moduleManagerFinlitAuthoringTabId === targetId) {
+      setModuleManagerFinlitAuthoringTabId('activities');
+    }
   };
   const addModuleManagerFinlitTabLink = (tabId) => {
     const targetId = String(tabId || '').trim();
@@ -1873,6 +1967,30 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       }),
     );
   };
+  const openModuleManagerFinlitTabInBuilder = React.useCallback(
+    (tabId) => {
+      const targetId = String(tabId || '').trim();
+      if (!targetId) return;
+      const resolved = resolveFinlitTabComposerState({
+        finlit: moduleManagerFinlitState,
+        moduleActivities: moduleManagerComposerActivities,
+        composerLayout: normalizedModuleManagerLayout,
+        activeTabId: targetId,
+      });
+      setModuleManagerFinlit(resolved.finlit);
+      setModuleManagerFinlitAuthoringTabId(resolved.activeTabId);
+      setModuleManagerComposerActivities(resolved.activeTabActivities);
+      setModuleManagerComposerSelectedIndex(0);
+      setModuleManagerComposerLeftPaneMode('builder');
+      moduleManagerComposerPreviewShouldFollowRef.current = false;
+    },
+    [
+      moduleManagerComposerActivities,
+      moduleManagerFinlitState,
+      normalizedModuleManagerLayout,
+      setModuleManagerComposerLeftPaneMode,
+    ],
+  );
   useEffect(() => {
     if (moduleManagerRichEditorUpdateTimerRef.current) {
       clearTimeout(moduleManagerRichEditorUpdateTimerRef.current);
@@ -1921,8 +2039,19 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     const rawId = moduleManagerID.trim();
     const moduleId = rawId ? (rawId.startsWith('view-') ? rawId : `view-${rawId}`) : 'view-composer-preview';
     const title = moduleManagerTitle.trim() || moduleId.replace('view-', '').replace(/-/g, ' ') || 'Composer Preview';
+    const resolvedFinlitComposerState = resolveFinlitTabComposerState({
+      finlit: moduleManagerFinlitState,
+      moduleActivities: moduleManagerComposerActivities,
+      composerLayout: normalizedModuleManagerLayout,
+      activeTabId: moduleManagerFinlitAuthoringTabId,
+      activeTabActivities: moduleManagerComposerActivities,
+    });
     const hero = normalizeFinlitHeroForSave(moduleManagerHero);
-    const finlit = normalizeFinlitTemplateForSave(moduleManagerFinlit);
+    const finlit = normalizeFinlitTemplateForSave(resolvedFinlitComposerState.finlit);
+    const previewActivities =
+      isModuleManagerFinlitComposer && Array.isArray(resolvedFinlitComposerState.canonicalActivities)
+        ? resolvedFinlitComposerState.canonicalActivities
+        : moduleManagerComposerActivities;
     const previewModule = {
       id: moduleId,
       title,
@@ -1933,7 +2062,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       hero,
       finlit,
       composerLayout: normalizedModuleManagerLayout,
-      activities: moduleManagerComposerActivities,
+      activities: previewActivities,
+      ...(isModuleManagerFinlitComposer ? { finlitActiveTabId: resolvedFinlitComposerState.activeTabId } : {}),
       rawHtml: '',
       html: '',
       css: '',
@@ -1952,6 +2082,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     moduleManagerComposerPreviewScope,
     moduleManagerComposerActivities,
     moduleManagerComposerMaxColumns,
+    moduleManagerFinlitAuthoringTabId,
+    moduleManagerFinlitState,
     moduleManagerHero,
     moduleManagerFinlit,
     moduleManagerID,
@@ -1959,22 +2091,44 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     moduleManagerTitle,
     moduleManagerTemplate,
     moduleManagerType,
+    isModuleManagerFinlitComposer,
     normalizedModuleManagerLayout,
     projectData,
   ]);
 
-  const scrollModuleManagerPreviewToActivity = React.useCallback((activityId) => {
-    const targetId = String(activityId || '').trim();
-    if (!targetId) return false;
-    const iframe = moduleManagerComposerPreviewIframeRef.current;
-    const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
-    if (!doc) return false;
-    const escaped = targetId.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    const target = doc.querySelector(`[data-activity-id="${escaped}"]`);
-    if (!target || typeof target.scrollIntoView !== 'function') return false;
-    target.scrollIntoView({ block: 'center', inline: 'nearest' });
-    return true;
-  }, []);
+  const scrollModuleManagerPreviewToActivity = React.useCallback(
+    (activityId) => {
+      const targetId = String(activityId || '').trim();
+      if (!targetId) return false;
+      const iframe = moduleManagerComposerPreviewIframeRef.current;
+      const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
+      if (!doc) return false;
+      const escapedActivityId = targetId.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const activeTabId = isModuleManagerFinlitComposer ? String(moduleManagerActiveFinlitTabId || '').trim() : '';
+      let panelRoot = doc;
+      if (activeTabId) {
+        const escapedTabId = activeTabId.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        const trigger = doc.querySelector(`[data-finlit-tab-trigger="${escapedTabId}"]`);
+        if (trigger instanceof HTMLElement) {
+          trigger.click();
+        }
+        const panel = doc.querySelector(`[data-finlit-tab-panel="${escapedTabId}"]`);
+        if (panel) {
+          panelRoot = panel;
+        }
+      }
+      const targetInPanel = panelRoot.querySelector?.(`[data-activity-id="${escapedActivityId}"]`) || null;
+      if (targetInPanel && typeof targetInPanel.scrollIntoView === 'function') {
+        targetInPanel.scrollIntoView({ block: 'center', inline: 'nearest' });
+        return true;
+      }
+      const fallbackTarget = doc.querySelector(`[data-activity-id="${escapedActivityId}"]`);
+      if (!fallbackTarget || typeof fallbackTarget.scrollIntoView !== 'function') return false;
+      fallbackTarget.scrollIntoView({ block: 'center', inline: 'nearest' });
+      return true;
+    },
+    [isModuleManagerFinlitComposer, moduleManagerActiveFinlitTabId],
+  );
 
   useEffect(() => {
     moduleManagerComposerPreviewTargetActivityIdRef.current = String(selectedComposerActivity?.id || '').trim();
@@ -1986,7 +2140,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       return;
     }
     moduleManagerComposerPreviewShouldFollowRef.current = true;
-  }, [moduleManagerType, selectedComposerActivity?.id, moduleManagerComposerActivities]);
+  }, [moduleManagerType, selectedComposerActivity?.id]);
 
   useEffect(() => {
     if (moduleManagerType !== 'composer') return;
@@ -2181,41 +2335,74 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     { recordHistory = true, historySnapshot = null, templateOverride = moduleManagerTemplate, templateProfiles = null } = {},
   ) => {
     const normalizedLayout = normalizeComposerLayout(nextLayout);
-    const normalizedActivities = normalizeComposerActivities(nextActivities, {
+    const targetTemplateKey = resolveTemplateKey(templateOverride, courseTemplateDefault);
+    const shouldSyncFinlit = isModuleManagerFinlitComposer && targetTemplateKey === 'finlit';
+    let normalizedActivities = normalizeComposerActivities(nextActivities, {
       maxColumns: normalizedLayout.maxColumns,
       mode: normalizedLayout.mode,
     });
+    let profileActivities = normalizedActivities;
+    let nextFinlitState = moduleManagerFinlitState;
+    let nextFinlitAuthoringTabId = moduleManagerFinlitAuthoringTabId;
+    if (shouldSyncFinlit) {
+      const resolved = resolveFinlitTabComposerState({
+        finlit: moduleManagerFinlitState,
+        moduleActivities: moduleManagerComposerActivities,
+        composerLayout: normalizedLayout,
+        activeTabId: moduleManagerFinlitAuthoringTabId,
+        activeTabActivities: normalizedActivities,
+      });
+      nextFinlitState = resolved.finlit;
+      nextFinlitAuthoringTabId = resolved.activeTabId;
+      profileActivities = Array.isArray(resolved.canonicalActivities) ? resolved.canonicalActivities : normalizedActivities;
+      normalizedActivities = Array.isArray(resolved.activeTabActivities) ? resolved.activeTabActivities : normalizedActivities;
+    }
     const baseProfiles = normalizeTemplateLayoutProfiles(
       templateProfiles != null ? templateProfiles : moduleManagerTemplateLayoutProfiles,
-      { activities: normalizedActivities },
+      { activities: profileActivities },
     );
     const nextTemplateProfiles = normalizeTemplateLayoutProfiles(
       {
         ...(baseProfiles && typeof baseProfiles === 'object' ? baseProfiles : {}),
         [resolveTemplateKey(templateOverride, courseTemplateDefault)]: captureTemplateLayoutProfile(
           normalizedLayout,
-          normalizedActivities,
+          profileActivities,
         ),
       },
-      { activities: normalizedActivities },
+      { activities: profileActivities },
     );
     const nextSignature = JSON.stringify([normalizedLayout, normalizedActivities]);
     const currentSignature = JSON.stringify([normalizeComposerLayout(moduleManagerComposerLayout), moduleManagerComposerActivities]);
+    const nextFinlitTabsSignature = JSON.stringify(nextFinlitState?.tabs || []);
+    const currentFinlitTabsSignature = JSON.stringify(moduleManagerFinlitState?.tabs || []);
     if (nextSignature === currentSignature) {
       const currentProfiles = normalizeTemplateLayoutProfiles(moduleManagerTemplateLayoutProfiles, {
-        activities: normalizedActivities,
+        activities: profileActivities,
       });
-      if (JSON.stringify(currentProfiles) !== JSON.stringify(nextTemplateProfiles)) {
+      const profilesChanged = JSON.stringify(currentProfiles) !== JSON.stringify(nextTemplateProfiles);
+      const finlitChanged =
+        shouldSyncFinlit &&
+        (nextFinlitTabsSignature !== currentFinlitTabsSignature || nextFinlitAuthoringTabId !== moduleManagerFinlitAuthoringTabId);
+      if (profilesChanged) {
         setModuleManagerTemplateLayoutProfiles(nextTemplateProfiles);
+      }
+      if (finlitChanged) {
+        setModuleManagerFinlit(nextFinlitState);
+        setModuleManagerFinlitAuthoringTabId(nextFinlitAuthoringTabId);
       }
       return false;
     }
     if (recordHistory) {
       pushComposerHistorySnapshot(historySnapshot || buildComposerSnapshot());
     }
+    moduleManagerComposerPreviewShouldFollowRef.current = true;
     setModuleManagerComposerLayout(normalizedLayout);
     setModuleManagerComposerActivities(normalizedActivities);
     setModuleManagerTemplateLayoutProfiles(nextTemplateProfiles);
+    if (shouldSyncFinlit) {
+      setModuleManagerFinlit(nextFinlitState);
+      setModuleManagerFinlitAuthoringTabId(nextFinlitAuthoringTabId);
+    }
     return true;
   };
 
@@ -2232,14 +2419,30 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     });
     const currentTemplateKey = resolveTemplateKey(moduleManagerTemplate, courseTemplateDefault);
     const nextTemplateKey = resolveTemplateKey(nextTemplateOverride, courseTemplateDefault);
-    const activeProfile = captureTemplateLayoutProfile(currentLayout, currentActivities);
-    const baseProfiles = normalizeTemplateLayoutProfiles(moduleManagerTemplateLayoutProfiles, { activities: currentActivities });
+    const isCurrentFinlitComposer = currentTemplateKey === 'finlit';
+    const isNextFinlitComposer = nextTemplateKey === 'finlit';
+    let templateSourceActivities = currentActivities;
+    if (isCurrentFinlitComposer) {
+      const resolvedCurrentFinlit = resolveFinlitTabComposerState({
+        finlit: moduleManagerFinlitState,
+        moduleActivities: currentActivities,
+        composerLayout: currentLayout,
+        activeTabId: moduleManagerFinlitAuthoringTabId,
+        activeTabActivities: currentActivities,
+      });
+      if (!isNextFinlitComposer && Array.isArray(resolvedCurrentFinlit.canonicalActivities)) {
+        templateSourceActivities = resolvedCurrentFinlit.canonicalActivities;
+      }
+      setModuleManagerFinlit(resolvedCurrentFinlit.finlit);
+    }
+    const activeProfile = captureTemplateLayoutProfile(currentLayout, templateSourceActivities);
+    const baseProfiles = normalizeTemplateLayoutProfiles(moduleManagerTemplateLayoutProfiles, { activities: templateSourceActivities });
     const profilesWithCurrent = normalizeTemplateLayoutProfiles(
       {
         ...(baseProfiles && typeof baseProfiles === 'object' ? baseProfiles : {}),
         [currentTemplateKey]: activeProfile,
       },
-      { activities: currentActivities },
+      { activities: templateSourceActivities },
     );
     const targetProfileSource =
       profilesWithCurrent[nextTemplateKey] || profilesWithCurrent[currentTemplateKey] || activeProfile;
@@ -2249,21 +2452,39 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         ...(profilesWithCurrent && typeof profilesWithCurrent === 'object' ? profilesWithCurrent : {}),
         [nextTemplateKey]: targetProfile,
       },
-      { activities: currentActivities },
+      { activities: templateSourceActivities },
     );
     const applied = applyTemplateLayoutProfile(
-      currentActivities,
+      templateSourceActivities,
       targetProfile,
       currentLayout.mode,
       currentLayout.maxColumns,
     );
+    let selectedIndexActivities = applied.activities;
     updateComposerActivities(applied.activities, applied.composerLayout, {
       templateOverride: nextTemplateOverride,
       templateProfiles: profilesWithTarget,
     });
     setModuleManagerTemplate(nextTemplateOverride);
+    if (isCurrentFinlitComposer && !isNextFinlitComposer) {
+      setModuleManagerFinlitAuthoringTabId('activities');
+    } else if (!isCurrentFinlitComposer && isNextFinlitComposer) {
+      const resolvedIntoFinlit = resolveFinlitTabComposerState({
+        finlit: moduleManagerFinlitState,
+        moduleActivities: applied.activities,
+        composerLayout: applied.composerLayout,
+        activeTabId: 'activities',
+        activeTabActivities: applied.activities,
+      });
+      setModuleManagerFinlit(resolvedIntoFinlit.finlit);
+      setModuleManagerFinlitAuthoringTabId(resolvedIntoFinlit.activeTabId);
+      setModuleManagerComposerActivities(resolvedIntoFinlit.activeTabActivities);
+      selectedIndexActivities = Array.isArray(resolvedIntoFinlit.activeTabActivities)
+        ? resolvedIntoFinlit.activeTabActivities
+        : selectedIndexActivities;
+    }
     setModuleManagerComposerSelectedIndex((prevIndex) => {
-      const maxIndex = Math.max(0, applied.activities.length - 1);
+      const maxIndex = Math.max(0, selectedIndexActivities.length - 1);
       return Math.max(0, Math.min(maxIndex, Number.parseInt(prevIndex, 10) || 0));
     });
   };
@@ -5060,6 +5281,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       setModuleManagerTheme('');
       setModuleManagerHero(createFinlitHeroFormState());
       setModuleManagerFinlit(createFinlitTemplateFormState());
+      setModuleManagerFinlitAuthoringTabId('activities');
       setModuleManagerStatus('success');
       setModuleManagerMessage(`Module "${title}" added successfully. It will run in an isolated iframe.`);
       
@@ -5107,12 +5329,23 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               maxColumns: composerLayout.maxColumns,
               mode: composerLayout.mode,
             });
+      const resolvedFinlitComposerState = resolveFinlitTabComposerState({
+        finlit: moduleManagerFinlitState,
+        moduleActivities: composerActivities,
+        composerLayout,
+        activeTabId: moduleManagerFinlitAuthoringTabId,
+        activeTabActivities: composerActivities,
+      });
+      const canonicalComposerActivities =
+        isModuleManagerFinlitComposer && Array.isArray(resolvedFinlitComposerState.canonicalActivities)
+          ? resolvedFinlitComposerState.canonicalActivities
+          : composerActivities;
       const normalizedHero = normalizeFinlitHeroForSave(moduleManagerHero);
-      const normalizedFinlit = normalizeFinlitTemplateForSave(moduleManagerFinlit);
+      const normalizedFinlit = normalizeFinlitTemplateForSave(resolvedFinlitComposerState.finlit);
       const templateLayoutProfiles = buildTemplateLayoutProfilesForComposerState({
         templateOverride: moduleManagerTemplate,
         composerLayout,
-        activities: composerActivities,
+        activities: canonicalComposerActivities,
       });
 
       const newModule = {
@@ -5125,7 +5358,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         hero: normalizedHero,
         finlit: normalizedFinlit,
         composerLayout,
-        activities: composerActivities,
+        activities: canonicalComposerActivities,
         templateLayoutProfiles,
         rawHtml: '',
         html: '',
@@ -5140,7 +5373,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           hero: normalizedHero,
           finlit: normalizedFinlit,
           composerLayout,
-          activities: composerActivities,
+          activities: canonicalComposerActivities,
           templateLayoutProfiles,
         }]
       };
@@ -5177,6 +5410,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       setModuleManagerTheme('');
       setModuleManagerHero(createFinlitHeroFormState());
       setModuleManagerFinlit(createFinlitTemplateFormState());
+      setModuleManagerFinlitAuthoringTabId('activities');
       setModuleManagerComposerLayout({
         mode: 'simple',
         maxColumns: 1,
@@ -5196,7 +5430,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       setModuleManagerComposerSelectedIndex(0);
       resetComposerHistory();
       setModuleManagerStatus('success');
-      setModuleManagerMessage(`Composer module "${title}" added with ${composerActivities.length} activities.`);
+      setModuleManagerMessage(`Composer module "${title}" added with ${canonicalComposerActivities.length} activities.`);
 
       setTimeout(() => {
         setModuleManagerStatus(null);
@@ -5313,6 +5547,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       setModuleManagerTheme('');
       setModuleManagerHero(createFinlitHeroFormState());
       setModuleManagerFinlit(createFinlitTemplateFormState());
+      setModuleManagerFinlitAuthoringTabId('activities');
       setModuleManagerStatus('success');
       setModuleManagerMessage(`External link module "${newModule.title}" added successfully.`);
       
@@ -7509,7 +7744,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 <div>
                                                     <h4 className="text-[11px] font-bold text-slate-300 uppercase">Tabs</h4>
                                                     <p className="text-[10px] text-slate-500 mt-1">
-                                                        Add custom tabs, link activities, and add optional resource links.
+                                                        Each tab can have its own block arrangement. Open a tab in the builder to edit its content.
                                                     </p>
                                                 </div>
                                                 <button
@@ -7526,21 +7761,40 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     const selectedIds = sanitizeModuleManagerFinlitTabActivityIds(tab?.activityIds);
                                                     const isCoreTab = FINLIT_CORE_TAB_IDS.includes(tabId);
                                                     const tabLinks = Array.isArray(tab?.links) ? tab.links : [];
+                                                    const tabActivityCount = Array.isArray(tab?.activities) ? tab.activities.length : 0;
+                                                    const isActiveAuthoringTab = moduleManagerActiveFinlitTabId === tabId;
                                                     return (
                                                         <div key={`module-finlit-tab-${tabId}`} className="rounded border border-slate-700 bg-slate-950/70 p-3 space-y-2">
                                                             <div className="flex items-center justify-between">
-                                                                <p className="text-[11px] font-bold text-slate-300 uppercase">
-                                                                    {isCoreTab ? `${tabId} (core)` : `Tab ${tabIndex + 1}`}
-                                                                </p>
-                                                                {!isCoreTab && (
+                                                                <div>
+                                                                    <p className="text-[11px] font-bold text-slate-300 uppercase">
+                                                                        {isCoreTab ? `${tabId} (core)` : `Tab ${tabIndex + 1}`}
+                                                                    </p>
+                                                                    <p className="text-[10px] text-slate-500">
+                                                                        {tabActivityCount} block{tabActivityCount === 1 ? '' : 's'}
+                                                                        {isActiveAuthoringTab ? ' • currently editing' : ''}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => removeModuleManagerFinlitTab(tabId)}
-                                                                        className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-[10px] font-bold text-white"
+                                                                        onClick={() => openModuleManagerFinlitTabInBuilder(tabId)}
+                                                                        className={`px-2 py-1 rounded text-[10px] font-bold text-white ${
+                                                                            isActiveAuthoringTab ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-indigo-600 hover:bg-indigo-500'
+                                                                        }`}
                                                                     >
-                                                                        Remove Tab
+                                                                        {isActiveAuthoringTab ? 'Editing This Tab' : 'Open In Builder'}
                                                                     </button>
-                                                                )}
+                                                                    {!isCoreTab && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => removeModuleManagerFinlitTab(tabId)}
+                                                                            className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-[10px] font-bold text-white"
+                                                                        >
+                                                                            Remove Tab
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                             <div className="grid grid-cols-12 gap-2">
                                                                 <div className="col-span-8">

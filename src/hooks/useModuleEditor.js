@@ -11,6 +11,7 @@ import {
   normalizeFinlitHeroForSave,
   normalizeFinlitTemplateForSave,
 } from '../utils/finlitHero.js';
+import { resolveFinlitTabComposerState } from '../utils/finlitTabActivities.js';
 
 const { useCallback, useState } = React;
 
@@ -78,8 +79,18 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
 
   const openEditModule = useCallback((item) => {
     const composerState = normalizeComposerModuleConfig(item);
+    const finlitResolved = resolveFinlitTabComposerState({
+      finlit: item?.finlit,
+      moduleActivities: composerState.activities,
+      composerLayout: composerState.composerLayout,
+      activeTabId: 'activities',
+    });
+    const canonicalActivities =
+      Array.isArray(finlitResolved?.canonicalActivities) && finlitResolved.canonicalActivities.length > 0
+        ? finlitResolved.canonicalActivities
+        : composerState.activities;
     const templateLayoutProfiles = normalizeTemplateLayoutProfiles(item?.templateLayoutProfiles, {
-      activities: composerState.activities,
+      activities: canonicalActivities,
     });
 
     // Handle external link modules
@@ -94,9 +105,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         template: normalizeModuleTemplate(item.template),
         theme: normalizeModuleTheme(item.theme),
         hero: createFinlitHeroFormState(item.hero),
-        finlit: createFinlitTemplateFormState(item.finlit),
+        finlit: finlitResolved.finlit || createFinlitTemplateFormState(item.finlit),
         moduleMode: item.mode || 'custom_html',
-        activities: composerState.activities,
+        activities: canonicalActivities,
         composerLayout: composerState.composerLayout,
         templateLayoutProfiles,
       });
@@ -117,9 +128,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
           template: normalizeModuleTemplate(item.template),
           theme: normalizeModuleTheme(item.theme),
           hero: createFinlitHeroFormState(item.hero),
-          finlit: createFinlitTemplateFormState(item.finlit),
+          finlit: finlitResolved.finlit || createFinlitTemplateFormState(item.finlit),
           moduleMode: item.mode || 'custom_html',
-          activities: composerState.activities,
+          activities: canonicalActivities,
           composerLayout: composerState.composerLayout,
           templateLayoutProfiles,
           hasRawHtml: true, // Flag to indicate this uses rawHtml format
@@ -160,9 +171,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         template: normalizeModuleTemplate(item.template),
         theme: normalizeModuleTheme(item.theme),
         hero: createFinlitHeroFormState(item.hero),
-        finlit: createFinlitTemplateFormState(item.finlit),
+        finlit: finlitResolved.finlit || createFinlitTemplateFormState(item.finlit),
         moduleMode: item.mode || 'custom_html',
-        activities: composerState.activities,
+        activities: canonicalActivities,
         composerLayout: composerState.composerLayout,
         templateLayoutProfiles,
         hasRawHtml: false,
@@ -188,9 +199,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
       template: normalizeModuleTemplate(item.template),
       theme: normalizeModuleTheme(item.theme),
       hero: createFinlitHeroFormState(item.hero),
-      finlit: createFinlitTemplateFormState(item.finlit),
+      finlit: finlitResolved.finlit || createFinlitTemplateFormState(item.finlit),
       moduleMode: item.mode || 'custom_html',
-      activities: composerState.activities,
+      activities: canonicalActivities,
       composerLayout: composerState.composerLayout,
       templateLayoutProfiles,
     });
@@ -255,14 +266,35 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
     const nextTemplate = normalizeModuleTemplate(editForm.template);
     const nextTheme = normalizeModuleTheme(editForm.theme);
     const nextHero = normalizeFinlitHeroForSave(editForm.hero);
-    const nextFinlit = normalizeFinlitTemplateForSave(editForm.finlit);
-    const nextActivities =
+    let finlitResolved = resolveFinlitTabComposerState({
+      finlit: editForm.finlit,
+      moduleActivities: editForm.activities,
+      composerLayout: nextComposerLayout,
+      activeTabId: 'activities',
+    });
+    let nextActivities =
       nextMode === 'composer'
-        ? ensureComposerActivities(editForm.activities, nextComposerLayout)
+        ? ensureComposerActivities(
+            Array.isArray(finlitResolved?.canonicalActivities) && finlitResolved.canonicalActivities.length > 0
+              ? finlitResolved.canonicalActivities
+              : editForm.activities,
+            nextComposerLayout,
+          )
         : normalizeComposerActivities(editForm.activities, {
             maxColumns: nextComposerLayout.maxColumns,
             mode: nextComposerLayout.mode,
           });
+    if (nextMode === 'composer') {
+      finlitResolved = resolveFinlitTabComposerState({
+        finlit: finlitResolved.finlit,
+        moduleActivities: nextActivities,
+        composerLayout: nextComposerLayout,
+        activeTabId: 'activities',
+        activeTabActivities: nextActivities,
+      });
+      nextActivities = Array.isArray(finlitResolved?.canonicalActivities) ? finlitResolved.canonicalActivities : nextActivities;
+    }
+    const nextFinlit = normalizeFinlitTemplateForSave(finlitResolved.finlit);
     const nextTemplateLayoutProfiles = normalizeTemplateLayoutProfiles(editForm.templateLayoutProfiles, {
       activities: nextActivities,
     });
