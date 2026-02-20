@@ -300,3 +300,70 @@
 - Resize:
   - Horizontal -> adjust horizontal neighbors.
   - Vertical -> push only on actual overlap collisions.
+
+## Update (2026-02-19 - FinLit Tab-Scoped Composer + Preview Focus)
+
+### Requested Outcomes
+- Convert FinLit tabs from selector-only to independently editable tab-local composer content.
+- Keep backward compatibility with legacy FinLit modules.
+- Ensure preview follows the tab being edited instead of resetting to first tab.
+- Add quality-of-life controls for composer workspace ergonomics.
+
+### Implemented
+
+### 1) FinLit data model and compatibility
+- Extended FinLit tabs to support local activities per tab:
+  - `module.finlit.tabs[] = { id, label, activityIds?, activities?, links }`
+- Kept legacy compatibility fields and behavior:
+  - `activitiesTabLabel`, `additionalTabLabel`, `additionalLinks`, `activityIds`.
+- Core-tab policy updated:
+  - `activities` remains required.
+  - `additional` is optional/removable.
+- Added conversion + normalization utility for legacy modules:
+  - Converts `activityIds` tabs to local `tab.activities`.
+  - Ensures unique activity IDs across all tab-local lists.
+  - Keeps canonical `module.activities` synced to `activities` tab.
+
+### 2) Authoring surfaces (Phase1 + EditModal)
+- Added FinLit authoring-tab state in both surfaces.
+- Added explicit tab action in FinLit options:
+  - `Open In Builder` / `Editing This Tab`
+- Routed composer mutations (add/edit/move/delete/reorder) through active FinLit tab.
+- Preserved shared layout settings across tabs.
+- Added FinLit hero media vault selection in both flows (single-file path into media URL).
+
+### 3) Compile/runtime behavior
+- FinLit compile now renders per-tab content priority:
+  1. `tab.activities` (new primary model, full layout render)
+  2. legacy `tab.activityIds` mapped to module activities
+  3. legacy tab-group fallback where applicable
+- Preview can pass active tab (`finlitActiveTabId`) into compile output.
+- Runtime tab initialization now respects pre-selected active tab and no longer always clicks the first tab.
+
+### 4) Preview follow-scroll behavior
+- Preview follow now targets active tab panel first, then selected `data-activity-id`.
+- Follow-scroll is no longer triggered by unrelated FinLit options edits.
+- Follow-scroll remains active for actual block selection/edit activity updates.
+
+### 5) Composer workspace controls collapse
+- Added a dedicated `Show Controls / Hide Controls` toggle for the workspace controls strip in Phase1.
+- Collapses/expands:
+  - Preview Width
+  - Preview Height
+  - Builder Height
+  - Block Width
+  - Lock Block Scale
+- Added draft persistence for this collapsed state in module manager draft payloads.
+
+### Key Files
+- `src/utils/finlitHero.js`
+- `src/utils/finlitTabActivities.js` (new)
+- `src/hooks/useModuleEditor.js`
+- `src/components/Phase1.jsx`
+- `src/components/modals/EditModal.jsx`
+- `src/composer/compileModuleHtml.js`
+
+### Validation
+- `npm run build`: passed
+- `npm run exports:fixtures`: passed
+- `npm run lint`: fails due large pre-existing repo/global lint debt (including generated `.vite` deps and unrelated legacy files), not introduced by this pass.

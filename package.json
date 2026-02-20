@@ -14,6 +14,8 @@
     "exports:verify": "node scripts/verify_exports.mjs verify",
     "exports:parity": "node scripts/exports_parity.mjs",
     "exports:fixtures": "node scripts/verify_composer_fixtures.mjs",
+    "build:calm4-draft": "node scripts/build_calm_module4_draft.mjs",
+    "build:ab30-theme1-draft": "node scripts/build_ab30_theme1_draft.mjs",
     "release:check": "node scripts/release_gate.mjs",
     "validate": "npm run build && npm run lint && npm run release:check"
   },

@@ -353,6 +353,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerComposerPreviewHeight, setModuleManagerComposerPreviewHeight] = useState(900);
   const [moduleManagerComposerBuilderHeight, setModuleManagerComposerBuilderHeight] = useState(760);
   const [moduleManagerComposerBuilderCellWidth, setModuleManagerComposerBuilderCellWidth] = useState(220);
+  const [moduleManagerComposerWorkspaceControlsCollapsed, setModuleManagerComposerWorkspaceControlsCollapsed] = useState(false);
   const [moduleManagerComposerCanvasGapRows, setModuleManagerComposerCanvasGapRows] = useState(1);
   const [moduleManagerComposerLockBuilderScale, setModuleManagerComposerLockBuilderScale] = useState(true);
   const [, setModuleManagerComposerHistoryVersion] = useState(0);
@@ -1302,6 +1303,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       finlitAuthoringTabId: resolvedFinlitComposerState.activeTabId,
       composerExtraRows: moduleManagerComposerExtraRows,
       composerSelectedIndex: moduleManagerComposerSelectedIndex,
+      composerWorkspaceControlsCollapsed: moduleManagerComposerWorkspaceControlsCollapsed,
     };
   };
 
@@ -1334,6 +1336,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       : 0;
     const requestedExtraRows = Number.parseInt(payload.composerExtraRows, 10);
     const nextExtraRows = Number.isInteger(requestedExtraRows) ? Math.max(0, Math.min(requestedExtraRows, 50)) : 0;
+    const nextWorkspaceControlsCollapsed = payload.composerWorkspaceControlsCollapsed === true;
     const loadedTemplateProfiles = normalizeTemplateLayoutProfiles(payload.templateLayoutProfiles, { activities: nextActivities });
     const nextTemplateProfiles = normalizeTemplateLayoutProfiles(
       {
@@ -1360,6 +1363,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     setModuleManagerFinlitAuthoringTabId(String(payload.finlitAuthoringTabId || 'activities').trim() || 'activities');
     setModuleManagerComposerExtraRows(nextExtraRows);
     setModuleManagerComposerSelectedIndex(nextSelectedIndex);
+    setModuleManagerComposerWorkspaceControlsCollapsed(nextWorkspaceControlsCollapsed);
     resetComposerHistory();
     return true;
   };
@@ -1623,6 +1627,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       }),
     );
     setModuleManagerComposerExtraRows(0);
+    setModuleManagerComposerWorkspaceControlsCollapsed(false);
     setModuleManagerComposerCanvasGapRows(1);
     setModuleManagerComposerSelectedIndex(0);
     resetComposerHistory();
@@ -1708,6 +1713,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     moduleManagerComposerActivities,
     moduleManagerComposerExtraRows,
     moduleManagerComposerSelectedIndex,
+    moduleManagerComposerWorkspaceControlsCollapsed,
   ]);
 
   useEffect(() => {
@@ -8043,104 +8049,125 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                         </>
                                                     )}
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setModuleManagerComposerWorkspaceControlsCollapsed((prev) => !prev)}
+                                                    className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
+                                                >
+                                                    {moduleManagerComposerWorkspaceControlsCollapsed ? (
+                                                        <>
+                                                            <ChevronDown size={12} />
+                                                            Show Controls
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <ChevronUp size={12} />
+                                                            Hide Controls
+                                                        </>
+                                                    )}
+                                                </button>
                                             </div>
                                         </div>
 
-                                        {moduleManagerBothWorkspacePanesOpen && (
-                                            <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
-                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                                                    <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Preview Width</label>
-                                                    <input
-                                                        type="range"
-                                                        min="30"
-                                                        max="75"
-                                                        value={moduleManagerPreviewPaneWidth}
-                                                        onChange={(e) =>
-                                                            setModuleManagerComposerPreviewWidth(
-                                                                Math.max(30, Math.min(75, Number.parseInt(e.target.value, 10) || 55)),
-                                                            )
-                                                        }
-                                                        className="flex-1 accent-indigo-500"
-                                                    />
-                                                    <p className="text-[11px] text-slate-400 whitespace-nowrap">
-                                                        {moduleManagerPreviewPaneWidth}% preview / {moduleManagerEditorPaneWidth}% left pane
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        )}
+                                        {!moduleManagerComposerWorkspaceControlsCollapsed && (
+                                            <>
+                                                {moduleManagerBothWorkspacePanesOpen && (
+                                                    <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                                            <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Preview Width</label>
+                                                            <input
+                                                                type="range"
+                                                                min="30"
+                                                                max="75"
+                                                                value={moduleManagerPreviewPaneWidth}
+                                                                onChange={(e) =>
+                                                                    setModuleManagerComposerPreviewWidth(
+                                                                        Math.max(30, Math.min(75, Number.parseInt(e.target.value, 10) || 55)),
+                                                                    )
+                                                                }
+                                                                className="flex-1 accent-indigo-500"
+                                                            />
+                                                            <p className="text-[11px] text-slate-400 whitespace-nowrap">
+                                                                {moduleManagerPreviewPaneWidth}% preview / {moduleManagerEditorPaneWidth}% left pane
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
 
-                                        {!moduleManagerComposerPreviewCollapsed && (
-                                            <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
-                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                                                    <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Preview Height</label>
-                                                    <input
-                                                        type="range"
-                                                        min="420"
-                                                        max="2000"
-                                                        step="20"
-                                                        value={moduleManagerPreviewPaneHeight}
-                                                        onChange={(e) =>
-                                                            setModuleManagerComposerPreviewHeight(
-                                                                Math.max(420, Math.min(2000, Number.parseInt(e.target.value, 10) || 900)),
-                                                            )
-                                                        }
-                                                        className="flex-1 accent-indigo-500"
-                                                    />
-                                                    <p className="text-[11px] text-slate-400 whitespace-nowrap">{moduleManagerPreviewPaneHeight}px tall</p>
-                                                </div>
-                                            </div>
-                                        )}
-                                        {!moduleManagerComposerLeftPaneCollapsed && moduleManagerComposerLeftPaneMode === 'builder' && (
-                                            <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3 space-y-3">
-                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                                                    <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Builder Height</label>
-                                                    <input
-                                                        type="range"
-                                                        min="360"
-                                                        max="1800"
-                                                        step="20"
-                                                        value={moduleManagerBuilderPaneHeight}
-                                                        onChange={(e) =>
-                                                            setModuleManagerComposerBuilderHeight(
-                                                                Math.max(360, Math.min(1800, Number.parseInt(e.target.value, 10) || 760)),
-                                                            )
-                                                        }
-                                                        className="flex-1 accent-indigo-500"
-                                                    />
-                                                    <p className="text-[11px] text-slate-400 whitespace-nowrap">{moduleManagerBuilderPaneHeight}px tall</p>
-                                                </div>
-                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                                                    <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Block Width</label>
-                                                    <input
-                                                        type="range"
-                                                        min="140"
-                                                        max="360"
-                                                        step="10"
-                                                        value={moduleManagerBuilderCellWidth}
-                                                        onChange={(e) =>
-                                                            setModuleManagerComposerBuilderCellWidth(
-                                                                Math.max(140, Math.min(360, Number.parseInt(e.target.value, 10) || 220)),
-                                                            )
-                                                        }
-                                                        className="flex-1 accent-indigo-500"
-                                                    />
-                                                    <p className="text-[11px] text-slate-400 whitespace-nowrap">{moduleManagerBuilderCellWidth}px per column</p>
-                                                </div>
-                                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                                    <label className="inline-flex items-center gap-2 text-[11px] text-slate-300 whitespace-nowrap">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={moduleManagerComposerLockBuilderScale}
-                                                            onChange={(e) => setModuleManagerComposerLockBuilderScale(Boolean(e.target.checked))}
-                                                            className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-indigo-500"
-                                                        />
-                                                        Lock Block Scale
-                                                    </label>
-                                                    <p className="text-[11px] text-slate-500">
-                                                        {moduleManagerComposerMaxColumns} cols x {moduleManagerBuilderCellWidth}px = {moduleManagerBuilderCanvasWidth}px canvas
-                                                    </p>
-                                                </div>
-                                            </div>
+                                                {!moduleManagerComposerPreviewCollapsed && (
+                                                    <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                                            <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Preview Height</label>
+                                                            <input
+                                                                type="range"
+                                                                min="420"
+                                                                max="2000"
+                                                                step="20"
+                                                                value={moduleManagerPreviewPaneHeight}
+                                                                onChange={(e) =>
+                                                                    setModuleManagerComposerPreviewHeight(
+                                                                        Math.max(420, Math.min(2000, Number.parseInt(e.target.value, 10) || 900)),
+                                                                    )
+                                                                }
+                                                                className="flex-1 accent-indigo-500"
+                                                            />
+                                                            <p className="text-[11px] text-slate-400 whitespace-nowrap">{moduleManagerPreviewPaneHeight}px tall</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {!moduleManagerComposerLeftPaneCollapsed && moduleManagerComposerLeftPaneMode === 'builder' && (
+                                                    <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3 space-y-3">
+                                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                                            <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Builder Height</label>
+                                                            <input
+                                                                type="range"
+                                                                min="360"
+                                                                max="1800"
+                                                                step="20"
+                                                                value={moduleManagerBuilderPaneHeight}
+                                                                onChange={(e) =>
+                                                                    setModuleManagerComposerBuilderHeight(
+                                                                        Math.max(360, Math.min(1800, Number.parseInt(e.target.value, 10) || 760)),
+                                                                    )
+                                                                }
+                                                                className="flex-1 accent-indigo-500"
+                                                            />
+                                                            <p className="text-[11px] text-slate-400 whitespace-nowrap">{moduleManagerBuilderPaneHeight}px tall</p>
+                                                        </div>
+                                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                                            <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Block Width</label>
+                                                            <input
+                                                                type="range"
+                                                                min="140"
+                                                                max="360"
+                                                                step="10"
+                                                                value={moduleManagerBuilderCellWidth}
+                                                                onChange={(e) =>
+                                                                    setModuleManagerComposerBuilderCellWidth(
+                                                                        Math.max(140, Math.min(360, Number.parseInt(e.target.value, 10) || 220)),
+                                                                    )
+                                                                }
+                                                                className="flex-1 accent-indigo-500"
+                                                            />
+                                                            <p className="text-[11px] text-slate-400 whitespace-nowrap">{moduleManagerBuilderCellWidth}px per column</p>
+                                                        </div>
+                                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                                            <label className="inline-flex items-center gap-2 text-[11px] text-slate-300 whitespace-nowrap">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={moduleManagerComposerLockBuilderScale}
+                                                                    onChange={(e) => setModuleManagerComposerLockBuilderScale(Boolean(e.target.checked))}
+                                                                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-indigo-500"
+                                                                />
+                                                                Lock Block Scale
+                                                            </label>
+                                                            <p className="text-[11px] text-slate-500">
+                                                                {moduleManagerComposerMaxColumns} cols x {moduleManagerBuilderCellWidth}px = {moduleManagerBuilderCanvasWidth}px canvas
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
 
                                         {moduleManagerComposerLeftPaneCollapsed && moduleManagerComposerPreviewCollapsed ? (
