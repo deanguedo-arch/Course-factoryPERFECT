@@ -1,9 +1,12 @@
 import { normalizeComposerModuleConfig } from '../composer/layout.js';
+import {
+  normalizeComposerThemeValue,
+  normalizeComposerVisualQualityValue,
+} from '../composer/themeCatalog.js';
 
 export const CURRENT_PROJECT_SCHEMA_VERSION = 3;
 
 const TEMPLATE_OPTIONS = ['deck', 'finlit', 'coursebook', 'toolkit_dashboard'];
-const THEME_OPTIONS = ['dark_cards', 'finlit_clean', 'coursebook_light', 'toolkit_clean'];
 
 function normalizeTemplateValue(value, fallback = null) {
   const raw = String(value || '').trim().toLowerCase();
@@ -12,9 +15,7 @@ function normalizeTemplateValue(value, fallback = null) {
 }
 
 function normalizeThemeValue(value, fallback = null) {
-  const raw = String(value || '').trim().toLowerCase();
-  if (!raw) return fallback;
-  return THEME_OPTIONS.includes(raw) ? raw : fallback;
+  return normalizeComposerThemeValue(value, fallback);
 }
 
 function deepClone(value) {
@@ -47,6 +48,7 @@ function withCourseSettingsDefaults(settings) {
   next.compilationDefaults = compilationDefaults;
   next.templateDefault = normalizeTemplateValue(next.templateDefault, 'deck');
   next.themeDefault = normalizeThemeValue(next.themeDefault, 'dark_cards');
+  next.composerVisualQuality = normalizeComposerVisualQualityValue(next.composerVisualQuality, 'premium_dribbble');
   return next;
 }
 

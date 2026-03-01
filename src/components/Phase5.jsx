@@ -1,6 +1,7 @@
 ﻿import * as React from 'react';
 import { AlertTriangle, Database, Download, Eye, Package, RefreshCw, Settings, Sparkles, Terminal, Trash2, Upload } from 'lucide-react';
 import { PROJECT_DATA } from '../data/constants.js';
+import { COMPOSER_THEME_OPTIONS, COMPOSER_VISUAL_QUALITY_OPTIONS } from '../composer/themeCatalog.js';
 
 // --- PHASE 5: SETTINGS & PREFERENCES ---
 const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
@@ -15,6 +16,7 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
     customCSS: "",
     templateDefault: "deck",
     themeDefault: "dark_cards",
+    composerVisualQuality: "premium_dribbble",
     compilationDefaults: {
       includeMaterials: true,
       includeAssessments: true,
@@ -106,12 +108,8 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
     { value: 'toolkit_dashboard', label: 'Toolkit Dashboard' },
   ];
 
-  const COURSE_THEME_OPTIONS = [
-    { value: 'dark_cards', label: 'Dark Cards' },
-    { value: 'finlit_clean', label: 'FinLit Clean' },
-    { value: 'coursebook_light', label: 'Coursebook Light' },
-    { value: 'toolkit_clean', label: 'Toolkit Clean' },
-  ];
+  const COURSE_THEME_OPTIONS = COMPOSER_THEME_OPTIONS;
+  const VISUAL_QUALITY_OPTIONS = COMPOSER_VISUAL_QUALITY_OPTIONS;
 
   const ACCENT_SWATCH_HEX = {
     sky: '#0ea5e9',
@@ -329,7 +327,7 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Default Template</label>
                 <select
@@ -353,6 +351,20 @@ const Phase5 = ({ projectData, setProjectData, applyVisualDefaults }) => {
                 >
                   {COURSE_THEME_OPTIONS.map((option) => (
                     <option key={`course-theme-${option.value}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Composer Visual Quality</label>
+                <select
+                  value={settings.composerVisualQuality || 'premium_dribbble'}
+                  onChange={(e) => updateSettings({ composerVisualQuality: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm"
+                >
+                  {VISUAL_QUALITY_OPTIONS.map((option) => (
+                    <option key={`composer-quality-${option.value}`} value={option.value}>
                       {option.label}
                     </option>
                   ))}

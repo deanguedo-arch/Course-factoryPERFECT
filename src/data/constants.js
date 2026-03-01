@@ -313,6 +313,7 @@ export const PROJECT_DATA = {
     customCSS: "",
     templateDefault: "deck",
     themeDefault: "dark_cards",
+    composerVisualQuality: "premium_dribbble",
     compilationDefaults: {
       includeMaterials: true,
       includeAssessments: true,

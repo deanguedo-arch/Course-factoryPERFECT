@@ -73,6 +73,11 @@ import {
   normalizeFinlitTemplateForSave,
 } from '../utils/finlitHero.js';
 import { resolveFinlitTabComposerState } from '../utils/finlitTabActivities.js';
+import { COMPOSER_THEME_OPTIONS } from '../composer/themeCatalog.js';
+import {
+  COMPOSER_WORKSPACE_PRESETS,
+  normalizeComposerWorkspaceMode,
+} from '../composer/workspaceCatalog.js';
 
 const { useEffect, useMemo, useRef, useState } = React;
 const GridLayout = WidthProvider(ReactGridLayout);
@@ -141,13 +146,7 @@ const MODULE_TEMPLATE_OPTIONS = [
   { value: 'toolkit_dashboard', label: 'Toolkit Dashboard' },
 ];
 
-const MODULE_THEME_OPTIONS = [
-  { value: '', label: 'Use Course Default' },
-  { value: 'dark_cards', label: 'Dark Cards' },
-  { value: 'finlit_clean', label: 'FinLit Clean' },
-  { value: 'coursebook_light', label: 'Coursebook Light' },
-  { value: 'toolkit_clean', label: 'Toolkit Clean' },
-];
+const MODULE_THEME_OPTIONS = [{ value: '', label: 'Use Course Default' }, ...COMPOSER_THEME_OPTIONS];
 
 function normalizeThemeValue(value) {
   const raw = String(value || '').trim().toLowerCase();
@@ -305,6 +304,8 @@ function getComposerRichEditorConfig(activity) {
 const MODULE_MANAGER_AUTOSAVE_KEY = 'course_factory_module_manager_autosave_v1';
 const MODULE_MANAGER_SAVED_DRAFTS_KEY = 'course_factory_module_manager_saved_drafts_v1';
 const MODULE_MANAGER_MAX_SAVED_DRAFTS = 30;
+const MODULE_MANAGER_WORKSPACE_MODE_KEY = 'course_factory_composer_workspace_mode_v1';
+const MODULE_MANAGER_WORKSPACE_PRESET_KEY = 'course_factory_composer_workspace_preset_v1';
 
 // --- PHASE 1: HARVEST ---
 const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, assessmentType, setAssessmentType, assessmentTitle, setAssessmentTitle, quizQuestions, setQuizQuestions, printInstructions, setPrintInstructions, editingAssessment, setEditingAssessment, isVaultOpen, setIsVaultOpen, setVaultTargetField, vaultTargetField }) => {
@@ -354,6 +355,21 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerComposerBuilderHeight, setModuleManagerComposerBuilderHeight] = useState(760);
   const [moduleManagerComposerBuilderCellWidth, setModuleManagerComposerBuilderCellWidth] = useState(220);
   const [moduleManagerComposerWorkspaceControlsCollapsed, setModuleManagerComposerWorkspaceControlsCollapsed] = useState(false);
+  const [moduleManagerComposerWorkspaceMode, setModuleManagerComposerWorkspaceMode] = useState(() => {
+    try {
+      return normalizeComposerWorkspaceMode(localStorage.getItem(MODULE_MANAGER_WORKSPACE_MODE_KEY), 'simple');
+    } catch {
+      return 'simple';
+    }
+  });
+  const [moduleManagerComposerWorkspacePreset, setModuleManagerComposerWorkspacePreset] = useState(() => {
+    try {
+      const raw = String(localStorage.getItem(MODULE_MANAGER_WORKSPACE_PRESET_KEY) || '').trim().toLowerCase();
+      return COMPOSER_WORKSPACE_PRESETS.some((preset) => preset.value === raw) ? raw : 'balanced';
+    } catch {
+      return 'balanced';
+    }
+  });
   const [moduleManagerComposerCanvasGapRows, setModuleManagerComposerCanvasGapRows] = useState(1);
   const [moduleManagerComposerLockBuilderScale, setModuleManagerComposerLockBuilderScale] = useState(true);
   const [, setModuleManagerComposerHistoryVersion] = useState(0);
@@ -381,6 +397,40 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerSavedDrafts, setModuleManagerSavedDrafts] = useState([]);
   const [moduleManagerSelectedDraftId, setModuleManagerSelectedDraftId] = useState('');
   const [moduleManagerDownloadDraftOnSave, setModuleManagerDownloadDraftOnSave] = useState(true);
+
+  const applyComposerWorkspacePreset = (presetValue) => {
+    const preset = COMPOSER_WORKSPACE_PRESETS.find((entry) => entry.value === presetValue);
+    if (!preset) return;
+    const next = preset.settings || {};
+    if (Number.isFinite(next.previewWidth)) setModuleManagerComposerPreviewWidth(next.previewWidth);
+    if (Number.isFinite(next.previewHeight)) setModuleManagerComposerPreviewHeight(next.previewHeight);
+    if (Number.isFinite(next.builderHeight)) setModuleManagerComposerBuilderHeight(next.builderHeight);
+    if (Number.isFinite(next.builderCellWidth)) setModuleManagerComposerBuilderCellWidth(next.builderCellWidth);
+    if (typeof next.lockBuilderScale === 'boolean') setModuleManagerComposerLockBuilderScale(next.lockBuilderScale);
+  };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(MODULE_MANAGER_WORKSPACE_MODE_KEY, moduleManagerComposerWorkspaceMode);
+    } catch {
+      // Ignore localStorage write errors.
+    }
+  }, [moduleManagerComposerWorkspaceMode]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(MODULE_MANAGER_WORKSPACE_PRESET_KEY, moduleManagerComposerWorkspacePreset);
+    } catch {
+      // Ignore localStorage write errors.
+    }
+  }, [moduleManagerComposerWorkspacePreset]);
+
+  useEffect(() => {
+    if (moduleManagerComposerWorkspaceMode !== 'simple') return;
+    setModuleManagerComposerLeftPaneCollapsed(false);
+    setModuleManagerComposerPreviewCollapsed(false);
+    setModuleManagerComposerLeftPaneMode('builder');
+  }, [moduleManagerComposerWorkspaceMode]);
 
   const moduleBankMaterials = useMemo(
     () =>
@@ -522,7 +572,10 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const moduleManagerCanvasGapRowCount = Math.max(1, Math.min(12, Number.parseInt(moduleManagerComposerCanvasGapRows, 10) || 1));
   const moduleManagerBuilderCanvasWidth = moduleManagerComposerMaxColumns * moduleManagerBuilderCellWidth;
   const moduleManagerEditorPaneWidth = Math.max(25, 100 - moduleManagerPreviewPaneWidth);
-  const moduleManagerBothWorkspacePanesOpen = !moduleManagerComposerLeftPaneCollapsed && !moduleManagerComposerPreviewCollapsed;
+  const isModuleManagerSimpleWorkspace = moduleManagerComposerWorkspaceMode === 'simple';
+  const moduleManagerShowLeftPane = isModuleManagerSimpleWorkspace ? true : !moduleManagerComposerLeftPaneCollapsed;
+  const moduleManagerShowPreviewPane = isModuleManagerSimpleWorkspace ? true : !moduleManagerComposerPreviewCollapsed;
+  const moduleManagerBothWorkspacePanesOpen = moduleManagerShowLeftPane && moduleManagerShowPreviewPane;
   const moduleManagerGridModel = useMemo(
     () =>
       buildComposerGridModel(moduleManagerComposerActivities, moduleManagerComposerMaxColumns, {
@@ -7974,6 +8027,50 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 <div className="inline-flex rounded-lg border border-slate-700 bg-slate-900 p-1">
                                                     <button
                                                         type="button"
+                                                        onClick={() => {
+                                                            setModuleManagerComposerWorkspaceMode('simple');
+                                                            applyComposerWorkspacePreset(moduleManagerComposerWorkspacePreset);
+                                                        }}
+                                                        className={`px-2 py-1 text-[10px] font-black uppercase tracking-wide rounded ${
+                                                            moduleManagerComposerWorkspaceMode === 'simple'
+                                                                ? 'bg-emerald-600 text-white'
+                                                                : 'text-slate-300 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        Simple
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setModuleManagerComposerWorkspaceMode('advanced')}
+                                                        className={`px-2 py-1 text-[10px] font-black uppercase tracking-wide rounded ${
+                                                            moduleManagerComposerWorkspaceMode === 'advanced'
+                                                                ? 'bg-indigo-600 text-white'
+                                                                : 'text-slate-300 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        Advanced
+                                                    </button>
+                                                </div>
+                                                {isModuleManagerSimpleWorkspace && (
+                                                    <select
+                                                        value={moduleManagerComposerWorkspacePreset}
+                                                        onChange={(e) => {
+                                                            const nextPreset = String(e.target.value || '').trim().toLowerCase();
+                                                            setModuleManagerComposerWorkspacePreset(nextPreset);
+                                                            applyComposerWorkspacePreset(nextPreset);
+                                                        }}
+                                                        className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-white"
+                                                    >
+                                                        {COMPOSER_WORKSPACE_PRESETS.map((preset) => (
+                                                            <option key={`workspace-preset-${preset.value}`} value={preset.value}>
+                                                                Preset: {preset.label}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                )}
+                                                <div className="inline-flex rounded-lg border border-slate-700 bg-slate-900 p-1">
+                                                    <button
+                                                        type="button"
                                                         onClick={() => setModuleManagerComposerLeftPaneMode('builder')}
                                                         className={`px-2 py-1 text-[10px] font-black uppercase tracking-wide rounded ${
                                                             moduleManagerComposerLeftPaneMode === 'builder'
@@ -8015,63 +8112,67 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     <RefreshCw size={12} />
                                                     Redo
                                                 </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setModuleManagerComposerLeftPaneCollapsed((prev) => !prev)}
-                                                    className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
-                                                >
-                                                    {moduleManagerComposerLeftPaneCollapsed ? (
-                                                        <>
-                                                            <ChevronDown size={12} />
-                                                            Show Left Pane
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <ChevronUp size={12} />
-                                                            Hide Left Pane
-                                                        </>
-                                                    )}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setModuleManagerComposerPreviewCollapsed((prev) => !prev)}
-                                                    className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
-                                                >
-                                                    {moduleManagerComposerPreviewCollapsed ? (
-                                                        <>
-                                                            <ChevronDown size={12} />
-                                                            Show Preview
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <ChevronUp size={12} />
-                                                            Hide Preview
-                                                        </>
-                                                    )}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setModuleManagerComposerWorkspaceControlsCollapsed((prev) => !prev)}
-                                                    className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
-                                                >
-                                                    {moduleManagerComposerWorkspaceControlsCollapsed ? (
-                                                        <>
-                                                            <ChevronDown size={12} />
-                                                            Show Controls
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <ChevronUp size={12} />
-                                                            Hide Controls
-                                                        </>
-                                                    )}
-                                                </button>
+                                                {moduleManagerComposerWorkspaceMode === 'advanced' && (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setModuleManagerComposerLeftPaneCollapsed((prev) => !prev)}
+                                                            className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
+                                                        >
+                                                            {moduleManagerComposerLeftPaneCollapsed ? (
+                                                                <>
+                                                                    <ChevronDown size={12} />
+                                                                    Show Left Pane
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <ChevronUp size={12} />
+                                                                    Hide Left Pane
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setModuleManagerComposerPreviewCollapsed((prev) => !prev)}
+                                                            className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
+                                                        >
+                                                            {moduleManagerComposerPreviewCollapsed ? (
+                                                                <>
+                                                                    <ChevronDown size={12} />
+                                                                    Show Preview
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <ChevronUp size={12} />
+                                                                    Hide Preview
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setModuleManagerComposerWorkspaceControlsCollapsed((prev) => !prev)}
+                                                            className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
+                                                        >
+                                                            {moduleManagerComposerWorkspaceControlsCollapsed ? (
+                                                                <>
+                                                                    <ChevronDown size={12} />
+                                                                    Show Controls
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <ChevronUp size={12} />
+                                                                    Hide Controls
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {!moduleManagerComposerWorkspaceControlsCollapsed && (
+                                        {(isModuleManagerSimpleWorkspace || !moduleManagerComposerWorkspaceControlsCollapsed) && (
                                             <>
-                                                {moduleManagerBothWorkspacePanesOpen && (
+                                                {moduleManagerBothWorkspacePanesOpen && !isModuleManagerSimpleWorkspace && (
                                                     <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
                                                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                                                             <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Preview Width</label>
@@ -8094,7 +8195,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     </div>
                                                 )}
 
-                                                {!moduleManagerComposerPreviewCollapsed && (
+                                                {moduleManagerShowPreviewPane && (
                                                     <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
                                                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                                                             <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Preview Height</label>
@@ -8115,7 +8216,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                         </div>
                                                     </div>
                                                 )}
-                                                {!moduleManagerComposerLeftPaneCollapsed && moduleManagerComposerLeftPaneMode === 'builder' && (
+                                                {moduleManagerShowLeftPane && moduleManagerComposerLeftPaneMode === 'builder' && (
                                                     <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3 space-y-3">
                                                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                                                             <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Builder Height</label>
@@ -8170,13 +8271,13 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             </>
                                         )}
 
-                                        {moduleManagerComposerLeftPaneCollapsed && moduleManagerComposerPreviewCollapsed ? (
+                                        {!moduleManagerShowLeftPane && !moduleManagerShowPreviewPane ? (
                                             <div className="rounded-lg border border-slate-700 bg-slate-950 p-4 text-xs text-slate-400">
                                                 Both panes are collapsed. Use the buttons above to reopen either pane.
                                             </div>
                                         ) : (
                                             <div className="flex flex-col gap-4 lg:flex-row">
-                                                {!moduleManagerComposerLeftPaneCollapsed && (
+                                                {moduleManagerShowLeftPane && (
                                                     <div
                                                         className="bg-slate-950 border border-slate-700 rounded-lg p-3 min-w-0"
                                                         style={moduleManagerBothWorkspacePanesOpen ? { flex: `${moduleManagerEditorPaneWidth} 1 0%` } : { flex: '1 1 100%' }}
@@ -8842,7 +8943,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     </div>
                                                 )}
 
-                                                {!moduleManagerComposerPreviewCollapsed && (
+                                                {moduleManagerShowPreviewPane && (
                                                     <div
                                                         className="bg-slate-950 border border-slate-700 rounded-lg p-3 min-w-0"
                                                         style={moduleManagerBothWorkspacePanesOpen ? { flex: `${moduleManagerPreviewPaneWidth} 1 0%` } : { flex: '1 1 100%' }}

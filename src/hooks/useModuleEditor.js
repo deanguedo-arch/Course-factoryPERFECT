@@ -12,6 +12,7 @@ import {
   normalizeFinlitTemplateForSave,
 } from '../utils/finlitHero.js';
 import { resolveFinlitTabComposerState } from '../utils/finlitTabActivities.js';
+import { COMPOSER_THEME_VALUES } from '../composer/themeCatalog.js';
 
 const { useCallback, useState } = React;
 
@@ -36,7 +37,7 @@ const DEFAULT_EDIT_FORM = {
 };
 
 const MODULE_TEMPLATE_OPTIONS = ['deck', 'finlit', 'coursebook', 'toolkit_dashboard'];
-const MODULE_THEME_OPTIONS = ['dark_cards', 'finlit_clean', 'coursebook_light', 'toolkit_clean'];
+const MODULE_THEME_OPTIONS = COMPOSER_THEME_VALUES;
 
 function normalizeModuleTemplate(value) {
   const raw = String(value || '').trim().toLowerCase();

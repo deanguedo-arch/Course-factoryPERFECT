@@ -5,6 +5,11 @@ import {
   createFinlitTemplateFormState,
   resolveFinlitHeroMediaKind,
 } from '../utils/finlitHero.js';
+import {
+  COMPOSER_THEME_VALUES,
+  normalizeComposerThemeValue,
+  normalizeComposerVisualQualityValue,
+} from './themeCatalog.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -288,8 +293,8 @@ function buildComposerRuntimeScript() {
       function setSaveLoadStatus(ctx, message, tone) {
         if (!ctx || !ctx.status) return;
         var normalizedTone = tone === 'error' ? 'error' : tone === 'success' ? 'success' : 'info';
-        var toneClass = normalizedTone === 'error' ? 'text-rose-300' : normalizedTone === 'success' ? 'text-emerald-300' : 'text-cyan-100/75';
-        ctx.status.className = 'mt-3 text-xs ' + toneClass;
+        var toneClass = normalizedTone === 'error' ? 'tone-danger' : normalizedTone === 'success' ? 'tone-success' : 'tone-info';
+        ctx.status.className = 'mt-3 text-xs cf-status-message ' + toneClass;
         ctx.status.textContent = message;
       }
 
@@ -324,13 +329,13 @@ function buildComposerRuntimeScript() {
         });
 
         var pathMaps = Array.prototype.slice.call(root.querySelectorAll('[data-path-map-block]')).map(function(block) {
-          var activeNode = block.querySelector('[data-path-node].ring-1') || block.querySelector('[data-path-node]');
+          var activeNode = block.querySelector('[data-path-node].is-active') || block.querySelector('[data-path-node]');
           var idx = parseInt((activeNode && activeNode.getAttribute('data-path-index')) || '0', 10);
           return Number.isInteger(idx) ? idx : 0;
         });
 
         var hotspots = Array.prototype.slice.call(root.querySelectorAll('[data-hotspot-block]')).map(function(block) {
-          var activeButton = block.querySelector('[data-hotspot-btn].bg-sky-500') || block.querySelector('[data-hotspot-btn]');
+          var activeButton = block.querySelector('[data-hotspot-btn].is-active') || block.querySelector('[data-hotspot-btn]');
           var idx = parseInt((activeButton && activeButton.getAttribute('data-hotspot-index')) || '0', 10);
           return Number.isInteger(idx) ? idx : 0;
         });
@@ -778,18 +783,18 @@ function buildComposerRuntimeScript() {
             var beforePercent = 100 - afterPercent;
             lines.push('Comparison Split: ' + beforeLabel + ' ' + beforePercent + ' / ' + afterLabel + ' ' + afterPercent);
           } else if (type === 'tabs_block') {
-            var activeTabPanel = section.querySelector('[data-tabs-panel]:not(.hidden)');
+            var activeTabPanel = section.querySelector('[data-tabs-panel]:not(.is-hidden)');
             if (activeTabPanel) {
               var activeTabLabel = getReadableText(activeTabPanel.querySelector('h4'), 'Tab');
               lines.push('Active Tab: ' + activeTabLabel);
             }
           } else if (type === 'path_map') {
-            var activePath = section.querySelector('[data-path-panel]:not(.hidden)');
+            var activePath = section.querySelector('[data-path-panel]:not(.is-hidden)');
             if (activePath) {
               lines.push('Selected Path: ' + getReadableText(activePath.querySelector('h4'), 'Path'));
             }
           } else if (type === 'hotspot_image') {
-            var activeHotspot = section.querySelector('[data-hotspot-panel]:not(.hidden)');
+            var activeHotspot = section.querySelector('[data-hotspot-panel]:not(.is-hidden)');
             if (activeHotspot) {
               lines.push('Selected Hotspot: ' + getReadableText(activeHotspot.querySelector('p'), 'Hotspot'));
             }
@@ -868,8 +873,8 @@ function buildComposerRuntimeScript() {
             var chapterNumber = escapeForHtml(chapter && chapter.number ? String(chapter.number) : String(idx + 1));
             var isActive = idx === state.index;
             var btnClass = isActive
-              ? 'w-full text-left px-3 py-2 rounded text-xs font-bold bg-emerald-600/20 border border-emerald-500/40 text-emerald-300'
-              : 'w-full text-left px-3 py-2 rounded text-xs font-semibold text-slate-300 hover:bg-slate-800 border border-transparent';
+              ? 'cf-chip is-active w-full justify-start text-left'
+              : 'cf-chip w-full justify-start text-left';
             return '<button type="button" class="' + btnClass + '" data-resource-reader-chapter="' + idx + '">' + chapterNumber + '. ' + chapterTitle + '</button>';
           })
           .join('');
@@ -879,7 +884,7 @@ function buildComposerRuntimeScript() {
       function renderReaderChapter(state) {
         if (!state || !state.refs || !state.refs.body) return;
         if (!state.chapters.length) {
-          state.refs.body.innerHTML = '<p class="text-sm text-slate-300">No chapters found.</p>';
+          state.refs.body.innerHTML = '<p class="text-sm cf-muted">No chapters found.</p>';
           if (state.refs.progress) state.refs.progress.textContent = '';
           if (state.refs.prevBtn) state.refs.prevBtn.disabled = true;
           if (state.refs.nextBtn) state.refs.nextBtn.disabled = true;
@@ -899,17 +904,17 @@ function buildComposerRuntimeScript() {
             var heading = escapeForHtml(section && section.heading ? section.heading : '');
             var body = escapeForHtml(section && section.content ? section.content : '').replace(/\\n/g, '<br>');
             return '<section class="mt-5">' +
-              (heading ? '<h5 class="text-sm font-bold text-emerald-300 mb-2">' + heading + '</h5>' : '') +
-              '<div class="text-sm text-slate-200 leading-relaxed">' + body + '</div>' +
+              (heading ? '<h5 class="text-sm font-bold tone-info mb-2">' + heading + '</h5>' : '') +
+              '<div class="text-sm  leading-relaxed">' + body + '</div>' +
             '</section>';
           })
           .join('');
 
         var resourceTitle = escapeForHtml(state.content && state.content.title ? state.content.title : 'Digital Resource');
         state.refs.body.innerHTML =
-          '<h3 class="text-xl font-bold text-white mb-1">' + resourceTitle + '</h3>' +
-          '<p class="text-xs uppercase tracking-widest text-slate-400 mb-4">Chapter ' + (state.index + 1) + ' of ' + state.chapters.length + '</p>' +
-          '<h4 class="text-lg font-bold text-white border-b border-slate-800 pb-2">' + chapterNumber + '. ' + chapterTitle + '</h4>' +
+          '<h3 class="text-xl font-bold  mb-1">' + resourceTitle + '</h3>' +
+          '<p class="text-xs uppercase tracking-widest cf-muted mb-4">Chapter ' + (state.index + 1) + ' of ' + state.chapters.length + '</p>' +
+          '<h4 class="text-lg font-bold  border-b  pb-2">' + chapterNumber + '. ' + chapterTitle + '</h4>' +
           sectionsHtml;
 
         if (state.refs.progress) {
@@ -931,7 +936,7 @@ function buildComposerRuntimeScript() {
           chapters: chapters,
           index: 0,
         };
-        refs.panel.classList.remove('hidden');
+        refs.panel.classList.remove('is-hidden');
         if (refs.title) {
           refs.title.textContent = 'Digital Resource: ' + (titleText || content.title || 'Read');
         }
@@ -941,7 +946,7 @@ function buildComposerRuntimeScript() {
       function closeResourceReader(card) {
         var refs = getReaderRefs(card);
         if (!refs || !refs.panel) return;
-        refs.panel.classList.add('hidden');
+        refs.panel.classList.add('is-hidden');
         if (refs.body) refs.body.innerHTML = '';
         if (refs.toc) refs.toc.innerHTML = '';
         resourceReaderState = null;
@@ -983,7 +988,8 @@ function buildComposerRuntimeScript() {
           var text = row.querySelector('span');
           if (!text) return;
           text.classList.toggle('line-through', input.checked);
-          text.classList.toggle('text-slate-500', input.checked);
+          text.classList.toggle('tone-info', input.checked);
+          row.classList.toggle('is-active', input.checked);
         });
         var total = parseInt(block.getAttribute('data-checklist-total') || String(inputs.length), 10);
         if (!Number.isFinite(total) || total < 0) total = inputs.length;
@@ -1031,16 +1037,11 @@ function buildComposerRuntimeScript() {
           var idx = parseInt(trigger.getAttribute('data-tab-index') || '-1', 10);
           var isActive = idx === active;
           trigger.setAttribute('aria-selected', isActive ? 'true' : 'false');
-          trigger.classList.toggle('ring-1', isActive);
-          trigger.classList.toggle('ring-indigo-400', isActive);
-          trigger.classList.toggle('border-indigo-500', isActive);
-          trigger.classList.toggle('text-white', isActive);
-          trigger.classList.toggle('border-slate-700', !isActive);
-          trigger.classList.toggle('text-slate-200', !isActive);
+          trigger.classList.toggle('is-active', isActive);
         });
         panels.forEach(function(panel) {
           var idx = parseInt(panel.getAttribute('data-tab-index') || '-1', 10);
-          panel.classList.toggle('hidden', idx !== active);
+          panel.classList.toggle('is-hidden', idx !== active);
         });
       }
 
@@ -1049,8 +1050,8 @@ function buildComposerRuntimeScript() {
         var front = card.querySelector('[data-flashcard-front]');
         var back = card.querySelector('[data-flashcard-back]');
         var toggleBtn = card.querySelector('[data-flashcard-toggle]');
-        if (front) front.classList.toggle('hidden', showBack);
-        if (back) back.classList.toggle('hidden', !showBack);
+        if (front) front.classList.toggle('is-hidden', showBack);
+        if (back) back.classList.toggle('is-hidden', !showBack);
         card.setAttribute('data-flashcard-side', showBack ? 'back' : 'front');
         if (toggleBtn) toggleBtn.textContent = showBack ? 'Show Front' : 'Show Back';
       }
@@ -1067,16 +1068,11 @@ function buildComposerRuntimeScript() {
         nodes.forEach(function(node) {
           var idx = parseInt(node.getAttribute('data-path-index') || '-1', 10);
           var isActive = idx === active;
-          node.classList.toggle('ring-1', isActive);
-          node.classList.toggle('ring-indigo-400', isActive);
-          node.classList.toggle('border-indigo-500', isActive);
-          node.classList.toggle('text-white', isActive);
-          node.classList.toggle('border-slate-700', !isActive);
-          node.classList.toggle('text-slate-200', !isActive);
+          node.classList.toggle('is-active', isActive);
         });
         panels.forEach(function(panel) {
           var idx = parseInt(panel.getAttribute('data-path-index') || '-1', 10);
-          panel.classList.toggle('hidden', idx !== active);
+          panel.classList.toggle('is-hidden', idx !== active);
         });
       }
 
@@ -1092,16 +1088,11 @@ function buildComposerRuntimeScript() {
         buttons.forEach(function(btn) {
           var idx = parseInt(btn.getAttribute('data-hotspot-index') || '-1', 10);
           var isActive = idx === active;
-          btn.classList.toggle('border-sky-300', isActive);
-          btn.classList.toggle('bg-sky-500', isActive);
-          btn.classList.toggle('text-slate-950', isActive);
-          btn.classList.toggle('border-slate-200/80', !isActive);
-          btn.classList.toggle('bg-slate-900/85', !isActive);
-          btn.classList.toggle('text-white', !isActive);
+          btn.classList.toggle('is-active', isActive);
         });
         panels.forEach(function(panel) {
           var idx = parseInt(panel.getAttribute('data-hotspot-index') || '-1', 10);
-          panel.classList.toggle('hidden', idx !== active);
+          panel.classList.toggle('is-hidden', idx !== active);
         });
       }
 
@@ -1162,9 +1153,7 @@ function buildComposerRuntimeScript() {
             cell = block.querySelector('[data-rubric-cell][data-rubric-row="' + row + '"][data-rubric-col="' + col + '"]');
           }
           if (cell) {
-            cell.classList.toggle('ring-1', choice.checked);
-            cell.classList.toggle('ring-emerald-400', choice.checked);
-            cell.classList.toggle('bg-emerald-900/20', choice.checked);
+            cell.classList.toggle('is-active', choice.checked);
           }
           if (choice.checked) {
             var score = Number(choice.getAttribute('data-rubric-score') || choice.value);
@@ -1269,7 +1258,7 @@ function buildComposerRuntimeScript() {
           var isCorrect = selected === correct;
           if (resultEl) {
             resultEl.textContent = isCorrect ? 'Correct.' : 'Try again.';
-            resultEl.className = isCorrect ? 'text-xs text-emerald-300' : 'text-xs text-rose-300';
+            resultEl.className = isCorrect ? 'text-xs tone-success' : 'text-xs tone-danger';
           }
           return;
         }
@@ -1342,7 +1331,7 @@ function buildComposerRuntimeScript() {
           if (!viewer || !frame || !rawUrl) return;
           frame.src = resolveViewerUrl(rawUrl);
           if (title) title.textContent = 'Viewing: ' + (viewResourceBtn.getAttribute('data-resource-title') || 'Resource');
-          viewer.classList.remove('hidden');
+          viewer.classList.remove('is-hidden');
           return;
         }
 
@@ -1353,7 +1342,7 @@ function buildComposerRuntimeScript() {
           var closeViewer = closeCard.querySelector('[data-resource-viewer]');
           var closeFrame = closeCard.querySelector('[data-resource-viewer-frame]');
           if (closeFrame) closeFrame.src = '';
-          if (closeViewer) closeViewer.classList.add('hidden');
+          if (closeViewer) closeViewer.classList.add('is-hidden');
           return;
         }
 
@@ -1579,7 +1568,7 @@ function buildComposerRuntimeScript() {
         var sortItem = closest(event.target, '[data-sort-item]');
         if (!sortItem) return;
         activeSortDragItem = sortItem;
-        sortItem.classList.add('opacity-70');
+        sortItem.classList.add('is-dragging');
         if (event.dataTransfer) {
           event.dataTransfer.effectAllowed = 'move';
           event.dataTransfer.setData('text/plain', 'sort-item');
@@ -1594,10 +1583,10 @@ function buildComposerRuntimeScript() {
         event.preventDefault();
         if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
         if (activeSortDropTarget && activeSortDropTarget !== overItem) {
-          activeSortDropTarget.classList.remove('ring-1', 'ring-indigo-400');
+          activeSortDropTarget.classList.remove('is-dragover');
         }
         if (overItem && overItem !== activeSortDragItem) {
-          overItem.classList.add('ring-1', 'ring-indigo-400');
+          overItem.classList.add('is-dragover');
           activeSortDropTarget = overItem;
         } else {
           activeSortDropTarget = null;
@@ -1611,7 +1600,7 @@ function buildComposerRuntimeScript() {
         if (!targetList) return;
         event.preventDefault();
         if (activeSortDropTarget) {
-          activeSortDropTarget.classList.remove('ring-1', 'ring-indigo-400');
+          activeSortDropTarget.classList.remove('is-dragover');
           activeSortDropTarget = null;
         }
         if (!targetItem || targetItem === activeSortDragItem) {
@@ -1631,11 +1620,11 @@ function buildComposerRuntimeScript() {
 
       document.addEventListener('dragend', function() {
         if (activeSortDropTarget) {
-          activeSortDropTarget.classList.remove('ring-1', 'ring-indigo-400');
+          activeSortDropTarget.classList.remove('is-dragover');
           activeSortDropTarget = null;
         }
         if (activeSortDragItem) {
-          activeSortDragItem.classList.remove('opacity-70');
+          activeSortDragItem.classList.remove('is-dragging');
           var owningList = closest(activeSortDragItem, '[data-sort-list]');
           if (owningList) refreshSortRanks(owningList);
           activeSortDragItem = null;
@@ -1648,7 +1637,7 @@ function buildComposerRuntimeScript() {
 }
 
 const TEMPLATE_OPTIONS = ['deck', 'finlit', 'coursebook', 'toolkit_dashboard'];
-const THEME_OPTIONS = ['dark_cards', 'finlit_clean', 'coursebook_light', 'toolkit_clean'];
+const THEME_OPTIONS = COMPOSER_THEME_VALUES;
 
 function resolveTemplateValue(value, fallback = 'deck') {
   const raw = String(value || '').trim().toLowerCase();
@@ -1657,9 +1646,11 @@ function resolveTemplateValue(value, fallback = 'deck') {
 }
 
 function resolveThemeValue(value, fallback = 'dark_cards') {
-  const raw = String(value || '').trim().toLowerCase();
-  if (!raw) return fallback;
-  return THEME_OPTIONS.includes(raw) ? raw : fallback;
+  return normalizeComposerThemeValue(value, fallback);
+}
+
+function resolveVisualQualityValue(value, fallback = 'premium_dribbble') {
+  return normalizeComposerVisualQualityValue(value, fallback);
 }
 
 function normalizeActivityStyleMeta(style = {}) {
@@ -1744,10 +1735,10 @@ function buildTemplateRuntimeScript() {
           Array.prototype.slice.call(root.querySelectorAll('[data-finlit-tab-trigger]')).forEach(function(trigger) {
             var active = trigger.getAttribute('data-finlit-tab-trigger') === nextId;
             trigger.setAttribute('aria-selected', active ? 'true' : 'false');
-            trigger.classList.toggle('cf-finlit-tab-active', active);
+            trigger.classList.toggle('is-active', active);
           });
           Array.prototype.slice.call(root.querySelectorAll('[data-finlit-tab-panel]')).forEach(function(panel) {
-            panel.classList.toggle('hidden', panel.getAttribute('data-finlit-tab-panel') !== nextId);
+            panel.classList.toggle('is-hidden', panel.getAttribute('data-finlit-tab-panel') !== nextId);
           });
           return;
         }
@@ -1758,7 +1749,7 @@ function buildTemplateRuntimeScript() {
           var panelId = expandToggle.getAttribute('data-expand-toggle');
           var root = closest(expandToggle, '[data-composer-root]') || document;
           var panel = root.querySelector('[data-expand-panel="' + panelId + '"]');
-          if (panel) panel.classList.toggle('hidden');
+          if (panel) panel.classList.toggle('is-hidden');
           return;
         }
 
@@ -1768,7 +1759,7 @@ function buildTemplateRuntimeScript() {
           var modalRoot = closest(openModal, '[data-toolkit-dashboard]') || document;
           var modalId = openModal.getAttribute('data-toolkit-open-modal');
           var modal = modalRoot.querySelector('[data-toolkit-modal-id="' + modalId + '"]');
-          if (modal) modal.classList.remove('hidden');
+          if (modal) modal.classList.remove('is-hidden');
           return;
         }
 
@@ -1776,21 +1767,21 @@ function buildTemplateRuntimeScript() {
         if (closeModal) {
           event.preventDefault();
           var modal = closest(closeModal, '[data-toolkit-modal-id]');
-          if (modal) modal.classList.add('hidden');
+          if (modal) modal.classList.add('is-hidden');
         }
       });
 
       function applyToolkitFilters(root) {
         var queryInput = root.querySelector('[data-toolkit-query]');
         var query = String(queryInput && queryInput.value || '').toLowerCase().trim();
-        var activeBtn = root.querySelector('[data-toolkit-category-filter].bg-slate-700');
+        var activeBtn = root.querySelector('[data-toolkit-category-filter].is-active');
         var category = activeBtn ? String(activeBtn.getAttribute('data-toolkit-category-filter') || 'all').toLowerCase() : 'all';
         Array.prototype.slice.call(root.querySelectorAll('[data-toolkit-card]')).forEach(function(card) {
           var cardCategory = String(card.getAttribute('data-toolkit-category') || '').toLowerCase();
           var search = String(card.getAttribute('data-toolkit-search') || '').toLowerCase();
           var passCategory = category === 'all' || cardCategory === category;
           var passQuery = !query || search.indexOf(query) !== -1;
-          card.classList.toggle('hidden', !(passCategory && passQuery));
+          card.classList.toggle('is-hidden', !(passCategory && passQuery));
         });
       }
 
@@ -1800,11 +1791,9 @@ function buildTemplateRuntimeScript() {
         event.preventDefault();
         var root = closest(filterBtn, '[data-toolkit-dashboard]') || document;
         Array.prototype.slice.call(root.querySelectorAll('[data-toolkit-category-filter]')).forEach(function(btn) {
-          btn.classList.remove('bg-slate-700', 'text-white');
-          btn.classList.add('text-slate-300');
+          btn.classList.remove('is-active');
         });
-        filterBtn.classList.add('bg-slate-700', 'text-white');
-        filterBtn.classList.remove('text-slate-300');
+        filterBtn.classList.add('is-active');
         applyToolkitFilters(root);
       });
 
@@ -1818,10 +1807,10 @@ function buildTemplateRuntimeScript() {
       Array.prototype.slice.call(document.querySelectorAll('[data-finlit-root]')).forEach(function(root) {
         var trigger = root.querySelector('[data-finlit-tab-trigger][aria-selected="true"]');
         if (!trigger) {
-          trigger = root.querySelector('[data-finlit-tab-trigger].cf-finlit-tab-active');
+          trigger = root.querySelector('[data-finlit-tab-trigger].is-active');
         }
         if (!trigger) {
-          var visiblePanel = root.querySelector('[data-finlit-tab-panel]:not(.hidden)');
+          var visiblePanel = root.querySelector('[data-finlit-tab-panel]:not(.is-hidden)');
           if (visiblePanel) {
             var panelId = visiblePanel.getAttribute('data-finlit-tab-panel');
             if (panelId) {
@@ -1848,7 +1837,12 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
 
   const template = resolveTemplateValue(module?.template, resolveTemplateValue(courseSettings?.templateDefault, 'deck'));
   const theme = resolveThemeValue(module?.theme, resolveThemeValue(courseSettings?.themeDefault, 'dark_cards'));
+  const visualQuality = resolveVisualQualityValue(
+    module?.composerVisualQuality,
+    resolveVisualQualityValue(courseSettings?.composerVisualQuality, 'premium_dribbble'),
+  );
   const themeClass = `cf-theme-${theme}`;
+  const visualQualityClass = `cf-visual-${visualQuality}`;
 
   const renderInlineActivities = (list, prefix = 'inline') =>
     normalizeComposerActivities(
@@ -1866,15 +1860,15 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
   const renderActivity = (activity, idx, { withLayout = true, trail = [] } = {}) => {
     const activityId = String(activity?.id || `activity-${idx + 1}`);
     if (trail.includes(activityId)) {
-      return `<section class="rounded-xl border border-rose-500/40 bg-rose-950/20 p-4"><p class="text-rose-300 text-sm">Cycle detected for activity "${escapeHtml(activityId)}".</p></section>`;
+      return `<section class="cf-card tone-danger"><p class="text-sm">Cycle detected for activity "${escapeHtml(activityId)}".</p></section>`;
     }
     const data = activity?.data || {};
     let compiled = '';
     if (activity?.type === 'tab_group') {
       const tabs = Array.isArray(data.tabs) ? data.tabs : [];
       compiled = `
-        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-4 cf-template-surface">
-          ${String(data.title || '').trim() ? `<h3 class="text-lg font-bold text-white mb-3">${escapeHtml(String(data.title || ''))}</h3>` : ''}
+        <article class="cf-card cf-card--elevated cf-template-surface">
+          ${String(data.title || '').trim() ? `<h3 class="text-lg font-bold  mb-3">${escapeHtml(String(data.title || ''))}</h3>` : ''}
           <div class="space-y-2">
             ${
               tabs.length
@@ -1884,16 +1878,16 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
                       const inline = renderInlineActivities(tab?.activities, `${activityId}-tab-${tabIdx + 1}`);
                       const content = [...refs, ...inline];
                       return `
-                        <details class="rounded-lg border border-slate-700 bg-slate-950/60 p-3" ${tabIdx === 0 ? 'open' : ''}>
-                          <summary class="cursor-pointer text-sm font-bold text-slate-200">${escapeHtml(String(tab?.label || tab?.id || `Tab ${tabIdx + 1}`))}</summary>
+                        <details class="cf-card cf-card--flat p-3" ${tabIdx === 0 ? 'open' : ''}>
+                          <summary class="cursor-pointer cf-pill">${escapeHtml(String(tab?.label || tab?.id || `Tab ${tabIdx + 1}`))}</summary>
                           <div class="mt-3 space-y-3">
-                            ${content.length ? content.map((item, nestedIdx) => renderActivity(item, nestedIdx, { withLayout: false, trail: [...trail, activityId] })).join('\n') : '<p class="text-sm text-slate-400">No linked activities.</p>'}
+                            ${content.length ? content.map((item, nestedIdx) => renderActivity(item, nestedIdx, { withLayout: false, trail: [...trail, activityId] })).join('\n') : '<p class="text-sm cf-muted">No linked activities.</p>'}
                           </div>
                         </details>
                       `;
                     })
                     .join('\n')
-                : '<p class="text-sm text-slate-400">No tabs configured.</p>'
+                : '<p class="text-sm cf-muted">No tabs configured.</p>'
             }
           </div>
         </article>
@@ -1917,28 +1911,28 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
           const panelId = `${slugify(activityId, 'card-list')}-panel-${cardIdx + 1}`;
           const content = linkedItems.length
             ? linkedItems.map((item, nestedIdx) => renderActivity(item, nestedIdx, { withLayout: false, trail: [...trail, activityId] })).join('\n')
-            : '<p class="text-sm text-slate-400">No linked activity.</p>';
+            : '<p class="text-sm cf-muted">No linked activity.</p>';
           return `
-            <article class="rounded-lg border border-slate-700 bg-slate-950/60 p-3">
-              <h4 class="text-sm font-bold text-white">${escapeHtml(String(card?.title || `Card ${cardIdx + 1}`))}</h4>
-              ${String(card?.subtitle || '').trim() ? `<p class="mt-1 text-xs text-slate-400">${escapeHtml(String(card.subtitle || ''))}</p>` : ''}
+            <article class="cf-card cf-card--flat">
+              <h4 class="text-sm font-bold ">${escapeHtml(String(card?.title || `Card ${cardIdx + 1}`))}</h4>
+              ${String(card?.subtitle || '').trim() ? `<p class="mt-1 text-xs cf-muted">${escapeHtml(String(card.subtitle || ''))}</p>` : ''}
               <div class="mt-2">
                 ${
                   openMode === 'expand'
-                    ? `<button type="button" data-expand-toggle="${panelId}" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold uppercase tracking-wide">Open</button>
-                       <div data-expand-panel="${panelId}" class="hidden mt-3">${content}</div>`
+                    ? `<button type="button" data-expand-toggle="${panelId}" class="cf-btn cf-btn--primary">Open</button>
+                       <div data-expand-panel="${panelId}" class="is-hidden mt-3">${content}</div>`
                     : openMode === 'modal'
-                      ? `<button type="button" data-toolkit-open-modal="${panelId}" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold uppercase tracking-wide">Open Modal</button>
-                         <div class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" data-toolkit-modal-id="${panelId}" data-toolkit-modal-backdrop>
-                           <div class="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-950 p-4 max-h-[85vh] custom-scroll">
+                      ? `<button type="button" data-toolkit-open-modal="${panelId}" class="cf-btn cf-btn--primary">Open Modal</button>
+                         <div class="is-hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" data-toolkit-modal-id="${panelId}" data-toolkit-modal-backdrop>
+                           <div class="w-full max-w-3xl cf-card cf-card--elevated max-h-[85vh] custom-scroll">
                              <div class="flex items-center justify-between mb-3">
-                               <h4 class="text-sm font-bold text-white">${escapeHtml(String(card?.title || `Card ${cardIdx + 1}`))}</h4>
-                               <button type="button" data-toolkit-close-modal class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white">Close</button>
+                               <h4 class="text-sm font-bold ">${escapeHtml(String(card?.title || `Card ${cardIdx + 1}`))}</h4>
+                               <button type="button" data-toolkit-close-modal class="cf-btn cf-btn--ghost">Close</button>
                              </div>
                              ${content}
                            </div>
                          </div>`
-                      : `<a href="#${panelId}" class="inline-block px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-bold uppercase tracking-wide">${openMode === 'navigate_page' ? 'Open Page' : 'Go to Section'}</a>
+                      : `<a href="#${panelId}" class="inline-flex items-center cf-btn cf-btn--ghost">${openMode === 'navigate_page' ? 'Open Page' : 'Go to Section'}</a>
                          <section id="${panelId}" class="mt-3">${content}</section>`
                 }
               </div>
@@ -1947,9 +1941,9 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
         })
         .join('\n');
       compiled = `
-        <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-4 cf-template-surface" data-toolkit-dashboard>
-          ${String(data.title || '').trim() ? `<h3 class="text-lg font-bold text-white mb-3">${escapeHtml(String(data.title || ''))}</h3>` : ''}
-          <div class="grid gap-3 md:grid-cols-2">${cardRows || '<p class="text-sm text-slate-400">No cards configured.</p>'}</div>
+        <article class="cf-card cf-card--elevated cf-template-surface" data-toolkit-dashboard>
+          ${String(data.title || '').trim() ? `<h3 class="text-lg font-bold  mb-3">${escapeHtml(String(data.title || ''))}</h3>` : ''}
+          <div class="grid gap-3 md:grid-cols-2">${cardRows || '<p class="text-sm cf-muted">No cards configured.</p>'}</div>
         </article>
       `;
     } else {
@@ -1960,7 +1954,7 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
             index: idx,
             activityId: activity.id,
           })
-        : `<article class="rounded-xl border border-rose-500/30 bg-rose-950/20 p-5"><p class="text-rose-300 text-sm font-semibold">Unknown activity type: ${escapeHtml(activity.type)}</p></article>`;
+        : `<article class="cf-card tone-danger"><p class="text-sm font-semibold">Unknown activity type: ${escapeHtml(activity.type)}</p></article>`;
     }
 
     const colSpan = activity?.layout?.colSpan || 1;
@@ -2010,7 +2004,7 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
     const sectionStyle = sectionStyleParts.filter(Boolean).join(' ');
     const headingLabel = stripHtml(activity?.data?.title || activity?.data?.text || getActivityDefinition(activity?.type)?.label || `Activity ${idx + 1}`);
     const activityHtml = behaviorMeta.collapsible
-      ? `<details class="rounded-xl border border-slate-700/60 bg-slate-950/20" ${behaviorMeta.collapsedByDefault ? '' : 'open'}><summary class="cursor-pointer select-none px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-300">${escapeHtml(headingLabel)}</summary><div class="p-1">${compiled}</div></details>`
+      ? `<details class="cf-card cf-card--flat" ${behaviorMeta.collapsedByDefault ? '' : 'open'}><summary class="cursor-pointer select-none cf-pill">${escapeHtml(headingLabel)}</summary><div class="p-1">${compiled}</div></details>`
       : compiled;
 
     return `
@@ -2035,7 +2029,7 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
   };
 
   const renderLayout = (list) => {
-    const sections = list.length ? list.map((activity, idx) => renderActivity(activity, idx)).join('\n') : '<p class="text-slate-400" style="grid-column: 1 / -1;">No composer activities added yet.</p>';
+    const sections = list.length ? list.map((activity, idx) => renderActivity(activity, idx)).join('\n') : '<p class="cf-muted" style="grid-column: 1 / -1;">No composer activities added yet.</p>';
     if (composerLayout.mode === 'canvas') {
       const rowHeight = Number.parseInt(composerLayout.rowHeight, 10) || 24;
       const margin = Array.isArray(composerLayout.margin) ? composerLayout.margin : [12, 12];
@@ -2105,13 +2099,13 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
             const href = toSafeHref(link?.url);
             const openAttrs = href && !href.startsWith('#') ? ' target="_blank" rel="noopener noreferrer"' : '';
             return `
-              <article class="rounded-lg border border-slate-700 bg-slate-950/60 p-3">
+              <article class="cf-card cf-card--flat">
                 ${
                   href
-                    ? `<a href="${escapeHtml(href)}"${openAttrs} class="text-sm font-bold text-sky-300 hover:text-sky-200 underline">${escapeHtml(title)}</a>`
-                    : `<p class="text-sm font-bold text-slate-200">${escapeHtml(title)}</p>`
+                    ? `<a href="${escapeHtml(href)}"${openAttrs} class="text-sm font-bold">${escapeHtml(title)}</a>`
+                    : `<p class="text-sm font-bold">${escapeHtml(title)}</p>`
                 }
-                ${description ? `<p class="mt-1 text-xs text-slate-400 leading-relaxed">${escapeHtml(description)}</p>` : ''}
+                ${description ? `<p class="mt-1 text-xs cf-muted leading-relaxed">${escapeHtml(description)}</p>` : ''}
               </article>
             `;
           })
@@ -2162,7 +2156,7 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
         const panelHtml =
           panelParts.length > 0
             ? panelParts.join('\n')
-            : `<p class="text-slate-400 text-sm">No ${escapeHtml(tabLabel.toLowerCase() || 'tab')} content.</p>`;
+            : `<p class="cf-muted text-sm">No ${escapeHtml(tabLabel.toLowerCase() || 'tab')} content.</p>`;
 
         return {
           tabId,
@@ -2176,7 +2170,7 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
         renderedTabs.push({
           tabId: 'activities',
           tabLabel: String(finlit?.activitiesTabLabel || 'Activities'),
-          panelHtml: unlinkedDirectActivitiesHtml || '<p class="text-slate-400 text-sm">No activities yet.</p>',
+          panelHtml: unlinkedDirectActivitiesHtml || '<p class="cf-muted text-sm">No activities yet.</p>',
           isActive: true,
         });
       }
@@ -2195,28 +2189,28 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
       const heroTitle = String(hero.title || module?.title || 'Module');
       const heroMediaHtml =
         heroMediaUrl && heroMediaKind === 'video'
-          ? `<div class="mt-4 rounded-lg overflow-hidden border border-slate-700 bg-black"><video src="${escapeHtml(heroMediaUrl)}" class="w-full h-auto" controls preload="metadata"></video></div>`
+          ? `<div class="mt-4 rounded-lg overflow-hidden cf-card cf-card--flat bg-black"><video src="${escapeHtml(heroMediaUrl)}" class="w-full h-auto" controls preload="metadata"></video></div>`
           : heroMediaUrl && heroMediaKind === 'embed'
-            ? `<div class="mt-4 rounded-lg overflow-hidden border border-slate-700 bg-black aspect-video"><iframe src="${escapeHtml(heroMediaUrl)}" title="${escapeHtml(heroTitle)}" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></div>`
+            ? `<div class="mt-4 rounded-lg overflow-hidden cf-card cf-card--flat bg-black aspect-video"><iframe src="${escapeHtml(heroMediaUrl)}" title="${escapeHtml(heroTitle)}" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></div>`
             : heroMediaUrl
-              ? `<div class="mt-4 rounded-lg overflow-hidden border border-slate-700 bg-black"><img src="${escapeHtml(heroMediaUrl)}" alt="${escapeHtml(heroTitle)}" class="w-full h-auto" loading="lazy" /></div>`
+              ? `<div class="mt-4 rounded-lg overflow-hidden cf-card cf-card--flat bg-black"><img src="${escapeHtml(heroMediaUrl)}" alt="${escapeHtml(heroTitle)}" class="w-full h-auto" loading="lazy" /></div>`
               : '';
       return `
-        <section class="space-y-6 rounded-xl border border-slate-700 p-5 cf-template-surface" data-finlit-root>
-          <header class="rounded-xl border border-slate-700 bg-slate-950/40 p-5">
-            <h2 class="text-2xl font-black text-white">${escapeHtml(heroTitle)}</h2>
-            ${String(hero.subtitle || '').trim() ? `<p class="mt-2 text-sm text-slate-300">${escapeHtml(String(hero.subtitle || ''))}</p>` : ''}
-            ${String(hero.progressLabel || '').trim() ? `<p class="mt-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">${escapeHtml(String(hero.progressLabel || ''))}</p>` : ''}
+        <section class="space-y-6 cf-card cf-card--elevated cf-template-surface" data-finlit-root>
+          <header class="cf-card cf-card--flat">
+            <h2 class="text-2xl font-black ">${escapeHtml(heroTitle)}</h2>
+            ${String(hero.subtitle || '').trim() ? `<p class="mt-2 text-sm cf-muted">${escapeHtml(String(hero.subtitle || ''))}</p>` : ''}
+            ${String(hero.progressLabel || '').trim() ? `<p class="mt-3 text-[11px] font-bold uppercase tracking-wide cf-muted">${escapeHtml(String(hero.progressLabel || ''))}</p>` : ''}
             ${heroMediaHtml}
           </header>
-          <div class="flex flex-wrap gap-3 border-b border-slate-700 pb-2">
+          <div class="flex flex-wrap gap-3 cf-divider pb-2">
             ${renderedTabs
               .map(
                 (tab) => `
                   <button
                     type="button"
                     data-finlit-tab-trigger="${escapeHtml(tab.tabId)}"
-                    class="px-2 py-1 text-sm font-bold ${tab.isActive ? 'text-slate-200 cf-finlit-tab-active' : 'text-slate-400'}"
+                    class="cf-chip ${tab.isActive ? 'is-active' : ''}"
                   >
                     ${escapeHtml(tab.tabLabel)}
                   </button>
@@ -2227,7 +2221,7 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
           ${renderedTabs
             .map(
               (tab) => `
-                <div data-finlit-tab-panel="${escapeHtml(tab.tabId)}" class="${tab.isActive ? '' : 'hidden'}">
+                <div data-finlit-tab-panel="${escapeHtml(tab.tabId)}" class="${tab.isActive ? '' : 'is-hidden'}">
                   ${tab.panelHtml}
                 </div>
               `,
@@ -2262,13 +2256,13 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
         });
       return `
         <section class="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-          <aside class="rounded-xl border border-slate-700 bg-slate-900/70 p-4 h-max sticky top-4 cf-template-surface">
-            <h3 class="text-xs font-bold uppercase tracking-wide text-slate-400 mb-3">Contents</h3>
+          <aside class="cf-card cf-card--elevated h-max sticky top-4 cf-template-surface">
+            <h3 class="text-xs font-bold uppercase tracking-wide cf-muted mb-3">Contents</h3>
             <nav class="space-y-2">
-              ${toc.length ? toc.map((entry) => `<a href="#${entry.anchor}" class="block text-sm text-slate-200 hover:text-white" style="padding-left:${Math.max(0, entry.level - 2) * 0.75}rem;">${escapeHtml(entry.text)}</a>`).join('\n') : '<p class="text-sm text-slate-400">No headings found.</p>'}
+              ${toc.length ? toc.map((entry) => `<a href="#${entry.anchor}" class="block text-sm" style="padding-left:${Math.max(0, entry.level - 2) * 0.75}rem;">${escapeHtml(entry.text)}</a>`).join('\n') : '<p class="text-sm cf-muted">No headings found.</p>'}
             </nav>
           </aside>
-          <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-6 cf-template-surface cf-prose">
+          <article class="cf-card cf-card--elevated cf-template-surface cf-prose">
             <div class="space-y-6">${sections.map((item) => item.html).join('\n')}</div>
           </article>
         </section>
@@ -2325,20 +2319,20 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
           const linkedItems = Array.isArray(card.linked) ? card.linked : [];
           const content = linkedItems.length
             ? linkedItems.map((item, nestedIdx) => renderActivity(item, nestedIdx, { withLayout: false, trail: [card.id] })).join('\n')
-            : '<p class="text-sm text-slate-400">No linked activity.</p>';
+            : '<p class="text-sm cf-muted">No linked activity.</p>';
           const searchText = `${card.title} ${card.subtitle} ${card.category}`.trim().toLowerCase();
           const categorySlug = slugify(card.category, 'general');
           return `
-            <article class="rounded-xl border border-slate-700 bg-slate-900/70 p-4 cf-toolkit-card cf-template-surface" data-toolkit-card data-toolkit-category="${categorySlug}" data-toolkit-search="${escapeHtml(searchText)}">
-              <h4 class="text-sm font-bold text-white">${escapeHtml(card.title)}</h4>
-              ${card.subtitle ? `<p class="mt-1 text-xs text-slate-400">${escapeHtml(card.subtitle)}</p>` : ''}
+            <article class="cf-card cf-card--elevated cf-toolkit-card cf-template-surface" data-toolkit-card data-toolkit-category="${categorySlug}" data-toolkit-search="${escapeHtml(searchText)}">
+              <h4 class="text-sm font-bold ">${escapeHtml(card.title)}</h4>
+              ${card.subtitle ? `<p class="mt-1 text-xs cf-muted">${escapeHtml(card.subtitle)}</p>` : ''}
               <div class="mt-3">
                 ${
                   card.openMode === 'expand'
-                    ? `<button type="button" data-expand-toggle="${panelId}" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-bold uppercase tracking-wide text-white">Open</button><div class="hidden mt-3" data-expand-panel="${panelId}">${content}</div>`
+                    ? `<button type="button" data-expand-toggle="${panelId}" class="cf-btn cf-btn--primary">Open</button><div class="is-hidden mt-3" data-expand-panel="${panelId}">${content}</div>`
                     : card.openMode === 'modal'
-                      ? `<button type="button" data-toolkit-open-modal="${panelId}" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-bold uppercase tracking-wide text-white">Open Modal</button><div class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" data-toolkit-modal-id="${panelId}" data-toolkit-modal-backdrop><div class="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-950 p-4 max-h-[85vh] custom-scroll"><div class="flex items-center justify-between mb-3"><h4 class="text-sm font-bold text-white">${escapeHtml(card.title)}</h4><button type="button" data-toolkit-close-modal class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white">Close</button></div>${content}</div></div>`
-                      : `<a href="#${panelId}" class="inline-block px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-bold uppercase tracking-wide text-white">${card.openMode === 'navigate_page' ? 'Open Page' : 'Go to Section'}</a><section id="${panelId}" class="mt-3">${content}</section>`
+                      ? `<button type="button" data-toolkit-open-modal="${panelId}" class="cf-btn cf-btn--primary">Open Modal</button><div class="is-hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" data-toolkit-modal-id="${panelId}" data-toolkit-modal-backdrop><div class="w-full max-w-3xl cf-card cf-card--elevated max-h-[85vh] custom-scroll"><div class="flex items-center justify-between mb-3"><h4 class="text-sm font-bold ">${escapeHtml(card.title)}</h4><button type="button" data-toolkit-close-modal class="cf-btn cf-btn--ghost">Close</button></div>${content}</div></div>`
+                      : `<a href="#${panelId}" class="inline-flex items-center cf-btn cf-btn--ghost">${card.openMode === 'navigate_page' ? 'Open Page' : 'Go to Section'}</a><section id="${panelId}" class="mt-3">${content}</section>`
                 }
               </div>
             </article>
@@ -2348,10 +2342,10 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
       return `
         <section class="space-y-4" data-toolkit-dashboard>
           <div class="flex flex-wrap gap-2">
-            <input type="search" data-toolkit-query class="flex-1 min-w-56 rounded border border-slate-700 bg-slate-950/70 px-3 py-2 text-sm text-white" placeholder="Search tools..." />
-            <button type="button" data-toolkit-category-filter="all" class="px-3 py-2 rounded bg-slate-700 text-white text-xs font-bold">All</button>
+            <input type="search" data-toolkit-query class="cf-input flex-1 min-w-56" placeholder="Search tools..." />
+            <button type="button" data-toolkit-category-filter="all" class="cf-chip is-active">All</button>
           </div>
-          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">${cardHtml || '<p class="text-slate-400 text-sm">No tools configured.</p>'}</div>
+          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">${cardHtml || '<p class="cf-muted text-sm">No tools configured.</p>'}</div>
         </section>
       `;
     }
@@ -2359,31 +2353,227 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
     return renderLayout(activities);
   };
 
-  const themeCss =
-    theme === 'finlit_clean'
-      ? `.cf-theme-finlit_clean { --cf-surface:#ffffff; --cf-border:#d1d5db; --cf-text:#0f172a; } .cf-theme-finlit_clean .cf-template-surface{background:var(--cf-surface);border-color:var(--cf-border);color:var(--cf-text);} .cf-theme-finlit_clean .cf-finlit-tab-active{color:#0284c7!important;border-color:#0284c7!important;}`
-      : theme === 'coursebook_light'
-        ? `.cf-theme-coursebook_light { --cf-surface:#ffffff; --cf-border:#d1d5db; --cf-text:#111827; } .cf-theme-coursebook_light .cf-template-surface{background:var(--cf-surface);border-color:var(--cf-border);color:var(--cf-text);} .cf-theme-coursebook_light .cf-prose{font-family:Georgia, "Times New Roman", serif;line-height:1.75;}`
-        : theme === 'toolkit_clean'
-          ? `.cf-theme-toolkit_clean { --cf-surface:#ffffff; --cf-border:#d1d5db; --cf-text:#111827; } .cf-theme-toolkit_clean .cf-template-surface{background:var(--cf-surface);border-color:var(--cf-border);color:var(--cf-text);}`
-          : `.cf-theme-dark_cards { --cf-surface:rgba(15, 23, 42, 0.72); --cf-border:rgba(71, 85, 105, 0.65); --cf-text:#e2e8f0; } .cf-theme-dark_cards .cf-template-surface{background:var(--cf-surface);border-color:var(--cf-border);color:var(--cf-text);}`;
+  const THEME_TOKENS = {
+    dark_cards: `
+      --cf-bg:#020617;
+      --cf-bg-gradient:radial-gradient(1200px 640px at 18% -10%, rgba(56,189,248,0.22), transparent 60%), radial-gradient(1000px 580px at 110% 0%, rgba(34,197,94,0.14), transparent 64%);
+      --cf-surface:rgba(7, 15, 28, 0.62);
+      --cf-card:rgba(15, 23, 42, 0.74);
+      --cf-border:rgba(71, 85, 105, 0.6);
+      --cf-text:#e2e8f0;
+      --cf-muted:#94a3b8;
+      --cf-accent:#38bdf8;
+      --cf-accent2:#22c55e;
+    `,
+    finlit_clean: `
+      --cf-bg:#eef2f7;
+      --cf-bg-gradient:radial-gradient(900px 500px at 8% -10%, rgba(14,165,233,0.12), transparent 60%);
+      --cf-surface:#ffffff;
+      --cf-card:#ffffff;
+      --cf-border:#d7dde7;
+      --cf-text:#0f172a;
+      --cf-muted:#64748b;
+      --cf-accent:#0284c7;
+      --cf-accent2:#16a34a;
+    `,
+    coursebook_light: `
+      --cf-bg:#f8fafc;
+      --cf-bg-gradient:linear-gradient(180deg, rgba(148,163,184,0.1) 0%, rgba(248,250,252,0) 46%);
+      --cf-surface:#ffffff;
+      --cf-card:#ffffff;
+      --cf-border:#dbe2eb;
+      --cf-text:#111827;
+      --cf-muted:#6b7280;
+      --cf-accent:#1d4ed8;
+      --cf-accent2:#0ea5e9;
+    `,
+    toolkit_clean: `
+      --cf-bg:#f3f6fb;
+      --cf-bg-gradient:radial-gradient(900px 480px at 0% -20%, rgba(56,189,248,0.15), transparent 58%);
+      --cf-surface:#ffffff;
+      --cf-card:#ffffff;
+      --cf-border:#d4dbe5;
+      --cf-text:#111827;
+      --cf-muted:#64748b;
+      --cf-accent:#0891b2;
+      --cf-accent2:#6366f1;
+    `,
+    saas_clean: `
+      --cf-bg:#f4f7f6;
+      --cf-bg-gradient:radial-gradient(860px 460px at 4% -12%, rgba(34,197,94,0.16), transparent 56%);
+      --cf-surface:#ffffff;
+      --cf-card:#ffffff;
+      --cf-border:#dbe4df;
+      --cf-text:#10221a;
+      --cf-muted:#5f746b;
+      --cf-accent:#16a34a;
+      --cf-accent2:#22c55e;
+    `,
+    lms_pastel: `
+      --cf-bg:#eef0ff;
+      --cf-bg-gradient:linear-gradient(150deg, rgba(196,181,253,0.42) 0%, rgba(224,231,255,0.45) 55%, rgba(255,237,213,0.32) 100%);
+      --cf-surface:rgba(255,255,255,0.86);
+      --cf-card:rgba(255,255,255,0.94);
+      --cf-border:#cfd4f2;
+      --cf-text:#1f1f3a;
+      --cf-muted:#606084;
+      --cf-accent:#6366f1;
+      --cf-accent2:#f59e0b;
+    `,
+    crypto_neon: `
+      --cf-bg:#060815;
+      --cf-bg-gradient:radial-gradient(860px 420px at 8% -12%, rgba(34,211,238,0.22), transparent 58%), radial-gradient(900px 440px at 110% -6%, rgba(147,51,234,0.26), transparent 62%);
+      --cf-surface:rgba(11, 16, 34, 0.66);
+      --cf-card:rgba(17, 24, 48, 0.56);
+      --cf-border:rgba(255,255,255,0.18);
+      --cf-text:#e8ecff;
+      --cf-muted:#9fa8c8;
+      --cf-accent:#22d3ee;
+      --cf-accent2:#a855f7;
+    `,
+  };
 
-  const html = `
-    <style>
+  const themeCss = THEME_OPTIONS.map((themeId) => `.cf-theme-${themeId}{${THEME_TOKENS[themeId] || THEME_TOKENS.dark_cards}}`).join('\n');
+
+  const BASE_CSS = `
+      .cf-page {
+        --cf-r-sm: 10px;
+        --cf-r-md: 16px;
+        --cf-r-lg: 24px;
+        --cf-sh-0: none;
+        --cf-sh-1: 0 10px 30px rgba(2,6,23,0.12);
+        --cf-sh-2: 0 18px 40px rgba(2,6,23,0.18);
+        --cf-focus: 0 0 0 3px color-mix(in srgb, var(--cf-accent) 36%, transparent);
+        --cf-space-1: 0.35rem;
+        --cf-space-2: 0.6rem;
+        --cf-space-3: 0.9rem;
+        --cf-space-4: 1.2rem;
+        --cf-space-5: 1.6rem;
+        --cf-space-6: 2.2rem;
+        min-height: 100vh;
+        padding: clamp(16px, 3vw, 40px);
+        background: var(--cf-bg);
+        background-image: var(--cf-bg-gradient, none);
+        color: var(--cf-text);
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+      .cf-shell {
+        max-width: 1400px;
+        margin: 0 auto;
+        border-radius: var(--cf-r-lg);
+        background: var(--cf-surface);
+        border: 1px solid var(--cf-border);
+        box-shadow: var(--cf-sh-2);
+        padding: clamp(16px, 3vw, 32px);
+        display: grid;
+        gap: 1.5rem;
+      }
+      .cf-shell h1, .cf-shell h2, .cf-shell h3, .cf-shell h4, .cf-shell h5, .cf-shell h6 { color: var(--cf-text); line-height: 1.2; letter-spacing: -0.01em; }
+      .cf-shell p, .cf-shell li, .cf-shell small, .cf-shell label { color: color-mix(in srgb, var(--cf-text) 92%, transparent); }
+      .cf-shell h1 { font-size: clamp(1.8rem, 2.8vw, 2.7rem); font-weight: 900; }
+      .cf-shell h2 { font-size: clamp(1.5rem, 2.2vw, 2.1rem); font-weight: 800; }
+      .cf-shell h3 { font-size: clamp(1.2rem, 1.7vw, 1.5rem); font-weight: 700; }
+      .cf-shell a { color: var(--cf-accent); text-decoration: underline; text-underline-offset: 0.12em; }
+      .cf-shell a:hover { color: color-mix(in srgb, var(--cf-accent) 80%, var(--cf-accent2) 20%); }
+      .cf-shell table { width: 100%; border-collapse: collapse; }
+      .cf-shell th, .cf-shell td { border: 1px solid var(--cf-border); padding: 0.6rem 0.7rem; vertical-align: top; }
+      .cf-shell th { background: color-mix(in srgb, var(--cf-card) 70%, transparent); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+      .cf-muted { color: var(--cf-muted) !important; }
+      .cf-status-message { padding: 0.45rem 0.6rem; border: 1px solid transparent; border-radius: var(--cf-r-sm); display: inline-flex; align-items: center; gap: 0.4rem; }
+      .cf-divider { border-bottom: 1px solid var(--cf-border); }
+
+      .cf-card {
+        background: var(--cf-card);
+        border: 1px solid var(--cf-border);
+        border-radius: var(--cf-r-md);
+        box-shadow: var(--cf-sh-1);
+        padding: clamp(20px, 2vw, 24px);
+      }
+      .cf-card--elevated { box-shadow: var(--cf-sh-2); }
+      .cf-card--flat { background: transparent; border-color: color-mix(in srgb, var(--cf-border) 70%, transparent); box-shadow: var(--cf-sh-0); }
+      .cf-template-surface { background: var(--cf-card); border: 1px solid var(--cf-border); border-radius: var(--cf-r-md); box-shadow: var(--cf-sh-1); }
+
+      .cf-btn, .cf-chip, .cf-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        height: 36px;
+        border-radius: var(--cf-r-sm);
+        border: 1px solid var(--cf-border);
+        padding: 0 0.85rem;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: var(--cf-text);
+        background: color-mix(in srgb, var(--cf-card) 84%, transparent);
+        cursor: pointer;
+        transition: transform 140ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease;
+      }
+      .cf-pill { height: 32px; }
+      .cf-btn:hover, .cf-chip:hover, .cf-pill:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--cf-accent) 45%, var(--cf-border) 55%); }
+      .cf-btn:active, .cf-chip:active, .cf-pill:active { transform: translateY(0); }
+      .cf-btn:focus-visible, .cf-chip:focus-visible, .cf-pill:focus-visible, .cf-input:focus-visible, .cf-textarea:focus-visible, .cf-select:focus-visible {
+        outline: none;
+        box-shadow: var(--cf-focus);
+      }
+      .cf-btn--primary {
+        border-color: color-mix(in srgb, var(--cf-accent) 75%, #fff 25%);
+        background: linear-gradient(135deg, color-mix(in srgb, var(--cf-accent) 88%, #fff 12%), color-mix(in srgb, var(--cf-accent2) 72%, var(--cf-accent) 28%));
+        color: white;
+      }
+      .cf-btn--ghost { background: transparent; }
+      .cf-btn--danger {
+        border-color: color-mix(in srgb, #ef4444 65%, var(--cf-border) 35%);
+        color: #fca5a5;
+        background: color-mix(in srgb, #ef4444 14%, transparent);
+      }
+
+      .cf-input, .cf-textarea, .cf-select {
+        border: 1px solid var(--cf-border);
+        border-radius: var(--cf-r-sm);
+        background: var(--cf-card);
+        color: var(--cf-text);
+        padding: 0.58rem 0.78rem;
+        font-size: 0.9rem;
+      }
+      .cf-textarea { min-height: 7rem; resize: vertical; }
+      .cf-input::placeholder, .cf-textarea::placeholder { color: color-mix(in srgb, var(--cf-muted) 82%, transparent); }
+
+      .tone-success { color: #34d399 !important; border-color: color-mix(in srgb, #34d399 45%, var(--cf-border) 55%) !important; background: color-mix(in srgb, #34d399 14%, transparent) !important; }
+      .tone-warning { color: #fbbf24 !important; border-color: color-mix(in srgb, #fbbf24 45%, var(--cf-border) 55%) !important; background: color-mix(in srgb, #fbbf24 14%, transparent) !important; }
+      .tone-danger { color: #f87171 !important; border-color: color-mix(in srgb, #f87171 45%, var(--cf-border) 55%) !important; background: color-mix(in srgb, #f87171 14%, transparent) !important; }
+      .tone-info { color: #60a5fa !important; border-color: color-mix(in srgb, #60a5fa 45%, var(--cf-border) 55%) !important; background: color-mix(in srgb, #60a5fa 14%, transparent) !important; }
+      .is-active {
+        border-color: var(--cf-accent) !important;
+        background: color-mix(in srgb, var(--cf-accent) 16%, var(--cf-card) 84%) !important;
+        color: var(--cf-text) !important;
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--cf-accent) 58%, transparent);
+      }
+      .is-dragover { border-color: var(--cf-accent) !important; box-shadow: 0 0 0 2px color-mix(in srgb, var(--cf-accent) 45%, transparent); }
+      .is-dragging { opacity: 0.7; }
+      .is-hidden { display: none !important; }
+
+      .cf-prose { font-family: Georgia, "Times New Roman", serif; line-height: 1.72; }
+      .cf-theme-crypto_neon .cf-card, .cf-theme-crypto_neon .cf-shell { backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+      .cf-theme-crypto_neon .cf-btn--primary, .cf-theme-crypto_neon .is-active {
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--cf-accent) 42%, transparent), 0 0 20px color-mix(in srgb, var(--cf-accent2) 28%, transparent);
+      }
+      .cf-visual-premium_dribbble .cf-shell { box-shadow: 0 30px 60px rgba(2,6,23,0.2), 0 2px 0 rgba(255,255,255,0.04) inset; }
+      .cf-visual-premium_dribbble .cf-card { box-shadow: 0 20px 40px rgba(2,6,23,0.16); border-color: color-mix(in srgb, var(--cf-border) 72%, white 28%); }
+      .cf-visual-premium_dribbble .cf-card:hover { transform: translateY(-2px); }
+      .cf-visual-premium_dribbble .cf-btn--primary { filter: saturate(1.08) contrast(1.02); }
+
       .cf-composer-activity { position: relative; }
       .cf-composer-activity.cf-block-font-override,
       .cf-composer-activity.cf-block-font-override * { font-family: var(--cf-block-font); }
       .cf-composer-activity.cf-block-text-override :is(h1, h2, h3, h4, h5, h6, p, span, div, li, ul, ol, label, summary, small, strong, em, blockquote, pre, a, button, input, textarea, select) { color: var(--cf-block-text); }
       .cf-composer-activity.cf-block-bg-override > :first-child { background: var(--cf-block-bg); }
-      .cf-composer-activity.cf-block-border-override > :first-child,
-      .cf-composer-activity.cf-block-border-override > :first-child [class*='border-'] { border-color: var(--cf-block-border); }
-      .cf-composer-activity.cf-block-accent-override a,
-      .cf-composer-activity.cf-block-accent-override [class*='text-indigo'],
-      .cf-composer-activity.cf-block-accent-override [class*='text-sky'],
-      .cf-composer-activity.cf-block-accent-override [class*='text-emerald'],
-      .cf-composer-activity.cf-block-accent-override [class*='text-cyan'] { color: var(--cf-block-accent); }
-      .cf-composer-activity.cf-no-border > :first-child,
-      .cf-composer-activity.cf-no-border > :first-child [class*='border-'] { border: 0 !important; box-shadow: none !important; }
+      .cf-composer-activity.cf-block-border-override > :first-child { border-color: var(--cf-block-border); }
+      .cf-composer-activity.cf-block-accent-override :is(a, .cf-btn--primary, .cf-chip.is-active, .cf-pill.is-active, .is-active) { color: var(--cf-block-accent); border-color: var(--cf-block-accent); }
+      .cf-composer-activity.cf-no-border > :first-child { border: 0 !important; box-shadow: none !important; }
       .cf-composer-activity.cf-variant-flat > :first-child { background: transparent !important; }
       .cf-composer-activity.cf-pad-sm > :first-child { padding: 0.5rem !important; }
       .cf-composer-activity.cf-pad-md > :first-child { padding: 1rem !important; }
@@ -2399,10 +2589,25 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
       [data-composer-root][data-composer-layout-mode="simple"][data-composer-simple-match-tallest-row="true"] > .cf-composer-activity { height: 100%; }
       [data-composer-root][data-composer-layout-mode="simple"][data-composer-simple-match-tallest-row="true"] > .cf-composer-activity > :first-child { height: 100%; box-sizing: border-box; }
       [data-composer-root][data-composer-layout-mode="simple"] textarea { resize: none !important; overflow-y: auto; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .cf-page *, .cf-page *::before, .cf-page *::after {
+          animation: none !important;
+          transition: none !important;
+          scroll-behavior: auto !important;
+        }
+      }
+  `;
+
+  const html = `
+    <style>
       ${themeCss}
+      ${BASE_CSS}
     </style>
-    <div class="space-y-6 ${themeClass}" data-template="${escapeHtml(template)}" data-theme="${escapeHtml(theme)}">
-      ${renderTemplate()}
+    <div class="cf-page ${themeClass} ${visualQualityClass}" data-template="${escapeHtml(template)}" data-theme="${escapeHtml(theme)}" data-visual-quality="${escapeHtml(visualQuality)}">
+      <div class="cf-shell">
+        ${renderTemplate()}
+      </div>
     </div>
   `;
 

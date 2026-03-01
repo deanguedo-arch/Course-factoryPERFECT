@@ -48,6 +48,7 @@ import {
   normalizeFinlitTemplateForSave,
 } from '../../utils/finlitHero.js';
 import { resolveFinlitTabComposerState } from '../../utils/finlitTabActivities.js';
+import { COMPOSER_THEME_OPTIONS } from '../../composer/themeCatalog.js';
 import GenericDataEditor from '../GenericDataEditor.jsx';
 import HotspotEditor from '../composer/HotspotEditor.jsx';
 import VaultBrowser from '../VaultBrowser.jsx';
@@ -133,13 +134,7 @@ const MODULE_TEMPLATE_OPTIONS = [
   { value: 'toolkit_dashboard', label: 'Toolkit Dashboard' },
 ];
 
-const MODULE_THEME_OPTIONS = [
-  { value: '', label: 'Use Course Default' },
-  { value: 'dark_cards', label: 'Dark Cards' },
-  { value: 'finlit_clean', label: 'FinLit Clean' },
-  { value: 'coursebook_light', label: 'Coursebook Light' },
-  { value: 'toolkit_clean', label: 'Toolkit Clean' },
-];
+const MODULE_THEME_OPTIONS = [{ value: '', label: 'Use Course Default' }, ...COMPOSER_THEME_OPTIONS];
 
 function normalizeThemeValue(value) {
   const raw = String(value || '').trim().toLowerCase();
