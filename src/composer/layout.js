@@ -7,6 +7,7 @@ export const COMPOSER_DEFAULT_ROW_HEIGHT = 24;
 export const COMPOSER_DEFAULT_MARGIN = [12, 12];
 export const COMPOSER_DEFAULT_CONTAINER_PADDING = [12, 12];
 export const COMPOSER_DEFAULT_SIMPLE_MATCH_TALLEST_ROW = false;
+export const COMPOSER_RESPONSIVE_BREAKPOINTS = ['tablet', 'mobile'];
 
 const ACTIVITY_PADDING_VALUES = ['sm', 'md', 'lg'];
 const ACTIVITY_VARIANT_VALUES = ['card', 'flat'];
@@ -68,6 +69,11 @@ function normalizeActivityPadding(value) {
 function normalizeActivityTitleVariant(value) {
   const raw = String(value || '').trim().toLowerCase();
   return ACTIVITY_TITLE_VARIANT_VALUES.includes(raw) ? raw : 'md';
+}
+
+function hasOwnResponsiveValue(layout, keys) {
+  if (!layout || typeof layout !== 'object') return false;
+  return keys.some((key) => Object.prototype.hasOwnProperty.call(layout, key) && layout[key] !== '' && layout[key] !== null);
 }
 
 function normalizeActivityStyle(style) {
@@ -183,6 +189,8 @@ function findNextAvailableCell(occupied, startRow, startCol, colSpan, maxColumns
 
 function normalizeSimpleLayout(rawLayout, maxColumns) {
   const layout = rawLayout && typeof rawLayout === 'object' ? { ...rawLayout } : {};
+  delete layout.breakpoints;
+  delete layout.hidden;
   layout.colSpan = clampComposerColSpan(layout.colSpan, maxColumns);
 
   if (isFiniteInteger(layout.row)) {
@@ -206,6 +214,8 @@ function normalizeSimpleLayout(rawLayout, maxColumns) {
 
 function normalizeCanvasLayout(rawLayout, maxColumns) {
   const layout = rawLayout && typeof rawLayout === 'object' ? { ...rawLayout } : {};
+  delete layout.breakpoints;
+  delete layout.hidden;
   layout.w = clampCanvasW(layout.w ?? layout.colSpan, maxColumns);
   layout.h = clampCanvasH(layout.h);
   layout.x = clampCanvasX(layout.x ?? ((layout.col || 1) - 1), maxColumns, layout.w);
@@ -216,6 +226,101 @@ function normalizeCanvasLayout(rawLayout, maxColumns) {
   return layout;
 }
 
+function normalizeResponsiveLayoutOverride(rawLayout, maxColumns, mode, baseLayout) {
+  const raw = rawLayout && typeof rawLayout === 'object' ? { ...rawLayout } : null;
+  if (!raw) return null;
+
+  const hidden = raw.hidden === true;
+  if (mode === 'canvas') {
+    const hasLayoutValue = hasOwnResponsiveValue(raw, ['x', 'y', 'w', 'h', 'colSpan', 'col', 'row']);
+    if (!hasLayoutValue && !hidden) return null;
+    const normalized = normalizeCanvasLayout(
+      {
+        ...(baseLayout && typeof baseLayout === 'object' ? baseLayout : {}),
+        ...raw,
+      },
+      maxColumns,
+    );
+    if (hidden) {
+      normalized.hidden = true;
+    }
+    return normalized;
+  }
+
+  const hasLayoutValue = hasOwnResponsiveValue(raw, ['colSpan', 'row', 'col']);
+  if (!hasLayoutValue && !hidden) return null;
+  const normalized = normalizeSimpleLayout(
+    {
+      ...(baseLayout && typeof baseLayout === 'object' ? baseLayout : {}),
+      ...raw,
+    },
+    maxColumns,
+  );
+  if (hidden) {
+    normalized.hidden = true;
+  }
+  return normalized;
+}
+
+function normalizeResponsiveLayoutOverrides(rawBreakpoints, maxColumns, mode, baseLayout) {
+  const source = rawBreakpoints && typeof rawBreakpoints === 'object' ? rawBreakpoints : null;
+  if (!source) return null;
+  const next = {};
+
+  COMPOSER_RESPONSIVE_BREAKPOINTS.forEach((breakpoint) => {
+    const normalized = normalizeResponsiveLayoutOverride(source[breakpoint], maxColumns, mode, baseLayout);
+    if (normalized) {
+      next[breakpoint] = normalized;
+    }
+  });
+
+  return Object.keys(next).length > 0 ? next : null;
+}
+
+export function getComposerActivityBreakpointOverride(activity, breakpoint, { maxColumns = COMPOSER_DEFAULT_COLUMNS, mode = COMPOSER_DEFAULT_MODE } = {}) {
+  const normalizedBreakpoint = String(breakpoint || '').trim().toLowerCase();
+  if (!COMPOSER_RESPONSIVE_BREAKPOINTS.includes(normalizedBreakpoint)) return null;
+  const normalizedActivity = normalizeComposerActivityShape(activity, 0, maxColumns, mode);
+  const override = normalizedActivity?.layout?.breakpoints?.[normalizedBreakpoint];
+  return override && typeof override === 'object' ? { ...override } : null;
+}
+
+export function resolveComposerActivityLayoutForBreakpoint(
+  activity,
+  breakpoint,
+  { maxColumns = COMPOSER_DEFAULT_COLUMNS, mode = COMPOSER_DEFAULT_MODE } = {},
+) {
+  const normalizedActivity = normalizeComposerActivityShape(activity, 0, maxColumns, mode);
+  const normalizedBreakpoint = String(breakpoint || 'desktop').trim().toLowerCase();
+  const baseLayout = normalizedActivity?.layout && typeof normalizedActivity.layout === 'object' ? { ...normalizedActivity.layout } : {};
+  const baseBreakpoints = baseLayout.breakpoints && typeof baseLayout.breakpoints === 'object' ? baseLayout.breakpoints : {};
+  delete baseLayout.breakpoints;
+
+  if (!COMPOSER_RESPONSIVE_BREAKPOINTS.includes(normalizedBreakpoint)) {
+    return {
+      ...baseLayout,
+      hidden: false,
+      hasOverride: false,
+    };
+  }
+
+  const override = baseBreakpoints[normalizedBreakpoint];
+  if (!override || typeof override !== 'object') {
+    return {
+      ...baseLayout,
+      hidden: false,
+      hasOverride: false,
+    };
+  }
+
+  return {
+    ...baseLayout,
+    ...override,
+    hidden: override.hidden === true,
+    hasOverride: true,
+  };
+}
+
 function normalizeComposerActivityShape(activity, index, maxColumns = COMPOSER_DEFAULT_COLUMNS, mode = COMPOSER_DEFAULT_MODE) {
   const next = activity && typeof activity === 'object' ? { ...activity } : {};
   next.type = next.type || 'content_block';
@@ -223,11 +328,18 @@ function normalizeComposerActivityShape(activity, index, maxColumns = COMPOSER_D
   next.data = next.data && typeof next.data === 'object' ? next.data : {};
   next.style = normalizeActivityStyle(next.style);
   next.behavior = normalizeActivityBehavior(next.behavior);
+  const rawLayout = next.layout && typeof next.layout === 'object' ? { ...next.layout } : {};
+  const rawBreakpointLayouts = rawLayout.breakpoints;
 
   if (mode === 'canvas') {
-    next.layout = normalizeCanvasLayout(next.layout, maxColumns);
+    next.layout = normalizeCanvasLayout(rawLayout, maxColumns);
   } else {
-    next.layout = normalizeSimpleLayout(next.layout, maxColumns);
+    next.layout = normalizeSimpleLayout(rawLayout, maxColumns);
+  }
+
+  const normalizedBreakpoints = normalizeResponsiveLayoutOverrides(rawBreakpointLayouts, maxColumns, mode, next.layout);
+  if (normalizedBreakpoints) {
+    next.layout.breakpoints = normalizedBreakpoints;
   }
   return next;
 }

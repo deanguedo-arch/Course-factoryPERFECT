@@ -2108,10 +2108,164 @@ export function listActivityTypeGroups() {
     }));
 }
 
+function stripValidationHtml(value = '') {
+  return String(value || '')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function slugifyValidation(value, fallback = 'item') {
+  const raw = String(value || '').trim().toLowerCase();
+  const slug = raw.replace(/<[^>]*>/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return slug || fallback;
+}
+
+function collectHtmlLikeStrings(value, bucket = []) {
+  if (typeof value === 'string') {
+    if (/[<][a-z!/]/i.test(value) || /\bhref\s*=\s*["']#/i.test(value) || /\bid\s*=\s*["']/i.test(value)) {
+      bucket.push(value);
+    }
+    return bucket;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectHtmlLikeStrings(item, bucket));
+    return bucket;
+  }
+  if (value && typeof value === 'object') {
+    Object.values(value).forEach((entry) => collectHtmlLikeStrings(entry, bucket));
+  }
+  return bucket;
+}
+
+function extractHtmlIdTargets(html = '') {
+  const ids = new Set();
+  const pattern = /\sid\s*=\s*(['"])(.*?)\1/gi;
+  let match = pattern.exec(String(html || ''));
+  while (match) {
+    const target = String(match[2] || '').trim();
+    if (target) ids.add(target);
+    match = pattern.exec(String(html || ''));
+  }
+  return ids;
+}
+
+function extractInternalHrefTargets(html = '') {
+  const targets = new Set();
+  const pattern = /\shref\s*=\s*(['"])#(.*?)\1/gi;
+  let match = pattern.exec(String(html || ''));
+  while (match) {
+    const target = String(match[2] || '').trim();
+    if (target) targets.add(target);
+    match = pattern.exec(String(html || ''));
+  }
+  return targets;
+}
+
+function countEmptyHeadingTags(html = '') {
+  let count = 0;
+  const pattern = /<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi;
+  let match = pattern.exec(String(html || ''));
+  while (match) {
+    if (!stripValidationHtml(match[2] || '')) count += 1;
+    match = pattern.exec(String(html || ''));
+  }
+  return count;
+}
+
+function parseColorToRgb(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const hexMatch = raw.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hexMatch) {
+    const hex = hexMatch[1].length === 3
+      ? hexMatch[1].split('').map((char) => `${char}${char}`).join('')
+      : hexMatch[1];
+    return {
+      r: Number.parseInt(hex.slice(0, 2), 16),
+      g: Number.parseInt(hex.slice(2, 4), 16),
+      b: Number.parseInt(hex.slice(4, 6), 16),
+    };
+  }
+  const rgbMatch = raw.match(/^rgba?\(\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})(?:\s*,\s*(0|0?\.\d+|1(?:\.0+)?))?\s*\)$/i);
+  if (rgbMatch) {
+    return {
+      r: Math.max(0, Math.min(255, Number.parseInt(rgbMatch[1], 10) || 0)),
+      g: Math.max(0, Math.min(255, Number.parseInt(rgbMatch[2], 10) || 0)),
+      b: Math.max(0, Math.min(255, Number.parseInt(rgbMatch[3], 10) || 0)),
+    };
+  }
+  return null;
+}
+
+function getRelativeLuminanceChannel(value) {
+  const normalized = value / 255;
+  return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+}
+
+function getContrastRatio(foreground, background) {
+  if (!foreground || !background) return 0;
+  const fgLuminance =
+    0.2126 * getRelativeLuminanceChannel(foreground.r) +
+    0.7152 * getRelativeLuminanceChannel(foreground.g) +
+    0.0722 * getRelativeLuminanceChannel(foreground.b);
+  const bgLuminance =
+    0.2126 * getRelativeLuminanceChannel(background.r) +
+    0.7152 * getRelativeLuminanceChannel(background.g) +
+    0.0722 * getRelativeLuminanceChannel(background.b);
+  const lighter = Math.max(fgLuminance, bgLuminance);
+  const darker = Math.min(fgLuminance, bgLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function collectActivityAnchorTargets(activity, index) {
+  const activityId = String(activity?.id || '').trim();
+  const anchors = new Set();
+  const fallbackActivityId = `activity-${index + 1}`;
+  if (activityId) {
+    anchors.add(activityId);
+    anchors.add(`cf-activity-${slugifyValidation(activityId, fallbackActivityId)}`);
+    anchors.add(`cb-${slugifyValidation(activityId, `section-${index + 1}`)}`);
+  }
+
+  collectHtmlLikeStrings(activity?.data || {}).forEach((html) => {
+    extractHtmlIdTargets(html).forEach((target) => anchors.add(target));
+  });
+
+  if (activity?.type === 'card_list') {
+    const cards = Array.isArray(activity?.data?.cards) ? activity.data.cards : [];
+    cards.forEach((_, cardIndex) => {
+      anchors.add(`${slugifyValidation(activityId, 'card-list')}-panel-${cardIndex + 1}`);
+    });
+  }
+
+  return anchors;
+}
+
 export function validateComposerActivity(activity) {
   const issues = [];
   const type = activity?.type || '';
   const data = activity?.data && typeof activity.data === 'object' ? activity.data : {};
+
+  const looksLikeAssetPathOrUrl = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return false;
+    if (/^javascript:/i.test(raw)) return false;
+    if (/^(https?:)?\/\//i.test(raw)) return true;
+    if (/^(\/|\.\/|\.\.\/)/.test(raw)) return true;
+    if (/^(blob:|data:)/i.test(raw)) return true;
+    if (/^(assets|materials)\//i.test(raw)) return true;
+    if (/\s/.test(raw)) return false;
+    return raw.includes('/') || /\.[a-z0-9]{2,8}($|[?#])/i.test(raw);
+  };
 
   const addIssue = (level, message) => {
     issues.push({ level: level === 'error' ? 'error' : 'warn', message: String(message || '').trim() });
@@ -2124,11 +2278,23 @@ export function validateComposerActivity(activity) {
 
   if (type === 'embed_block') {
     if (!String(data.url || '').trim()) addIssue('error', 'Embed URL is missing.');
+    if (String(data.url || '').trim() && !looksLikeAssetPathOrUrl(data.url)) addIssue('warn', 'Embed URL format looks invalid.');
   }
 
   if (type === 'image_block') {
     if (!String(data.url || '').trim()) addIssue('error', 'Image URL is missing.');
+    if (String(data.url || '').trim() && !looksLikeAssetPathOrUrl(data.url)) addIssue('warn', 'Image URL format looks invalid.');
     if (!String(data.alt || '').trim()) addIssue('warn', 'Alt text is empty (accessibility).');
+  }
+
+  if (type === 'title_block') {
+    const titleText = stripValidationHtml(data.textHtml || data.text || '');
+    if (!titleText) addIssue('warn', 'Title block content is empty.');
+  }
+
+  if (type === 'content_block') {
+    const bodyText = stripValidationHtml(data.bodyHtml || data.body || '');
+    if (!bodyText) addIssue('warn', 'Content block body is empty.');
   }
 
   if (type === 'resource_list') {
@@ -2142,6 +2308,8 @@ export function validateComposerActivity(activity) {
       const hasDigital = Boolean(item?.digitalContent);
       if (!label) addIssue('warn', `Resource #${idx + 1}: label is empty.`);
       if (!viewUrl && !downloadUrl && !hasDigital) addIssue('warn', `Resource #${idx + 1}: missing view/download/read source.`);
+      if (viewUrl && !looksLikeAssetPathOrUrl(viewUrl)) addIssue('warn', `Resource #${idx + 1}: view URL format looks invalid.`);
+      if (downloadUrl && !looksLikeAssetPathOrUrl(downloadUrl)) addIssue('warn', `Resource #${idx + 1}: download URL format looks invalid.`);
     });
   }
 
@@ -2227,8 +2395,28 @@ export function validateComposerActivity(activity) {
 
   if (type === 'hotspot_image') {
     if (!String(data.imageUrl || data.url || '').trim()) addIssue('warn', 'Hotspot image URL is empty.');
+    if (String(data.imageUrl || data.url || '').trim() && !looksLikeAssetPathOrUrl(data.imageUrl || data.url)) {
+      addIssue('warn', 'Hotspot image URL format looks invalid.');
+    }
     const hotspots = Array.isArray(data.hotspots) ? data.hotspots : [];
     if (hotspots.length === 0) addIssue('warn', 'No hotspots defined yet.');
+  }
+
+  const htmlStrings = collectHtmlLikeStrings(data);
+  const emptyHeadingCount = htmlStrings.reduce((total, html) => total + countEmptyHeadingTags(html), 0);
+  if (emptyHeadingCount > 0) {
+    addIssue('warn', `${emptyHeadingCount} heading tag${emptyHeadingCount === 1 ? '' : 's'} appear empty.`);
+  }
+
+  const explicitTextColor = parseColorToRgb(data.blockTextColor);
+  const explicitBackgroundColor = parseColorToRgb(data.bodyContainerBg || data.blockContainerBg || data.containerBg);
+  if (explicitTextColor && explicitBackgroundColor) {
+    const ratio = getContrastRatio(explicitTextColor, explicitBackgroundColor);
+    if (ratio > 0 && ratio < 3) {
+      addIssue('error', `Text contrast is very low (${ratio.toFixed(2)}:1).`);
+    } else if (ratio > 0 && ratio < 4.5) {
+      addIssue('warn', `Text contrast may be hard to read (${ratio.toFixed(2)}:1).`);
+    }
   }
 
   return issues.filter((issue) => issue && issue.message);
@@ -2236,10 +2424,107 @@ export function validateComposerActivity(activity) {
 
 export function validateComposerActivities(activities) {
   const list = Array.isArray(activities) ? activities : [];
-  return list.map((activity, index) => ({
-    index,
-    id: activity?.id || '',
-    type: activity?.type || '',
-    issues: validateComposerActivity(activity),
-  }));
+  const activityIds = list.map((activity) => String(activity?.id || '').trim());
+  const validIds = new Set(activityIds.filter(Boolean));
+  const duplicateIds = new Set(
+    activityIds.filter((id, index) => id && activityIds.indexOf(id) !== index),
+  );
+  const availableAnchors = new Set();
+  list.forEach((activity, index) => {
+    collectActivityAnchorTargets(activity, index).forEach((target) => availableAnchors.add(target));
+  });
+
+  return list.map((activity, index) => {
+    const id = String(activity?.id || '').trim();
+    const type = activity?.type || '';
+    const issues = validateComposerActivity(activity);
+    const data = activity?.data && typeof activity.data === 'object' ? activity.data : {};
+    const mobileOverride = activity?.layout?.breakpoints?.mobile;
+    const hasMobileOverride =
+      mobileOverride &&
+      typeof mobileOverride === 'object' &&
+      Object.keys(mobileOverride).some((key) => mobileOverride[key] !== '' && mobileOverride[key] != null);
+
+    if (!id) {
+      issues.push({ level: 'warn', message: 'Activity ID is missing.' });
+    } else if (duplicateIds.has(id)) {
+      issues.push({ level: 'error', message: 'Activity ID is duplicated. Duplicate IDs break references and preview selection.' });
+    }
+
+    if (!hasMobileOverride) {
+      const colSpan = Math.max(1, Number.parseInt(activity?.layout?.colSpan, 10) || 1);
+      const col = Math.max(1, Number.parseInt(activity?.layout?.col, 10) || 1);
+      const x = Math.max(0, Number.parseInt(activity?.layout?.x, 10) || 0);
+      const w = Math.max(1, Number.parseInt(activity?.layout?.w, 10) || colSpan);
+      if (colSpan > 1 || col > 1 || x > 0 || w > 1) {
+        issues.push({
+          level: 'warn',
+          message: 'No mobile override for this multi-column placement. It may overflow or feel cramped on small screens.',
+        });
+      }
+    }
+
+    const brokenAnchorTargets = new Set();
+    collectHtmlLikeStrings(data).forEach((html) => {
+      extractInternalHrefTargets(html).forEach((target) => {
+        if (!availableAnchors.has(target)) {
+          brokenAnchorTargets.add(target);
+        }
+      });
+    });
+    if (brokenAnchorTargets.size > 0) {
+      issues.push({
+        level: 'warn',
+        message: `Internal anchor target${brokenAnchorTargets.size === 1 ? '' : 's'} missing: ${Array.from(brokenAnchorTargets).join(', ')}.`,
+      });
+    }
+
+    if (type === 'tab_group') {
+      const tabs = Array.isArray(data.tabs) ? data.tabs : [];
+      tabs.forEach((tab, tabIndex) => {
+        const missingIds = (Array.isArray(tab?.activityIds) ? tab.activityIds : [])
+          .map((value) => String(value || '').trim())
+          .filter((value) => value && !validIds.has(value));
+        if (missingIds.length > 0) {
+          issues.push({
+            level: 'warn',
+            message: `Tab #${tabIndex + 1} references missing activities: ${missingIds.join(', ')}.`,
+          });
+        }
+      });
+    }
+
+    if (type === 'card_list') {
+      const cards = Array.isArray(data.cards) ? data.cards : [];
+      cards.forEach((card, cardIndex) => {
+        const targetActivityId = String(card?.targetActivityId || '').trim();
+        if (targetActivityId && !validIds.has(targetActivityId)) {
+          issues.push({
+            level: 'warn',
+            message: `Card #${cardIndex + 1} references missing activity: ${targetActivityId}.`,
+          });
+        }
+      });
+    }
+
+    return {
+      index,
+      id,
+      type,
+      issues: issues.filter((issue) => issue && issue.message),
+    };
+  });
+}
+
+export function countComposerValidationIssues(results) {
+  return (Array.isArray(results) ? results : []).reduce(
+    (totals, row) => {
+      (Array.isArray(row?.issues) ? row.issues : []).forEach((issue) => {
+        if (issue?.level === 'error') totals.error += 1;
+        else totals.warn += 1;
+      });
+      return totals;
+    },
+    { error: 0, warn: 0 },
+  );
 }

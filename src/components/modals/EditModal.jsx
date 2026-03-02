@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import {
+  countComposerValidationIssues,
   createKnowledgeCheckBuilderQuestion,
   createWorksheetBuilderBlock,
   getActivityDefinition,
@@ -22,15 +23,19 @@ import {
   listActivityTypes,
   normalizeFillableChartData,
   normalizeKnowledgeCheckBuilderQuestions,
+  validateComposerActivities,
   normalizeWorksheetBuilderBlocks,
 } from '../../composer/activityRegistry.js';
 import {
   buildComposerGridModel,
   clampComposerColSpan,
+  getComposerActivityBreakpointOverride,
   moveComposerActivityToCell,
   normalizeComposerActivities,
   normalizeComposerLayout,
+  resolveComposerActivityLayoutForBreakpoint,
 } from '../../composer/layout.js';
+import { fixComposerDuplicateActivityIds, fixComposerImageAltText, fixComposerMobileStacking } from '../../composer/issueFixes.js';
 import {
   applyTemplateLayoutProfile,
   captureTemplateLayoutProfile,
@@ -38,6 +43,27 @@ import {
   normalizeTemplateLayoutProfiles,
   resolveTemplateKey,
 } from '../../composer/templateLayoutProfiles.js';
+import {
+  applyComposerBindingToActivityField,
+  buildComposerBindingContext,
+} from '../../composer/bindings.js';
+import {
+  alignSelectedCanvasActivities,
+  distributeSelectedCanvasActivities,
+  matchSelectedCanvasActivitySize,
+  matchSelectedSimpleActivitySpan,
+  stackSelectedCanvasActivities,
+  stackSelectedSimpleActivities,
+} from '../../composer/arrange.js';
+import {
+  attachComposerComponentLink,
+  detachComposerComponentLink,
+  getComposerComponentSyncStatus,
+  normalizeComposerComponentLibrary,
+  syncComposerActivitiesFromComponent,
+  syncComposerModulesFromComponent,
+  updateComposerComponentEntryFromActivity,
+} from '../../composer/componentLibrary.js';
 import { isComposerEnabled } from '../../utils/composer.js';
 import { buildModuleFrameHTML, buildPreviewStorageScope } from '../../utils/generators.js';
 import {
@@ -49,15 +75,30 @@ import {
 } from '../../utils/finlitHero.js';
 import { resolveFinlitTabComposerState } from '../../utils/finlitTabActivities.js';
 import { COMPOSER_THEME_OPTIONS } from '../../composer/themeCatalog.js';
+import { useComposerHistory } from '../../hooks/useComposerHistory.js';
+import { useComposerCanvasInteractions } from '../../hooks/useComposerCanvasInteractions.js';
+import { useComposerCommandPaletteShortcut } from '../../hooks/useComposerCommandPaletteShortcut.js';
+import { useComposerPreviewBridge } from '../../hooks/useComposerPreviewBridge.js';
+import { getComposerSelectionIntent, useComposerSelection } from '../../hooks/useComposerSelection.js';
+import { useComposerUndoRedoShortcuts } from '../../hooks/useComposerUndoRedoShortcuts.js';
+import ComposerBulkEditBar from '../composer/ComposerBulkEditBar.jsx';
+import ComposerActivityBuilderFooter from '../composer/ComposerActivityBuilderFooter.jsx';
+import ComposerActivityBuilderPane from '../composer/ComposerActivityBuilderPane.jsx';
+import ComposerBindingPanel from '../composer/ComposerBindingPanel.jsx';
+import ComposerActivityEditorPane from '../composer/ComposerActivityEditorPane.jsx';
+import ComposerCanvasBuilder from '../composer/ComposerCanvasBuilder.jsx';
+import ComposerCommandPalette from '../composer/ComposerCommandPalette.jsx';
+import ComposerLayoutControls from '../composer/ComposerLayoutControls.jsx';
+import ComposerPreviewPane from '../composer/ComposerPreviewPane.jsx';
+import ComposerResponsiveControls from '../composer/ComposerResponsiveControls.jsx';
+import ComposerSidebarTools from '../composer/ComposerSidebarTools.jsx';
+import ComposerUndoRedoControls from '../composer/ComposerUndoRedoControls.jsx';
+import ComposerWorkspaceFrame from '../composer/ComposerWorkspaceFrame.jsx';
 import GenericDataEditor from '../GenericDataEditor.jsx';
 import HotspotEditor from '../composer/HotspotEditor.jsx';
 import VaultBrowser from '../VaultBrowser.jsx';
-import ReactGridLayout, { WidthProvider } from 'react-grid-layout';
-import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css';
 
 const { useEffect, useMemo, useRef, useState } = React;
-const GridLayout = WidthProvider(ReactGridLayout);
 
 function createActivity(type) {
   const def = getActivityDefinition(type);
@@ -371,6 +412,7 @@ export default function EditModal({
   setEditForm,
   setEditingModule,
   projectData,
+  setProjectData,
   saveEditModule,
   moduleHistory,
   setModuleHistory,
@@ -460,7 +502,17 @@ export default function EditModal({
       .flatMap((mod) => (mod.assessments || []).map((assessment) => ({ ...assessment, moduleId: mod.id, moduleTitle: mod.title })))
       .filter((assessment) => !assessment.hidden);
   }, [projectData]);
+  const courseComposerComponents = useMemo(
+    () => normalizeComposerComponentLibrary(projectData?.['Current Course']?.composerComponents, { fallbackPrefix: 'course-cmp' }),
+    [projectData],
+  );
   const [selectedActivityIndex, setSelectedActivityIndex] = useState(0);
+  const [composerSidebarMode, setComposerSidebarMode] = useState('grid');
+  const [composerPreviewViewport, setComposerPreviewViewport] = useState('desktop');
+  const [composerPreviewInteractionMode, setComposerPreviewInteractionMode] = useState('select');
+  const [composerPreviewQaMode, setComposerPreviewQaMode] = useState('off');
+  const [composerCommandPaletteInitialQuery, setComposerCommandPaletteInitialQuery] = useState('');
+  const [isComposerCommandPaletteOpen, setIsComposerCommandPaletteOpen] = useState(false);
   const [draggingActivityIndex, setDraggingActivityIndex] = useState(null);
   const [dragOverActivityIndex, setDragOverActivityIndex] = useState(null);
   const [dragOverSlotKey, setDragOverSlotKey] = useState(null);
@@ -473,15 +525,11 @@ export default function EditModal({
   const [dragOverKnowledgeQuestionIndex, setDragOverKnowledgeQuestionIndex] = useState(null);
   const [draggingWorksheetBlockIndex, setDraggingWorksheetBlockIndex] = useState(null);
   const [dragOverWorksheetBlockIndex, setDragOverWorksheetBlockIndex] = useState(null);
-  const [composerPreviewNonce, setComposerPreviewNonce] = useState(0);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
   const [vaultTargetField, setVaultTargetField] = useState(null);
   const richEditorRef = useRef(null);
   const richEditorSelectionRef = useRef(null);
   const richEditorUpdateTimerRef = useRef(null);
-  const composerPreviewIframeRef = useRef(null);
-  const composerPreviewTargetActivityIdRef = useRef('');
-  const composerPreviewShouldFollowRef = useRef(false);
   const composerGridModel = useMemo(
     () =>
       buildComposerGridModel(activities, composerMaxColumns, {
@@ -499,6 +547,8 @@ export default function EditModal({
     setSelectedActivityIndex(0);
     setComposerExtraRows(0);
     setFinlitAuthoringTabId('activities');
+    setComposerSidebarMode('grid');
+    setComposerPreviewQaMode('off');
   }, [editingModule, standaloneMode]);
 
   useEffect(() => {
@@ -597,13 +647,108 @@ export default function EditModal({
     }
   }, [availableAssessments, selectedAssessmentId]);
 
-  useEffect(() => {
-    if (standaloneMode !== 'composer') return;
-    setComposerPreviewNonce((n) => n + 1);
-  }, [editingModule, standaloneMode]);
-
   const selectedActivity = activities[selectedActivityIndex] || null;
+  const selectedActivityComponentStatus = useMemo(
+    () => getComposerComponentSyncStatus(selectedActivity, courseComposerComponents),
+    [courseComposerComponents, selectedActivity],
+  );
+  const selectedActivityBindingContext = useMemo(
+    () =>
+      buildComposerBindingContext(
+        {
+          id: editForm.id,
+          title: editForm.title,
+          template: editForm.template,
+          theme: editForm.theme,
+        },
+        {
+          courseSettings: {
+            ...(projectData?.['Course Settings'] || {}),
+            __courseName: projectData?.['Current Course']?.name || '',
+          },
+          activities,
+          activity: selectedActivity,
+        },
+      ),
+    [activities, editForm.id, editForm.template, editForm.theme, editForm.title, projectData, selectedActivity],
+  );
   const selectedPlacement = selectedActivity ? composerPlacementsByIndex.get(selectedActivityIndex) || null : null;
+  const composerResponsiveBreakpoint = composerPreviewViewport === 'desktop' ? 'desktop' : composerPreviewViewport;
+  const selectedResponsiveLayout = useMemo(
+    () =>
+      selectedActivity
+        ? resolveComposerActivityLayoutForBreakpoint(selectedActivity, composerResponsiveBreakpoint, {
+            maxColumns: composerMaxColumns,
+            mode: composerLayout.mode,
+          })
+        : null,
+    [composerLayout.mode, composerMaxColumns, composerResponsiveBreakpoint, selectedActivity],
+  );
+  const selectedResponsiveOverride = useMemo(
+    () =>
+      selectedActivity
+        ? getComposerActivityBreakpointOverride(selectedActivity, composerResponsiveBreakpoint, {
+            maxColumns: composerMaxColumns,
+            mode: composerLayout.mode,
+          })
+        : null,
+    [composerLayout.mode, composerMaxColumns, composerResponsiveBreakpoint, selectedActivity],
+  );
+  const {
+    applySelection: applyActivitySelection,
+    clearToPrimary: clearActivitySelectionToPrimary,
+    isSelectedIndex: isSelectedActivityIndex,
+    selectAll: selectAllActivities,
+    selectById: selectActivityById,
+    selectIndex: selectActivityIndex,
+    selectOnly: selectOnlyActivity,
+    selectedCount: selectedActivityCount,
+    selectedIds: selectedActivityIds,
+    selectedIndexes: selectedActivityIndexes,
+  } = useComposerSelection({
+    activities,
+    selectedIndex: selectedActivityIndex,
+    setSelectedIndex: setSelectedActivityIndex,
+  });
+  const handleActivitySelection = React.useCallback(
+    (index, eventOrOptions = {}) => {
+      const options =
+        eventOrOptions && typeof eventOrOptions === 'object' && 'preventDefault' in eventOrOptions
+          ? getComposerSelectionIntent(eventOrOptions)
+          : eventOrOptions;
+      selectActivityIndex(index, options);
+    },
+    [selectActivityIndex],
+  );
+  const handlePreviewActivitySelect = React.useCallback(
+    (activityId, options = {}) => {
+      selectActivityById(activityId, options);
+      if (options?.focusIssues) {
+        setComposerSidebarMode('issues');
+      }
+    },
+    [selectActivityById],
+  );
+  const composerValidationResults = useMemo(() => validateComposerActivities(activities), [activities]);
+  const composerValidationTotals = useMemo(
+    () => countComposerValidationIssues(composerValidationResults),
+    [composerValidationResults],
+  );
+  const composerPreviewIssues = useMemo(
+    () =>
+      Object.fromEntries(
+        composerValidationResults
+          .filter((row) => row?.id && Array.isArray(row.issues) && row.issues.length > 0)
+          .map((row) => [
+            row.id,
+            {
+              count: row.issues.length,
+              level: row.issues.some((issue) => issue?.level === 'error') ? 'error' : 'warn',
+            },
+          ]),
+      ),
+    [composerValidationResults],
+  );
 
   useEffect(() => {
     if (richEditorUpdateTimerRef.current) {
@@ -696,65 +841,116 @@ export default function EditModal({
     projectData,
     standaloneMode,
   ]);
+  const {
+    iframeRef: composerPreviewIframeRef,
+    previewNonce: composerPreviewNonce,
+    handlePreviewLoad: handleComposerPreviewLoad,
+    requestPreviewFollow,
+    resetPreview: resetComposerPreview,
+    suspendPreviewFollow,
+  } = useComposerPreviewBridge({
+    enabled: standaloneMode === 'composer',
+    previewDoc: composerPreviewSrcDoc,
+    selectedActivityId: selectedActivity?.id,
+    selectedActivityIds,
+    activityIssues: composerPreviewIssues,
+    activeFinlitTabId: isFinlitComposer ? activeFinlitTabId : '',
+    onActivitySelect: handlePreviewActivitySelect,
+    qaEnabled: composerPreviewQaMode === 'issues',
+    selectionEnabled: composerPreviewInteractionMode === 'select',
+    resetKey: `${editingModule || ''}:${standaloneMode}`,
+  });
 
-  const scrollComposerPreviewToActivity = React.useCallback(
-    (activityId) => {
-      const targetId = String(activityId || '').trim();
-      if (!targetId) return false;
-      const iframe = composerPreviewIframeRef.current;
-      const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
-      if (!doc) return false;
-      const escapedActivityId = targetId.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-      const activeTabId = isFinlitComposer ? String(activeFinlitTabId || '').trim() : '';
-      let panelRoot = doc;
-      if (activeTabId) {
-        const escapedTabId = activeTabId.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-        const trigger = doc.querySelector(`[data-finlit-tab-trigger="${escapedTabId}"]`);
-        if (trigger instanceof HTMLElement) {
-          trigger.click();
-        }
-        const panel = doc.querySelector(`[data-finlit-tab-panel="${escapedTabId}"]`);
-        if (panel) {
-          panelRoot = panel;
-        }
-      }
-      const targetInPanel = panelRoot.querySelector?.(`[data-activity-id="${escapedActivityId}"]`) || null;
-      if (targetInPanel && typeof targetInPanel.scrollIntoView === 'function') {
-        targetInPanel.scrollIntoView({ block: 'center', inline: 'nearest' });
-        return true;
-      }
-      const fallbackTarget = doc.querySelector(`[data-activity-id="${escapedActivityId}"]`);
-      if (!fallbackTarget || typeof fallbackTarget.scrollIntoView !== 'function') return false;
-      fallbackTarget.scrollIntoView({ block: 'center', inline: 'nearest' });
-      return true;
+  const buildComposerSnapshot = React.useCallback(
+    ({
+      snapshotActivities = activities,
+      snapshotLayout = composerLayout,
+      extraRows = composerExtraRows,
+      selectedIndex = selectedActivityIndex,
+      templateOverride = editForm.template,
+      templateLayoutProfiles = normalizedTemplateLayoutProfiles,
+    } = {}) => {
+      const safeActivities = Array.isArray(snapshotActivities) ? snapshotActivities : [];
+      return {
+        activities: JSON.parse(JSON.stringify(safeActivities)),
+        layout: normalizeComposerLayout(snapshotLayout),
+        extraRows: Math.max(0, Math.min(50, Number.parseInt(extraRows, 10) || 0)),
+        selectedIndex: Math.max(0, Number.parseInt(selectedIndex, 10) || 0),
+        templateOverride: typeof templateOverride === 'string' ? templateOverride : '',
+        templateLayoutProfiles: normalizeTemplateLayoutProfiles(templateLayoutProfiles, { activities: safeActivities }),
+      };
     },
-    [activeFinlitTabId, isFinlitComposer],
+    [activities, composerExtraRows, composerLayout, editForm.template, normalizedTemplateLayoutProfiles, selectedActivityIndex],
   );
 
-  useEffect(() => {
-    composerPreviewTargetActivityIdRef.current = String(selectedActivity?.id || '').trim();
-  }, [selectedActivity?.id]);
+  const applyComposerSnapshot = React.useCallback(
+    (snapshot) => {
+      if (!snapshot || typeof snapshot !== 'object') return;
+      const normalizedLayout = normalizeComposerLayout(snapshot.layout);
+      const normalizedActivities = normalizeComposerActivities(snapshot.activities, {
+        maxColumns: normalizedLayout.maxColumns,
+        mode: normalizedLayout.mode,
+      });
+      const safeSelectedIndex = Math.max(0, Math.min(normalizedActivities.length - 1, Number.parseInt(snapshot.selectedIndex, 10) || 0));
+      const safeExtraRows = Math.max(0, Math.min(50, Number.parseInt(snapshot.extraRows, 10) || 0));
+      const nextTemplateOverride = typeof snapshot.templateOverride === 'string' ? snapshot.templateOverride : editForm.template;
+      const normalizedSnapshotProfiles = normalizeTemplateLayoutProfiles(snapshot.templateLayoutProfiles, {
+        activities: normalizedActivities,
+      });
+      const nextTemplateProfiles = normalizeTemplateLayoutProfiles(
+        {
+          ...(normalizedSnapshotProfiles && typeof normalizedSnapshotProfiles === 'object' ? normalizedSnapshotProfiles : {}),
+          [resolveTemplateKey(nextTemplateOverride, courseTemplateDefault)]: captureTemplateLayoutProfile(
+            normalizedLayout,
+            normalizedActivities,
+          ),
+        },
+        { activities: normalizedActivities },
+      );
+      requestPreviewFollow();
+      setEditForm((prev) => ({
+        ...prev,
+        moduleMode: 'composer',
+        template: nextTemplateOverride || null,
+        composerLayout: normalizedLayout,
+        activities: normalizedActivities,
+        templateLayoutProfiles: nextTemplateProfiles,
+      }));
+      setComposerExtraRows(safeExtraRows);
+      setSelectedActivityIndex(safeSelectedIndex);
+    },
+    [courseTemplateDefault, editForm.template, requestPreviewFollow, setEditForm],
+  );
+
+  const {
+    canRedo: composerCanRedo,
+    canUndo: composerCanUndo,
+    pushHistorySnapshot: pushComposerHistorySnapshot,
+    redoHistory: redoComposerChange,
+    resetHistory: resetComposerHistory,
+    undoHistory: undoComposerChange,
+  } = useComposerHistory({
+    buildSnapshot: buildComposerSnapshot,
+    applySnapshot: applyComposerSnapshot,
+  });
+
+  const {
+    applyTransientLayout: applyComposerTransientCanvasLayout,
+    beginInteraction: beginComposerCanvasInteraction,
+    finishInteraction: finishComposerCanvasInteraction,
+    interactionRef: composerCanvasInteractionRef,
+    resetInteraction: resetComposerCanvasInteraction,
+  } = useComposerCanvasInteractions({
+    enabled: isCanvasMode,
+    buildSnapshot: buildComposerSnapshot,
+    applyLayoutChange: (layoutItems, options) => applyCanvasGridLayout(layoutItems, options),
+    pushHistorySnapshot: pushComposerHistorySnapshot,
+  });
 
   useEffect(() => {
-    if (standaloneMode !== 'composer') {
-      composerPreviewShouldFollowRef.current = false;
-      return;
-    }
-    composerPreviewShouldFollowRef.current = true;
-  }, [standaloneMode, selectedActivity?.id]);
-
-  useEffect(() => {
-    if (standaloneMode !== 'composer') return;
-    if (!composerPreviewShouldFollowRef.current) return;
-    const targetId = String(selectedActivity?.id || '').trim();
-    if (!targetId) return;
-    const timer = setTimeout(() => {
-      if (scrollComposerPreviewToActivity(targetId)) {
-        composerPreviewShouldFollowRef.current = false;
-      }
-    }, 80);
-    return () => clearTimeout(timer);
-  }, [composerPreviewSrcDoc, selectedActivity?.id, scrollComposerPreviewToActivity, standaloneMode]);
+    resetComposerHistory();
+    resetComposerCanvasInteraction();
+  }, [editingModule, resetComposerCanvasInteraction, resetComposerHistory, standaloneMode]);
 
   const buildTemplateLayoutProfilesForComposerState = ({
     templateOverride = editForm.template,
@@ -773,7 +969,11 @@ export default function EditModal({
     );
   };
 
-  const updateActivities = (nextActivities, nextComposerLayout = composerLayout, { templateOverride = editForm.template } = {}) => {
+  const updateActivities = (
+    nextActivities,
+    nextComposerLayout = composerLayout,
+    { templateOverride = editForm.template, recordHistory = true, historySnapshot = null } = {},
+  ) => {
     const normalizedLayout = normalizeComposerLayout(nextComposerLayout);
     const targetTemplateKey = resolveTemplateKey(templateOverride, courseTemplateDefault);
     const shouldSyncFinlit = editForm.moduleType === 'standalone' && standaloneMode === 'composer' && targetTemplateKey === 'finlit';
@@ -802,7 +1002,15 @@ export default function EditModal({
       nextComposerLayout: normalizedLayout,
       nextActivities: profileActivities,
     });
-    composerPreviewShouldFollowRef.current = true;
+    const nextSignature = JSON.stringify([normalizedLayout, normalizedActivities]);
+    const currentSignature = JSON.stringify([normalizeComposerLayout(composerLayout), activities]);
+    if (nextSignature === currentSignature) {
+      return false;
+    }
+    if (recordHistory) {
+      pushComposerHistorySnapshot(historySnapshot || buildComposerSnapshot());
+    }
+    requestPreviewFollow();
     setEditForm((prev) => ({
       ...prev,
       moduleMode: 'composer',
@@ -814,7 +1022,200 @@ export default function EditModal({
     if (shouldSyncFinlit && nextFinlitAuthoringTabId !== finlitAuthoringTabId) {
       setFinlitAuthoringTabId(nextFinlitAuthoringTabId);
     }
+    return true;
   };
+
+  const fixComposerDuplicateIds = React.useCallback(() => {
+    const result = fixComposerDuplicateActivityIds(activities);
+    if (result.changed) {
+      updateActivities(result.activities);
+    }
+  }, [activities, updateActivities]);
+
+  const fixComposerImageAltIssues = React.useCallback(() => {
+    const result = fixComposerImageAltText(activities);
+    if (result.changed) {
+      updateActivities(result.activities);
+    }
+  }, [activities, updateActivities]);
+
+  const fixComposerMobileStackingIssues = React.useCallback(() => {
+    const result = fixComposerMobileStacking(activities);
+    if (result.changed) {
+      updateActivities(result.activities);
+    }
+  }, [activities, updateActivities]);
+
+  const updateSelectedActivityResponsiveLayout = React.useCallback(
+    (updates) => {
+      if (!selectedActivity || composerResponsiveBreakpoint === 'desktop') return;
+      const nextActivities = activities.map((activity, idx) => {
+        if (idx !== selectedActivityIndex) return activity;
+        const nextBreakpoints = {
+          ...(((activity?.layout || {}).breakpoints && typeof activity.layout.breakpoints === 'object')
+            ? activity.layout.breakpoints
+            : {}),
+          [composerResponsiveBreakpoint]: {
+            ...((((activity?.layout || {}).breakpoints || {})[composerResponsiveBreakpoint] || {})),
+            ...updates,
+          },
+        };
+        return {
+          ...activity,
+          layout: {
+            ...(activity.layout || {}),
+            breakpoints: nextBreakpoints,
+          },
+        };
+      });
+      updateActivities(nextActivities);
+    },
+    [activities, composerResponsiveBreakpoint, selectedActivity, selectedActivityIndex, updateActivities],
+  );
+
+  const clearSelectedActivityResponsiveLayout = React.useCallback(() => {
+    if (!selectedActivity || composerResponsiveBreakpoint === 'desktop') return;
+    const nextActivities = activities.map((activity, idx) => {
+      if (idx !== selectedActivityIndex) return activity;
+      const nextBreakpoints = {
+        ...(((activity?.layout || {}).breakpoints && typeof activity.layout.breakpoints === 'object')
+          ? activity.layout.breakpoints
+          : {}),
+      };
+      delete nextBreakpoints[composerResponsiveBreakpoint];
+      return {
+        ...activity,
+        layout: {
+          ...(activity.layout || {}),
+          breakpoints: nextBreakpoints,
+        },
+      };
+    });
+    updateActivities(nextActivities);
+  }, [activities, composerResponsiveBreakpoint, selectedActivity, selectedActivityIndex, updateActivities]);
+
+  const applyBulkActivityChanges = React.useCallback(
+    (transform) => {
+      if (selectedActivityCount <= 1) return;
+      const selectedIdSet = new Set(selectedActivityIds);
+      const nextActivities = activities.map((activity) =>
+        selectedIdSet.has(String(activity?.id || '').trim()) ? transform(activity) : activity,
+      );
+      updateActivities(nextActivities);
+    },
+    [activities, selectedActivityCount, selectedActivityIds, updateActivities],
+  );
+
+  const applySelectedActivityBinding = React.useCallback(
+    (fieldPath, bindingKey) => {
+      if (!selectedActivity) return;
+      const nextActivities = activities.map((activity, idx) =>
+        idx === selectedActivityIndex ? applyComposerBindingToActivityField(activity, fieldPath, bindingKey) : activity,
+      );
+      updateActivities(nextActivities);
+    },
+    [activities, selectedActivity, selectedActivityIndex, updateActivities],
+  );
+
+  const bulkArrangementActions = React.useMemo(() => {
+    if (selectedActivityCount <= 1) return [];
+    if (isCanvasMode) {
+      return [
+        {
+          id: 'align-left',
+          label: 'Align Left',
+          onClick: () => updateActivities(alignSelectedCanvasActivities(activities, selectedActivityIndexes, selectedActivityIndex, 'left')),
+        },
+        {
+          id: 'align-top',
+          label: 'Align Top',
+          onClick: () => updateActivities(alignSelectedCanvasActivities(activities, selectedActivityIndexes, selectedActivityIndex, 'top')),
+        },
+        {
+          id: 'space-x',
+          label: 'Space X',
+          onClick: () => updateActivities(distributeSelectedCanvasActivities(activities, selectedActivityIndexes, 'horizontal')),
+        },
+        {
+          id: 'space-y',
+          label: 'Space Y',
+          onClick: () => updateActivities(distributeSelectedCanvasActivities(activities, selectedActivityIndexes, 'vertical')),
+        },
+        {
+          id: 'match-width',
+          label: 'Match Width',
+          onClick: () => updateActivities(matchSelectedCanvasActivitySize(activities, selectedActivityIndexes, selectedActivityIndex, 'width')),
+        },
+        {
+          id: 'match-height',
+          label: 'Match Height',
+          onClick: () => updateActivities(matchSelectedCanvasActivitySize(activities, selectedActivityIndexes, selectedActivityIndex, 'height')),
+        },
+        {
+          id: 'stack-vertical',
+          label: 'Stack Vertical',
+          onClick: () => updateActivities(stackSelectedCanvasActivities(activities, selectedActivityIndexes, selectedActivityIndex)),
+        },
+      ];
+    }
+    return [
+      {
+        id: 'match-span',
+        label: 'Match Span',
+        onClick: () => updateActivities(matchSelectedSimpleActivitySpan(activities, selectedActivityIndexes, selectedActivityIndex)),
+      },
+      {
+        id: 'stack-rows',
+        label: 'Stack Rows',
+        onClick: () => updateActivities(stackSelectedSimpleActivities(activities, selectedActivityIndexes, selectedActivityIndex)),
+      },
+    ];
+  }, [activities, isCanvasMode, selectedActivityCount, selectedActivityIndex, selectedActivityIndexes, updateActivities]);
+
+  const duplicateSelectedActivities = React.useCallback(() => {
+    if (selectedActivityCount <= 1) return;
+    const selectedIdSet = new Set(selectedActivityIds);
+    const duplicates = activities
+      .filter((activity) => selectedIdSet.has(String(activity?.id || '').trim()))
+      .map((activity) => ({
+        ...activity,
+        id: `activity-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        data: {
+          ...(activity.data || {}),
+        },
+        layout: {
+          ...(activity.layout || {}),
+          ...(isCanvasMode
+            ? { y: (Number.isInteger(activity?.layout?.y) ? activity.layout.y : 0) + 1 }
+            : { row: (Number.isInteger(activity?.layout?.row) ? activity.layout.row : 1) + 1 }),
+        },
+      }));
+    if (!duplicates.length) return;
+    const nextActivities = [...activities, ...duplicates];
+    updateActivities(nextActivities);
+    applyActivitySelection(duplicates.map((activity) => activity.id), {
+      primaryId: duplicates[0]?.id,
+      activityList: nextActivities,
+    });
+  }, [activities, applyActivitySelection, isCanvasMode, selectedActivityCount, selectedActivityIds, updateActivities]);
+
+  const deleteSelectedActivities = React.useCallback(() => {
+    if (selectedActivityCount <= 1) return;
+    const selectedIdSet = new Set(selectedActivityIds);
+    const selectedBlocks = activities.filter((activity) => selectedIdSet.has(String(activity?.id || '').trim()));
+    if (selectedBlocks.some((activity) => activityRequiresDeleteConfirmation(activity))) {
+      const confirmed = window.confirm(`Delete ${selectedBlocks.length} selected blocks?`);
+      if (!confirmed) return;
+    }
+    const firstRemovedIndex = activities.findIndex((activity) => selectedIdSet.has(String(activity?.id || '').trim()));
+    const nextActivities = activities.filter((activity) => !selectedIdSet.has(String(activity?.id || '').trim()));
+    updateActivities(nextActivities);
+    const fallbackActivity = nextActivities[Math.max(0, Math.min(firstRemovedIndex, nextActivities.length - 1))];
+    applyActivitySelection(fallbackActivity ? [fallbackActivity.id] : [], {
+      primaryId: fallbackActivity?.id,
+      activityList: nextActivities,
+    });
+  }, [activities, applyActivitySelection, selectedActivityCount, selectedActivityIds, updateActivities]);
 
   const handleTemplateChange = (nextTemplateOverrideRaw) => {
     const nextTemplateOverride = String(nextTemplateOverrideRaw || '').trim() || null;
@@ -822,6 +1223,8 @@ export default function EditModal({
       setEditForm((prev) => ({ ...prev, template: nextTemplateOverride }));
       return;
     }
+
+    pushComposerHistorySnapshot(buildComposerSnapshot());
 
     const currentTemplateKey = resolveTemplateKey(editForm.template, courseTemplateDefault);
     const nextTemplateKey = resolveTemplateKey(nextTemplateOverride, courseTemplateDefault);
@@ -905,7 +1308,7 @@ export default function EditModal({
     } else if (isCurrentFinlitComposer && !isNextFinlitComposer) {
       nextAuthoringTabId = 'activities';
     }
-    composerPreviewShouldFollowRef.current = false;
+    suspendPreviewFollow();
     setEditForm((prev) => ({
       ...prev,
       template: nextTemplateOverride,
@@ -958,6 +1361,34 @@ export default function EditModal({
     updateActivities(activities, normalizedLayout);
   };
 
+  useComposerUndoRedoShortcuts({
+    enabled: standaloneMode === 'composer',
+    onRedo: redoComposerChange,
+    onUndo: undoComposerChange,
+  });
+
+  const composerCommandPaletteEnabled = Boolean(editingModule) && editForm.moduleType === 'standalone' && standaloneMode === 'composer';
+  const toggleComposerCommandPalette = React.useCallback(() => {
+    setComposerCommandPaletteInitialQuery('');
+    setIsComposerCommandPaletteOpen((current) => !current);
+  }, []);
+  const openComposerInsertPalette = React.useCallback(() => {
+    setComposerCommandPaletteInitialQuery('insert ');
+    setIsComposerCommandPaletteOpen(true);
+  }, []);
+
+  useComposerCommandPaletteShortcut({
+    enabled: composerCommandPaletteEnabled,
+    onInsert: openComposerInsertPalette,
+    onToggle: toggleComposerCommandPalette,
+  });
+
+  useEffect(() => {
+    if (!composerCommandPaletteEnabled && isComposerCommandPaletteOpen) {
+      setIsComposerCommandPaletteOpen(false);
+    }
+  }, [composerCommandPaletteEnabled, isComposerCommandPaletteOpen]);
+
   const updateSelectedActivityMeta = (metaKey, updates) => {
     if (!selectedActivity) return;
     const nextActivities = activities.map((activity, idx) =>
@@ -990,7 +1421,7 @@ export default function EditModal({
     updateActivities(nextActivities);
   };
 
-  const applyCanvasGridLayout = (layoutItems) => {
+  const applyCanvasGridLayout = (layoutItems, { recordHistory = true, historySnapshot = null } = {}) => {
     if (!Array.isArray(layoutItems)) return;
     const nextActivities = activities.map((activity, idx) => {
       const match = layoutItems.find((item) => String(item.i) === String(idx));
@@ -1008,7 +1439,11 @@ export default function EditModal({
         },
       };
     });
-    updateActivities(nextActivities);
+    const didUpdate = updateActivities(nextActivities, composerLayout, {
+      recordHistory,
+      historySnapshot,
+    });
+    return didUpdate;
   };
 
   const updateSelectedActivityData = (updates) => {
@@ -1124,6 +1559,191 @@ export default function EditModal({
     setSelectedActivityIndex(nextActivities.length - 1);
   };
 
+  const addActivityOfType = React.useCallback(
+    (activityType) => {
+      const activity = createActivity(activityType);
+      if (!activity) return;
+      const maxRow = composerGridModel.placements.reduce((largest, placement) => Math.max(largest, placement.row), 0);
+      if (isCanvasMode) {
+        const maxY = activities.reduce((largest, item) => Math.max(largest, Number(item?.layout?.y) || 0), 0);
+        activity.layout = {
+          ...(activity.layout || {}),
+          colSpan: clampComposerColSpan(activity?.layout?.colSpan, composerMaxColumns),
+          x: 0,
+          y: maxY + 1,
+          w: 1,
+          h: 4,
+        };
+      } else {
+        activity.layout = {
+          ...(activity.layout || {}),
+          colSpan: clampComposerColSpan(activity?.layout?.colSpan, composerMaxColumns),
+          row: Math.max(1, maxRow + 1),
+          col: 1,
+        };
+      }
+      const nextActivities = [...activities, activity];
+      updateActivities(nextActivities);
+      applyActivitySelection([activity.id], { primaryId: activity.id, activityList: nextActivities });
+    },
+    [activities, applyActivitySelection, composerGridModel.placements, composerMaxColumns, isCanvasMode, updateActivities],
+  );
+
+  const addActivityFromTemplate = React.useCallback(
+    (templateActivity, options = {}) => {
+      const base = templateActivity && typeof templateActivity === 'object' ? templateActivity : null;
+      const requestedType = String(base?.type || '').trim();
+      const resolvedType = requestedType && getActivityDefinition(requestedType) ? requestedType : newActivityType;
+      const activity = createActivity(resolvedType);
+      if (!activity) return;
+
+      let clonedData = activity.data;
+      if (base?.data && typeof base.data === 'object') {
+        try {
+          clonedData = JSON.parse(JSON.stringify(base.data));
+        } catch {
+          clonedData = { ...(base.data || {}) };
+        }
+      }
+
+      const maxRow = composerGridModel.placements.reduce((largest, placement) => Math.max(largest, placement.row), 0);
+      const requestedSpan = base?.layout?.colSpan ?? activity?.layout?.colSpan ?? 1;
+      activity.data = clonedData && typeof clonedData === 'object' ? clonedData : {};
+      activity.style = base?.style && typeof base.style === 'object' ? JSON.parse(JSON.stringify(base.style)) : activity.style;
+      activity.behavior = base?.behavior && typeof base.behavior === 'object' ? JSON.parse(JSON.stringify(base.behavior)) : activity.behavior;
+      if (isCanvasMode) {
+        const maxY = activities.reduce((largest, item) => Math.max(largest, Number(item?.layout?.y) || 0), 0);
+        activity.layout = {
+          ...(activity.layout || {}),
+          colSpan: clampComposerColSpan(requestedSpan, composerMaxColumns),
+          breakpoints:
+            base?.layout?.breakpoints && typeof base.layout.breakpoints === 'object'
+              ? JSON.parse(JSON.stringify(base.layout.breakpoints))
+              : {},
+          x: 0,
+          y: maxY + 1,
+          w: clampComposerColSpan(requestedSpan, composerMaxColumns),
+          h: Math.max(1, Number(base?.layout?.h) || 4),
+        };
+      } else {
+        activity.layout = {
+          ...(activity.layout || {}),
+          colSpan: clampComposerColSpan(requestedSpan, composerMaxColumns),
+          breakpoints:
+            base?.layout?.breakpoints && typeof base.layout.breakpoints === 'object'
+              ? JSON.parse(JSON.stringify(base.layout.breakpoints))
+              : {},
+          row: Math.max(1, maxRow + 1),
+          col: 1,
+        };
+      }
+      if (options?.linkedComponent) {
+        const linkedActivity = attachComposerComponentLink(activity, options.linkedComponent);
+        activity.component = linkedActivity.component;
+      }
+
+      const nextActivities = [...activities, activity];
+      updateActivities(nextActivities);
+      applyActivitySelection([activity.id], { primaryId: activity.id, activityList: nextActivities });
+    },
+    [activities, applyActivitySelection, composerGridModel.placements, composerMaxColumns, isCanvasMode, newActivityType, updateActivities],
+  );
+
+  const saveCourseComposerComponent = React.useCallback(
+    (entry) => {
+      if (!entry || typeof entry !== 'object') return;
+      const normalizedEntry = normalizeComposerComponentLibrary([entry], { fallbackPrefix: 'course-cmp' })[0];
+      if (!normalizedEntry || typeof setProjectData !== 'function') return;
+      setProjectData((prev) => {
+        const nextData = { ...(prev || {}) };
+        const currentCourse = { ...(nextData['Current Course'] || {}) };
+        const existingEntries = normalizeComposerComponentLibrary(currentCourse.composerComponents, { fallbackPrefix: 'course-cmp' }).filter(
+          (item) => item.id !== normalizedEntry.id,
+        );
+        nextData['Current Course'] = {
+          ...currentCourse,
+          composerComponents: [normalizedEntry, ...existingEntries].slice(0, 200),
+        };
+        return nextData;
+      });
+      return normalizedEntry;
+    },
+    [setProjectData],
+  );
+
+  const deleteCourseComposerComponent = React.useCallback(
+    (componentId) => {
+      const targetId = String(componentId || '').trim();
+      if (!targetId || typeof setProjectData !== 'function') return;
+      setProjectData((prev) => {
+        const nextData = { ...(prev || {}) };
+        const currentCourse = { ...(nextData['Current Course'] || {}) };
+        nextData['Current Course'] = {
+          ...currentCourse,
+          composerComponents: normalizeComposerComponentLibrary(currentCourse.composerComponents, { fallbackPrefix: 'course-cmp' }).filter(
+            (entry) => entry.id !== targetId,
+          ),
+        };
+        return nextData;
+      });
+    },
+    [setProjectData],
+  );
+
+  const insertLinkedCourseComposerComponent = React.useCallback(
+    (entry) => {
+      const normalizedEntry = normalizeComposerComponentLibrary([entry], { fallbackPrefix: 'course-cmp' })[0];
+      if (!normalizedEntry) return;
+      addActivityFromTemplate(normalizedEntry.activity, { linkedComponent: normalizedEntry });
+    },
+    [addActivityFromTemplate],
+  );
+
+  const detachSelectedCourseComposerComponent = React.useCallback(() => {
+    if (!selectedActivity) return;
+    const nextActivities = activities.map((activity, idx) =>
+      idx === selectedActivityIndex ? detachComposerComponentLink(activity) : activity,
+    );
+    updateActivities(nextActivities);
+  }, [activities, selectedActivity, selectedActivityIndex, updateActivities]);
+
+  const updateSelectedLinkedCourseComposerComponent = React.useCallback(() => {
+    const sourceEntry = selectedActivityComponentStatus?.sourceEntry;
+    if (!selectedActivity || !sourceEntry) return;
+    const nextEntry = updateComposerComponentEntryFromActivity(sourceEntry, selectedActivity, { name: sourceEntry.name });
+    if (!nextEntry) return;
+    const localSync = syncComposerActivitiesFromComponent(activities, nextEntry);
+    if (localSync.changed) {
+      updateActivities(localSync.activities);
+    }
+    saveCourseComposerComponent(nextEntry);
+  }, [activities, saveCourseComposerComponent, selectedActivity, selectedActivityComponentStatus, updateActivities]);
+
+  const updateSelectedLinkedCourseComposerInstances = React.useCallback(() => {
+    const sourceEntry = selectedActivityComponentStatus?.sourceEntry;
+    if (!selectedActivity || !sourceEntry || typeof setProjectData !== 'function') return;
+    const nextEntry = updateComposerComponentEntryFromActivity(sourceEntry, selectedActivity, { name: sourceEntry.name });
+    if (!nextEntry) return;
+    const localSync = syncComposerActivitiesFromComponent(activities, nextEntry);
+    if (localSync.changed) {
+      updateActivities(localSync.activities);
+    }
+    setProjectData((prev) => {
+      const nextData = { ...(prev || {}) };
+      const currentCourse = { ...(nextData['Current Course'] || {}) };
+      const existingEntries = normalizeComposerComponentLibrary(currentCourse.composerComponents, { fallbackPrefix: 'course-cmp' }).filter(
+        (item) => item.id !== nextEntry.id,
+      );
+      const syncedModules = syncComposerModulesFromComponent(currentCourse.modules, nextEntry);
+      nextData['Current Course'] = {
+        ...currentCourse,
+        composerComponents: [nextEntry, ...existingEntries].slice(0, 200),
+        modules: syncedModules.changed ? syncedModules.modules : currentCourse.modules,
+      };
+      return nextData;
+    });
+  }, [activities, selectedActivity, selectedActivityComponentStatus, setProjectData, updateActivities]);
+
   const addEmptyRow = () => {
     if (!isCanvasMode && selectedPlacement) {
       const insertAfterRow = Math.max(1, Number.parseInt(selectedPlacement.row, 10) || 1);
@@ -1145,6 +1765,7 @@ export default function EditModal({
         return;
       }
     }
+    pushComposerHistorySnapshot(buildComposerSnapshot());
     setComposerExtraRows((count) => Math.min(50, count + 1));
   };
 
@@ -1173,6 +1794,7 @@ export default function EditModal({
 
     const maxRow = composerGridModel.placements.reduce((largest, placement) => Math.max(largest, placement.row), 0);
     if (row > maxRow && composerExtraRows > 0) {
+      pushComposerHistorySnapshot(buildComposerSnapshot());
       setComposerExtraRows((count) => Math.max(0, count - 1));
     }
   };
@@ -1321,7 +1943,7 @@ export default function EditModal({
             nextActivities: profileActivities,
           })
         : normalizeTemplateLayoutProfiles(editForm.templateLayoutProfiles, { activities: nextActivities });
-    composerPreviewShouldFollowRef.current = false;
+    suspendPreviewFollow();
     setEditForm((prev) => ({
       ...prev,
       moduleMode: mode,
@@ -1335,7 +1957,7 @@ export default function EditModal({
 
   const updateFinlitHeroField = (key, value) => {
     if (!['title', 'subtitle', 'progressLabel', 'mediaUrl', 'mediaType'].includes(key)) return;
-    composerPreviewShouldFollowRef.current = false;
+    suspendPreviewFollow();
     const nextHero = {
       ...finlitHero,
       [key]: value,
@@ -1355,7 +1977,7 @@ export default function EditModal({
   };
 
   const updateFinlitTabs = (updater) => {
-    composerPreviewShouldFollowRef.current = false;
+    suspendPreviewFollow();
     const tabs = Array.isArray(finlitSettings.tabs) ? finlitSettings.tabs : [];
     const draftTabs = tabs.map((tab) => ({
       ...tab,
@@ -1478,7 +2100,7 @@ export default function EditModal({
       composerLayout,
       activeTabId: targetId,
     });
-    composerPreviewShouldFollowRef.current = false;
+    suspendPreviewFollow();
     setEditForm((prev) => ({
       ...prev,
       moduleMode: 'composer',
@@ -1575,6 +2197,277 @@ export default function EditModal({
   const preserveRichSelection = (event) => {
     event.preventDefault();
   };
+
+  const composerCommandPaletteActions = React.useMemo(() => {
+    if (!composerCommandPaletteEnabled) return [];
+
+    const insertActions = activityTypes.map((type) => {
+      const definition = getActivityDefinition(type);
+      const label = definition?.label || type;
+      return {
+        id: `insert-${type}`,
+        label: `Insert ${label}`,
+        subtitle: `Add a new ${label.toLowerCase()} block to this module.`,
+        hint: 'Insert',
+        keywords: [type, label, 'add', 'insert', 'activity', 'block'],
+        onSelect: () => addActivityOfType(type),
+      };
+    });
+
+    return [
+      {
+        id: 'undo',
+        label: 'Undo Composer Change',
+        subtitle: 'Revert the most recent composer change.',
+        hint: 'Cmd/Ctrl+Z',
+        keywords: ['undo history revert back'],
+        onSelect: () => undoComposerChange(),
+      },
+      {
+        id: 'redo',
+        label: 'Redo Composer Change',
+        subtitle: 'Reapply the last undone composer change.',
+        hint: 'Shift+Cmd/Ctrl+Z',
+        keywords: ['redo history forward'],
+        onSelect: () => redoComposerChange(),
+      },
+      {
+        id: 'layout-simple',
+        label: 'Use Grid Layout',
+        subtitle: 'Switch the builder to row and column placement.',
+        keywords: ['grid simple rows columns layout'],
+        onSelect: () => updateComposerLayoutMode('simple'),
+      },
+      {
+        id: 'layout-canvas',
+        label: 'Use Freeform Canvas',
+        subtitle: 'Switch the builder to freeform drag and resize mode.',
+        keywords: ['canvas freeform drag resize layout'],
+        onSelect: () => updateComposerLayoutMode('canvas'),
+      },
+      {
+        id: 'preview-desktop',
+        label: 'Preview Desktop',
+        subtitle: 'Set the preview stage to desktop width.',
+        keywords: ['desktop viewport responsive preview'],
+        onSelect: () => setComposerPreviewViewport('desktop'),
+      },
+      {
+        id: 'preview-tablet',
+        label: 'Preview Tablet',
+        subtitle: 'Set the preview stage to tablet width.',
+        keywords: ['tablet viewport responsive preview'],
+        onSelect: () => setComposerPreviewViewport('tablet'),
+      },
+      {
+        id: 'preview-mobile',
+        label: 'Preview Mobile',
+        subtitle: 'Set the preview stage to mobile width.',
+        keywords: ['mobile viewport responsive preview'],
+        onSelect: () => setComposerPreviewViewport('mobile'),
+      },
+      {
+        id: 'preview-select-mode',
+        label: 'Preview Select Mode',
+        subtitle: 'Click rendered blocks in preview to select them for editing.',
+        keywords: ['preview select inspect edit'],
+        onSelect: () => setComposerPreviewInteractionMode('select'),
+      },
+      {
+        id: 'preview-live-mode',
+        label: 'Preview Live Mode',
+        subtitle: 'Run the preview normally without intercepting clicks.',
+        keywords: ['preview live play interact'],
+        onSelect: () => setComposerPreviewInteractionMode('live'),
+      },
+      {
+        id: 'preview-qa-off',
+        label: 'Hide Preview QA',
+        subtitle: 'Turn off validation highlights in the preview.',
+        keywords: ['qa preview hide validation'],
+        onSelect: () => setComposerPreviewQaMode('off'),
+      },
+      {
+        id: 'preview-qa-issues',
+        label: 'Show Preview QA',
+        subtitle: 'Highlight blocks with warnings and errors in preview.',
+        keywords: ['qa preview issues validation highlight'],
+        onSelect: () => setComposerPreviewQaMode('issues'),
+      },
+      {
+        id: 'show-grid-view',
+        label: 'Show Grid Builder',
+        subtitle: 'Open the visual block grid in the builder pane.',
+        keywords: ['grid builder blocks layout'],
+        onSelect: () => setComposerSidebarMode('grid'),
+      },
+      {
+        id: 'show-outline-view',
+        label: 'Show Outline View',
+        subtitle: 'Open the searchable block outline.',
+        keywords: ['outline list search blocks'],
+        onSelect: () => setComposerSidebarMode('outline'),
+      },
+      {
+        id: 'show-issues-view',
+        label: 'Show Issues View',
+        subtitle: 'Open validation results for this module.',
+        keywords: ['issues validation errors warnings qa'],
+        onSelect: () => setComposerSidebarMode('issues'),
+      },
+      {
+        id: 'show-templates-view',
+        label: 'Show Templates View',
+        subtitle: 'Open browser-local reusable block templates.',
+        keywords: ['templates snippets reuse'],
+        onSelect: () => setComposerSidebarMode('templates'),
+      },
+      {
+        id: 'fix-duplicate-ids',
+        label: 'Fix Duplicate Block IDs',
+        subtitle: 'Regenerate duplicate or missing activity IDs.',
+        keywords: ['fix ids duplicate validation'],
+        onSelect: () => fixComposerDuplicateIds(),
+      },
+      {
+        id: 'fill-image-alt-text',
+        label: 'Fill Missing Image Alt Text',
+        subtitle: 'Populate missing alt text on image blocks.',
+        keywords: ['fix alt image accessibility'],
+        onSelect: () => fixComposerImageAltIssues(),
+      },
+      {
+        id: 'stack-mobile-layout',
+        label: 'Stack Blocks For Mobile',
+        subtitle: 'Add one-column mobile overrides to multi-column blocks without a mobile layout.',
+        keywords: ['mobile responsive stack overflow fix'],
+        onSelect: () => fixComposerMobileStackingIssues(),
+      },
+      ...(selectedActivity
+        ? [
+            {
+              id: 'save-selected-to-course-library',
+              label: 'Save Selected To Course Library',
+              subtitle: 'Store the current block as a shared course component.',
+              keywords: ['course library component save shared'],
+              onSelect: () =>
+                saveCourseComposerComponent({
+                  activity: selectedActivity,
+                  name: getActivityDefinition(selectedActivity.type)?.label || selectedActivity.type,
+                }),
+            },
+            ...(selectedActivityComponentStatus?.linked
+              ? [
+                  {
+                    id: 'update-linked-component-source',
+                    label: 'Update Linked Component Source',
+                    subtitle: 'Overwrite the linked course component source from the selected block.',
+                    keywords: ['component symbol source shared update linked'],
+                    onSelect: () => updateSelectedLinkedCourseComposerComponent(),
+                  },
+                  {
+                    id: 'update-linked-component-all',
+                    label: 'Update All Linked Instances',
+                    subtitle: 'Push the selected linked block to every linked instance in the course.',
+                    keywords: ['component symbol shared sync propagate update all'],
+                    onSelect: () => updateSelectedLinkedCourseComposerInstances(),
+                  },
+                  {
+                    id: 'detach-linked-component',
+                    label: 'Detach Linked Component',
+                    subtitle: 'Turn the selected linked block into a normal detached block.',
+                    keywords: ['component symbol unlink detach'],
+                    onSelect: () => detachSelectedCourseComposerComponent(),
+                  },
+                ]
+              : []),
+          ]
+        : []),
+      {
+        id: 'select-all',
+        label: 'Select All Blocks',
+        subtitle: 'Select every activity in the composer.',
+        keywords: ['select all multi bulk'],
+        onSelect: () => selectAllActivities(),
+      },
+      {
+        id: 'clear-multi-selection',
+        label: 'Clear Multi-Selection',
+        subtitle: 'Reduce the current selection back to the primary block.',
+        keywords: ['clear selection primary single'],
+        onSelect: () => clearActivitySelectionToPrimary(),
+      },
+      {
+        id: 'duplicate-selection',
+        label: selectedActivityCount > 1 ? 'Duplicate Selected Blocks' : 'Duplicate Selected Block',
+        subtitle: 'Create copies of the current selection.',
+        keywords: ['duplicate copy clone'],
+        onSelect: () => {
+          if (selectedActivityCount > 1) {
+            duplicateSelectedActivities();
+            return;
+          }
+          duplicateSelectedActivity();
+        },
+      },
+      {
+        id: 'delete-selection',
+        label: selectedActivityCount > 1 ? 'Delete Selected Blocks' : 'Delete Selected Block',
+        subtitle: 'Remove the current selection from the composer.',
+        keywords: ['delete remove trash'],
+        onSelect: () => {
+          if (selectedActivityCount > 1) {
+            deleteSelectedActivities();
+            return;
+          }
+          removeSelectedActivity();
+        },
+      },
+      {
+        id: 'add-open-row',
+        label: 'Add Open Row',
+        subtitle: 'Insert an empty row after the current row in grid layout.',
+        keywords: ['row spacer gap open'],
+        onSelect: () => addEmptyRow(),
+      },
+      {
+        id: 'reset-preview',
+        label: 'Reload Preview',
+        subtitle: 'Rebuild and reload the live preview iframe.',
+        keywords: ['reload refresh preview iframe'],
+        onSelect: () => resetComposerPreview(),
+      },
+      ...insertActions,
+    ];
+  }, [
+    activityTypes,
+    addActivityOfType,
+    addEmptyRow,
+    clearActivitySelectionToPrimary,
+    composerCommandPaletteEnabled,
+    deleteSelectedActivities,
+    duplicateSelectedActivities,
+    duplicateSelectedActivity,
+    fixComposerDuplicateIds,
+    fixComposerImageAltIssues,
+    fixComposerMobileStackingIssues,
+    getActivityDefinition,
+    redoComposerChange,
+    removeSelectedActivity,
+    resetComposerPreview,
+    saveCourseComposerComponent,
+    selectedActivityComponentStatus,
+    setComposerPreviewQaMode,
+    setComposerSidebarMode,
+    selectedActivity,
+    selectAllActivities,
+    selectedActivityCount,
+    detachSelectedCourseComposerComponent,
+    undoComposerChange,
+    updateSelectedLinkedCourseComposerComponent,
+    updateSelectedLinkedCourseComposerInstances,
+    updateComposerLayoutMode,
+  ]);
 
   const renderSelectedActivityStylePanel = () => {
     if (!selectedActivity) return null;
@@ -3807,570 +4700,423 @@ export default function EditModal({
                   )}
 
                   {standaloneMode === 'composer' ? (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                        <div className="lg:col-span-5 bg-slate-950 border border-slate-700 rounded-lg p-3">
-                          <div className="flex items-center justify-between mb-3">
-                            <h4 className="text-sm font-bold text-white">Activities</h4>
-                            <span className="text-[11px] text-slate-500">{activities.length} total</span>
-                          </div>
-                          <div className="mb-3 p-2 rounded border border-slate-700 bg-slate-900/60">
-                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Layout Mode</label>
-                            <div className="grid grid-cols-2 gap-2 mb-2">
-                              <button
-                                type="button"
-                                onClick={() => updateComposerLayoutMode('simple')}
-                                className={`rounded px-2 py-1 text-[10px] font-black uppercase tracking-wide border ${
-                                  composerLayoutMode === 'simple'
-                                    ? 'bg-blue-600 border-blue-400 text-white'
-                                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'
-                                }`}
-                              >
-                                Simple
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => updateComposerLayoutMode('canvas')}
-                                className={`rounded px-2 py-1 text-[10px] font-black uppercase tracking-wide border ${
-                                  composerLayoutMode === 'canvas'
-                                    ? 'bg-blue-600 border-blue-400 text-white'
-                                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'
-                                }`}
-                              >
-                                Canvas
-                              </button>
-                            </div>
-                            <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Grid Columns</label>
-                            <select
-                              value={composerMaxColumns}
-                              onChange={(e) => updateComposerMaxColumns(e.target.value)}
-                              className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                            >
-                              {[1, 2, 3, 4].map((count) => (
-                                <option key={count} value={count}>
-                                  {count} {count === 1 ? 'Column' : 'Columns'}
-                                </option>
-                              ))}
-                            </select>
-                            {isCanvasMode ? (
-                              <div className="grid grid-cols-5 gap-2 mt-2">
-                                <label className="text-[10px] text-slate-400">
-                                  Row H
-                                  <input
-                                    type="number"
-                                    min="8"
-                                    max="200"
-                                    value={composerLayout.rowHeight}
-                                    onChange={(e) => updateComposerCanvasMetric('rowHeight', e.target.value)}
-                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
-                                  />
-                                </label>
-                                <label className="text-[10px] text-slate-400">
-                                  Gap X
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max="200"
-                                    value={Array.isArray(composerLayout.margin) ? composerLayout.margin[0] : 12}
-                                    onChange={(e) =>
-                                      updateComposerCanvasMetric('margin', [
-                                        Number.parseInt(e.target.value, 10) || 0,
-                                        Array.isArray(composerLayout.margin) ? composerLayout.margin[1] : 12,
-                                      ])
-                                    }
-                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
-                                  />
-                                </label>
-                                <label className="text-[10px] text-slate-400">
-                                  Gap Y
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max="200"
-                                    value={Array.isArray(composerLayout.margin) ? composerLayout.margin[1] : 12}
-                                    onChange={(e) =>
-                                      updateComposerCanvasMetric('margin', [
-                                        Array.isArray(composerLayout.margin) ? composerLayout.margin[0] : 12,
-                                        Number.parseInt(e.target.value, 10) || 0,
-                                      ])
-                                    }
-                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
-                                  />
-                                </label>
-                                <label className="text-[10px] text-slate-400">
-                                  Pad X
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max="200"
-                                    value={Array.isArray(composerLayout.containerPadding) ? composerLayout.containerPadding[0] : 12}
-                                    onChange={(e) =>
-                                      updateComposerCanvasMetric('containerPadding', [
-                                        Number.parseInt(e.target.value, 10) || 0,
-                                        Array.isArray(composerLayout.containerPadding) ? composerLayout.containerPadding[1] : 12,
-                                      ])
-                                    }
-                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
-                                  />
-                                </label>
-                                <label className="text-[10px] text-slate-400">
-                                  Pad Y
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max="200"
-                                    value={Array.isArray(composerLayout.containerPadding) ? composerLayout.containerPadding[1] : 12}
-                                    onChange={(e) =>
-                                      updateComposerCanvasMetric('containerPadding', [
-                                        Array.isArray(composerLayout.containerPadding) ? composerLayout.containerPadding[0] : 12,
-                                        Number.parseInt(e.target.value, 10) || 0,
-                                      ])
-                                    }
-                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
-                                  />
-                                </label>
-                              </div>
-                            ) : (
-                              <label className="mt-2 flex items-center justify-between gap-3 rounded border border-slate-700 bg-slate-900/70 px-2 py-2 text-[10px] text-slate-300">
-                                <div>
-                                  <p className="font-black uppercase tracking-wide text-slate-200">Match Tallest Block Per Row</p>
-                                  <p className="text-slate-500">Keep row cards the same height in simple mode.</p>
+                    <ComposerWorkspaceFrame
+                      layout="stacked"
+                      mainContent={(
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                          <div className="lg:col-span-5">
+                            <ComposerActivityBuilderPane
+                              title="Activities"
+                              countLabel={`${activities.length} total`}
+                              headerActions={(
+                                <ComposerUndoRedoControls
+                                  canUndo={composerCanUndo}
+                                  canRedo={composerCanRedo}
+                                  onUndo={undoComposerChange}
+                                  onRedo={redoComposerChange}
+                                />
+                              )}
+                              toolbar={(
+                                <div className="grid grid-cols-4 gap-2">
+                                  {[
+                                    { value: 'grid', label: 'Grid' },
+                                    { value: 'outline', label: 'Outline' },
+                                    { value: 'issues', label: 'Issues' },
+                                    { value: 'templates', label: 'Templates' },
+                                  ].map((tab) => (
+                                    <button
+                                      key={tab.value}
+                                      type="button"
+                                      onClick={() => setComposerSidebarMode(tab.value)}
+                                      className={`rounded border px-2 py-1 text-[10px] font-black uppercase tracking-wide transition-colors ${
+                                        composerSidebarMode === tab.value
+                                          ? 'border-indigo-400 bg-indigo-600 text-white'
+                                          : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white'
+                                      }`}
+                                    >
+                                      {tab.label}
+                                    </button>
+                                  ))}
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => updateComposerSimpleMatchTallestRow(!(composerLayout.simpleMatchTallestRow === true))}
-                                  className={`inline-flex h-5 w-9 items-center rounded-full border transition-colors ${
-                                    composerLayout.simpleMatchTallestRow === true
-                                      ? 'border-blue-300 bg-blue-500'
-                                      : 'border-slate-600 bg-slate-800'
-                                  }`}
-                                  aria-label="Toggle simple row height matching"
-                                >
-                                  <span
-                                    className={`mx-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-                                      composerLayout.simpleMatchTallestRow === true ? 'translate-x-4' : ''
-                                    }`}
-                                  />
-                                </button>
-                              </label>
-                            )}
-                          </div>
-
-                          <div className="max-h-72 overflow-y-auto pr-1">
-                            {isCanvasMode ? (
-                              <GridLayout
-                                className="layout"
-                                layout={activities.map((activity, idx) => ({
-                                  i: String(idx),
-                                  x: Number.isInteger(activity?.layout?.x) ? activity.layout.x : 0,
-                                  y: Number.isInteger(activity?.layout?.y) ? activity.layout.y : 0,
-                                  w: Math.max(1, Math.min(composerMaxColumns, Number.parseInt(activity?.layout?.w, 10) || Number.parseInt(activity?.layout?.colSpan, 10) || 1)),
-                                  h: Math.max(1, Number.parseInt(activity?.layout?.h, 10) || 4),
-                                }))}
-                                cols={composerMaxColumns}
-                                rowHeight={composerLayout.rowHeight}
-                                margin={Array.isArray(composerLayout.margin) ? composerLayout.margin : [12, 12]}
-                                containerPadding={Array.isArray(composerLayout.containerPadding) ? composerLayout.containerPadding : [12, 12]}
-                                autoSize
-                                isResizable
-                                isDraggable
-                                compactType={null}
-                                verticalCompact={false}
-                                preventCollision={false}
-                                draggableHandle=".cf-canvas-handle"
-                                onLayoutChange={applyCanvasGridLayout}
-                              >
-                                {activities.map((activity, idx) => {
-                                  const def = getActivityDefinition(activity.type);
-                                  const isSelected = idx === selectedActivityIndex;
-                                  return (
-                                    <div key={String(idx)} className="overflow-hidden">
-                                      <button
-                                        type="button"
-                                        onClick={() => setSelectedActivityIndex(idx)}
-                                        className={`w-full h-full text-left p-2 rounded border transition-colors ${
-                                          isSelected
-                                            ? 'bg-emerald-900/30 border-emerald-600 text-white'
-                                            : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
-                                        }`}
-                                      >
-                                        <div className="flex items-center justify-between gap-2">
-                                          <p className="text-xs font-bold truncate">{def?.label || activity.type}</p>
-                                          <span className="cf-canvas-handle inline-flex items-center justify-center w-5 h-5 rounded bg-slate-800 text-slate-300 text-[10px] font-black cursor-grab active:cursor-grabbing">
-                                            ::
-                                          </span>
-                                        </div>
-                                        <p className="text-[10px] text-slate-500 font-mono truncate mt-1">{activity.id || `activity-${idx + 1}`}</p>
-                                        <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-1">
-                                          x:{activity?.layout?.x || 0} y:{activity?.layout?.y || 0} w:{activity?.layout?.w || 1} h:{activity?.layout?.h || 4}
-                                        </p>
-                                      </button>
+                              )}
+                              controls={(
+                                <ComposerLayoutControls
+                                  accent="blue"
+                                  layoutMode={composerLayoutMode}
+                                  maxColumns={composerMaxColumns}
+                                  rowHeight={composerLayout.rowHeight}
+                                  margin={composerLayout.margin}
+                                  containerPadding={composerLayout.containerPadding}
+                                  simpleMatchTallestRow={composerLayout.simpleMatchTallestRow === true}
+                                  onLayoutModeChange={updateComposerLayoutMode}
+                                  onMaxColumnsChange={updateComposerMaxColumns}
+                                  onCanvasMetricChange={updateComposerCanvasMetric}
+                                  onSimpleMatchTallestRowChange={updateComposerSimpleMatchTallestRow}
+                                />
+                              )}
+                              body={(
+                                composerSidebarMode === 'grid' ? (
+                                  <div className="max-h-72 overflow-y-auto pr-1">
+                                    {isCanvasMode ? (
+                                      <ComposerCanvasBuilder
+                                        activities={activities}
+                                        cols={composerMaxColumns}
+                                        rowHeight={composerLayout.rowHeight}
+                                        margin={Array.isArray(composerLayout.margin) ? composerLayout.margin : [12, 12]}
+                                        containerPadding={Array.isArray(composerLayout.containerPadding) ? composerLayout.containerPadding : [12, 12]}
+                                        selectedIndex={selectedActivityIndex}
+                                        selectedIndexes={selectedActivityIndexes}
+                                        onSelectActivity={handleActivitySelection}
+                                        onBeginInteraction={beginComposerCanvasInteraction}
+                                        onFinishInteraction={finishComposerCanvasInteraction}
+                                        onLiveResizeLayoutChange={(layoutItems) => applyComposerTransientCanvasLayout(layoutItems, { mode: 'resize' })}
+                                      />
+                                    ) : null}
+                                    <div className={`${isCanvasMode ? 'hidden ' : ''}grid gap-2`} style={{ gridTemplateColumns: `repeat(${composerMaxColumns}, minmax(0, 1fr))` }}>
+                                      {composerGridModel.emptySlots.map((slot) => {
+                                        const isSlotTarget =
+                                          draggingActivityIndex !== null &&
+                                          dragOverSlotKey === slot.key &&
+                                          dragOverActivityIndex === null;
+                                        return (
+                                          <div
+                                            key={slot.key}
+                                            className={`relative rounded border border-dashed transition-colors ${
+                                              isSlotTarget
+                                                ? 'border-indigo-400 bg-indigo-500/20'
+                                                : 'border-slate-700/80 bg-slate-900/35'
+                                            }`}
+                                            style={{ gridColumn: `${slot.col}`, gridRow: `${slot.row}`, minHeight: '58px' }}
+                                            onDragOver={(event) => {
+                                              if (!Number.isInteger(draggingActivityIndex)) return;
+                                              event.preventDefault();
+                                              if (event.dataTransfer) {
+                                                event.dataTransfer.dropEffect = 'move';
+                                              }
+                                              if (dragOverSlotKey !== slot.key) setDragOverSlotKey(slot.key);
+                                              if (dragOverActivityIndex !== null) setDragOverActivityIndex(null);
+                                            }}
+                                            onDragLeave={() => {
+                                              if (dragOverSlotKey === slot.key) setDragOverSlotKey(null);
+                                            }}
+                                            onDrop={(event) => {
+                                              event.preventDefault();
+                                              const fallback = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10);
+                                              const fromIndex = Number.isInteger(draggingActivityIndex) ? draggingActivityIndex : fallback;
+                                              moveActivityToCell(fromIndex, slot.row, slot.col);
+                                              setDraggingActivityIndex(null);
+                                              setDragOverActivityIndex(null);
+                                              setDragOverSlotKey(null);
+                                            }}
+                                          >
+                                            <button
+                                              type="button"
+                                              draggable={false}
+                                              onDragStart={(event) => event.preventDefault()}
+                                              onMouseDown={(event) => event.stopPropagation()}
+                                              onClick={(event) => {
+                                                event.stopPropagation();
+                                                removeEmptyRowAt(slot.row);
+                                              }}
+                                              className="absolute top-1.5 right-1.5 inline-flex h-5 w-5 items-center justify-center rounded border border-slate-600/60 bg-slate-900/40 text-slate-300 transition-colors hover:border-rose-400/70 hover:bg-rose-500/15 hover:text-rose-200"
+                                              title="Delete empty row"
+                                              aria-label={`Delete empty row ${slot.row}`}
+                                            >
+                                              <X size={11} />
+                                            </button>
+                                          </div>
+                                        );
+                                      })}
+                                      {activities.map((activity, idx) => {
+                                        const def = getActivityDefinition(activity.type);
+                                        const colSpan = Math.min(activity?.layout?.colSpan || 1, composerMaxColumns);
+                                        const placement = composerPlacementsByIndex.get(idx);
+                                        const isSelected = idx === selectedActivityIndex;
+                                        const isMultiSelected = isSelectedActivityIndex(idx);
+                                        const isDropTarget = idx === dragOverActivityIndex && draggingActivityIndex !== null && idx !== draggingActivityIndex;
+                                        return (
+                                          <div
+                                            key={activity.id || `${activity.type}-${idx}`}
+                                            className="relative"
+                                            style={{
+                                              gridColumn: placement
+                                                ? `${placement.col} / span ${placement.colSpan}`
+                                                : `span ${colSpan} / span ${colSpan}`,
+                                              gridRow: placement ? `${placement.row}` : undefined,
+                                            }}
+                                            draggable
+                                            onDragStart={(event) => {
+                                              setDraggingActivityIndex(idx);
+                                              selectOnlyActivity(idx);
+                                              setDragOverSlotKey(null);
+                                              if (event.dataTransfer) {
+                                                event.dataTransfer.effectAllowed = 'move';
+                                                event.dataTransfer.setData('text/plain', String(idx));
+                                              }
+                                            }}
+                                            onDragOver={(event) => {
+                                              event.preventDefault();
+                                              if (event.dataTransfer) {
+                                                event.dataTransfer.dropEffect = 'move';
+                                              }
+                                              if (dragOverActivityIndex !== idx) setDragOverActivityIndex(idx);
+                                              if (dragOverSlotKey !== null) setDragOverSlotKey(null);
+                                            }}
+                                            onDrop={(event) => {
+                                              event.preventDefault();
+                                              const fallback = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10);
+                                              const fromIndex = Number.isInteger(draggingActivityIndex) ? draggingActivityIndex : fallback;
+                                              moveActivityToCell(fromIndex, placement?.row || 1, placement?.col || 1);
+                                              setDraggingActivityIndex(null);
+                                              setDragOverActivityIndex(null);
+                                              setDragOverSlotKey(null);
+                                            }}
+                                            onDragEnd={() => {
+                                              setDraggingActivityIndex(null);
+                                              setDragOverActivityIndex(null);
+                                              setDragOverSlotKey(null);
+                                            }}
+                                          >
+                                            <button
+                                              type="button"
+                                              onClick={(event) => handleActivitySelection(idx, event)}
+                                              className={`w-full rounded border p-2 pr-8 text-left transition-colors ${
+                                                isSelected
+                                                  ? 'border-emerald-600 bg-emerald-900/30 text-white'
+                                                  : isMultiSelected
+                                                    ? 'border-sky-500 bg-sky-950/40 text-sky-100'
+                                                    : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
+                                              } ${isDropTarget ? 'ring-1 ring-indigo-400 border-indigo-500' : ''}`}
+                                            >
+                                              <p className="text-xs font-bold">{def?.label || activity.type}</p>
+                                              <p className="font-mono text-[10px] text-slate-500">{activity.id || `activity-${idx + 1}`}</p>
+                                              <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-500">Span {colSpan}</p>
+                                            </button>
+                                            <button
+                                              type="button"
+                                              draggable={false}
+                                              onDragStart={(event) => event.preventDefault()}
+                                              onMouseDown={(event) => event.stopPropagation()}
+                                              onClick={(event) => {
+                                                event.stopPropagation();
+                                                removeActivityByIndex(idx);
+                                              }}
+                                              className="absolute top-1.5 right-1.5 inline-flex h-5 w-5 items-center justify-center rounded border border-slate-600/60 bg-slate-900/40 text-slate-300 transition-colors hover:border-rose-400/70 hover:bg-rose-500/15 hover:text-rose-200"
+                                              title="Delete block"
+                                              aria-label={`Delete ${def?.label || activity.type}`}
+                                            >
+                                              <X size={11} />
+                                            </button>
+                                          </div>
+                                        );
+                                      })}
                                     </div>
-                                  );
-                                })}
-                              </GridLayout>
-                            ) : null}
-                            <div className={`${isCanvasMode ? 'hidden ' : ''}grid gap-2`} style={{ gridTemplateColumns: `repeat(${composerMaxColumns}, minmax(0, 1fr))` }}>
-                              {composerGridModel.emptySlots.map((slot) => {
-                                const isSlotTarget =
-                                  draggingActivityIndex !== null &&
-                                  dragOverSlotKey === slot.key &&
-                                  dragOverActivityIndex === null;
-                                return (
-                                  <div
-                                    key={slot.key}
-                                    className={`relative rounded border border-dashed transition-colors ${
-                                      isSlotTarget
-                                        ? 'border-indigo-400 bg-indigo-500/20'
-                                        : 'border-slate-700/80 bg-slate-900/35'
-                                    }`}
-                                    style={{ gridColumn: `${slot.col}`, gridRow: `${slot.row}`, minHeight: '58px' }}
-                                    onDragOver={(event) => {
-                                      if (!Number.isInteger(draggingActivityIndex)) return;
-                                      event.preventDefault();
-                                      if (event.dataTransfer) {
-                                        event.dataTransfer.dropEffect = 'move';
-                                      }
-                                      if (dragOverSlotKey !== slot.key) setDragOverSlotKey(slot.key);
-                                      if (dragOverActivityIndex !== null) setDragOverActivityIndex(null);
-                                    }}
-                                    onDragLeave={() => {
-                                      if (dragOverSlotKey === slot.key) setDragOverSlotKey(null);
-                                    }}
-                                    onDrop={(event) => {
-                                      event.preventDefault();
-                                      const fallback = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10);
-                                      const fromIndex = Number.isInteger(draggingActivityIndex) ? draggingActivityIndex : fallback;
-                                      moveActivityToCell(fromIndex, slot.row, slot.col);
-                                      setDraggingActivityIndex(null);
-                                      setDragOverActivityIndex(null);
-                                      setDragOverSlotKey(null);
-                                    }}
-                                  >
-                                    <button
-                                      type="button"
-                                      draggable={false}
-                                      onDragStart={(event) => event.preventDefault()}
-                                      onMouseDown={(event) => event.stopPropagation()}
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        removeEmptyRowAt(slot.row);
-                                      }}
-                                      className="absolute top-1.5 right-1.5 inline-flex h-5 w-5 items-center justify-center rounded border border-slate-600/60 bg-slate-900/40 text-slate-300 hover:border-rose-400/70 hover:bg-rose-500/15 hover:text-rose-200 transition-colors"
-                                      title="Delete empty row"
-                                      aria-label={`Delete empty row ${slot.row}`}
-                                    >
-                                      <X size={11} />
-                                    </button>
+                                    {activities.length === 0 ? <p className="mt-1 text-xs text-slate-500">No activities yet.</p> : null}
                                   </div>
-                                );
-                              })}
-                              {activities.map((activity, idx) => {
-                                const def = getActivityDefinition(activity.type);
-                                const colSpan = Math.min(activity?.layout?.colSpan || 1, composerMaxColumns);
-                                const placement = composerPlacementsByIndex.get(idx);
-                                const isSelected = idx === selectedActivityIndex;
-                                const isDropTarget = idx === dragOverActivityIndex && draggingActivityIndex !== null && idx !== draggingActivityIndex;
-                                return (
-                                  <div
-                                    key={activity.id || `${activity.type}-${idx}`}
-                                    className="relative"
-                                    style={{
-                                      gridColumn: placement
-                                        ? `${placement.col} / span ${placement.colSpan}`
-                                        : `span ${colSpan} / span ${colSpan}`,
-                                      gridRow: placement ? `${placement.row}` : undefined,
-                                    }}
-                                    draggable
-                                    onDragStart={(event) => {
-                                      setDraggingActivityIndex(idx);
-                                      setSelectedActivityIndex(idx);
-                                      setDragOverSlotKey(null);
-                                      if (event.dataTransfer) {
-                                        event.dataTransfer.effectAllowed = 'move';
-                                        event.dataTransfer.setData('text/plain', String(idx));
+                                ) : (
+                                  <ComposerSidebarTools
+                                    courseComponents={courseComposerComponents}
+                                    mode={composerSidebarMode}
+                                    activities={activities}
+                                    onDeleteCourseComponent={deleteCourseComposerComponent}
+                                    onDetachSelectedComponent={detachSelectedCourseComposerComponent}
+                                    onFixDuplicateIds={fixComposerDuplicateIds}
+                                    onFixImageAltText={fixComposerImageAltIssues}
+                                    onFixMobileStacking={fixComposerMobileStackingIssues}
+                                    onInsertLinkedActivity={insertLinkedCourseComposerComponent}
+                                    selectedIndex={selectedActivityIndex}
+                                    selectedActivity={selectedActivity}
+                                    selectedComponentStatus={selectedActivityComponentStatus}
+                                    onSelectIndex={setSelectedActivityIndex}
+                                    onSaveCourseComponent={saveCourseComposerComponent}
+                                    onUpdateSelectedCourseComponent={updateSelectedLinkedCourseComposerComponent}
+                                    onUpdateSelectedCourseComponentInstances={updateSelectedLinkedCourseComposerInstances}
+                                    onDuplicateSelected={duplicateSelectedActivity}
+                                    onDeleteSelected={removeSelectedActivity}
+                                    onInsertActivity={addActivityFromTemplate}
+                                  />
+                                )
+                              )}
+                              footer={(
+                                <ComposerActivityBuilderFooter
+                                  activityTypeGroups={activityTypeGroups}
+                                  getActivityLabel={(type) => getActivityDefinition(type)?.label || type}
+                                  isCanvasMode={isCanvasMode}
+                                  maxColumns={composerMaxColumns}
+                                  moveDownDisabled={!selectedActivity}
+                                  moveLeftDisabled={!selectedActivity || !selectedPlacement || selectedPlacement.col <= 1}
+                                  moveRightDisabled={
+                                    !selectedActivity ||
+                                    !selectedPlacement ||
+                                    selectedPlacement.col >= Math.max(1, composerMaxColumns - (selectedActivity?.layout?.colSpan || 1) + 1)
+                                  }
+                                  moveUpDisabled={!selectedActivity || !selectedPlacement || selectedPlacement.row <= 1}
+                                  newActivityType={newActivityType}
+                                  onAddActivity={addActivity}
+                                  onAddOpenRow={addEmptyRow}
+                                  onCanvasHChange={(value) =>
+                                    updateSelectedActivityCanvasLayout({ h: Math.max(1, Number.parseInt(value, 10) || 1) })
+                                  }
+                                  onCanvasWChange={(value) => {
+                                    const nextW = Math.max(1, Number.parseInt(value, 10) || 1);
+                                    updateSelectedActivityCanvasLayout({ w: nextW, colSpan: nextW });
+                                  }}
+                                  onCanvasXChange={(value) => updateSelectedActivityCanvasLayout({ x: Number.parseInt(value, 10) || 0 })}
+                                  onCanvasYChange={(value) => updateSelectedActivityCanvasLayout({ y: Number.parseInt(value, 10) || 0 })}
+                                  onDelete={removeSelectedActivity}
+                                  onDuplicate={duplicateSelectedActivity}
+                                  onMoveDown={() => moveSelectedActivity('down')}
+                                  onMoveLeft={() => moveSelectedActivity('left')}
+                                  onMoveRight={() => moveSelectedActivity('right')}
+                                  onMoveUp={() => moveSelectedActivity('up')}
+                                  onNewActivityTypeChange={setNewActivityType}
+                                  onSpanChange={updateSelectedActivitySpan}
+                                  bulkControls={(
+                                    <ComposerBulkEditBar
+                                      arrangeActions={bulkArrangementActions}
+                                      count={selectedActivityCount}
+                                      onApplyBlockTheme={(value) =>
+                                        applyBulkActivityChanges((activity) => ({
+                                          ...activity,
+                                          data: {
+                                            ...(activity.data || {}),
+                                            blockTheme: normalizeThemeValue(value),
+                                          },
+                                        }))
                                       }
-                                    }}
-                                    onDragOver={(event) => {
-                                      event.preventDefault();
-                                      if (event.dataTransfer) {
-                                        event.dataTransfer.dropEffect = 'move';
+                                      onApplyPadding={(value) =>
+                                        applyBulkActivityChanges((activity) => ({
+                                          ...activity,
+                                          style: {
+                                            ...(activity.style || {}),
+                                            padding: value,
+                                          },
+                                        }))
                                       }
-                                      if (dragOverActivityIndex !== idx) setDragOverActivityIndex(idx);
-                                      if (dragOverSlotKey !== null) setDragOverSlotKey(null);
-                                    }}
-                                    onDrop={(event) => {
-                                      event.preventDefault();
-                                      const fallback = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10);
-                                      const fromIndex = Number.isInteger(draggingActivityIndex) ? draggingActivityIndex : fallback;
-                                      moveActivityToCell(fromIndex, placement?.row || 1, placement?.col || 1);
-                                      setDraggingActivityIndex(null);
-                                      setDragOverActivityIndex(null);
-                                      setDragOverSlotKey(null);
-                                    }}
-                                    onDragEnd={() => {
-                                      setDraggingActivityIndex(null);
-                                      setDragOverActivityIndex(null);
-                                      setDragOverSlotKey(null);
-                                    }}
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={() => setSelectedActivityIndex(idx)}
-                                      className={`w-full text-left p-2 pr-8 rounded border transition-colors ${
-                                        isSelected
-                                          ? 'bg-emerald-900/30 border-emerald-600 text-white'
-                                          : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
-                                      } ${isDropTarget ? 'ring-1 ring-indigo-400 border-indigo-500' : ''}`}
-                                    >
-                                      <p className="text-xs font-bold">{def?.label || activity.type}</p>
-                                      <p className="text-[10px] text-slate-500 font-mono">{activity.id || `activity-${idx + 1}`}</p>
-                                      <p className="text-[10px] text-slate-500 uppercase tracking-wide mt-1">Span {colSpan}</p>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      draggable={false}
-                                      onDragStart={(event) => event.preventDefault()}
-                                      onMouseDown={(event) => event.stopPropagation()}
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        removeActivityByIndex(idx);
+                                      onApplyVariant={(value) =>
+                                        applyBulkActivityChanges((activity) => ({
+                                          ...activity,
+                                          style: {
+                                            ...(activity.style || {}),
+                                            variant: value,
+                                          },
+                                        }))
+                                      }
+                                      onClearSelection={clearActivitySelectionToPrimary}
+                                      onDelete={deleteSelectedActivities}
+                                      onDuplicate={duplicateSelectedActivities}
+                                      onSelectAll={selectAllActivities}
+                                      themeOptions={BLOCK_THEME_OPTIONS}
+                                    />
+                                  )}
+                                  responsiveControls={(
+                                    <ComposerResponsiveControls
+                                      activeBreakpoint={composerResponsiveBreakpoint}
+                                      canReset={Boolean(selectedResponsiveOverride)}
+                                      hidden={selectedResponsiveLayout?.hidden === true}
+                                      isCanvasMode={isCanvasMode}
+                                      maxColumns={composerMaxColumns}
+                                      onCanvasHChange={(value) =>
+                                        updateSelectedActivityResponsiveLayout({ h: Math.max(1, Number.parseInt(value, 10) || 1) })
+                                      }
+                                      onCanvasWChange={(value) => {
+                                        const nextW = Math.max(1, Number.parseInt(value, 10) || 1);
+                                        updateSelectedActivityResponsiveLayout({ w: nextW, colSpan: nextW });
                                       }}
-                                      className="absolute top-1.5 right-1.5 inline-flex h-5 w-5 items-center justify-center rounded border border-slate-600/60 bg-slate-900/40 text-slate-300 hover:border-rose-400/70 hover:bg-rose-500/15 hover:text-rose-200 transition-colors"
-                                      title="Delete block"
-                                      aria-label={`Delete ${def?.label || activity.type}`}
-                                    >
-                                      <X size={11} />
-                                    </button>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            {activities.length === 0 && <p className="text-xs text-slate-500 mt-1">No activities yet.</p>}
-                          </div>
-
-                          <div className="mt-4 pt-3 border-t border-slate-700">
-                            <div className="grid grid-cols-3 gap-2">
-                              <select
-                                value={newActivityType}
-                                onChange={(e) => setNewActivityType(e.target.value)}
-                                className="col-span-2 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
-                              >
-                                {activityTypeGroups.map((group) => (
-                                  <optgroup key={`modal-group-${group.category}`} label={group.label}>
-                                    {group.types.map((type) => {
-                                      const def = getActivityDefinition(type);
-                                      return (
-                                        <option key={type} value={type}>
-                                          {def?.label || type}
-                                        </option>
-                                      );
-                                    })}
-                                  </optgroup>
-                                ))}
-                              </select>
-                              <button
-                                type="button"
-                                onClick={addActivity}
-                                className="bg-emerald-600 hover:bg-emerald-500 rounded text-xs font-bold text-white inline-flex items-center justify-center gap-1"
-                              >
-                                <Plus size={12} /> Add
-                              </button>
-                            </div>
-                            {!isCanvasMode ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={addEmptyRow}
-                                  className="w-full mt-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1.5 text-white text-xs inline-flex items-center justify-center gap-1"
-                                  title="Add one open row below the selected block (or at bottom if none selected)"
-                                >
-                                  <Plus size={12} /> Add Open Row
-                                </button>
-                                <div className="grid grid-cols-2 gap-2 mt-2">
-                                  <label className="text-[11px] font-bold text-slate-400 uppercase self-center">Selected Span</label>
-                                  <select
-                                    value={selectedActivity?.layout?.colSpan || 1}
-                                    onChange={(e) => updateSelectedActivitySpan(e.target.value)}
-                                    disabled={!selectedActivity}
-                                    className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs disabled:opacity-40"
-                                  >
-                                    {Array.from({ length: composerMaxColumns }, (_, idx) => idx + 1).map((span) => (
-                                      <option key={span} value={span}>
-                                        Span {span}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <div className="grid grid-cols-4 gap-2 mt-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => moveSelectedActivity('left')}
-                                    disabled={!selectedActivity || !selectedPlacement || selectedPlacement.col <= 1}
-                                    className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
-                                    title="Move left"
-                                  >
-                                    <ChevronLeft size={12} /> Left
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => moveSelectedActivity('right')}
-                                    disabled={
-                                      !selectedActivity ||
-                                      !selectedPlacement ||
-                                      selectedPlacement.col >= Math.max(1, composerMaxColumns - (selectedActivity?.layout?.colSpan || 1) + 1)
-                                    }
-                                    className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
-                                    title="Move right"
-                                  >
-                                    <ChevronRight size={12} /> Right
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => moveSelectedActivity('up')}
-                                    disabled={!selectedActivity || !selectedPlacement || selectedPlacement.row <= 1}
-                                    className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
-                                  >
-                                    <ChevronUp size={12} /> Up
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => moveSelectedActivity('down')}
-                                    disabled={!selectedActivity}
-                                    className="px-2 py-1.5 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
-                                  >
-                                    <ChevronDown size={12} /> Down
-                                  </button>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="grid grid-cols-4 gap-2 mt-2">
-                                <label className="text-[10px] text-slate-400">
-                                  X
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={selectedActivity?.layout?.x || 0}
-                                    onChange={(e) => updateSelectedActivityCanvasLayout({ x: Number.parseInt(e.target.value, 10) || 0 })}
-                                    disabled={!selectedActivity}
-                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
-                                  />
-                                </label>
-                                <label className="text-[10px] text-slate-400">
-                                  Y
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    value={selectedActivity?.layout?.y || 0}
-                                    onChange={(e) => updateSelectedActivityCanvasLayout({ y: Number.parseInt(e.target.value, 10) || 0 })}
-                                    disabled={!selectedActivity}
-                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
-                                  />
-                                </label>
-                                <label className="text-[10px] text-slate-400">
-                                  W
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    max={composerMaxColumns}
-                                    value={selectedActivity?.layout?.w || 1}
-                                    onChange={(e) => {
-                                      const nextW = Math.max(1, Number.parseInt(e.target.value, 10) || 1);
-                                      updateSelectedActivityCanvasLayout({ w: nextW, colSpan: nextW });
-                                    }}
-                                    disabled={!selectedActivity}
-                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
-                                  />
-                                </label>
-                                <label className="text-[10px] text-slate-400">
-                                  H
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    value={selectedActivity?.layout?.h || 4}
-                                    onChange={(e) => updateSelectedActivityCanvasLayout({ h: Math.max(1, Number.parseInt(e.target.value, 10) || 1) })}
-                                    disabled={!selectedActivity}
-                                    className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs disabled:opacity-40"
-                                  />
-                                </label>
-                              </div>
-                            )}
-                            <div className="flex gap-2 mt-2">
-                              <button
-                                type="button"
-                                onClick={duplicateSelectedActivity}
-                                disabled={!selectedActivity}
-                                className="flex-1 px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
-                                title="Duplicate selected activity"
-                              >
-                                <Copy size={12} /> Duplicate
-                              </button>
-                              <button
-                                type="button"
-                                onClick={removeSelectedActivity}
-                                disabled={!selectedActivity}
-                                className="flex-1 px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white text-xs inline-flex items-center justify-center gap-1"
-                                title="Delete selected activity"
-                              >
-                                <Trash2 size={12} /> Delete
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="lg:col-span-7 bg-slate-950 border border-slate-700 rounded-lg p-4">
-                          <h4 className="text-sm font-bold text-white mb-3">
-                            {selectedActivity ? (getActivityDefinition(selectedActivity.type)?.label || selectedActivity.type) : 'Activity Editor'}
-                          </h4>
-                          {renderSelectedActivityStylePanel()}
-                          {renderActivityEditor()}
-                        </div>
-                      </div>
-
-                      <div className="bg-slate-950 border border-slate-700 rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-sm font-bold text-white">Live Module Preview</h4>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              composerPreviewShouldFollowRef.current = false;
-                              setComposerPreviewNonce((n) => n + 1);
-                            }}
-                            className="inline-flex items-center gap-1 rounded bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-200 hover:bg-slate-700"
-                            title="Remount preview iframe"
-                          >
-                            <RefreshCw size={12} />
-                            Reset
-                          </button>
-                        </div>
-                        <p className="text-[11px] text-slate-500 mb-3">Preview updates while you edit activities.</p>
-                        <div className="rounded-lg overflow-hidden border border-slate-800 bg-black">
-                          {composerPreviewSrcDoc ? (
-                            <iframe
-                              ref={composerPreviewIframeRef}
-                              key={`composer-edit-preview-${editForm.id || 'draft'}-${composerPreviewNonce}`}
-                              srcDoc={composerPreviewSrcDoc}
-                              className="w-full border-0"
-                              style={{ minHeight: '420px' }}
-                              sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads allow-top-navigation-by-user-activation"
-                              title="Composer live preview"
-                              onLoad={() => {
-                                if (!composerPreviewShouldFollowRef.current) return;
-                                const targetId = composerPreviewTargetActivityIdRef.current;
-                                if (!targetId) return;
-                                if (scrollComposerPreviewToActivity(targetId)) {
-                                  composerPreviewShouldFollowRef.current = false;
-                                }
-                              }}
+                                      onCanvasXChange={(value) =>
+                                        updateSelectedActivityResponsiveLayout({ x: Math.max(0, Number.parseInt(value, 10) || 0) })
+                                      }
+                                      onCanvasYChange={(value) =>
+                                        updateSelectedActivityResponsiveLayout({ y: Math.max(0, Number.parseInt(value, 10) || 0) })
+                                      }
+                                      onColChange={(value) =>
+                                        updateSelectedActivityResponsiveLayout({ col: Math.max(1, Number.parseInt(value, 10) || 1) })
+                                      }
+                                      onHiddenChange={(hidden) => updateSelectedActivityResponsiveLayout({ hidden })}
+                                      onReset={clearSelectedActivityResponsiveLayout}
+                                      onRowChange={(value) =>
+                                        updateSelectedActivityResponsiveLayout({ row: Math.max(1, Number.parseInt(value, 10) || 1) })
+                                      }
+                                      onSpanChange={(value) =>
+                                        updateSelectedActivityResponsiveLayout({ colSpan: clampComposerColSpan(value, composerMaxColumns) })
+                                      }
+                                      col={selectedResponsiveLayout?.col ?? selectedActivity?.layout?.col ?? 1}
+                                      row={selectedResponsiveLayout?.row ?? selectedActivity?.layout?.row ?? 1}
+                                      span={selectedResponsiveLayout?.colSpan ?? selectedActivity?.layout?.colSpan ?? 1}
+                                      x={selectedResponsiveLayout?.x ?? selectedActivity?.layout?.x ?? 0}
+                                      y={selectedResponsiveLayout?.y ?? selectedActivity?.layout?.y ?? 0}
+                                      width={selectedResponsiveLayout?.w ?? selectedActivity?.layout?.w ?? 1}
+                                      height={selectedResponsiveLayout?.h ?? selectedActivity?.layout?.h ?? 4}
+                                    />
+                                  )}
+                                  selectedActivity={selectedActivity}
+                                  selectedSpan={selectedActivity?.layout?.colSpan || 1}
+                                  canvasX={selectedActivity?.layout?.x || 0}
+                                  canvasY={selectedActivity?.layout?.y || 0}
+                                  canvasW={selectedActivity?.layout?.w || 1}
+                                  canvasH={selectedActivity?.layout?.h || 4}
+                                />
+                              )}
                             />
-                          ) : (
-                            <div className="h-48 flex items-center justify-center text-xs text-slate-500">
-                              Composer preview unavailable.
-                            </div>
-                          )}
+                          </div>
+
+                          <div className="lg:col-span-7">
+                            <ComposerActivityEditorPane
+                              title={selectedActivity ? (getActivityDefinition(selectedActivity.type)?.label || selectedActivity.type) : 'Activity Editor'}
+                              headerActions={
+                                selectedActivityComponentStatus?.linked ? (
+                                  <span
+                                    className={`rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                                      selectedActivityComponentStatus?.missingSource
+                                        ? 'bg-rose-500/15 text-rose-200'
+                                        : selectedActivityComponentStatus?.stale
+                                          ? 'bg-amber-500/15 text-amber-100'
+                                          : 'bg-emerald-500/15 text-emerald-100'
+                                    }`}
+                                  >
+                                    {selectedActivityComponentStatus?.missingSource
+                                      ? 'Linked Source Missing'
+                                      : selectedActivityComponentStatus?.stale
+                                        ? 'Linked Out Of Sync'
+                                        : 'Linked Component'}
+                                  </span>
+                                ) : null
+                              }
+                            >
+                              <ComposerBindingPanel
+                                activity={selectedActivity}
+                                bindingContext={selectedActivityBindingContext}
+                                onApplyBinding={applySelectedActivityBinding}
+                              />
+                              {renderSelectedActivityStylePanel()}
+                              {renderActivityEditor()}
+                            </ComposerActivityEditorPane>
+                          </div>
                         </div>
-                      </div>
-                    </div>
+                      )}
+                      previewContent={(
+                        <ComposerPreviewPane
+                          description="Preview updates while you edit activities."
+                          srcDoc={composerPreviewSrcDoc}
+                          iframeRef={composerPreviewIframeRef}
+                          iframeKey={`composer-edit-preview-${editForm.id || 'draft'}-${composerPreviewNonce}`}
+                          iframeStyle={{ minHeight: '420px' }}
+                          interactionMode={composerPreviewInteractionMode}
+                          qaMode={composerPreviewQaMode}
+                          qaSummary={composerValidationTotals}
+                          showInteractionModeControls
+                          showQaControls
+                          showViewportControls
+                          titleText="Composer live preview"
+                          onInteractionModeChange={setComposerPreviewInteractionMode}
+                          onLoad={handleComposerPreviewLoad}
+                          onQaModeChange={setComposerPreviewQaMode}
+                          onReset={resetComposerPreview}
+                          onViewportModeChange={setComposerPreviewViewport}
+                          viewportMode={composerPreviewViewport}
+                        />
+                      )}
+                    />
                   ) : (
                     <div>
                       <label className="block text-sm font-bold text-slate-300 mb-2">Full HTML Document</label>
@@ -4536,6 +5282,19 @@ export default function EditModal({
           </div>
         </div>
       )}
+
+      <ComposerCommandPalette
+        actions={composerCommandPaletteActions}
+        emptyMessage="No composer commands match."
+        initialQuery={composerCommandPaletteInitialQuery}
+        isOpen={isComposerCommandPaletteOpen}
+        onClose={() => {
+          setComposerCommandPaletteInitialQuery('');
+          setIsComposerCommandPaletteOpen(false);
+        }}
+        placeholder="Search composer commands..."
+        title="Composer Commands"
+      />
     </>
   );
 }

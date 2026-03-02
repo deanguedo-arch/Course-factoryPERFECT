@@ -5,6 +5,7 @@ export const PROJECT_DATA = {
   projectSchemaVersion: 3,
   "Current Course": {
     name: "Mental Fitness",
+    composerComponents: [],
     modules: [
       {
         id: "item-1768749223001",

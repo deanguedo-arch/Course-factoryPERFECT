@@ -1395,6 +1395,7 @@ export function App() {
         setEditForm={setEditForm}
         setEditingModule={setEditingModule}
         projectData={projectData}
+        setProjectData={setProjectData}
         saveEditModule={saveEditModule}
         moduleHistory={moduleHistory}
         setModuleHistory={setModuleHistory}

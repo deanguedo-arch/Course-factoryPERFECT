@@ -52,11 +52,16 @@ function withCourseSettingsDefaults(settings) {
   return next;
 }
 
+function withCurrentCourseDefaults(course) {
+  const next = { ...(course || {}) };
+  next.modules = Array.isArray(next.modules) ? next.modules.map(withModuleDefaults) : [];
+  next.composerComponents = Array.isArray(next.composerComponents) ? next.composerComponents : [];
+  return next;
+}
+
 function migrateToV1(projectData) {
   const next = { ...(projectData || {}) };
-  const currentCourse = { ...(next['Current Course'] || {}) };
-  const modules = Array.isArray(currentCourse.modules) ? currentCourse.modules.map(withModuleDefaults) : [];
-  next['Current Course'] = { ...currentCourse, modules };
+  next['Current Course'] = withCurrentCourseDefaults(next['Current Course']);
   next['Course Settings'] = withCourseSettingsDefaults(next['Course Settings']);
   next.projectSchemaVersion = 1;
   return next;
@@ -64,9 +69,7 @@ function migrateToV1(projectData) {
 
 function migrateToV2(projectData) {
   const next = { ...(projectData || {}) };
-  const currentCourse = { ...(next['Current Course'] || {}) };
-  const modules = Array.isArray(currentCourse.modules) ? currentCourse.modules.map(withModuleDefaults) : [];
-  next['Current Course'] = { ...currentCourse, modules };
+  next['Current Course'] = withCurrentCourseDefaults(next['Current Course']);
   next['Course Settings'] = withCourseSettingsDefaults(next['Course Settings']);
   next.projectSchemaVersion = 2;
   return next;
@@ -74,9 +77,7 @@ function migrateToV2(projectData) {
 
 function migrateToV3(projectData) {
   const next = { ...(projectData || {}) };
-  const currentCourse = { ...(next['Current Course'] || {}) };
-  const modules = Array.isArray(currentCourse.modules) ? currentCourse.modules.map(withModuleDefaults) : [];
-  next['Current Course'] = { ...currentCourse, modules };
+  next['Current Course'] = withCurrentCourseDefaults(next['Current Course']);
   next['Course Settings'] = withCourseSettingsDefaults(next['Course Settings']);
   next.projectSchemaVersion = 3;
   return next;
@@ -84,9 +85,7 @@ function migrateToV3(projectData) {
 
 function applyCurrentDefaults(projectData, targetVersion) {
   const next = { ...(projectData || {}) };
-  const currentCourse = { ...(next['Current Course'] || {}) };
-  const modules = Array.isArray(currentCourse.modules) ? currentCourse.modules.map(withModuleDefaults) : [];
-  next['Current Course'] = { ...currentCourse, modules };
+  next['Current Course'] = withCurrentCourseDefaults(next['Current Course']);
   next['Course Settings'] = withCourseSettingsDefaults(next['Course Settings']);
   if (!Number.isInteger(next.projectSchemaVersion) || next.projectSchemaVersion < targetVersion) {
     next.projectSchemaVersion = targetVersion;

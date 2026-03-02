@@ -1,10 +1,19 @@
 import { getActivityDefinition } from './activityRegistry.js';
-import { normalizeComposerActivities, normalizeComposerModuleConfig } from './layout.js';
+import {
+  COMPOSER_RESPONSIVE_BREAKPOINTS,
+  normalizeComposerActivities,
+  normalizeComposerModuleConfig,
+  resolveComposerActivityLayoutForBreakpoint,
+} from './layout.js';
 import {
   createFinlitHeroFormState,
   createFinlitTemplateFormState,
   resolveFinlitHeroMediaKind,
 } from '../utils/finlitHero.js';
+import {
+  buildComposerBindingContext,
+  resolveComposerBindingsInActivity,
+} from './bindings.js';
 import {
   COMPOSER_THEME_VALUES,
   normalizeComposerThemeValue,
@@ -90,6 +99,11 @@ const COMPOSER_BLOCK_THEME_PRESETS = {
     borderColor: 'rgba(148, 163, 184, 0.6)',
     accentColor: '#cbd5e1',
   },
+};
+
+const COMPOSER_BREAKPOINT_MEDIA_QUERIES = {
+  tablet: '(max-width: 1024px)',
+  mobile: '(max-width: 640px)',
 };
 
 function sanitizeHexColor(value) {
@@ -1828,7 +1842,20 @@ function buildTemplateRuntimeScript() {
 }
 
 export function compileComposerModule(module, { courseSettings = {} } = {}) {
-  const { composerLayout, activities } = normalizeComposerModuleConfig(module);
+  const { composerLayout, activities: normalizedActivities } = normalizeComposerModuleConfig(module);
+  const bindingBaseContext = buildComposerBindingContext(module, {
+    courseSettings,
+    activities: normalizedActivities,
+  });
+  const activities = normalizedActivities.map((activity) =>
+    resolveComposerBindingsInActivity(activity, {
+      ...bindingBaseContext,
+      activity: {
+        id: String(activity?.id || '').trim(),
+        type: String(activity?.type || '').trim(),
+      },
+    }),
+  );
   const activityMap = new Map();
   activities.forEach((activity) => {
     const key = String(activity?.id || '').trim();
@@ -1855,6 +1882,14 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
         behavior: item?.behavior || {},
       })),
       { maxColumns: composerLayout.maxColumns, mode: composerLayout.mode },
+    ).map((item) =>
+      resolveComposerBindingsInActivity(item, {
+        ...bindingBaseContext,
+        activity: {
+          id: String(item?.id || '').trim(),
+          type: String(item?.type || '').trim(),
+        },
+      }),
     );
 
   const renderActivity = (activity, idx, { withLayout = true, trail = [] } = {}) => {
@@ -2001,7 +2036,24 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
       sectionClasses.push('cf-block-accent-override');
       sectionStyleParts.push(`--cf-block-accent:${blockStyle.accentColor};`);
     }
-    const sectionStyle = sectionStyleParts.filter(Boolean).join(' ');
+    const responsiveAttrs = [];
+    COMPOSER_RESPONSIVE_BREAKPOINTS.forEach((breakpoint) => {
+      const responsiveLayout = resolveComposerActivityLayoutForBreakpoint(activity, breakpoint, {
+        maxColumns: composerLayout.maxColumns,
+        mode: composerLayout.mode,
+      });
+      if (!responsiveLayout?.hasOverride) return;
+      responsiveAttrs.push(`data-composer-responsive-${breakpoint}="true"`);
+      sectionStyleParts.push(`--cf-${breakpoint}-col-start:${responsiveLayout.col || 1};`);
+      sectionStyleParts.push(`--cf-${breakpoint}-row-start:${responsiveLayout.row || 1};`);
+      sectionStyleParts.push(`--cf-${breakpoint}-col-span:${responsiveLayout.colSpan || responsiveLayout.w || 1};`);
+      sectionStyleParts.push(`--cf-${breakpoint}-w:${responsiveLayout.w || responsiveLayout.colSpan || 1};`);
+      sectionStyleParts.push(`--cf-${breakpoint}-h:${responsiveLayout.h || 4};`);
+      if (responsiveLayout.hidden === true) {
+        sectionStyleParts.push(`--cf-${breakpoint}-display:none;`);
+      }
+    });
+    const resolvedSectionStyle = sectionStyleParts.filter(Boolean).join(' ');
     const headingLabel = stripHtml(activity?.data?.title || activity?.data?.text || getActivityDefinition(activity?.type)?.label || `Activity ${idx + 1}`);
     const activityHtml = behaviorMeta.collapsible
       ? `<details class="cf-card cf-card--flat" ${behaviorMeta.collapsedByDefault ? '' : 'open'}><summary class="cursor-pointer select-none cf-pill">${escapeHtml(headingLabel)}</summary><div class="p-1">${compiled}</div></details>`
@@ -2020,7 +2072,8 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
         data-composer-y="${y}"
         data-composer-w="${w}"
         data-composer-h="${h}"
-        style="${sectionStyle}"
+        ${responsiveAttrs.join(' ')}
+        style="${resolvedSectionStyle}"
         class="${sectionClasses.join(' ')}"
       >
         ${activityHtml}
@@ -2589,6 +2642,32 @@ export function compileComposerModule(module, { courseSettings = {} } = {}) {
       [data-composer-root][data-composer-layout-mode="simple"][data-composer-simple-match-tallest-row="true"] > .cf-composer-activity { height: 100%; }
       [data-composer-root][data-composer-layout-mode="simple"][data-composer-simple-match-tallest-row="true"] > .cf-composer-activity > :first-child { height: 100%; box-sizing: border-box; }
       [data-composer-root][data-composer-layout-mode="simple"] textarea { resize: none !important; overflow-y: auto; }
+
+      @media ${COMPOSER_BREAKPOINT_MEDIA_QUERIES.tablet} {
+        [data-composer-root][data-composer-layout-mode="simple"] > .cf-composer-activity[data-composer-responsive-tablet="true"] {
+          display: var(--cf-tablet-display, block) !important;
+          grid-column: var(--cf-tablet-col-start, auto) / span var(--cf-tablet-col-span, 1) !important;
+          grid-row: var(--cf-tablet-row-start, auto) !important;
+        }
+        [data-composer-root][data-composer-layout-mode="canvas"] > .cf-composer-activity[data-composer-responsive-tablet="true"] {
+          display: var(--cf-tablet-display, block) !important;
+          grid-column: var(--cf-tablet-col-start, 1) / span var(--cf-tablet-w, 1) !important;
+          grid-row: var(--cf-tablet-row-start, 1) / span var(--cf-tablet-h, 4) !important;
+        }
+      }
+
+      @media ${COMPOSER_BREAKPOINT_MEDIA_QUERIES.mobile} {
+        [data-composer-root][data-composer-layout-mode="simple"] > .cf-composer-activity[data-composer-responsive-mobile="true"] {
+          display: var(--cf-mobile-display, block) !important;
+          grid-column: var(--cf-mobile-col-start, auto) / span var(--cf-mobile-col-span, 1) !important;
+          grid-row: var(--cf-mobile-row-start, auto) !important;
+        }
+        [data-composer-root][data-composer-layout-mode="canvas"] > .cf-composer-activity[data-composer-responsive-mobile="true"] {
+          display: var(--cf-mobile-display, block) !important;
+          grid-column: var(--cf-mobile-col-start, 1) / span var(--cf-mobile-w, 1) !important;
+          grid-row: var(--cf-mobile-row-start, 1) / span var(--cf-mobile-h, 4) !important;
+        }
+      }
 
       @media (prefers-reduced-motion: reduce) {
         .cf-page *, .cf-page *::before, .cf-page *::after {
