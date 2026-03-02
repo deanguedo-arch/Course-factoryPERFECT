@@ -432,6 +432,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const moduleManagerRichEditorUpdateTimerRef = useRef(null);
   const moduleManagerDraftImportRef = useRef(null);
   const moduleManagerCanvasViewportRef = useRef(null);
+  const moduleManagerComposerEntryScrollResetPendingRef = useRef(false);
   const [moduleManagerHTML, setModuleManagerHTML] = useState('');
   const [moduleManagerURL, setModuleManagerURL] = useState('');
   const [moduleManagerID, setModuleManagerID] = useState('');
@@ -461,6 +462,18 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     if (Number.isFinite(next.builderCellWidth)) setModuleManagerComposerBuilderCellWidth(next.builderCellWidth);
     if (typeof next.lockBuilderScale === 'boolean') setModuleManagerComposerLockBuilderScale(next.lockBuilderScale);
   };
+
+  const resetPhase1ViewportToTop = React.useCallback(() => {
+    if (typeof window === 'undefined') return;
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    if (typeof document === 'undefined') return;
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+    const root = document.getElementById('root');
+    if (root && 'scrollTop' in root) root.scrollTop = 0;
+    const appMain = document.querySelector('main.flex-grow');
+    if (appMain && 'scrollTop' in appMain) appMain.scrollTop = 0;
+  }, []);
 
   useEffect(() => {
     try {
@@ -1884,6 +1897,23 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   }, [moduleManagerType, moduleManagerComposerActivities.length, moduleManagerComposerStarterType, moduleManagerComposerMaxColumns, moduleManagerComposerLayoutMode]);
 
   useEffect(() => {
+    const enteringComposer = harvestType === 'MODULE_MANAGER' && moduleManagerType === 'composer';
+    if (!enteringComposer) {
+      moduleManagerComposerEntryScrollResetPendingRef.current = false;
+      return;
+    }
+    moduleManagerComposerEntryScrollResetPendingRef.current = true;
+    resetPhase1ViewportToTop();
+    if (typeof window === 'undefined') return;
+    const frameId = window.requestAnimationFrame(() => resetPhase1ViewportToTop());
+    const timerId = window.setTimeout(() => resetPhase1ViewportToTop(), 220);
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timerId);
+    };
+  }, [harvestType, moduleManagerType, resetPhase1ViewportToTop]);
+
+  useEffect(() => {
     if (!moduleManagerComposerFocusMode) return;
     setModuleManagerComposerSidebarMode(null);
     setModuleManagerComposerWorkspaceControlsCollapsed(true);
@@ -2407,6 +2437,15 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     selectionEnabled: moduleManagerComposerPreviewInteractionMode === 'select',
     resetKey: moduleManagerType,
   });
+  const handleModuleManagerComposerPreviewLoadWithTopReset = React.useCallback(
+    (event) => {
+      handleModuleManagerComposerPreviewLoad(event);
+      if (!moduleManagerComposerEntryScrollResetPendingRef.current) return;
+      moduleManagerComposerEntryScrollResetPendingRef.current = false;
+      resetPhase1ViewportToTop();
+    },
+    [handleModuleManagerComposerPreviewLoad, resetPhase1ViewportToTop],
+  );
 
   const phase1MaterialCompiledPreviewDoc = useMemo(() => {
     if (!phase1MaterialPreview) return '';
@@ -9839,7 +9878,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                 title: 'Canvas',
                                                                 titleText: 'Composer draft canvas',
                                                                 onInteractionModeChange: setModuleManagerComposerPreviewInteractionMode,
-                                                                onLoad: handleModuleManagerComposerPreviewLoad,
+                                                                onLoad: handleModuleManagerComposerPreviewLoadWithTopReset,
                                                                 onQaModeChange: setModuleManagerComposerPreviewQaMode,
                                                                 onReset: resetModuleManagerComposerPreview,
                                                                 onViewportModeChange: setModuleManagerComposerPreviewViewport,
