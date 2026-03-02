@@ -76,11 +76,14 @@
 - **Vite Base URL:** When using `base: '/RepoName/'`, file paths in code must respect this prefix (e.g., in `scan-vault.cjs`).
 
 ## Active Goal
-- **Modularization:** Break down the 12k+ line `App.jsx` monolith into smaller, manageable components now that the Vault feature is complete.
-- **Refactor:** Headless Verification, Preview Hardening, & Modularization.
+- **Composer UX Polish:** Make the Module Manager composer feel premium and workspace-first by reducing chrome weight, tightening tool density, and giving the canvas more room.
+- **Authoring Flow Refinement:** Keep setup/session controls accessible without letting them dominate the builder surface.
 
 ## Next Step
-- Begin extracting the **"Phase 1: Harvest"** (Content Ingestor/AI Studio Creator) logic from `App.jsx` into a separate file.
+- Do a final visual polish pass on the composer workspace:
+  - reduce top toolbar density further if needed
+  - decide whether `Stage` belongs in the primary toolbar or an overflow menu
+  - mirror the new compact session/setup treatment into any remaining composer surfaces that still feel heavier than Phase 1
 
 ## Update (Jan 29, 2026)
 - Fixed Master Shell header/brand text color on light backgrounds by deriving heading text from background brightness in `generateMasterShell`. (`src/App.jsx`)
@@ -311,3 +314,38 @@
   - Vertical resize now pushes rows only on actual overlap collision, not when blocks are merely close.
 - Primary file updated:
   - `src/components/Phase1.jsx`
+
+## Update (Mar 2, 2026 - Composer Workspace Polish + Navigation Space)
+- Fixed a composer preview bootstrap bug that was breaking iframe startup:
+  - `buildScopedStorageBootstrapTag()` now emits a real closing `</script>` tag instead of the malformed escaped version.
+  - Primary file: `src/utils/generators.js`
+- Hardened canvas overlay sizing math so resize frames stay aligned under zoom:
+  - grid gap, padding, and row-height calculations now scale against the rendered iframe instead of assuming unscaled preview dimensions.
+  - Primary file: `src/components/composer/ComposerCanvasBlockOverlay.jsx`
+- Restructured composer preview chrome to move from stacked workspace cards toward a tighter toolbar-driven layout:
+  - extracted a shared compact preview toolbar component for mode, viewport, stage, zoom, inspector, focus, review, and reset
+  - simplified the preview pane so it behaves more like a clean frame surface than a nested control card
+  - moved workspace status copy up into the Lesson Builder header instead of burning a large block inside the preview area
+  - aligned the inspector with the canvas by removing the fixed top-padding hack and making the two-column layout start together
+  - Primary files:
+    - `src/components/composer/ComposerPreviewToolbar.jsx`
+    - `src/components/composer/ComposerPreviewPane.jsx`
+    - `src/components/composer/ComposerUndoRedoControls.jsx`
+    - `src/components/Phase1.jsx`
+    - `src/components/modals/EditModal.jsx`
+- Reworked the Module Manager pre-builder area in Phase 1 to reduce visual clutter before the canvas:
+  - turned `Draft Saves` into a slimmer `Session` strip with the selected draft, save/update actions, load, and download toggle
+  - moved import/export/delete/reset under a collapsed `Manage Drafts` section
+  - grouped `Module Title`, `Template`, `Theme`, and `Module ID` into a compact `Module Setup` card
+  - made `Module ID` secondary via an `Edit ID` reveal and added a clean resolved-ID summary
+  - Primary file: `src/components/Phase1.jsx`
+- Added a collapsible global left sidebar so the authoring area can reclaim horizontal workspace:
+  - sidebar now collapses to an icon rail
+  - collapse state persists in local storage
+  - phase navigation still works in icon-only mode with tooltips and badges
+  - collapsed state replaces the long module list with a compact module count card
+  - Primary files:
+    - `src/App.jsx`
+    - `src/components/Section.jsx`
+- Verification:
+  - `npm run build` passed after the composer workspace changes and again after the new sidebar collapse work.

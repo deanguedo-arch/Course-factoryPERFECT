@@ -441,6 +441,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerSavedDrafts, setModuleManagerSavedDrafts] = useState([]);
   const [moduleManagerSelectedDraftId, setModuleManagerSelectedDraftId] = useState('');
   const [moduleManagerDownloadDraftOnSave, setModuleManagerDownloadDraftOnSave] = useState(true);
+  const [moduleManagerSetupExpanded, setModuleManagerSetupExpanded] = useState(false);
+  const [moduleManagerIdExpanded, setModuleManagerIdExpanded] = useState(false);
 
   const applyComposerWorkspacePreset = (presetValue) => {
     const preset = COMPOSER_WORKSPACE_PRESETS.find((entry) => entry.value === presetValue);
@@ -559,6 +561,28 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const courseTemplateDefault = String(projectData?.['Course Settings']?.templateDefault || 'deck').trim().toLowerCase();
   const moduleManagerEffectiveTemplate = resolveTemplateKey(moduleManagerTemplate, courseTemplateDefault);
   const showModuleManagerFinlitOptions = moduleManagerType === 'composer' && moduleManagerEffectiveTemplate === 'finlit';
+  const moduleManagerResolvedId = useMemo(() => {
+    const raw = String(moduleManagerID || '').trim();
+    if (!raw) return '';
+    return raw.startsWith('view-') ? raw : `view-${raw}`;
+  }, [moduleManagerID]);
+  const moduleManagerSelectedDraft = useMemo(
+    () => moduleManagerSavedDrafts.find((draft) => draft.id === moduleManagerSelectedDraftId) || null,
+    [moduleManagerSavedDrafts, moduleManagerSelectedDraftId],
+  );
+  const moduleManagerTemplateLabel =
+    MODULE_TEMPLATE_OPTIONS.find((option) => option.value === moduleManagerTemplate)?.label || 'Use Course Default';
+  const moduleManagerThemeLabel =
+    MODULE_THEME_OPTIONS.find((option) => option.value === moduleManagerTheme)?.label || 'Use Course Default';
+  const moduleManagerSetupNeedsAttention = !moduleManagerTitle.trim() || !moduleManagerID.trim();
+  const moduleManagerShowSetupEditor = moduleManagerSetupExpanded || moduleManagerSetupNeedsAttention;
+  const moduleManagerShowIdField = moduleManagerIdExpanded || !moduleManagerID.trim();
+  const moduleManagerSetupSummary = [
+    moduleManagerTitle.trim() || 'Untitled module',
+    moduleManagerTemplateLabel,
+    moduleManagerThemeLabel,
+    moduleManagerResolvedId || 'Module ID required',
+  ].join('  •  ');
   const isModuleManagerFinlitComposer = showModuleManagerFinlitOptions;
   const normalizedModuleManagerTemplateProfiles = useMemo(
     () => normalizeTemplateLayoutProfiles(moduleManagerTemplateLayoutProfiles, { activities: moduleManagerComposerActivities }),
@@ -8473,11 +8497,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                             </button>
                         </div>
 
-                        <div className="mb-6 rounded-lg border border-slate-700 bg-slate-900/70 p-3">
-                            <div className="flex items-center justify-between gap-2 mb-2">
-                                <p className="text-[11px] font-bold uppercase tracking-wide text-slate-300">Draft Saves</p>
-                                <span className="text-[10px] text-slate-500">{moduleManagerSavedDrafts.length} saved</span>
-                            </div>
+                        <div className="mb-5 rounded-2xl border border-slate-800/80 bg-slate-950/68 p-3 shadow-[0_14px_28px_rgba(2,6,23,0.14)]">
                             <input
                                 ref={moduleManagerDraftImportRef}
                                 type="file"
@@ -8485,26 +8505,46 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 className="hidden"
                                 onChange={importModuleManagerDraftFile}
                             />
-                            <div className="grid grid-cols-12 gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => saveModuleManagerDraft({ overwriteSelected: false })}
-                                    className="col-span-12 sm:col-span-3 rounded bg-indigo-600 hover:bg-indigo-500 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
-                                >
-                                    <Save size={12} /> Save New
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={updateModuleManagerSelectedDraft}
-                                    disabled={!moduleManagerSelectedDraftId}
-                                    className="col-span-12 sm:col-span-3 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
-                                >
-                                    <RefreshCw size={12} /> Update Selected
-                                </button>
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div className="space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Session</p>
+                                        <span className="inline-flex items-center rounded-full border border-slate-700/80 bg-slate-900/70 px-2 py-0.5 text-[10px] font-bold text-slate-300">
+                                            {moduleManagerSavedDrafts.length} drafts
+                                        </span>
+                                    </div>
+                                    <p className="text-sm font-semibold text-white">
+                                        {moduleManagerSelectedDraft ? moduleManagerSelectedDraft.label : 'Draft Saves'}
+                                    </p>
+                                    <p className="text-[11px] text-slate-500">
+                                        {moduleManagerSelectedDraft?.savedAt
+                                            ? `Selected draft saved ${new Date(moduleManagerSelectedDraft.savedAt).toLocaleString()}.`
+                                            : 'Autosave still runs locally. Save named checkpoints only when you want a milestone.'}
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => saveModuleManagerDraft({ overwriteSelected: false })}
+                                        className="inline-flex items-center justify-center gap-1 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-indigo-500"
+                                    >
+                                        <Save size={12} /> Save New
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={updateModuleManagerSelectedDraft}
+                                        disabled={!moduleManagerSelectedDraftId}
+                                        className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        <RefreshCw size={12} /> Update
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="mt-3 grid gap-2 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
                                 <select
                                     value={moduleManagerSelectedDraftId}
                                     onChange={(e) => setModuleManagerSelectedDraftId(e.target.value)}
-                                    className="col-span-12 sm:col-span-6 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                    className="min-w-0 rounded-xl border border-slate-800/80 bg-slate-950 px-3 py-2.5 text-xs text-white"
                                 >
                                     {moduleManagerSavedDrafts.length === 0 && <option value="">No saved drafts</option>}
                                     {moduleManagerSavedDrafts.map((draft) => (
@@ -8513,124 +8553,200 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         </option>
                                     ))}
                                 </select>
-                                <label className="col-span-12 sm:col-span-6 inline-flex items-center gap-2 rounded border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-300">
-                                    <input
-                                        type="checkbox"
-                                        checked={moduleManagerDownloadDraftOnSave}
-                                        onChange={(event) => setModuleManagerDownloadDraftOnSave(event.target.checked)}
-                                        className="w-4 h-4"
-                                    />
-                                    Download .json when saving
-                                </label>
-                                <button
-                                    type="button"
-                                    onClick={loadModuleManagerDraft}
-                                    disabled={!moduleManagerSelectedDraftId}
-                                    className="col-span-6 sm:col-span-2 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-40 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
-                                >
-                                    <FolderOpen size={12} /> Load
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={deleteModuleManagerDraft}
-                                    disabled={!moduleManagerSelectedDraftId}
-                                    className="col-span-6 sm:col-span-2 rounded bg-rose-700/80 hover:bg-rose-600 disabled:opacity-40 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
-                                >
-                                    <Trash2 size={12} /> Delete
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={triggerModuleManagerDraftImport}
-                                    className="col-span-6 sm:col-span-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
-                                >
-                                    <FolderOpen size={12} /> Import File
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={exportModuleManagerSelectedDraft}
-                                    disabled={!moduleManagerSelectedDraftId}
-                                    className="col-span-6 sm:col-span-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-40 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
-                                >
-                                    <FileJson size={12} /> Export File
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={resetModuleManagerBuilder}
-                                    className="col-span-12 sm:col-span-4 rounded bg-amber-700/80 hover:bg-amber-600 px-3 py-2 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
-                                >
-                                    <RotateCcw size={12} /> Reset Builder
-                                </button>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={loadModuleManagerDraft}
+                                        disabled={!moduleManagerSelectedDraftId}
+                                        className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        <FolderOpen size={12} /> Load
+                                    </button>
+                                    <label className="inline-flex items-center gap-2 rounded-xl border border-slate-800/80 bg-slate-950/80 px-3 py-2 text-[11px] text-slate-300">
+                                        <input
+                                            type="checkbox"
+                                            checked={moduleManagerDownloadDraftOnSave}
+                                            onChange={(event) => setModuleManagerDownloadDraftOnSave(event.target.checked)}
+                                            className="h-4 w-4"
+                                        />
+                                        Download JSON on save
+                                    </label>
+                                </div>
                             </div>
-                            <p className="text-[10px] text-slate-500 mt-2">
-                                Builder state auto-saves locally. You can keep multiple drafts, import/export JSON draft files, and load any saved draft back into Module Manager.
-                            </p>
+                            <details className="group mt-2 rounded-xl border border-slate-800/80 bg-slate-950/55">
+                                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200">
+                                    <span>Manage Drafts</span>
+                                    <div className="flex items-center gap-2 text-slate-500">
+                                        <span className="hidden sm:inline">Import, export, delete, reset</span>
+                                        <ChevronDown size={12} />
+                                    </div>
+                                </summary>
+                                <div className="grid gap-2 border-t border-slate-800/70 p-3 sm:grid-cols-2 xl:grid-cols-4">
+                                    <button
+                                        type="button"
+                                        onClick={triggerModuleManagerDraftImport}
+                                        className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800"
+                                    >
+                                        <FolderOpen size={12} /> Import File
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={exportModuleManagerSelectedDraft}
+                                        disabled={!moduleManagerSelectedDraftId}
+                                        className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        <FileJson size={12} /> Export File
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={deleteModuleManagerDraft}
+                                        disabled={!moduleManagerSelectedDraftId}
+                                        className="inline-flex items-center justify-center gap-1 rounded-xl bg-rose-700/85 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                        <Trash2 size={12} /> Delete Draft
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={resetModuleManagerBuilder}
+                                        className="inline-flex items-center justify-center gap-1 rounded-xl bg-amber-700/85 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-amber-600"
+                                    >
+                                        <RotateCcw size={12} /> Reset Builder
+                                    </button>
+                                </div>
+                            </details>
                         </div>
-                        
-                        <div className="space-y-4">
-                            {/* Module ID */}
-                            <div>
-                                <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
-                                    Module ID <span className="text-rose-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={moduleManagerID}
-                                    onChange={(e) => setModuleManagerID(e.target.value)}
-                                    placeholder="hss3020 or view-hss3020"
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm font-mono focus:border-indigo-500 outline-none"
-                                />
-                                <p className="text-[10px] text-slate-500 mt-1 italic">
-                                    Unique identifier (will be prefixed with 'view-' if needed)
-                                </p>
-                            </div>
-                            
-                            {/* Module Title */}
-                            <div>
-                                <label className="block text-xs font-bold text-slate-300 uppercase mb-2">
-                                    Module Title <span className="text-rose-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={moduleManagerTitle}
-                                    onChange={(e) => setModuleManagerTitle(e.target.value)}
-                                    placeholder="HSS3020 Course"
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm focus:border-indigo-500 outline-none"
-                                />
-                                <p className="text-[10px] text-slate-500 mt-1 italic">
-                                    Display name for the sidebar button
-                                </p>
+
+                        <div className="mb-4 rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4 shadow-[0_14px_30px_rgba(2,6,23,0.14)]">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div className="space-y-1.5">
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Setup</p>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <h4 className="text-base font-semibold text-white">Module Setup</h4>
+                                        <span
+                                            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${
+                                                moduleManagerSetupNeedsAttention
+                                                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+                                                    : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
+                                            }`}
+                                        >
+                                            {moduleManagerSetupNeedsAttention ? 'Setup Required' : 'Ready'}
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500">{moduleManagerSetupSummary}</p>
+                                </div>
+                                {moduleManagerSetupNeedsAttention ? (
+                                    <span className="inline-flex items-center rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-100">
+                                        Finish required fields
+                                    </span>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => setModuleManagerSetupExpanded((prev) => !prev)}
+                                        className="inline-flex items-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200 transition-colors hover:bg-slate-800"
+                                    >
+                                        {moduleManagerShowSetupEditor ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                        {moduleManagerShowSetupEditor ? 'Collapse' : 'Edit Setup'}
+                                    </button>
+                                )}
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-300 uppercase mb-2">Template Override</label>
-                                    <select
-                                        value={moduleManagerTemplate}
-                                        onChange={(e) => handleModuleManagerTemplateChange(e.target.value)}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white text-xs"
-                                    >
-                                        {MODULE_TEMPLATE_OPTIONS.map((option) => (
-                                            <option key={`module-template-${option.value || 'default'}`} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
-                                    </select>
+                            {moduleManagerShowSetupEditor ? (
+                                <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,1fr)]">
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="mb-2 block text-xs font-bold uppercase text-slate-300">
+                                                Module Title <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={moduleManagerTitle}
+                                                onChange={(e) => setModuleManagerTitle(e.target.value)}
+                                                placeholder="HSS3020 Course"
+                                                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm text-white outline-none focus:border-indigo-500"
+                                            />
+                                            <p className="mt-1 text-[10px] italic text-slate-500">
+                                                Display name for the sidebar button.
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
+                                            <div className="flex flex-wrap items-start justify-between gap-2">
+                                                <div>
+                                                    <label className="block text-xs font-bold uppercase text-slate-300">
+                                                        Module ID <span className="text-rose-500">*</span>
+                                                    </label>
+                                                    <p className="mt-1 text-[10px] text-slate-500">
+                                                        Stable identifier. It will be prefixed with <span className="font-mono text-slate-400">view-</span> if needed.
+                                                    </p>
+                                                </div>
+                                                {moduleManagerID.trim() ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setModuleManagerIdExpanded((prev) => !prev)}
+                                                        className="inline-flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/80 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300 transition-colors hover:bg-slate-800"
+                                                    >
+                                                        {moduleManagerShowIdField ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                                        {moduleManagerShowIdField ? 'Hide ID' : 'Edit ID'}
+                                                    </button>
+                                                ) : null}
+                                            </div>
+                                            {moduleManagerShowIdField ? (
+                                                <div className="mt-3 space-y-2">
+                                                    <input
+                                                        type="text"
+                                                        value={moduleManagerID}
+                                                        onChange={(e) => setModuleManagerID(e.target.value)}
+                                                        placeholder="hss3020 or view-hss3020"
+                                                        className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 font-mono text-sm text-white outline-none focus:border-indigo-500"
+                                                    />
+                                                    {moduleManagerResolvedId ? (
+                                                        <p className="text-[10px] text-slate-500">
+                                                            Final ID: <span className="font-mono text-slate-300">{moduleManagerResolvedId}</span>
+                                                        </p>
+                                                    ) : null}
+                                                </div>
+                                            ) : (
+                                                <div className="mt-3 rounded-xl border border-slate-800/80 bg-slate-900/70 px-3 py-2">
+                                                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Current ID</p>
+                                                    <p className="mt-1 font-mono text-xs text-white">{moduleManagerResolvedId}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                                        <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
+                                            <label className="mb-2 block text-xs font-bold uppercase text-slate-300">Template</label>
+                                            <select
+                                                value={moduleManagerTemplate}
+                                                onChange={(e) => handleModuleManagerTemplateChange(e.target.value)}
+                                                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                                            >
+                                                {MODULE_TEMPLATE_OPTIONS.map((option) => (
+                                                    <option key={`module-template-${option.value || 'default'}`} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
+                                            <label className="mb-2 block text-xs font-bold uppercase text-slate-300">Theme</label>
+                                            <select
+                                                value={moduleManagerTheme}
+                                                onChange={(e) => setModuleManagerTheme(e.target.value)}
+                                                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
+                                            >
+                                                {MODULE_THEME_OPTIONS.map((option) => (
+                                                    <option key={`module-theme-${option.value || 'default'}`} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-300 uppercase mb-2">Theme Override</label>
-                                    <select
-                                        value={moduleManagerTheme}
-                                        onChange={(e) => setModuleManagerTheme(e.target.value)}
-                                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white text-xs"
-                                    >
-                                        {MODULE_THEME_OPTIONS.map((option) => (
-                                            <option key={`module-theme-${option.value || 'default'}`} value={option.value}>
-                                                {option.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
+                            ) : null}
+                        </div>
 
                             {showModuleManagerFinlitOptions && (
                                 <details className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
@@ -9365,7 +9481,6 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                             </div>
                         </div>
                     </div>
-                </div>
             )}
 
             {harvestType === 'AI_MODULE' && (

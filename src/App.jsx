@@ -1,5 +1,5 @@
 ﻿import * as React from 'react';
-import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X, Edit, Clock, RotateCcw } from 'lucide-react';
+import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X, Edit, Clock, RotateCcw, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
@@ -74,6 +74,8 @@ const FUNCTIONAL_VISUAL_DEFAULTS = {
   fontFamily: 'inter',
 };
 
+const SIDEBAR_COLLAPSED_KEY = 'course_factory_sidebar_collapsed_v1';
+
 // ==========================================
 // PROJECT DATA (THE LIVING LIBRARY)
 // ==========================================
@@ -134,6 +136,13 @@ const FUNCTIONAL_VISUAL_DEFAULTS = {
 
 export function App() {
   const [activePhase, setActivePhase] = useState(0);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
   // Initialize state with PROJECT_DATA constant
   const [projectData, setProjectData] = useState(PROJECT_DATA);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
@@ -207,6 +216,14 @@ export function App() {
     correct: 0
   });
   const [editingQuestion, setEditingQuestion] = useState(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(sidebarCollapsed));
+    } catch {
+      // Ignore localStorage write failures.
+    }
+  }, [sidebarCollapsed]);
   
   // Note: Preview scripts execute inside the iframe, not in the parent window
   // The iframe's srcDoc includes the script, so it runs in the iframe's scope
@@ -1201,116 +1218,144 @@ export function App() {
 
       <div className="flex max-w-[1800px] mx-auto w-full min-w-0">
         {/* Left Sidebar */}
-        <aside className="w-64 bg-slate-900 border-r border-slate-800 p-4 min-h-[calc(100vh-73px)] flex flex-col">
-          <div className="flex-grow space-y-6">
-            {/* FACTORY LINE */}
+        <aside
+          className={`${sidebarCollapsed ? 'w-[78px] p-3' : 'w-64 p-4'} bg-slate-900 border-r border-slate-800 min-h-[calc(100vh-73px)] flex flex-col transition-[width,padding] duration-200 ease-out`}
+        >
+          <div className="flex items-center justify-between mb-4">
+            {!sidebarCollapsed ? (
+              <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Factory Line</h3>
+            ) : (
+              <span className="sr-only">Factory navigation</span>
+            )}
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed((prev) => !prev)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/70 text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            </button>
+          </div>
+
+          <div className={`flex-grow ${sidebarCollapsed ? 'space-y-4' : 'space-y-6'}`}>
             <div>
-              <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3">Factory Line</h3>
               <div className="space-y-1">
-            <Section 
-              title="Phase 0: Master Shell" 
-              icon={Layers} 
-              isActive={activePhase === 0} 
-              onClick={() => setActivePhase(0)}
-            />
-            <Section 
-              title="Phase 1: Harvest" 
-              icon={FileJson} 
-              isActive={activePhase === 1} 
-              onClick={() => setActivePhase(1)} 
-            />
-            <Section 
-                  title="Phase 2: Preview & Test" 
-                  icon={Eye} 
-              isActive={activePhase === 2} 
-              onClick={() => setActivePhase(2)}
+                <Section
+                  title="Phase 0: Master Shell"
+                  icon={Layers}
+                  isActive={activePhase === 0}
+                  onClick={() => setActivePhase(0)}
+                  collapsed={sidebarCollapsed}
+                />
+                <Section
+                  title="Phase 1: Harvest"
+                  icon={FileJson}
+                  isActive={activePhase === 1}
+                  onClick={() => setActivePhase(1)}
+                  collapsed={sidebarCollapsed}
+                />
+                <Section
+                  title="Phase 2: Preview & Test"
+                  icon={Eye}
+                  isActive={activePhase === 2}
+                  onClick={() => setActivePhase(2)}
                   badge={currentCourse.modules.length}
                   badgeColor="bg-purple-600"
-            />
-             <Section 
-              title="Phase 3: Manage & Reset" 
-              icon={BookOpen} 
-              isActive={activePhase === 3} 
-              onClick={() => setActivePhase(3)} 
-            />
-            <Section 
-              title="Phase 4: Compile" 
-              icon={Package} 
-              isActive={activePhase === 4} 
-              onClick={() => setActivePhase(4)} 
+                  collapsed={sidebarCollapsed}
                 />
-                <Section 
-                  title="Phase 5: Settings" 
-                  icon={Settings} 
-                  isActive={activePhase === 5} 
-                  onClick={() => setActivePhase(5)} 
+                <Section
+                  title="Phase 3: Manage & Reset"
+                  icon={BookOpen}
+                  isActive={activePhase === 3}
+                  onClick={() => setActivePhase(3)}
+                  collapsed={sidebarCollapsed}
+                />
+                <Section
+                  title="Phase 4: Compile"
+                  icon={Package}
+                  isActive={activePhase === 4}
+                  onClick={() => setActivePhase(4)}
+                  collapsed={sidebarCollapsed}
+                />
+                <Section
+                  title="Phase 5: Settings"
+                  icon={Settings}
+                  isActive={activePhase === 5}
+                  onClick={() => setActivePhase(5)}
+                  collapsed={sidebarCollapsed}
                 />
               </div>
             </div>
-            
-            {/* IN: CURRENT COURSE */}
-            <div>
-              <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3">
-                IN: {(projectData["Course Settings"]?.courseName || currentCourse.name).toUpperCase()}
-              </h3>
-              <div className="space-y-1">
-                {currentCourse.modules.map((mod, idx) => (
-                  <div key={mod.id} className="flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-slate-800 transition-colors group">
-                    <button
-                      onClick={() => toggleModuleHidden(mod.id)}
-                      className="p-0.5 hover:text-emerald-400 transition-colors"
-                      title={mod.hidden ? "Show module" : "Hide module"}
-                    >
-                      {mod.hidden ? <EyeOff size={12} className="text-slate-600" /> : <Eye size={12} className="text-emerald-500" />}
-                    </button>
-                    <span className="text-slate-300 truncate flex-1">{mod.title}</span>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button 
-                        onClick={() => {
-                          if (idx === 0) return;
-                          const newModules = [...currentCourse.modules];
-                          [newModules[idx], newModules[idx - 1]] = [newModules[idx - 1], newModules[idx]];
-                          setProjectData({
-                            ...projectData,
-                            "Current Course": { ...projectData["Current Course"], modules: newModules }
-                          });
-                        }}
-                                                        disabled={idx === 0}
-                        className="p-0.5 hover:text-sky-400 disabled:opacity-30 disabled:cursor-not-allowed"
-                        title="Move Up"
-                                                    >
-                        <ChevronUp size={12} />
-                                                    </button>
-                                                    <button 
-                        onClick={() => {
-                          if (idx === currentCourse.modules.length - 1) return;
-                          const newModules = [...currentCourse.modules];
-                          [newModules[idx], newModules[idx + 1]] = [newModules[idx + 1], newModules[idx]];
-                          setProjectData({
-                            ...projectData,
-                            "Current Course": { ...projectData["Current Course"], modules: newModules }
-                          });
-                        }}
-                                                        disabled={idx === currentCourse.modules.length - 1}
-                        className="p-0.5 hover:text-sky-400 disabled:opacity-30 disabled:cursor-not-allowed"
-                        title="Move Down"
-                                                    >
-                        <ChevronDown size={12} />
-                                                    </button>
-                                                    <button 
-                        onClick={() => deleteModule(mod)}
-                        disabled={isProtectedModule(mod)}
-                        className={`p-0.5 ${isProtectedModule(mod) ? 'opacity-30 cursor-not-allowed' : 'hover:text-rose-400'}`}
-                        title={isProtectedModule(mod) ? 'Core module (cannot be deleted)' : 'Delete'}
-                      >
-                        <X size={12} />
-                                                    </button>
-                                                </div>
-                            </div>
-                ))}
-                </div>
-            </div>
 
+            {!sidebarCollapsed ? (
+              <div>
+                <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3">
+                  IN: {(projectData["Course Settings"]?.courseName || currentCourse.name).toUpperCase()}
+                </h3>
+                <div className="space-y-1">
+                  {currentCourse.modules.map((mod, idx) => (
+                    <div key={mod.id} className="flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-slate-800 transition-colors group">
+                      <button
+                        onClick={() => toggleModuleHidden(mod.id)}
+                        className="p-0.5 hover:text-emerald-400 transition-colors"
+                        title={mod.hidden ? "Show module" : "Hide module"}
+                      >
+                        {mod.hidden ? <EyeOff size={12} className="text-slate-600" /> : <Eye size={12} className="text-emerald-500" />}
+                      </button>
+                      <span className="text-slate-300 truncate flex-1">{mod.title}</span>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => {
+                            if (idx === 0) return;
+                            const newModules = [...currentCourse.modules];
+                            [newModules[idx], newModules[idx - 1]] = [newModules[idx - 1], newModules[idx]];
+                            setProjectData({
+                              ...projectData,
+                              "Current Course": { ...projectData["Current Course"], modules: newModules }
+                            });
+                          }}
+                          disabled={idx === 0}
+                          className="p-0.5 hover:text-sky-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Move Up"
+                        >
+                          <ChevronUp size={12} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (idx === currentCourse.modules.length - 1) return;
+                            const newModules = [...currentCourse.modules];
+                            [newModules[idx], newModules[idx + 1]] = [newModules[idx + 1], newModules[idx]];
+                            setProjectData({
+                              ...projectData,
+                              "Current Course": { ...projectData["Current Course"], modules: newModules }
+                            });
+                          }}
+                          disabled={idx === currentCourse.modules.length - 1}
+                          className="p-0.5 hover:text-sky-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Move Down"
+                        >
+                          <ChevronDown size={12} />
+                        </button>
+                        <button
+                          onClick={() => deleteModule(mod)}
+                          disabled={isProtectedModule(mod)}
+                          className={`p-0.5 ${isProtectedModule(mod) ? 'opacity-30 cursor-not-allowed' : 'hover:text-rose-400'}`}
+                          title={isProtectedModule(mod) ? 'Core module (cannot be deleted)' : 'Delete'}
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 px-2 py-3 text-center">
+                <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Modules</p>
+                <p className="mt-1 text-sm font-semibold text-white">{currentCourse.modules.length}</p>
+              </div>
+            )}
           </div>
         </aside>
 
