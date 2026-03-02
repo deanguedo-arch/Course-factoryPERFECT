@@ -92,6 +92,7 @@ import ComposerCanvasBuilder from '../composer/ComposerCanvasBuilder.jsx';
 import ComposerCommandPalette from '../composer/ComposerCommandPalette.jsx';
 import ComposerInspectorSection from '../composer/ComposerInspectorSection.jsx';
 import ComposerPreviewPane from '../composer/ComposerPreviewPane.jsx';
+import ComposerPreviewToolbar from '../composer/ComposerPreviewToolbar.jsx';
 import ComposerUndoRedoControls from '../composer/ComposerUndoRedoControls.jsx';
 import ComposerWorkspaceFrame from '../composer/ComposerWorkspaceFrame.jsx';
 import GenericDataEditor from '../GenericDataEditor.jsx';
@@ -4782,7 +4783,58 @@ export default function EditModal({
                       layout="stacked"
                       showPreviewPane={false}
                       mainContent={(
-                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="space-y-2">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Lesson Builder</p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h4 className="text-base font-semibold text-white">Canvas Workspace</h4>
+                                <span
+                                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${
+                                    composerPreviewInteractionMode === 'select'
+                                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
+                                      : 'border-slate-700/80 bg-slate-900/80 text-slate-300'
+                                  }`}
+                                >
+                                  {composerPreviewInteractionMode === 'select' ? 'Direct Preview Editing Active' : 'Live Preview Active'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <ComposerUndoRedoControls
+                                canUndo={composerCanUndo}
+                                canRedo={composerCanRedo}
+                                onUndo={undoComposerChange}
+                                onRedo={redoComposerChange}
+                              />
+                            </div>
+                          </div>
+                          <ComposerPreviewToolbar
+                            desktopWidthMode={composerDesktopWidthMode}
+                            focusMode={composerFocusMode}
+                            inspectorCollapsed={composerInspectorCollapsed}
+                            interactionMode={composerPreviewInteractionMode}
+                            onDesktopWidthModeChange={setComposerDesktopWidthMode}
+                            onFocusModeChange={setComposerFocusMode}
+                            onInspectorCollapsedChange={setComposerInspectorCollapsed}
+                            onPreviewScaleChange={setComposerPreviewScale}
+                            popoutTitle={editForm.title || 'Course Review'}
+                            previewScale={composerPreviewScale}
+                            showDesktopWidthControls
+                            showFocusModeControl
+                            showInspectorToggle={!composerFocusMode}
+                            showInteractionModeControls
+                            showPopoutControl
+                            showPreviewScaleControls
+                            showViewportControls
+                            srcDoc={composerPreviewSrcDoc}
+                            titleText="Composer live canvas"
+                            onInteractionModeChange={setComposerPreviewInteractionMode}
+                            onReset={resetComposerPreview}
+                            onViewportModeChange={setComposerPreviewViewport}
+                            viewportMode={composerPreviewViewport}
+                          />
+                        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12 xl:items-start">
                           <div className={`order-1 min-w-0 ${composerFocusMode || composerInspectorCollapsed ? 'xl:col-span-12' : 'xl:col-span-8'}`}>
                             <ComposerCanvasShell
                               activePanel={composerSidebarMode}
@@ -4898,6 +4950,7 @@ export default function EditModal({
                                 previewScale: composerPreviewScale,
                                 showDesktopWidthControls: true,
                                 showFocusModeControl: true,
+                                showHeaderMeta: false,
                                 showInspectorToggle: !composerFocusMode,
                                 showInteractionModeControls: true,
                                 showPopoutControl: true,
@@ -4972,6 +5025,7 @@ export default function EditModal({
                             </ComposerActivityEditorPane>
                           </div>
                           ) : null}
+                        </div>
                         </div>
                       )}
                     />

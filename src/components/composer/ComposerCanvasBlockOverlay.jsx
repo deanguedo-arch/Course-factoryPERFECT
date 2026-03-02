@@ -66,13 +66,15 @@ function computeGridMetrics({ doc, iframe, maxColumns = 1, viewport }) {
   const viewportRect = viewport.getBoundingClientRect();
   const rootRect = root.getBoundingClientRect();
   const cols = Math.max(1, Number.parseInt(root.getAttribute('data-composer-columns'), 10) || maxColumns || 1);
-  const gapX = parseCssPx(styles.columnGap || styles.gap, 0);
-  const gapY = parseCssPx(styles.rowGap || styles.gap, 0);
-  const paddingLeft = parseCssPx(styles.paddingLeft, 0);
-  const paddingRight = parseCssPx(styles.paddingRight, 0);
-  const paddingTop = parseCssPx(styles.paddingTop, 0);
-  const paddingBottom = parseCssPx(styles.paddingBottom, 0);
-  const rowHeight = Math.max(1, parseCssPx(styles.gridAutoRows, 24));
+  const scaleX = root.offsetWidth > 0 ? rootRect.width / root.offsetWidth : 1;
+  const scaleY = root.offsetHeight > 0 ? rootRect.height / root.offsetHeight : scaleX;
+  const gapX = parseCssPx(styles.columnGap || styles.gap, 0) * scaleX;
+  const gapY = parseCssPx(styles.rowGap || styles.gap, 0) * scaleY;
+  const paddingLeft = parseCssPx(styles.paddingLeft, 0) * scaleX;
+  const paddingRight = parseCssPx(styles.paddingRight, 0) * scaleX;
+  const paddingTop = parseCssPx(styles.paddingTop, 0) * scaleY;
+  const paddingBottom = parseCssPx(styles.paddingBottom, 0) * scaleY;
+  const rowHeight = Math.max(1, parseCssPx(styles.gridAutoRows, 24) * scaleY);
   const rootClientLeft = iframeRect.left + rootRect.left;
   const rootClientTop = iframeRect.top + rootRect.top;
   const rootOverlayLeft = rootClientLeft - viewportRect.left;
@@ -98,6 +100,8 @@ function computeGridMetrics({ doc, iframe, maxColumns = 1, viewport }) {
     rootOverlayTop,
     rowBands: buildSimpleRowBands(doc, iframeRect, viewportRect),
     rowHeight,
+    scaleX,
+    scaleY,
     viewportRect,
   };
 }

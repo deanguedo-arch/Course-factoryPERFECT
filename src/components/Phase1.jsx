@@ -38,6 +38,7 @@ import ComposerCanvasBuilder from './composer/ComposerCanvasBuilder.jsx';
 import ComposerCommandPalette from './composer/ComposerCommandPalette.jsx';
 import ComposerInspectorSection from './composer/ComposerInspectorSection.jsx';
 import ComposerPreviewPane from './composer/ComposerPreviewPane.jsx';
+import ComposerPreviewToolbar from './composer/ComposerPreviewToolbar.jsx';
 import ComposerUndoRedoControls from './composer/ComposerUndoRedoControls.jsx';
 import ComposerWorkspaceControls from './composer/ComposerWorkspaceControls.jsx';
 import ComposerWorkspaceFrame from './composer/ComposerWorkspaceFrame.jsx';
@@ -8938,8 +8939,20 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 <>
                                     <div className="space-y-3">
                                         <div className="flex flex-wrap items-center justify-between gap-3">
-                                            <div className="space-y-0">
-                                                <h4 className="text-sm font-semibold text-white">Lesson Builder</h4>
+                                            <div className="space-y-2">
+                                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Lesson Builder</p>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h4 className="text-base font-semibold text-white">Canvas Workspace</h4>
+                                                    <span
+                                                        className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${
+                                                            moduleManagerComposerPreviewInteractionMode === 'select'
+                                                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
+                                                                : 'border-slate-700/80 bg-slate-900/80 text-slate-300'
+                                                        }`}
+                                                    >
+                                                        {moduleManagerComposerPreviewInteractionMode === 'select' ? 'Direct Preview Editing Active' : 'Live Preview Active'}
+                                                    </span>
+                                                </div>
                                             </div>
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <ComposerUndoRedoControls
@@ -8967,6 +8980,32 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 </button>
                                             </div>
                                         </div>
+
+                                        <ComposerPreviewToolbar
+                                            desktopWidthMode={moduleManagerComposerDesktopWidthMode}
+                                            focusMode={moduleManagerComposerFocusMode}
+                                            inspectorCollapsed={moduleManagerComposerInspectorCollapsed}
+                                            interactionMode={moduleManagerComposerPreviewInteractionMode}
+                                            onDesktopWidthModeChange={setModuleManagerComposerDesktopWidthMode}
+                                            onFocusModeChange={setModuleManagerComposerFocusMode}
+                                            onInspectorCollapsedChange={setModuleManagerComposerInspectorCollapsed}
+                                            onPreviewScaleChange={setModuleManagerComposerPreviewScale}
+                                            popoutTitle={moduleManagerTitle || 'Course Review'}
+                                            previewScale={moduleManagerComposerPreviewScale}
+                                            showDesktopWidthControls
+                                            showFocusModeControl
+                                            showInspectorToggle={!moduleManagerComposerFocusMode}
+                                            showInteractionModeControls
+                                            showPopoutControl
+                                            showPreviewScaleControls
+                                            showViewportControls
+                                            srcDoc={moduleManagerComposerPreviewDoc}
+                                            titleText="Composer draft canvas"
+                                            onInteractionModeChange={setModuleManagerComposerPreviewInteractionMode}
+                                            onReset={resetModuleManagerComposerPreview}
+                                            onViewportModeChange={setModuleManagerComposerPreviewViewport}
+                                            viewportMode={moduleManagerComposerPreviewViewport}
+                                        />
 
                                         {!moduleManagerComposerFocusMode && !moduleManagerComposerWorkspaceControlsCollapsed && (
                                             <ComposerWorkspaceControls
@@ -9009,7 +9048,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             layout="stacked"
                                             showPreviewPane={false}
                                             mainContent={(
-                                                <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+                                                <div className="grid grid-cols-1 gap-4 xl:grid-cols-12 xl:items-start">
                                                     <div className={`order-1 min-w-0 ${moduleManagerComposerFocusMode || moduleManagerComposerInspectorCollapsed ? 'xl:col-span-12' : 'xl:col-span-8'}`}>
                                                         <ComposerCanvasShell
                                                             activePanel={moduleManagerComposerSidebarMode}
@@ -9125,6 +9164,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                 previewScale: moduleManagerComposerPreviewScale,
                                                                 showDesktopWidthControls: true,
                                                                 showFocusModeControl: true,
+                                                                showHeaderMeta: false,
                                                                 showInspectorToggle: !moduleManagerComposerFocusMode,
                                                                 showInteractionModeControls: true,
                                                                 showPopoutControl: true,

@@ -138,7 +138,7 @@ export function buildScopedStorageBootstrapScript(storageScope) {
 export function buildScopedStorageBootstrapTag(storageScope) {
   const script = buildScopedStorageBootstrapScript(storageScope);
   if (!script) return '';
-  return `<script>${script}<\\/script>`;
+  return `<script>${script}</script>`;
 }
 
 function injectScopedStorageBootstrapIntoHtml(rawHtml, storageScope) {
