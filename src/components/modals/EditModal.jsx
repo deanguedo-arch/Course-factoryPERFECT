@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+  AlertTriangle,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -81,17 +82,16 @@ import { useComposerCommandPaletteShortcut } from '../../hooks/useComposerComman
 import { useComposerPreviewBridge } from '../../hooks/useComposerPreviewBridge.js';
 import { getComposerSelectionIntent, useComposerSelection } from '../../hooks/useComposerSelection.js';
 import { useComposerUndoRedoShortcuts } from '../../hooks/useComposerUndoRedoShortcuts.js';
-import ComposerBulkEditBar from '../composer/ComposerBulkEditBar.jsx';
-import ComposerActivityBuilderFooter from '../composer/ComposerActivityBuilderFooter.jsx';
 import ComposerActivityBuilderPane from '../composer/ComposerActivityBuilderPane.jsx';
 import ComposerBindingPanel from '../composer/ComposerBindingPanel.jsx';
+import ComposerCanvasBlockOverlay from '../composer/ComposerCanvasBlockOverlay.jsx';
+import ComposerCanvasDrawer from '../composer/ComposerCanvasDrawer.jsx';
+import ComposerCanvasShell from '../composer/ComposerCanvasShell.jsx';
 import ComposerActivityEditorPane from '../composer/ComposerActivityEditorPane.jsx';
 import ComposerCanvasBuilder from '../composer/ComposerCanvasBuilder.jsx';
 import ComposerCommandPalette from '../composer/ComposerCommandPalette.jsx';
-import ComposerLayoutControls from '../composer/ComposerLayoutControls.jsx';
+import ComposerInspectorSection from '../composer/ComposerInspectorSection.jsx';
 import ComposerPreviewPane from '../composer/ComposerPreviewPane.jsx';
-import ComposerResponsiveControls from '../composer/ComposerResponsiveControls.jsx';
-import ComposerSidebarTools from '../composer/ComposerSidebarTools.jsx';
 import ComposerUndoRedoControls from '../composer/ComposerUndoRedoControls.jsx';
 import ComposerWorkspaceFrame from '../composer/ComposerWorkspaceFrame.jsx';
 import GenericDataEditor from '../GenericDataEditor.jsx';
@@ -507,10 +507,14 @@ export default function EditModal({
     [projectData],
   );
   const [selectedActivityIndex, setSelectedActivityIndex] = useState(0);
-  const [composerSidebarMode, setComposerSidebarMode] = useState('grid');
+  const [composerSidebarMode, setComposerSidebarMode] = useState(null);
   const [composerPreviewViewport, setComposerPreviewViewport] = useState('desktop');
   const [composerPreviewInteractionMode, setComposerPreviewInteractionMode] = useState('select');
   const [composerPreviewQaMode, setComposerPreviewQaMode] = useState('off');
+  const [composerFocusMode, setComposerFocusMode] = useState(false);
+  const [composerInspectorCollapsed, setComposerInspectorCollapsed] = useState(false);
+  const [composerDesktopWidthMode, setComposerDesktopWidthMode] = useState('fit');
+  const [composerPreviewScale, setComposerPreviewScale] = useState(1);
   const [composerCommandPaletteInitialQuery, setComposerCommandPaletteInitialQuery] = useState('');
   const [isComposerCommandPaletteOpen, setIsComposerCommandPaletteOpen] = useState(false);
   const [draggingActivityIndex, setDraggingActivityIndex] = useState(null);
@@ -530,6 +534,7 @@ export default function EditModal({
   const richEditorRef = useRef(null);
   const richEditorSelectionRef = useRef(null);
   const richEditorUpdateTimerRef = useRef(null);
+  const composerCanvasViewportRef = useRef(null);
   const composerGridModel = useMemo(
     () =>
       buildComposerGridModel(activities, composerMaxColumns, {
@@ -547,9 +552,18 @@ export default function EditModal({
     setSelectedActivityIndex(0);
     setComposerExtraRows(0);
     setFinlitAuthoringTabId('activities');
-    setComposerSidebarMode('grid');
+    setComposerSidebarMode(null);
     setComposerPreviewQaMode('off');
   }, [editingModule, standaloneMode]);
+
+  useEffect(() => {
+    if (!composerFocusMode) return;
+    setComposerSidebarMode(null);
+  }, [composerFocusMode]);
+
+  useEffect(() => {
+    setComposerPreviewQaMode(composerSidebarMode === 'issues' ? 'issues' : 'off');
+  }, [composerSidebarMode]);
 
   useEffect(() => {
     setDraggingActivityIndex(null);
@@ -972,7 +986,7 @@ export default function EditModal({
   const updateActivities = (
     nextActivities,
     nextComposerLayout = composerLayout,
-    { templateOverride = editForm.template, recordHistory = true, historySnapshot = null } = {},
+    { templateOverride = editForm.template, recordHistory = true, historySnapshot = null, followPreview = true } = {},
   ) => {
     const normalizedLayout = normalizeComposerLayout(nextComposerLayout);
     const targetTemplateKey = resolveTemplateKey(templateOverride, courseTemplateDefault);
@@ -1010,7 +1024,11 @@ export default function EditModal({
     if (recordHistory) {
       pushComposerHistorySnapshot(historySnapshot || buildComposerSnapshot());
     }
-    requestPreviewFollow();
+    if (followPreview) {
+      requestPreviewFollow();
+    } else {
+      suspendPreviewFollow();
+    }
     setEditForm((prev) => ({
       ...prev,
       moduleMode: 'composer',
@@ -1442,9 +1460,58 @@ export default function EditModal({
     const didUpdate = updateActivities(nextActivities, composerLayout, {
       recordHistory,
       historySnapshot,
+      followPreview: recordHistory,
     });
     return didUpdate;
   };
+
+  const commitSelectedActivitySimpleLayout = React.useCallback(
+    (updates) => {
+      if (isCanvasMode || !selectedActivity) return false;
+      const nextSpan = clampComposerColSpan(updates?.colSpan ?? selectedActivity?.layout?.colSpan, composerMaxColumns);
+      const targetRow = Math.max(
+        1,
+        Number.parseInt(updates?.row, 10) ||
+          selectedPlacement?.row ||
+          Number.parseInt(selectedActivity?.layout?.row, 10) ||
+          1,
+      );
+      const targetCol = Math.max(
+        1,
+        Math.min(
+          composerMaxColumns - nextSpan + 1,
+          Number.parseInt(updates?.col, 10) ||
+            selectedPlacement?.col ||
+            Number.parseInt(selectedActivity?.layout?.col, 10) ||
+            1,
+        ),
+      );
+      const baseActivities = activities.map((activity, idx) =>
+        idx === selectedActivityIndex
+          ? {
+              ...activity,
+              layout: {
+                ...(activity.layout || {}),
+                colSpan: nextSpan,
+              },
+            }
+          : activity,
+      );
+      const result = moveComposerActivityToCell(baseActivities, selectedActivityIndex, targetRow, targetCol, {
+        maxColumns: composerMaxColumns,
+      });
+      return updateActivities(result.activities);
+    },
+    [
+      activities,
+      composerMaxColumns,
+      isCanvasMode,
+      selectedActivity,
+      selectedActivityIndex,
+      selectedPlacement,
+      updateActivities,
+    ],
+  );
 
   const updateSelectedActivityData = (updates) => {
     if (!selectedActivity) return;
@@ -2296,29 +2363,29 @@ export default function EditModal({
       },
       {
         id: 'show-grid-view',
-        label: 'Show Grid Builder',
-        subtitle: 'Open the visual block grid in the builder pane.',
-        keywords: ['grid builder blocks layout'],
+        label: 'Open Add Drawer',
+        subtitle: 'Open section insertion and layout tools beside the canvas.',
+        keywords: ['add drawer layout sections'],
         onSelect: () => setComposerSidebarMode('grid'),
       },
       {
         id: 'show-outline-view',
-        label: 'Show Outline View',
-        subtitle: 'Open the searchable block outline.',
+        label: 'Open Outline Drawer',
+        subtitle: 'Open the searchable section outline.',
         keywords: ['outline list search blocks'],
         onSelect: () => setComposerSidebarMode('outline'),
       },
       {
         id: 'show-issues-view',
-        label: 'Show Issues View',
+        label: 'Open Audit Drawer',
         subtitle: 'Open validation results for this module.',
         keywords: ['issues validation errors warnings qa'],
         onSelect: () => setComposerSidebarMode('issues'),
       },
       {
         id: 'show-templates-view',
-        label: 'Show Templates View',
-        subtitle: 'Open browser-local reusable block templates.',
+        label: 'Open Library Drawer',
+        subtitle: 'Open reusable section templates and course components.',
         keywords: ['templates snippets reuse'],
         onSelect: () => setComposerSidebarMode('templates'),
       },
@@ -2397,6 +2464,15 @@ export default function EditModal({
         keywords: ['clear selection primary single'],
         onSelect: () => clearActivitySelectionToPrimary(),
       },
+      ...(selectedActivityCount > 1
+        ? bulkArrangementActions.map((action) => ({
+            id: `arrange-${action.id}`,
+            label: `Arrange: ${action.label}`,
+            subtitle: 'Apply a bulk arrangement to the current multi-selection.',
+            keywords: ['arrange align distribute stack match bulk selection'],
+            onSelect: action.onClick,
+          }))
+        : []),
       {
         id: 'duplicate-selection',
         label: selectedActivityCount > 1 ? 'Duplicate Selected Blocks' : 'Duplicate Selected Block',
@@ -2443,6 +2519,7 @@ export default function EditModal({
     activityTypes,
     addActivityOfType,
     addEmptyRow,
+    bulkArrangementActions,
     clearActivitySelectionToPrimary,
     composerCommandPaletteEnabled,
     deleteSelectedActivities,
@@ -2469,7 +2546,8 @@ export default function EditModal({
     updateComposerLayoutMode,
   ]);
 
-  const renderSelectedActivityStylePanel = () => {
+  const renderSelectedActivityStylePanel = (options = {}) => {
+    const { embedded = false } = options;
     if (!selectedActivity) return null;
     const data = selectedActivity.data || {};
     const styleMeta = selectedActivity.style || {};
@@ -2482,7 +2560,7 @@ export default function EditModal({
       (selectedActivity.type === 'title_block' ? '#1e1b4b' : themePreview.containerBg || '#0f172a');
     const effectiveTextColor = data.blockTextColor || themePreview.textColor || '#e2e8f0';
     return (
-      <div className="mb-3 rounded-lg border border-slate-700 bg-slate-900/60 p-3 space-y-2">
+      <div className={embedded ? 'space-y-2' : 'mb-3 rounded-lg border border-slate-700 bg-slate-900/60 p-3 space-y-2'}>
         <div className="flex items-center justify-between">
           <p className="text-[11px] font-bold uppercase tracking-wide text-slate-300">Block Style</p>
           <button
@@ -4702,367 +4780,145 @@ export default function EditModal({
                   {standaloneMode === 'composer' ? (
                     <ComposerWorkspaceFrame
                       layout="stacked"
+                      showPreviewPane={false}
                       mainContent={(
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                          <div className="lg:col-span-5">
-                            <ComposerActivityBuilderPane
-                              title="Activities"
-                              countLabel={`${activities.length} total`}
-                              headerActions={(
-                                <ComposerUndoRedoControls
-                                  canUndo={composerCanUndo}
-                                  canRedo={composerCanRedo}
-                                  onUndo={undoComposerChange}
-                                  onRedo={redoComposerChange}
-                                />
-                              )}
-                              toolbar={(
-                                <div className="grid grid-cols-4 gap-2">
-                                  {[
-                                    { value: 'grid', label: 'Grid' },
-                                    { value: 'outline', label: 'Outline' },
-                                    { value: 'issues', label: 'Issues' },
-                                    { value: 'templates', label: 'Templates' },
-                                  ].map((tab) => (
-                                    <button
-                                      key={tab.value}
-                                      type="button"
-                                      onClick={() => setComposerSidebarMode(tab.value)}
-                                      className={`rounded border px-2 py-1 text-[10px] font-black uppercase tracking-wide transition-colors ${
-                                        composerSidebarMode === tab.value
-                                          ? 'border-indigo-400 bg-indigo-600 text-white'
-                                          : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white'
-                                      }`}
-                                    >
-                                      {tab.label}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                              controls={(
-                                <ComposerLayoutControls
-                                  accent="blue"
-                                  layoutMode={composerLayoutMode}
-                                  maxColumns={composerMaxColumns}
-                                  rowHeight={composerLayout.rowHeight}
-                                  margin={composerLayout.margin}
-                                  containerPadding={composerLayout.containerPadding}
-                                  simpleMatchTallestRow={composerLayout.simpleMatchTallestRow === true}
-                                  onLayoutModeChange={updateComposerLayoutMode}
-                                  onMaxColumnsChange={updateComposerMaxColumns}
-                                  onCanvasMetricChange={updateComposerCanvasMetric}
-                                  onSimpleMatchTallestRowChange={updateComposerSimpleMatchTallestRow}
-                                />
-                              )}
-                              body={(
-                                composerSidebarMode === 'grid' ? (
-                                  <div className="max-h-72 overflow-y-auto pr-1">
-                                    {isCanvasMode ? (
-                                      <ComposerCanvasBuilder
-                                        activities={activities}
-                                        cols={composerMaxColumns}
-                                        rowHeight={composerLayout.rowHeight}
-                                        margin={Array.isArray(composerLayout.margin) ? composerLayout.margin : [12, 12]}
-                                        containerPadding={Array.isArray(composerLayout.containerPadding) ? composerLayout.containerPadding : [12, 12]}
-                                        selectedIndex={selectedActivityIndex}
-                                        selectedIndexes={selectedActivityIndexes}
-                                        onSelectActivity={handleActivitySelection}
-                                        onBeginInteraction={beginComposerCanvasInteraction}
-                                        onFinishInteraction={finishComposerCanvasInteraction}
-                                        onLiveResizeLayoutChange={(layoutItems) => applyComposerTransientCanvasLayout(layoutItems, { mode: 'resize' })}
-                                      />
-                                    ) : null}
-                                    <div className={`${isCanvasMode ? 'hidden ' : ''}grid gap-2`} style={{ gridTemplateColumns: `repeat(${composerMaxColumns}, minmax(0, 1fr))` }}>
-                                      {composerGridModel.emptySlots.map((slot) => {
-                                        const isSlotTarget =
-                                          draggingActivityIndex !== null &&
-                                          dragOverSlotKey === slot.key &&
-                                          dragOverActivityIndex === null;
-                                        return (
-                                          <div
-                                            key={slot.key}
-                                            className={`relative rounded border border-dashed transition-colors ${
-                                              isSlotTarget
-                                                ? 'border-indigo-400 bg-indigo-500/20'
-                                                : 'border-slate-700/80 bg-slate-900/35'
-                                            }`}
-                                            style={{ gridColumn: `${slot.col}`, gridRow: `${slot.row}`, minHeight: '58px' }}
-                                            onDragOver={(event) => {
-                                              if (!Number.isInteger(draggingActivityIndex)) return;
-                                              event.preventDefault();
-                                              if (event.dataTransfer) {
-                                                event.dataTransfer.dropEffect = 'move';
-                                              }
-                                              if (dragOverSlotKey !== slot.key) setDragOverSlotKey(slot.key);
-                                              if (dragOverActivityIndex !== null) setDragOverActivityIndex(null);
-                                            }}
-                                            onDragLeave={() => {
-                                              if (dragOverSlotKey === slot.key) setDragOverSlotKey(null);
-                                            }}
-                                            onDrop={(event) => {
-                                              event.preventDefault();
-                                              const fallback = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10);
-                                              const fromIndex = Number.isInteger(draggingActivityIndex) ? draggingActivityIndex : fallback;
-                                              moveActivityToCell(fromIndex, slot.row, slot.col);
-                                              setDraggingActivityIndex(null);
-                                              setDragOverActivityIndex(null);
-                                              setDragOverSlotKey(null);
-                                            }}
-                                          >
-                                            <button
-                                              type="button"
-                                              draggable={false}
-                                              onDragStart={(event) => event.preventDefault()}
-                                              onMouseDown={(event) => event.stopPropagation()}
-                                              onClick={(event) => {
-                                                event.stopPropagation();
-                                                removeEmptyRowAt(slot.row);
-                                              }}
-                                              className="absolute top-1.5 right-1.5 inline-flex h-5 w-5 items-center justify-center rounded border border-slate-600/60 bg-slate-900/40 text-slate-300 transition-colors hover:border-rose-400/70 hover:bg-rose-500/15 hover:text-rose-200"
-                                              title="Delete empty row"
-                                              aria-label={`Delete empty row ${slot.row}`}
-                                            >
-                                              <X size={11} />
-                                            </button>
-                                          </div>
-                                        );
-                                      })}
-                                      {activities.map((activity, idx) => {
-                                        const def = getActivityDefinition(activity.type);
-                                        const colSpan = Math.min(activity?.layout?.colSpan || 1, composerMaxColumns);
-                                        const placement = composerPlacementsByIndex.get(idx);
-                                        const isSelected = idx === selectedActivityIndex;
-                                        const isMultiSelected = isSelectedActivityIndex(idx);
-                                        const isDropTarget = idx === dragOverActivityIndex && draggingActivityIndex !== null && idx !== draggingActivityIndex;
-                                        return (
-                                          <div
-                                            key={activity.id || `${activity.type}-${idx}`}
-                                            className="relative"
-                                            style={{
-                                              gridColumn: placement
-                                                ? `${placement.col} / span ${placement.colSpan}`
-                                                : `span ${colSpan} / span ${colSpan}`,
-                                              gridRow: placement ? `${placement.row}` : undefined,
-                                            }}
-                                            draggable
-                                            onDragStart={(event) => {
-                                              setDraggingActivityIndex(idx);
-                                              selectOnlyActivity(idx);
-                                              setDragOverSlotKey(null);
-                                              if (event.dataTransfer) {
-                                                event.dataTransfer.effectAllowed = 'move';
-                                                event.dataTransfer.setData('text/plain', String(idx));
-                                              }
-                                            }}
-                                            onDragOver={(event) => {
-                                              event.preventDefault();
-                                              if (event.dataTransfer) {
-                                                event.dataTransfer.dropEffect = 'move';
-                                              }
-                                              if (dragOverActivityIndex !== idx) setDragOverActivityIndex(idx);
-                                              if (dragOverSlotKey !== null) setDragOverSlotKey(null);
-                                            }}
-                                            onDrop={(event) => {
-                                              event.preventDefault();
-                                              const fallback = Number.parseInt(event.dataTransfer?.getData('text/plain') || '', 10);
-                                              const fromIndex = Number.isInteger(draggingActivityIndex) ? draggingActivityIndex : fallback;
-                                              moveActivityToCell(fromIndex, placement?.row || 1, placement?.col || 1);
-                                              setDraggingActivityIndex(null);
-                                              setDragOverActivityIndex(null);
-                                              setDragOverSlotKey(null);
-                                            }}
-                                            onDragEnd={() => {
-                                              setDraggingActivityIndex(null);
-                                              setDragOverActivityIndex(null);
-                                              setDragOverSlotKey(null);
-                                            }}
-                                          >
-                                            <button
-                                              type="button"
-                                              onClick={(event) => handleActivitySelection(idx, event)}
-                                              className={`w-full rounded border p-2 pr-8 text-left transition-colors ${
-                                                isSelected
-                                                  ? 'border-emerald-600 bg-emerald-900/30 text-white'
-                                                  : isMultiSelected
-                                                    ? 'border-sky-500 bg-sky-950/40 text-sky-100'
-                                                    : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
-                                              } ${isDropTarget ? 'ring-1 ring-indigo-400 border-indigo-500' : ''}`}
-                                            >
-                                              <p className="text-xs font-bold">{def?.label || activity.type}</p>
-                                              <p className="font-mono text-[10px] text-slate-500">{activity.id || `activity-${idx + 1}`}</p>
-                                              <p className="mt-1 text-[10px] uppercase tracking-wide text-slate-500">Span {colSpan}</p>
-                                            </button>
-                                            <button
-                                              type="button"
-                                              draggable={false}
-                                              onDragStart={(event) => event.preventDefault()}
-                                              onMouseDown={(event) => event.stopPropagation()}
-                                              onClick={(event) => {
-                                                event.stopPropagation();
-                                                removeActivityByIndex(idx);
-                                              }}
-                                              className="absolute top-1.5 right-1.5 inline-flex h-5 w-5 items-center justify-center rounded border border-slate-600/60 bg-slate-900/40 text-slate-300 transition-colors hover:border-rose-400/70 hover:bg-rose-500/15 hover:text-rose-200"
-                                              title="Delete block"
-                                              aria-label={`Delete ${def?.label || activity.type}`}
-                                            >
-                                              <X size={11} />
-                                            </button>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                    {activities.length === 0 ? <p className="mt-1 text-xs text-slate-500">No activities yet.</p> : null}
-                                  </div>
-                                ) : (
-                                  <ComposerSidebarTools
-                                    courseComponents={courseComposerComponents}
+                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+                          <div className={`order-1 min-w-0 ${composerFocusMode || composerInspectorCollapsed ? 'xl:col-span-12' : 'xl:col-span-8'}`}>
+                            <ComposerCanvasShell
+                              activePanel={composerSidebarMode}
+                              onPanelChange={setComposerSidebarMode}
+                              showRail={!composerFocusMode}
+                              railItems={[
+                                { value: 'grid', label: 'Add', icon: Plus },
+                                { value: 'outline', label: 'Outline', icon: Edit },
+                                { value: 'templates', label: 'Library', icon: FolderOpen },
+                                {
+                                  value: 'issues',
+                                  label: 'Audit',
+                                  icon: AlertTriangle,
+                                  badge:
+                                    Number(composerValidationTotals?.error || 0) + Number(composerValidationTotals?.warn || 0) > 0
+                                      ? Number(composerValidationTotals?.error || 0) + Number(composerValidationTotals?.warn || 0)
+                                      : null,
+                                },
+                              ]}
+                              drawerTitle={{
+                                grid: 'Add & Layout',
+                                outline: 'Outline',
+                                templates: 'Library',
+                                issues: 'Audit',
+                              }[composerSidebarMode] || 'Canvas Tools'}
+                              drawerContent={
+                                composerSidebarMode ? (
+                                  <ComposerCanvasDrawer
+                                    accent="blue"
                                     mode={composerSidebarMode}
                                     activities={activities}
+                                    activityTypeGroups={activityTypeGroups}
+                                    containerPadding={composerLayout.containerPadding}
+                                    courseComponents={courseComposerComponents}
+                                    getActivityLabel={(type) => getActivityDefinition(type)?.label || type}
+                                    isCanvasMode={isCanvasMode}
+                                    layoutMode={composerLayoutMode}
+                                    margin={composerLayout.margin}
+                                    maxColumns={composerMaxColumns}
+                                    newActivityType={newActivityType}
+                                    onAddActivity={addActivity}
+                                    onAddOpenRow={addEmptyRow}
+                                    onCanvasLayoutChange={updateSelectedActivityCanvasLayout}
+                                    onCanvasMetricChange={updateComposerCanvasMetric}
                                     onDeleteCourseComponent={deleteCourseComposerComponent}
+                                    onDeleteSelected={removeSelectedActivity}
                                     onDetachSelectedComponent={detachSelectedCourseComposerComponent}
+                                    onDuplicateSelected={duplicateSelectedActivity}
                                     onFixDuplicateIds={fixComposerDuplicateIds}
                                     onFixImageAltText={fixComposerImageAltIssues}
                                     onFixMobileStacking={fixComposerMobileStackingIssues}
+                                    onInsertActivity={addActivityFromTemplate}
                                     onInsertLinkedActivity={insertLinkedCourseComposerComponent}
-                                    selectedIndex={selectedActivityIndex}
-                                    selectedActivity={selectedActivity}
-                                    selectedComponentStatus={selectedActivityComponentStatus}
-                                    onSelectIndex={setSelectedActivityIndex}
+                                    onLayoutModeChange={updateComposerLayoutMode}
+                                    onMaxColumnsChange={updateComposerMaxColumns}
+                                    onMove={moveSelectedActivity}
+                                    onNewActivityTypeChange={setNewActivityType}
+                                    onQuickAddActivityType={addActivityOfType}
                                     onSaveCourseComponent={saveCourseComposerComponent}
+                                    onSelectIndex={setSelectedActivityIndex}
+                                    onSimpleMatchTallestRowChange={updateComposerSimpleMatchTallestRow}
+                                    onSpanChange={updateSelectedActivitySpan}
                                     onUpdateSelectedCourseComponent={updateSelectedLinkedCourseComposerComponent}
                                     onUpdateSelectedCourseComponentInstances={updateSelectedLinkedCourseComposerInstances}
-                                    onDuplicateSelected={duplicateSelectedActivity}
-                                    onDeleteSelected={removeSelectedActivity}
-                                    onInsertActivity={addActivityFromTemplate}
+                                    rowHeight={composerLayout.rowHeight}
+                                    selectedActivity={selectedActivity}
+                                    selectedComponentStatus={selectedActivityComponentStatus}
+                                    selectedIndex={selectedActivityIndex}
+                                    simpleMatchTallestRow={composerLayout.simpleMatchTallestRow === true}
+                                    validationResults={composerValidationResults}
+                                    validationTotals={composerValidationTotals}
                                   />
-                                )
-                              )}
-                              footer={(
-                                <ComposerActivityBuilderFooter
-                                  activityTypeGroups={activityTypeGroups}
-                                  getActivityLabel={(type) => getActivityDefinition(type)?.label || type}
-                                  isCanvasMode={isCanvasMode}
-                                  maxColumns={composerMaxColumns}
-                                  moveDownDisabled={!selectedActivity}
-                                  moveLeftDisabled={!selectedActivity || !selectedPlacement || selectedPlacement.col <= 1}
-                                  moveRightDisabled={
-                                    !selectedActivity ||
-                                    !selectedPlacement ||
-                                    selectedPlacement.col >= Math.max(1, composerMaxColumns - (selectedActivity?.layout?.colSpan || 1) + 1)
-                                  }
-                                  moveUpDisabled={!selectedActivity || !selectedPlacement || selectedPlacement.row <= 1}
-                                  newActivityType={newActivityType}
-                                  onAddActivity={addActivity}
-                                  onAddOpenRow={addEmptyRow}
-                                  onCanvasHChange={(value) =>
-                                    updateSelectedActivityCanvasLayout({ h: Math.max(1, Number.parseInt(value, 10) || 1) })
-                                  }
-                                  onCanvasWChange={(value) => {
-                                    const nextW = Math.max(1, Number.parseInt(value, 10) || 1);
-                                    updateSelectedActivityCanvasLayout({ w: nextW, colSpan: nextW });
-                                  }}
-                                  onCanvasXChange={(value) => updateSelectedActivityCanvasLayout({ x: Number.parseInt(value, 10) || 0 })}
-                                  onCanvasYChange={(value) => updateSelectedActivityCanvasLayout({ y: Number.parseInt(value, 10) || 0 })}
-                                  onDelete={removeSelectedActivity}
-                                  onDuplicate={duplicateSelectedActivity}
-                                  onMoveDown={() => moveSelectedActivity('down')}
-                                  onMoveLeft={() => moveSelectedActivity('left')}
-                                  onMoveRight={() => moveSelectedActivity('right')}
-                                  onMoveUp={() => moveSelectedActivity('up')}
-                                  onNewActivityTypeChange={setNewActivityType}
-                                  onSpanChange={updateSelectedActivitySpan}
-                                  bulkControls={(
-                                    <ComposerBulkEditBar
-                                      arrangeActions={bulkArrangementActions}
-                                      count={selectedActivityCount}
-                                      onApplyBlockTheme={(value) =>
-                                        applyBulkActivityChanges((activity) => ({
-                                          ...activity,
-                                          data: {
-                                            ...(activity.data || {}),
-                                            blockTheme: normalizeThemeValue(value),
-                                          },
-                                        }))
-                                      }
-                                      onApplyPadding={(value) =>
-                                        applyBulkActivityChanges((activity) => ({
-                                          ...activity,
-                                          style: {
-                                            ...(activity.style || {}),
-                                            padding: value,
-                                          },
-                                        }))
-                                      }
-                                      onApplyVariant={(value) =>
-                                        applyBulkActivityChanges((activity) => ({
-                                          ...activity,
-                                          style: {
-                                            ...(activity.style || {}),
-                                            variant: value,
-                                          },
-                                        }))
-                                      }
-                                      onClearSelection={clearActivitySelectionToPrimary}
-                                      onDelete={deleteSelectedActivities}
-                                      onDuplicate={duplicateSelectedActivities}
-                                      onSelectAll={selectAllActivities}
-                                      themeOptions={BLOCK_THEME_OPTIONS}
-                                    />
-                                  )}
-                                  responsiveControls={(
-                                    <ComposerResponsiveControls
-                                      activeBreakpoint={composerResponsiveBreakpoint}
-                                      canReset={Boolean(selectedResponsiveOverride)}
-                                      hidden={selectedResponsiveLayout?.hidden === true}
-                                      isCanvasMode={isCanvasMode}
-                                      maxColumns={composerMaxColumns}
-                                      onCanvasHChange={(value) =>
-                                        updateSelectedActivityResponsiveLayout({ h: Math.max(1, Number.parseInt(value, 10) || 1) })
-                                      }
-                                      onCanvasWChange={(value) => {
-                                        const nextW = Math.max(1, Number.parseInt(value, 10) || 1);
-                                        updateSelectedActivityResponsiveLayout({ w: nextW, colSpan: nextW });
-                                      }}
-                                      onCanvasXChange={(value) =>
-                                        updateSelectedActivityResponsiveLayout({ x: Math.max(0, Number.parseInt(value, 10) || 0) })
-                                      }
-                                      onCanvasYChange={(value) =>
-                                        updateSelectedActivityResponsiveLayout({ y: Math.max(0, Number.parseInt(value, 10) || 0) })
-                                      }
-                                      onColChange={(value) =>
-                                        updateSelectedActivityResponsiveLayout({ col: Math.max(1, Number.parseInt(value, 10) || 1) })
-                                      }
-                                      onHiddenChange={(hidden) => updateSelectedActivityResponsiveLayout({ hidden })}
-                                      onReset={clearSelectedActivityResponsiveLayout}
-                                      onRowChange={(value) =>
-                                        updateSelectedActivityResponsiveLayout({ row: Math.max(1, Number.parseInt(value, 10) || 1) })
-                                      }
-                                      onSpanChange={(value) =>
-                                        updateSelectedActivityResponsiveLayout({ colSpan: clampComposerColSpan(value, composerMaxColumns) })
-                                      }
-                                      col={selectedResponsiveLayout?.col ?? selectedActivity?.layout?.col ?? 1}
-                                      row={selectedResponsiveLayout?.row ?? selectedActivity?.layout?.row ?? 1}
-                                      span={selectedResponsiveLayout?.colSpan ?? selectedActivity?.layout?.colSpan ?? 1}
-                                      x={selectedResponsiveLayout?.x ?? selectedActivity?.layout?.x ?? 0}
-                                      y={selectedResponsiveLayout?.y ?? selectedActivity?.layout?.y ?? 0}
-                                      width={selectedResponsiveLayout?.w ?? selectedActivity?.layout?.w ?? 1}
-                                      height={selectedResponsiveLayout?.h ?? selectedActivity?.layout?.h ?? 4}
-                                    />
-                                  )}
-                                  selectedActivity={selectedActivity}
-                                  selectedSpan={selectedActivity?.layout?.colSpan || 1}
-                                  canvasX={selectedActivity?.layout?.x || 0}
-                                  canvasY={selectedActivity?.layout?.y || 0}
-                                  canvasW={selectedActivity?.layout?.w || 1}
-                                  canvasH={selectedActivity?.layout?.h || 4}
-                                />
-                              )}
+                                ) : null
+                              }
+                              previewProps={{
+                                description: 'Build on the real lesson page and use the inspector for content.',
+                                desktopWidthMode: composerDesktopWidthMode,
+                                focusMode: composerFocusMode,
+                                srcDoc: composerPreviewSrcDoc,
+                                iframeRef: composerPreviewIframeRef,
+                                iframeKey: `composer-edit-preview-${editForm.id || 'draft'}-${composerPreviewNonce}`,
+                                iframeStyle: { minHeight: '820px' },
+                                inspectorCollapsed: composerInspectorCollapsed,
+                                viewportRef: composerCanvasViewportRef,
+                                frameOverlay: (
+                                  <ComposerCanvasBlockOverlay
+                                    hidden={composerPreviewInteractionMode !== 'select'}
+                                    iframeRef={composerPreviewIframeRef}
+                                    viewportRef={composerCanvasViewportRef}
+                                    syncKey={`composer-edit-preview-${editForm.id || 'draft'}-${composerPreviewNonce}-${composerPreviewViewport}-${composerDesktopWidthMode}-${composerPreviewScale}-${selectedActivity?.id || ''}`}
+                                    selectedActivity={selectedActivity}
+                                    selectedActivityId={selectedActivity?.id || ''}
+                                    selectedLabel={getActivityDefinition(selectedActivity?.type)?.label || 'Section'}
+                                    isCanvasMode={isCanvasMode}
+                                    maxColumns={composerMaxColumns}
+                                    onOpenAddPanel={() => setComposerSidebarMode('grid')}
+                                    onDuplicate={duplicateSelectedActivity}
+                                    onDelete={removeSelectedActivity}
+                                    onMove={moveSelectedActivity}
+                                    onSpanChange={updateSelectedActivitySpan}
+                                    onCanvasLayoutChange={updateSelectedActivityCanvasLayout}
+                                    onSimpleLayoutChange={commitSelectedActivitySimpleLayout}
+                                  />
+                                ),
+                                interactionMode: composerPreviewInteractionMode,
+                                onDesktopWidthModeChange: setComposerDesktopWidthMode,
+                                onFocusModeChange: setComposerFocusMode,
+                                onInspectorCollapsedChange: setComposerInspectorCollapsed,
+                                qaMode: composerPreviewQaMode,
+                                qaSummary: composerValidationTotals,
+                                onPreviewScaleChange: setComposerPreviewScale,
+                                popoutTitle: editForm.title || 'Course Review',
+                                previewScale: composerPreviewScale,
+                                showDesktopWidthControls: true,
+                                showFocusModeControl: true,
+                                showInspectorToggle: !composerFocusMode,
+                                showInteractionModeControls: true,
+                                showPopoutControl: true,
+                                showPreviewScaleControls: true,
+                                showViewportControls: true,
+                                title: 'Canvas',
+                                titleText: 'Composer live canvas',
+                                onInteractionModeChange: setComposerPreviewInteractionMode,
+                                onLoad: handleComposerPreviewLoad,
+                                onQaModeChange: setComposerPreviewQaMode,
+                                onReset: resetComposerPreview,
+                                onViewportModeChange: setComposerPreviewViewport,
+                                viewportMode: composerPreviewViewport,
+                              }}
                             />
                           </div>
 
-                          <div className="lg:col-span-7">
+                          {!composerFocusMode && !composerInspectorCollapsed ? (
+                          <div className="order-3 xl:col-span-4">
                             <ComposerActivityEditorPane
-                              title={selectedActivity ? (getActivityDefinition(selectedActivity.type)?.label || selectedActivity.type) : 'Activity Editor'}
+                              title="Inspector"
                               headerActions={
                                 selectedActivityComponentStatus?.linked ? (
                                   <span
@@ -5083,38 +4939,40 @@ export default function EditModal({
                                 ) : null
                               }
                             >
-                              <ComposerBindingPanel
-                                activity={selectedActivity}
-                                bindingContext={selectedActivityBindingContext}
-                                onApplyBinding={applySelectedActivityBinding}
-                              />
-                              {renderSelectedActivityStylePanel()}
-                              {renderActivityEditor()}
+                              {selectedActivity ? (
+                                <div className="space-y-3">
+                                  <ComposerInspectorSection
+                                    title="Content"
+                                    description="Edit text, media, and block-specific settings."
+                                    defaultOpen
+                                  >
+                                    {renderActivityEditor()}
+                                  </ComposerInspectorSection>
+                                  <ComposerInspectorSection
+                                    title="Style"
+                                    description="Theme, color, spacing, and presentation."
+                                  >
+                                    {renderSelectedActivityStylePanel({ embedded: true })}
+                                  </ComposerInspectorSection>
+                                  <ComposerInspectorSection
+                                    title="Smart Content"
+                                    description="Bind this section to course or module values when needed."
+                                  >
+                                    <ComposerBindingPanel
+                                      activity={selectedActivity}
+                                      bindingContext={selectedActivityBindingContext}
+                                      embedded
+                                      onApplyBinding={applySelectedActivityBinding}
+                                    />
+                                  </ComposerInspectorSection>
+                                </div>
+                              ) : (
+                                <p className="text-xs text-slate-500">Select a section to edit.</p>
+                              )}
                             </ComposerActivityEditorPane>
                           </div>
+                          ) : null}
                         </div>
-                      )}
-                      previewContent={(
-                        <ComposerPreviewPane
-                          description="Preview updates while you edit activities."
-                          srcDoc={composerPreviewSrcDoc}
-                          iframeRef={composerPreviewIframeRef}
-                          iframeKey={`composer-edit-preview-${editForm.id || 'draft'}-${composerPreviewNonce}`}
-                          iframeStyle={{ minHeight: '420px' }}
-                          interactionMode={composerPreviewInteractionMode}
-                          qaMode={composerPreviewQaMode}
-                          qaSummary={composerValidationTotals}
-                          showInteractionModeControls
-                          showQaControls
-                          showViewportControls
-                          titleText="Composer live preview"
-                          onInteractionModeChange={setComposerPreviewInteractionMode}
-                          onLoad={handleComposerPreviewLoad}
-                          onQaModeChange={setComposerPreviewQaMode}
-                          onReset={resetComposerPreview}
-                          onViewportModeChange={setComposerPreviewViewport}
-                          viewportMode={composerPreviewViewport}
-                        />
                       )}
                     />
                   ) : (

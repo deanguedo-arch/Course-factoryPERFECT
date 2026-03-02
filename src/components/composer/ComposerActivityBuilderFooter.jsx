@@ -38,36 +38,57 @@ export default function ComposerActivityBuilderFooter({
   onMoveRight,
   onMoveUp,
   onNewActivityTypeChange,
+  onQuickAddActivityType,
   onSpanChange,
   responsiveControls = null,
   selectedActivity = null,
   selectedSpan = 1,
 }) {
+  const quickInsertTypes = ['title_block', 'content_block', 'reflection_journal', 'knowledge_check', 'resource_list', 'tabs_block'];
+
   return (
     <>
-      <div className="grid grid-cols-3 gap-2">
-        <select
-          value={newActivityType}
-          onChange={(event) => onNewActivityTypeChange?.(event.target.value)}
-          className="col-span-2 rounded border border-slate-700 bg-slate-900 p-2 text-xs text-white"
-        >
-          {activityTypeGroups.map((group) => (
-            <optgroup key={group.category} label={group.label}>
-              {group.types.map((type) => (
-                <option key={type} value={type}>
-                  {getActivityLabel ? getActivityLabel(type) : type}
-                </option>
-              ))}
-            </optgroup>
+      <div className="rounded border border-slate-700 bg-slate-900/60 p-2">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-300">Add Section</p>
+        <div className="mb-2 flex flex-wrap gap-2">
+          {quickInsertTypes.map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => {
+                onNewActivityTypeChange?.(type);
+                onQuickAddActivityType?.(type);
+              }}
+              className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-bold text-slate-200 hover:border-emerald-500/60 hover:text-white"
+            >
+              {getActivityLabel ? getActivityLabel(type) : type}
+            </button>
           ))}
-        </select>
-        <button
-          type="button"
-          onClick={onAddActivity}
-          className="inline-flex items-center justify-center gap-1 rounded bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-500"
-        >
-          <Plus size={12} /> Add
-        </button>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <select
+            value={newActivityType}
+            onChange={(event) => onNewActivityTypeChange?.(event.target.value)}
+            className="col-span-2 rounded border border-slate-700 bg-slate-900 p-2 text-xs text-white"
+          >
+            {activityTypeGroups.map((group) => (
+              <optgroup key={group.category} label={group.label}>
+                {group.types.map((type) => (
+                  <option key={type} value={type}>
+                    {getActivityLabel ? getActivityLabel(type) : type}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={onAddActivity}
+            className="inline-flex items-center justify-center gap-1 rounded bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-500"
+          >
+            <Plus size={12} /> Add Section
+          </button>
+        </div>
       </div>
 
       {!isCanvasMode ? (
@@ -81,7 +102,7 @@ export default function ComposerActivityBuilderFooter({
             <Plus size={12} /> Add Open Row
           </button>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <label className="self-center text-[11px] font-bold uppercase text-slate-400">Selected Span</label>
+            <label className="self-center text-[11px] font-bold uppercase text-slate-400">Section Width</label>
             <select
               value={selectedSpan}
               onChange={(event) => onSpanChange?.(event.target.value)}

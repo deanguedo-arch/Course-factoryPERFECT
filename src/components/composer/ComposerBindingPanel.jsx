@@ -9,6 +9,7 @@ import {
 export default function ComposerBindingPanel({
   activity = null,
   bindingContext = {},
+  embedded = false,
   onApplyBinding,
 }) {
   const fields = React.useMemo(() => collectComposerBindableDataFields(activity), [activity]);
@@ -30,7 +31,7 @@ export default function ComposerBindingPanel({
   const selectedField = fields.find((field) => field.path === fieldPath) || fields[0] || null;
 
   return (
-    <div className="mb-3 rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-3 space-y-3">
+    <div className={`${embedded ? 'space-y-3' : 'mb-3 rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-3 space-y-3'}`}>
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wide text-cyan-100">Smart Content</p>

@@ -18,12 +18,21 @@ export default function ComposerWorkspaceControls({
   showPreviewHeight = false,
   showPreviewWidth = false,
 }) {
+  const showAnything = showPreviewWidth || showPreviewHeight || showBuilderSizing;
+  if (!showAnything) return null;
+
   return (
-    <>
+    <div className="rounded-lg border border-slate-700 bg-slate-950/60 p-3 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-300">Workspace Settings</p>
+          <p className="text-[10px] text-slate-500">These controls only change the editor workspace. They do not affect the published lesson.</p>
+        </div>
+      </div>
       {showPreviewWidth ? (
         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Preview Width</label>
+            <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Canvas Split</label>
             <input
               type="range"
               min="30"
@@ -73,7 +82,7 @@ export default function ComposerWorkspaceControls({
             <p className="text-[11px] text-slate-400 whitespace-nowrap">{builderHeight}px tall</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Block Width</label>
+            <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Builder Scale</label>
             <input
               type="range"
               min="140"
@@ -101,6 +110,6 @@ export default function ComposerWorkspaceControls({
           </div>
         </div>
       ) : null}
-    </>
+    </div>
   );
 }
