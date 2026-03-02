@@ -33,6 +33,7 @@ import { useProjectPersistence } from './hooks/useProjectPersistence.js';
 import { useAppError } from './hooks/useAppError.js';
 import { usePreviewState } from './hooks/usePreviewState.js';
 import { useModuleEditor } from './hooks/useModuleEditor.js';
+import { getHubTitle } from './utils/hubConfig.js';
 import Phase5 from './components/Phase5.jsx';
 import Phase4 from './components/Phase4.jsx';
 import Phase3 from './components/Phase3.jsx';
@@ -60,19 +61,6 @@ const { useState, useEffect, useRef } = React;
 // const auth = getAuth(app);
 // const db = getFirestore(app);
 const appId = 'course-factory-v1';
-
-const FUNCTIONAL_VISUAL_DEFAULTS = {
-  accentColor: 'sky',
-  backgroundColor: 'slate-900',
-  headingTextColor: 'white',
-  secondaryTextColor: 'slate-400',
-  assessmentTextColor: 'white',
-  assessmentBoxColor: 'slate-900',
-  defaultMaterialTheme: 'dark',
-  buttonColor: 'sky-600',
-  containerColor: 'slate-900/80',
-  fontFamily: 'inter',
-};
 
 const SIDEBAR_COLLAPSED_KEY = 'course_factory_sidebar_collapsed_v1';
 
@@ -247,12 +235,13 @@ export function App() {
       );
     }
     // Keep fallback behavior for non-course items like toolkit previews.
-    return (
-      buildModuleFrameHTML(previewModule, {
-        ...(projectData['Course Settings'] || {}),
-        __storageScope: previewStorageScope,
-      }) || ''
-    );
+      return (
+        buildModuleFrameHTML(previewModule, {
+          ...(projectData['Course Settings'] || {}),
+          hubConfig: projectData.hubConfig,
+          __storageScope: previewStorageScope,
+        }) || ''
+      );
   }, [previewModule, previewStorageScope, projectData]);
 
   // Rename Course Function
@@ -432,61 +421,6 @@ export function App() {
       }
     });
   }
-
-  const applyVisualDefaults = () => {
-    const currentCourseState = projectData["Current Course"] || {};
-    const currentSettings = projectData["Course Settings"] || {};
-    const currentMaterials = currentCourseState.materials || [];
-    const currentModules = currentCourseState.modules || [];
-
-    const materialsChanged = currentMaterials.some((mat) => mat.themeOverride);
-    const clearedMaterials = currentMaterials.map((mat) =>
-      mat.themeOverride ? { ...mat, themeOverride: null } : mat,
-    );
-
-    let assessmentsChanged = false;
-    const updatedModules = currentModules.map((module) => {
-      if (!(module.id === "item-assessments" || module.title === "Assessments")) return module;
-      const assessments = module.assessments || [];
-      const clearedAssessments = assessments.map((assessment) => {
-        const hasOverride = Boolean(assessment.textColorOverride || assessment.boxColorOverride);
-        if (hasOverride) assessmentsChanged = true;
-        return hasOverride
-          ? {
-              ...assessment,
-              textColorOverride: null,
-              boxColorOverride: null,
-            }
-          : assessment;
-      });
-      return {
-        ...module,
-        assessments: clearedAssessments,
-      };
-    });
-
-    const settingsChanged = Object.entries(FUNCTIONAL_VISUAL_DEFAULTS).some(([key, value]) => currentSettings[key] !== value);
-
-    if (!materialsChanged && !assessmentsChanged && !settingsChanged) {
-      showToast('Visuals already use the functional defaults.', 'info');
-      return;
-    }
-
-    setProjectData((prev) => ({
-      ...prev,
-      "Course Settings": {
-        ...(prev["Course Settings"] || {}),
-        ...FUNCTIONAL_VISUAL_DEFAULTS,
-      },
-      "Current Course": {
-        ...(prev["Current Course"] || {}),
-        materials: clearedMaterials,
-        modules: updatedModules,
-      },
-    }));
-
-    showToast('Functional visual defaults applied. Material and assessment overrides were cleared.', 'success');
-  };
 
   const addMaterial = (materialData) => {
     const currentMaterials = projectData["Current Course"]?.materials || [];
@@ -1279,7 +1213,7 @@ export function App() {
                   collapsed={sidebarCollapsed}
                 />
                 <Section
-                  title="Phase 5: Settings"
+                  title="Phase 5: Ops"
                   icon={Settings}
                   isActive={activePhase === 5}
                   onClick={() => setActivePhase(5)}
@@ -1291,7 +1225,7 @@ export function App() {
             {!sidebarCollapsed ? (
               <div>
                 <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3">
-                  IN: {(projectData["Course Settings"]?.courseName || currentCourse.name).toUpperCase()}
+                  IN: {getHubTitle(projectData).toUpperCase()}
                 </h3>
                 <div className="space-y-1">
                   {currentCourse.modules.map((mod, idx) => (
@@ -1415,7 +1349,7 @@ export function App() {
             <Phase5
               projectData={projectData}
               setProjectData={setProjectData}
-              applyVisualDefaults={applyVisualDefaults}
+              showToast={showToast}
             />
           )}
         </main>

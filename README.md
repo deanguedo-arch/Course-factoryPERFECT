@@ -239,7 +239,7 @@ Make a save system
   - Data Export Utility
   - Toast Notification System
 - **ID Format**: `feat-[name]`
-- **Location**: Saved to "Global Toolkit" → visible in Phase 5
+- **Location**: Saved to "Global Toolkit" -> visible in Phase 5 Ops
 
 **When to use which:**
 - Creating lesson content? → **Module**

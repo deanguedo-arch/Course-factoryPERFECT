@@ -1,6 +1,16 @@
 // Extracted generators (Headless Golden Baseline)
 // NOTE: Keep logic stable; edit with care.
 import { compileComposerModule } from '../composer/compileModuleHtml.js';
+import {
+  getHubTitle,
+  resolveHubConfigFromProject,
+  resolveHubConfigFromSettings,
+  resolveHubPresentation,
+  resolveHubPresentationFromProject,
+} from './hubConfig.js';
+
+const SHELL_FONT_STACK = "'Segoe UI', 'Inter', system-ui, sans-serif";
+const SHELL_MONO_STACK = "'JetBrains Mono', 'SFMono-Regular', Consolas, monospace";
 
 export const getAccentColor = (accentColor) => {
   const colorMap = {
@@ -158,85 +168,70 @@ export const generateMasterShell = (data) => {
   const {
     courseName = "Course Factory",
     courseNameUpper = "COURSE FACTORY",
-    accentColor = "sky",
-    backgroundColor = "slate-900",
-    fontFamily = "inter",
-    customCSS = "",
     courseInfo = "",
     navItems = "",
     content = "",
     scripts = "",
     progressTracking = "",
     containerBgRgba = null,
-    layoutSettings = { showSidebar: true, showFooter: true, navPosition: 'side' }
+    layoutSettings = { showSidebar: true, showFooter: true, navPosition: 'side' },
+    hubConfig = null,
   } = data;
-  
-  const colors = getAccentColor(accentColor);
-  const font = getFontFamilyGlobal(fontFamily);
-  
-  // Map Tailwind color names to hex values for background
-  const bgColorMap = {
-    'slate-900': '#0f172a',
-    'slate-950': '#020617',
-    'zinc-900': '#18181b',
-    'neutral-900': '#171717',
-    'stone-900': '#1c1917',
-    'gray-900': '#111827',
-    'slate-50': '#f8fafc',
-    'zinc-50': '#fafafa',
-    'neutral-50': '#fafafa',
-    'stone-50': '#fafaf9',
-    'gray-50': '#f9fafb',
-    'white': '#ffffff'
-  };
-  const bgHex = bgColorMap[backgroundColor] || bgColorMap['slate-900'];
-  const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
-  const textColor = isLightBg ? '#0f172a' : '#e2e8f0';
-  const hexToRgba = (hex, alpha = 1) => {
-    if (!hex) return `rgba(15, 23, 42, ${alpha})`;
-    const clean = hex.replace('#', '');
-    if (clean.length !== 6) return `rgba(15, 23, 42, ${alpha})`;
-    const r = parseInt(clean.slice(0, 2), 16);
-    const g = parseInt(clean.slice(2, 4), 16);
-    const b = parseInt(clean.slice(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
-  const sidebarBg = hexToRgba(bgHex, isLightBg ? 0.92 : 0.95);
-  const sidebarBorder = isLightBg ? 'rgba(15, 23, 42, 0.12)' : 'rgba(51, 65, 85, 0.5)';
-  const sidebarHoverBg = isLightBg ? hexToRgba(bgHex, 0.98) : 'rgba(30, 41, 59, 0.95)';
-  const containerBgVar = containerBgRgba || hexToRgba(isLightBg ? '#ffffff' : '#0f172a', 0.8);
-  const headingTextClass = isLightBg ? 'text-slate-900' : 'text-white';
-  
+
+  const { hubConfig: resolvedHubConfig, palette } = resolveHubPresentation(hubConfig);
+  const bgHex = palette.background;
+  const containerBgVar = containerBgRgba || palette.panel;
+  const headingTextClass = palette.isLight ? 'text-slate-900' : 'text-white';
+  const borderClass = palette.isLight ? 'border-slate-200/80' : 'border-slate-800/80';
+  const brandLogoHtml = resolvedHubConfig.brand.logoUrl
+    ? `<img src="${escapeHtml(resolvedHubConfig.brand.logoUrl)}" alt="" class="w-11 h-11 rounded-2xl object-cover border" style="border-color: ${palette.border}; background: ${palette.backgroundAlt};">`
+    : '';
+
   const showSidebar = layoutSettings?.showSidebar !== false;
   const showFooter = layoutSettings?.showFooter !== false;
   const navPosition = layoutSettings?.navPosition || 'side';
   const useTopNav = navPosition === 'top';
 
-  // Build styles with accent color applied
   const baseStyles = `        /* --- GLOBAL & SHARED STYLES --- */
-        html, body { background-color: ${bgHex} !important; }
-        body { ${font.css} color: ${textColor}; margin: 0; height: 100vh; overflow: hidden; }
-        :root { --cf-container-bg: ${containerBgVar}; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        .glass-panel { background: ${sidebarBg}; border-right: 1px solid ${sidebarBorder}; }
+        :root {
+            --cf-container-bg: ${containerBgVar};
+            --cf-shell-bg: ${palette.background};
+            --cf-shell-panel: ${palette.panel};
+            --cf-shell-panel-strong: ${palette.panelStrong};
+            --cf-shell-panel-hover: ${palette.panelHover};
+            --cf-shell-border: ${palette.border};
+            --cf-shell-text: ${palette.text};
+            --cf-shell-muted: ${palette.muted};
+            --cf-shell-subtle: ${palette.subtle};
+            --cf-shell-accent: ${palette.accent};
+            --cf-shell-accent-soft: ${palette.accentSoft};
+            --cf-shell-accent-outline: ${palette.accentOutline};
+        }
+        html, body { background-color: var(--cf-shell-bg) !important; }
+        body { font-family: ${SHELL_FONT_STACK}; color: var(--cf-shell-text); margin: 0; height: 100vh; overflow: hidden; }
+        .mono { font-family: ${SHELL_MONO_STACK}; }
+        .cf-accent { color: var(--cf-shell-accent); }
+        .cf-shell-meta { color: var(--cf-shell-muted); }
+        .cf-shell-subtle { color: var(--cf-shell-subtle); }
+        .glass-panel { background: var(--cf-shell-panel); border-right: 1px solid var(--cf-shell-border); backdrop-filter: blur(22px); }
         .custom-scroll { overflow-y: auto; }
-        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
-        input:not(.assessment-input), textarea:not(.assessment-input), select:not(.assessment-input) { background: #0f172a !important; border: 1px solid #1e293b !important; transition: all 0.2s; color: #e2e8f0; }
-        input:not(.assessment-input):focus, textarea:not(.assessment-input):focus, select:not(.assessment-input):focus { border-color: ${colors.hex} !important; outline: none; box-shadow: 0 0 0 1px ${colors.hex}; }
+        .glass { background: var(--cf-shell-panel); backdrop-filter: blur(10px); border: 1px solid var(--cf-shell-border); }
+        input:not(.assessment-input), textarea:not(.assessment-input), select:not(.assessment-input) { background: ${palette.isLight ? '#ffffff' : '#0f172a'} !important; border: 1px solid ${palette.isLight ? 'rgba(15, 23, 42, 0.12)' : 'rgba(51, 65, 85, 0.85)'} !important; transition: all 0.2s; color: var(--cf-shell-text); }
+        input:not(.assessment-input):focus, textarea:not(.assessment-input):focus, select:not(.assessment-input):focus { border-color: var(--cf-shell-accent) !important; outline: none; box-shadow: 0 0 0 1px var(--cf-shell-accent); }
         
         /* Navigation */
-        .nav-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; transition: all 0.2s; border-left: 2px solid transparent; }
-        .nav-item:hover { background: rgba(30, 41, 59, 0.5); color: #e2e8f0; }
-        .nav-item.active { background: rgba(14, 165, 233, 0.1); color: ${colors.light}; border-left: 2px solid ${colors.light}; }
+        .nav-item { display: flex; align-items: center; gap: 12px; width: calc(100% - 1rem); margin: 0 0.5rem; padding: 14px 16px; color: var(--cf-shell-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; transition: all 0.2s; border-left: 2px solid transparent; border-radius: 16px; }
+        .nav-item:hover { background: var(--cf-shell-panel-hover); color: var(--cf-shell-text); }
+        .nav-item.active { background: var(--cf-shell-accent-soft); color: var(--cf-shell-text); border-left: 2px solid var(--cf-shell-accent); box-shadow: inset 0 0 0 1px var(--cf-shell-accent-outline); }
 
         /* Module Buttons & Tabs */
-        .score-btn, .mod-nav-btn, .nav-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; }
-        .score-btn:hover, .mod-nav-btn:hover, .nav-btn:hover { border-color: ${colors.hex}; color: white; }
-        .score-btn.active, .mod-nav-btn.active, .nav-btn.active { background: ${colors.hex}; color: #000; font-weight: 900; border-color: ${colors.hex}; }
+        .score-btn, .mod-nav-btn, .nav-btn { background: ${palette.isLight ? '#ffffff' : '#0f172a'}; border: 1px solid ${palette.isLight ? 'rgba(15, 23, 42, 0.14)' : '#1e293b'}; color: var(--cf-shell-muted); transition: all 0.2s; }
+        .score-btn:hover, .mod-nav-btn:hover, .nav-btn:hover { border-color: var(--cf-shell-accent); color: var(--cf-shell-text); }
+        .score-btn.active, .mod-nav-btn.active, .nav-btn.active { background: var(--cf-shell-accent); color: ${palette.isLight ? '#ffffff' : '#02131d'}; font-weight: 900; border-color: var(--cf-shell-accent); }
         
         /* Layout Helpers */
         .phase-header { border-left: 4px solid #334155; padding-left: 1rem; margin-bottom: 1rem; }
-        .phase-header.active { border-color: ${colors.hex}; }
+        .phase-header.active { border-color: var(--cf-shell-accent); }
         .step-content { display: none; }
         .step-content.active { display: block; }
         .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
@@ -244,8 +239,8 @@ export const generateMasterShell = (data) => {
         .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
         .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
         .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; }
-        .helper-text { font-size: 8px; color: #64748b; font-style: italic; margin-top: 4px; line-height: 1.2; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
-        .info-card { background: rgba(30, 41, 59, 0.4); border-left: 3px solid ${colors.hex}; padding: 1.5rem; border-radius: 0.75rem; }
+        .helper-text { font-size: 8px; color: var(--cf-shell-muted); font-style: italic; margin-top: 4px; line-height: 1.2; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+        .info-card { background: var(--cf-shell-panel-hover); border-left: 3px solid var(--cf-shell-accent); padding: 1.5rem; border-radius: 0.75rem; }
         .top-ten-input { font-size: 0.75rem; padding: 0.5rem !important; border-radius: 0.375rem !important; }
         
         /* Animations */
@@ -260,9 +255,9 @@ export const generateMasterShell = (data) => {
             top: 1rem; 
             left: 1rem; 
             z-index: 100; 
-            background: ${sidebarBg}; 
-            border: 1px solid ${sidebarBorder}; 
-            color: ${textColor}; 
+            background: var(--cf-shell-panel-strong); 
+            border: 1px solid var(--cf-shell-border); 
+            color: var(--cf-shell-text); 
             padding: 0.75rem; 
             border-radius: 0.5rem; 
             cursor: pointer; 
@@ -274,7 +269,7 @@ export const generateMasterShell = (data) => {
             width: 44px;
             height: 44px;
         }
-        .sidebar-toggle:hover { background: ${sidebarHoverBg}; border-color: ${colors.hex}; }
+        .sidebar-toggle:hover { background: var(--cf-shell-panel-hover); border-color: var(--cf-shell-accent); box-shadow: 0 0 0 1px var(--cf-shell-accent-outline); }
 
         /* Materials & Assessments Container Colors */
         /* Material cards use per-material theme (Phase 1 card theme); do NOT override. */
@@ -298,7 +293,7 @@ export const generateMasterShell = (data) => {
         /* Sidebar - Collapsible on all sizes */
         #sidebar-nav {
             transition: width 0.3s ease, min-width 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
-            min-width: 16rem;
+            min-width: 18rem;
             overflow: hidden;
         }
         #sidebar-nav.collapsed {
@@ -314,8 +309,8 @@ export const generateMasterShell = (data) => {
             flex: 1;
             transition: all 0.3s ease;
             width: 100%;
-            background: ${bgHex} !important;
-            background-color: ${bgHex} !important;
+            background: var(--cf-shell-bg) !important;
+            background-color: var(--cf-shell-bg) !important;
         }
         
         /* Toggle button position */
@@ -323,7 +318,7 @@ export const generateMasterShell = (data) => {
             transition: left 0.3s ease;
         }
         body:not(.sidebar-collapsed) .sidebar-toggle {
-            left: calc(16rem + 1rem); /* 16rem = w-64 sidebar width + margin */
+            left: calc(18rem + 1rem);
         }
         body.sidebar-collapsed .sidebar-toggle {
             left: 1rem;
@@ -369,24 +364,32 @@ export const generateMasterShell = (data) => {
     ? `        <div class="p-6 border-t border-slate-800 text-center"><p class="text-[9px] text-slate-600 italic">"Recognition is the trigger for regulation."</p></div>`
     : '';
   const sidebarHtml = showSidebar && !useTopNav
-    ? `    <div id="sidebar-nav" class="w-64 glass-panel flex flex-col h-full z-50">
-        <div class="p-8 border-b border-slate-800">
-            <h1 class="text-xl font-black italic ${headingTextClass} tracking-tighter uppercase leading-none"><span class="text-${accentColor}-500">${courseName}</span></h1>
-            <p class="text-[10px] text-slate-500 mt-2 mono uppercase tracking-widest">Master Console v2.0</p>${courseInfo}
+    ? `    <div id="sidebar-nav" class="w-72 glass-panel flex flex-col h-full z-50">
+        <div class="p-8 border-b ${borderClass}">
+            <div class="flex items-center gap-4">
+                ${brandLogoHtml}
+                <div class="min-w-0">
+                    <h1 class="text-xl font-black italic ${headingTextClass} tracking-tighter uppercase leading-none"><span class="cf-accent">${courseName}</span></h1>
+                    <p class="text-[10px] cf-shell-meta mt-2 mono uppercase tracking-widest">Hub Shell</p>${courseInfo}
+                </div>
+            </div>
         </div>
         <nav class="flex-1 overflow-y-auto py-4 space-y-1" id="main-nav">
-            <div class="px-4 py-2 mt-4 text-[9px] font-bold text-slate-600 uppercase tracking-widest mono">System Modules</div>
+            <div class="px-5 py-2 mt-4 text-[9px] font-bold cf-shell-subtle uppercase tracking-widest mono">System Modules</div>
             ${navItems}
         </nav>
 ${sidebarFooterHtml}
     </div>`
     : '';
   const topNavHtml = useTopNav
-    ? `    <header class="w-full border-b border-slate-800 backdrop-blur-sm" style="background: ${bgHex}; background-color: ${bgHex};">
+    ? `    <header class="w-full border-b ${borderClass} backdrop-blur-sm" style="background: ${palette.panel};">
         <div class="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between gap-4">
-            <div>
-                <h1 class="text-lg font-bold flex items-center gap-2 ${headingTextClass}"><span class="text-${accentColor}-500">${courseName}</span></h1>
-                <p class="text-[10px] text-slate-500 uppercase tracking-wider mt-1 font-mono">MASTER CONSOLE</p>
+            <div class="flex items-center gap-3 min-w-0">
+                ${brandLogoHtml}
+                <div class="min-w-0">
+                    <h1 class="text-lg font-bold flex items-center gap-2 ${headingTextClass}"><span class="cf-accent">${courseName}</span></h1>
+                    <p class="text-[10px] cf-shell-meta uppercase tracking-wider mt-1 font-mono">Hub Shell</p>
+                </div>
             </div>
             <nav class="flex-1 overflow-x-auto">
                 <div class="flex items-center gap-2 justify-end min-w-max">
@@ -397,9 +400,9 @@ ${sidebarFooterHtml}
     </header>`
     : '';
   const footerHtml = showFooter && (useTopNav || !showSidebar)
-    ? `    <footer class="w-full border-t border-slate-800 backdrop-blur-sm" style="background: ${bgHex}; background-color: ${bgHex};">
-        <div class="max-w-[1800px] mx-auto px-6 py-4 text-[10px] text-slate-500 uppercase tracking-widest text-center">
-            Master Console v2.0
+    ? `    <footer class="w-full border-t ${borderClass} backdrop-blur-sm" style="background: ${palette.panel};">
+        <div class="max-w-[1800px] mx-auto px-6 py-4 text-[10px] cf-shell-subtle uppercase tracking-widest text-center">
+            ${resolvedHubConfig.template.toUpperCase()} HUB
         </div>
     </footer>`
     : '';
@@ -411,10 +414,8 @@ ${sidebarFooterHtml}
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${courseNameUpper} | MASTER CONSOLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="${font.url}" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <style>
-        ${baseStyles}${customCSS ? `\n        /* Custom CSS from Settings */\n        ${customCSS}` : ''}
+        ${baseStyles}
     </style>
     <script>
         // Force background color after Tailwind loads
@@ -1126,17 +1127,17 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
 
   const settings = courseSettings || {};
   const scopedStorageBootstrapTag = buildScopedStorageBootstrapTag(settings.__storageScope);
-  const courseName = settings.courseName || settings.__courseName || "Course";
+  const resolvedHubConfig = resolveHubConfigFromSettings(settings);
+  const { palette } = resolveHubPresentation(resolvedHubConfig);
+  const courseName = resolvedHubConfig.brand.title || settings.courseName || settings.__courseName || "Course";
   const accentColor = settings.accentColor || "sky";
   const backgroundColor = settings.backgroundColor || "slate-900";
-  const fontFamily = settings.fontFamily || "inter";
-  const customCSS = settings.customCSS || "";
   const enabledTools = (settings.__toolkit || []).filter(t => t.enabled);
   const courseMaterials = Array.isArray(settings.__materials)
     ? settings.__materials
     : (module.materials || []);
-
-  const font = getFontFamilyGlobal(fontFamily);
+  const hubTextColorClass = palette.isLight ? 'text-slate-900' : 'text-white';
+  const hubBorderClass = palette.isLight ? 'border-slate-200/80' : 'border-slate-800/80';
 
   const bgColorMap = {
     'slate-900': '#0f172a',
@@ -1152,7 +1153,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
     'gray-50': '#f9fafb',
     'white': '#ffffff'
   };
-  const bgHex = bgColorMap[backgroundColor] || bgColorMap['slate-900'];
+  const bgHex = palette.background;
   const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
   const textColor = isLightBg ? 'text-slate-900' : 'text-white';
   const textColorSecondary = isLightBg ? 'text-slate-600' : 'text-slate-400';
@@ -1223,7 +1224,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
 <head>
   ${scopedStorageBootstrapTag}
   <style>
-    body { margin: 0; padding: 0; background: ${bgHex}; ${font.css} }
+    body { margin: 0; padding: 0; background: ${bgHex}; color: ${palette.text}; font-family: ${SHELL_FONT_STACK}; }
     iframe { width: 100%; height: 100vh; border: none; }
   </style>
 </head>
@@ -1238,8 +1239,8 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
 <head>
   ${scopedStorageBootstrapTag}
   <style>
-    body { background: ${bgHex}; color: ${isLightBg ? '#0f172a' : '#e2e8f0'}; ${font.css}; padding: 40px; text-align: center; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    a { color: #0ea5e9; text-decoration: underline; }
+    body { background: ${bgHex}; color: ${palette.text}; font-family: ${SHELL_FONT_STACK}; padding: 40px; text-align: center; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    a { color: ${palette.accent}; text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -1749,7 +1750,6 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${module.title} | ${courseName}</title>
   <script src="https://cdn.tailwindcss.com"><\/script>
-  <link href="${font.url}" rel="stylesheet">
   ${scopedStorageBootstrapTag}
   <style>
     * {
@@ -1760,15 +1760,18 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
     html, body {
       background: ${bgHex} !important;
       background-color: ${bgHex} !important;
-      ${font.css}
+      font-family: ${SHELL_FONT_STACK};
     }
     body {
       min-height: 100vh;
+      color: ${palette.text};
     }
     .custom-scroll::-webkit-scrollbar { width: 6px; }
     .custom-scroll::-webkit-scrollbar-track { background: ${isLightBg ? '#e2e8f0' : '#1e293b'}; }
     .custom-scroll::-webkit-scrollbar-thumb { background: ${isLightBg ? '#94a3b8' : '#475569'}; border-radius: 3px; }
     .glass { background: ${isLightBg ? 'rgba(255, 255, 255, 0.8)' : 'rgba(15, 23, 42, 0.8)'}; backdrop-filter: blur(10px); }
+    .cf-back-link { color: ${palette.muted}; transition: color 0.2s ease; }
+    .cf-back-link:hover { color: ${palette.accent}; }
     .material-card { transition: all 0.2s; }
     .material-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
     .assessment-container [class*="bg-slate-9"],
@@ -1782,7 +1785,6 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
     }
     :root { --cf-container-bg: ${containerBgRgba}; }
     ${moduleCSS}
-    ${customCSS ? `\n    /* Custom CSS from Settings */\n    ${customCSS}` : ''}
   </style>
   <script>
     (function() {
@@ -1803,16 +1805,16 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
     })();
   <\/script>
 </head>
-<body class="${textColor} custom-scroll" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
-  <header class="sticky top-0 z-50 ${isLightBg ? 'bg-white/95' : 'bg-slate-900/95'} backdrop-blur border-b ${cardBorder}">
+<body class="custom-scroll" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
+  <header class="sticky top-0 z-50 ${palette.isLight ? 'bg-white/95' : 'bg-slate-950/88'} backdrop-blur border-b ${hubBorderClass}">
     <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-      <a href="../index.html" class="flex items-center gap-2 ${textColorSecondary} hover:text-${accentColor}-400 transition-colors text-sm font-bold">
+      <a href="../index.html" class="cf-back-link flex items-center gap-2 text-sm font-bold">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
         </svg>
         Back to Course
       </a>
-      <h1 class="text-sm font-bold ${textColor} uppercase tracking-wider">${module.title}</h1>
+      <h1 class="text-sm font-bold ${hubTextColorClass} uppercase tracking-wider">${module.title}</h1>
     </div>
   </header>
 
@@ -1837,15 +1839,15 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
   // PHASE 5 SETTINGS APPLICATION
   // ========================================
   const courseSettings = projectData["Course Settings"] || {};
-  const courseName = courseSettings.courseName || projectData["Current Course"]?.name || "Course Factory";
+  const resolvedHubConfig = resolveHubConfigFromProject(projectData);
+  const hubPresentation = resolveHubPresentation(resolvedHubConfig);
+  const courseName = getHubTitle(projectData) || "Course Factory";
   const courseNameUpper = courseName.toUpperCase();
   const courseCode = courseSettings.courseCode || "";
   const instructor = courseSettings.instructor || "";
   const academicYear = courseSettings.academicYear || "";
   const accentColor = courseSettings.accentColor || "sky";
   const backgroundColor = courseSettings.backgroundColor || "slate-900";
-  const fontFamily = courseSettings.fontFamily || "inter";
-  const customCSS = courseSettings.customCSS || "";
   const compDefaults = courseSettings.compilationDefaults || {};
   const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
   const headingTextColor = courseSettings.headingTextColor || (isLightBg ? 'slate-900' : 'white');
@@ -1914,8 +1916,13 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
   if (instructor) courseInfoParts.push(instructor);
   if (academicYear) courseInfoParts.push(academicYear);
   const courseInfoHTML = courseInfoParts.length > 0 
-    ? `\n            <p class="text-[9px] text-slate-600 uppercase tracking-widest mono mt-1">${courseInfoParts.join(' | ')}</p>`
+    ? `\n            <p class="text-[9px] cf-shell-subtle uppercase tracking-widest mono mt-1">${courseInfoParts.join(' | ')}</p>`
     : "";
+  const hubLayoutSettings = {
+    ...(courseSettings.layoutSettings || {}),
+    navPosition: hubPresentation.preset.navPosition,
+    showSidebar: hubPresentation.preset.showSidebar,
+  };
   
   // FILTER MODULES & TOOLKIT BASED ON COMPILATION DEFAULTS
   let activeModules = modules.filter(m => !excludedIds.includes(m.id) && !m.hidden);
@@ -2916,17 +2923,14 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
   const finalCode = generateMasterShell({
     courseName,
     courseNameUpper,
-    accentColor,
-    backgroundColor,
-    fontFamily,
-    customCSS,
     courseInfo: courseInfoHTML,
     navItems: navInjection,
     content: contentInjection,
     scripts: scriptInjection + initScript,
     progressTracking: progressTrackingScript,
     containerBgRgba,
-    layoutSettings: projectData["Course Settings"]?.layoutSettings
+    layoutSettings: hubLayoutSettings,
+    hubConfig: resolvedHubConfig,
   });
 
   return finalCode;
@@ -2935,8 +2939,7 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
 const getFontFamily = getFontFamilyGlobal;
 
 export const buildBetaManifest = ({ projectData, modules, excludedIds = [] }) => {
-  const courseSettings = projectData["Course Settings"] || {};
-  const courseName = courseSettings.courseName || projectData["Current Course"]?.name || "Course";
+  const courseName = getHubTitle(projectData) || "Course";
   const activeModules = modules.filter(m => !excludedIds.includes(m.id) && !m.hidden);
   
   return {
@@ -2951,174 +2954,251 @@ export const buildBetaManifest = ({ projectData, modules, excludedIds = [] }) =>
 };
 
 export const generateHubPageBeta = ({ projectData, manifest }) => {
-  const courseSettings = projectData["Course Settings"] || {};
-  const accentColor = courseSettings.accentColor || "sky";
-  const backgroundColor = courseSettings.backgroundColor || "slate-900";
-  const fontFamily = courseSettings.fontFamily || "inter";
-  const customCSS = courseSettings.customCSS || "";
-  const courseName = manifest.courseTitle;
-  
-  const font = getFontFamily(fontFamily);
-  
-  // Determine if background is light (for text color)
-  const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
-  const headingTextColor = courseSettings.headingTextColor || (isLightBg ? 'slate-900' : 'white');
-  const secondaryTextColor = courseSettings.secondaryTextColor || (isLightBg ? 'slate-600' : 'slate-400');
-  const containerColor = courseSettings.containerColor || (isLightBg ? 'white/80' : 'slate-900/80');
-  const toTextClass = (value) => value.startsWith('text-') ? value : `text-${value}`;
-  const hexToRgba = (hex, alpha = 1) => {
-    if (!hex) return `rgba(15, 23, 42, ${alpha})`;
-    const clean = hex.replace('#', '');
-    if (clean.length !== 6) return `rgba(15, 23, 42, ${alpha})`;
-    const r = parseInt(clean.slice(0, 2), 16);
-    const g = parseInt(clean.slice(2, 4), 16);
-    const b = parseInt(clean.slice(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
-  const parseColorToken = (value) => {
-    const raw = (value || '').toString().trim();
-    if (!raw) return { base: isLightBg ? 'white' : 'slate-900', alpha: 0.8, alphaRaw: '80' };
-    let token = raw;
-    if (token.startsWith('bg-')) token = token.slice(3);
-    if (token.startsWith('text-')) token = token.slice(5);
-    const parts = token.split('/');
-    const base = parts[0] || (isLightBg ? 'white' : 'slate-900');
-    const alphaRaw = parts[1] || null;
-    const alpha = alphaRaw ? Math.max(0, Math.min(1, parseInt(alphaRaw, 10) / 100)) : 1;
-    return { base, alpha, alphaRaw };
-  };
-  const colorHexMap = {
-    'slate-900': '#0f172a',
-    'slate-800': '#1e293b',
-    'slate-700': '#334155',
-    'slate-600': '#475569',
-    'slate-500': '#64748b',
-    'slate-950': '#020617',
-    'gray-900': '#111827',
-    'gray-800': '#1f2937',
-    'gray-700': '#374151',
-    'gray-600': '#4b5563',
-    'zinc-900': '#18181b',
-    'zinc-800': '#27272a',
-    'neutral-900': '#171717',
-    'stone-900': '#1c1917',
-    'white': '#ffffff'
-  };
-  const headingTextClass = toTextClass(headingTextColor);
-  const secondaryTextClass = toTextClass(secondaryTextColor);
-  const tertiaryTextClass = toTextClass(isLightBg ? 'slate-500' : 'slate-500');
-  const borderColor = isLightBg ? 'border-slate-300' : 'border-slate-700';
-  const containerToken = parseColorToken(containerColor);
-  const containerBgClass = containerToken.alphaRaw ? `bg-${containerToken.base}/${containerToken.alphaRaw}` : `bg-${containerToken.base}`;
-  const containerHoverClass = `hover:bg-${containerToken.base}`;
-  const containerHex = colorHexMap[containerToken.base] || (isLightBg ? '#ffffff' : '#0f172a');
-  const containerBgRgba = hexToRgba(containerHex, containerToken.alpha);
-  const arrowColor = secondaryTextClass;
-  
-  const moduleListHTML = manifest.modules.map((mod, idx) => `
-    <a href="./${mod.path}" class="block p-6 ${containerBgClass} rounded-xl border ${borderColor} hover:border-${accentColor}-500 ${containerHoverClass} transition-all group">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-lg bg-${accentColor}-500/20 flex items-center justify-center text-${accentColor}-400 font-bold">
-            ${String(idx + 1).padStart(2, '0')}
+  const { hubConfig, palette } = resolveHubPresentationFromProject(projectData);
+  const courseName = manifest.courseTitle || getHubTitle(projectData) || 'Course';
+  const maxWidth = hubConfig.template === 'minimal' ? '72rem' : hubConfig.template === 'cards' ? '80rem' : '88rem';
+  const shellPadding = hubConfig.template === 'cards' ? '4rem 1.5rem 3rem' : hubConfig.template === 'sidebar' ? '3rem 1.5rem 2.5rem' : '3.5rem 1.5rem 3rem';
+  const cardPadding = hubConfig.template === 'cards' ? '1.5rem' : '1.25rem';
+  const cardRadius = hubConfig.template === 'cards' ? '30px' : '22px';
+  const headerAlign = hubConfig.template === 'minimal' ? 'center' : 'left';
+  const logoHtml = hubConfig.brand.logoUrl
+    ? `<img src="${escapeHtml(hubConfig.brand.logoUrl)}" alt="" class="cf-logo">`
+    : '';
+  const moduleLayoutClass = hubConfig.template === 'cards' ? 'cf-module-grid' : 'cf-module-stack';
+  const sidebarClass = hubConfig.template === 'sidebar' ? 'cf-template-sidebar' : '';
+  const moduleListHTML = manifest.modules.length > 0
+    ? manifest.modules.map((mod, idx) => `
+        <a href="./${mod.path}" class="cf-module-card">
+          <div class="cf-module-row">
+            <div class="cf-module-meta">
+              <span class="cf-module-index">${String(idx + 1).padStart(2, '0')}</span>
+              <div>
+                <h3 class="cf-module-title">${escapeHtml(mod.title)}</h3>
+                <p class="cf-module-id">${escapeHtml(mod.id)}</p>
+              </div>
+            </div>
+            <span class="cf-module-arrow">→</span>
           </div>
-          <div>
-            <h3 class="text-lg font-bold ${headingTextClass} group-hover:text-${accentColor}-400 transition-colors">${mod.title}</h3>
-            <p class="text-xs ${tertiaryTextClass} font-mono">${mod.id}</p>
-          </div>
-        </div>
-        <svg class="w-5 h-5 ${arrowColor} group-hover:text-${accentColor}-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-      </div>
-    </a>
-  `).join('\n');
+        </a>
+      `).join('\n')
+    : `<div class="cf-empty-state">No published modules yet.</div>`;
 
-  // Map Tailwind color names to hex values for background
-  const bgColorMap = {
-    // Dark backgrounds
-    'slate-900': '#0f172a',
-    'slate-950': '#020617',
-    'zinc-900': '#18181b',
-    'neutral-900': '#171717',
-    'stone-900': '#1c1917',
-    'gray-900': '#111827',
-    // Light backgrounds
-    'slate-50': '#f8fafc',
-    'zinc-50': '#fafafa',
-    'neutral-50': '#fafafa',
-    'stone-50': '#fafaf9',
-    'gray-50': '#f9fafb',
-    'white': '#ffffff'
-  };
-  const bgHex = bgColorMap[backgroundColor] || bgColorMap['slate-900'];
-  const scrollbarTrack = isLightBg ? '#e2e8f0' : '#1e293b';
-  const scrollbarThumb = isLightBg ? '#94a3b8' : '#475569';
-  
   return `<!DOCTYPE html>
-<html lang="en" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${courseName}</title>
-<script src="https://cdn.tailwindcss.com"><\/script>
-<link href="${font.url}" rel="stylesheet">
+<title>${escapeHtml(courseName)}</title>
 <style>
-  * { 
+  :root {
+    --cf-bg: ${palette.background};
+    --cf-bg-alt: ${palette.backgroundAlt};
+    --cf-panel: ${palette.panel};
+    --cf-panel-hover: ${palette.panelHover};
+    --cf-border: ${palette.border};
+    --cf-text: ${palette.text};
+    --cf-muted: ${palette.muted};
+    --cf-subtle: ${palette.subtle};
+    --cf-accent: ${palette.accent};
+    --cf-accent-soft: ${palette.accentSoft};
+    --cf-accent-outline: ${palette.accentOutline};
+    --cf-shadow: ${palette.shadow};
+  }
+  * {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
   }
-  html, body { 
-    background: ${bgHex} !important;
-    background-color: ${bgHex} !important;
-    ${font.css}
+  html, body {
+    min-height: 100%;
+    background: var(--cf-bg);
   }
-  body { 
+  body {
+    font-family: ${SHELL_FONT_STACK};
+    color: var(--cf-text);
     min-height: 100vh;
   }
-  :root { --cf-container-bg: ${containerBgRgba}; }
-  .custom-scroll::-webkit-scrollbar { width: 6px; }
-  .custom-scroll::-webkit-scrollbar-track { background: ${scrollbarTrack}; }
-  .custom-scroll::-webkit-scrollbar-thumb { background: ${scrollbarThumb}; border-radius: 3px; }
-  ${customCSS ? `\n    /* Custom CSS from Settings */\n    ${customCSS}` : ''}
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .cf-shell {
+    width: min(100%, ${maxWidth});
+    margin: 0 auto;
+    padding: ${shellPadding};
+  }
+  .cf-template-sidebar {
+    display: grid;
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .cf-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    text-align: ${headerAlign};
+  }
+  .cf-template-sidebar .cf-header {
+    position: sticky;
+    top: 1.5rem;
+    margin-bottom: 0;
+    text-align: left;
+  }
+  .cf-brand {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    justify-content: ${headerAlign === 'center' ? 'center' : 'flex-start'};
+  }
+  .cf-template-sidebar .cf-brand {
+    justify-content: flex-start;
+  }
+  .cf-logo {
+    width: 3.25rem;
+    height: 3.25rem;
+    object-fit: cover;
+    border-radius: 1.1rem;
+    border: 1px solid var(--cf-border);
+    background: var(--cf-bg-alt);
+    box-shadow: var(--cf-shadow);
+  }
+  .cf-title {
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    line-height: 0.95;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+  }
+  .cf-title span {
+    color: var(--cf-accent);
+  }
+  .cf-subtitle {
+    color: var(--cf-muted);
+    font-size: 0.95rem;
+  }
+  .cf-updated {
+    color: var(--cf-subtle);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+  .cf-module-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+  .cf-module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+  .cf-module-card,
+  .cf-empty-state {
+    display: block;
+    padding: ${cardPadding};
+    border-radius: ${cardRadius};
+    background: var(--cf-panel);
+    border: 1px solid var(--cf-border);
+    box-shadow: var(--cf-shadow);
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  }
+  .cf-module-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--cf-accent-outline);
+    background: var(--cf-panel-hover);
+  }
+  .cf-module-row,
+  .cf-module-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .cf-module-meta {
+    justify-content: flex-start;
+    min-width: 0;
+  }
+  .cf-module-index {
+    width: 2.75rem;
+    height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.95rem;
+    background: var(--cf-accent-soft);
+    color: var(--cf-accent);
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+  .cf-module-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--cf-text);
+  }
+  .cf-module-id {
+    margin-top: 0.25rem;
+    color: var(--cf-subtle);
+    font-size: 0.72rem;
+    font-family: ${SHELL_MONO_STACK};
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  .cf-module-arrow {
+    color: var(--cf-muted);
+    font-size: 1.15rem;
+    transition: transform 0.2s ease, color 0.2s ease;
+  }
+  .cf-module-card:hover .cf-module-arrow {
+    color: var(--cf-accent);
+    transform: translateX(4px);
+  }
+  .cf-empty-state {
+    color: var(--cf-muted);
+    text-align: center;
+  }
+  .cf-footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--cf-border);
+    color: var(--cf-subtle);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    text-align: center;
+  }
+  @media (max-width: 900px) {
+    .cf-template-sidebar {
+      grid-template-columns: 1fr;
+    }
+    .cf-template-sidebar .cf-header {
+      position: static;
+      margin-bottom: 2rem;
+    }
+  }
 </style>
-<script>
-  // Force background color after Tailwind loads
-  (function() {
-    function setBackground() {
-      document.documentElement.style.backgroundColor = '${bgHex}';
-      document.documentElement.style.background = '${bgHex}';
-      if (document.body) {
-        document.body.style.backgroundColor = '${bgHex}';
-        document.body.style.background = '${bgHex}';
-      }
-    }
-    setBackground();
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', setBackground);
-    }
-    setTimeout(setBackground, 100);
-    setTimeout(setBackground, 500);
-  })();
-<\/script>
 </head>
-<body class="${secondaryTextClass} custom-scroll" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
-<div class="max-w-4xl mx-auto px-6 py-12">
-  <header class="mb-12 text-center">
-    <h1 class="text-4xl font-black ${headingTextClass} uppercase tracking-tight mb-2">${courseName}</h1>
-    <p class="text-sm ${secondaryTextClass}">Select a module to begin</p>
-    <p class="text-xs ${tertiaryTextClass} mt-2 font-mono">Last updated: ${new Date(manifest.updatedAt).toLocaleDateString()}</p>
-  </header>
-  
-  <nav class="space-y-4">
-    ${moduleListHTML}
-  </nav>
-  
-  <footer class="mt-16 pt-8 border-t ${borderColor} text-center">
-    <p class="text-xs ${tertiaryTextClass}">Built with Course Factory</p>
-  </footer>
-</div>
+<body>
+  <div class="cf-shell ${sidebarClass}">
+    <header class="cf-header">
+      <div class="cf-brand">
+        ${logoHtml}
+        <div>
+          <h1 class="cf-title"><span>${escapeHtml(courseName)}</span></h1>
+          <p class="cf-subtitle">Select a module to begin</p>
+        </div>
+      </div>
+      <p class="cf-updated">Updated ${new Date(manifest.updatedAt).toLocaleDateString()}</p>
+    </header>
+
+    <nav class="${moduleLayoutClass}">
+      ${moduleListHTML}
+    </nav>
+  </div>
+
+  <footer class="cf-footer">Built with Course Factory</footer>
 </body>
 </html>`;
 };
@@ -3131,6 +3211,7 @@ export const generateModuleHtmlBeta = ({ projectData, modules, moduleId, renderS
   const safeRenderSettings = renderSettings && typeof renderSettings === 'object' ? renderSettings : {};
   return buildModuleFrameHTML(mod, {
     ...courseSettings,
+    hubConfig: projectData.hubConfig,
     __courseName: courseSettings.courseName || projectData["Current Course"]?.name || "Course",
     __toolkit: projectData["Global Toolkit"] || [],
     __materials: projectData["Current Course"]?.materials || [],

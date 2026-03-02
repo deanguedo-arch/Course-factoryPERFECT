@@ -11,6 +11,7 @@ import {
   generateModuleHtmlBeta as generateModuleHtmlBetaGen,
   buildStaticFilesBeta as buildStaticFilesBetaGen,
 } from '../utils/generators.js';
+import { getHubTitle } from '../utils/hubConfig.js';
 
 const { useState } = React;
 
@@ -257,8 +258,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
 
   // Full publish handler
   const handleFullPublishBeta = async () => {
-    const courseSettings = projectData["Course Settings"] || {};
-    const courseName = courseSettings.courseName || projectData["Current Course"]?.name || "course";
+    const courseName = getHubTitle(projectData) || 'course';
     const safeTitle = getSafeFilename(courseName);
     const dateStr = new Date().toISOString().split('T')[0];
     const zipName = `course_${safeTitle}_${dateStr}.zip`;
@@ -279,8 +279,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       return;
     }
     
-    const courseSettings = projectData["Course Settings"] || {};
-    const courseName = courseSettings.courseName || projectData["Current Course"]?.name || "course";
+    const courseName = getHubTitle(projectData) || 'course';
     const safeTitle = getSafeFilename(courseName);
     const dateStr = new Date().toISOString().split('T')[0];
     const zipName = `delta_${safeTitle}_${dateStr}.zip`;
@@ -335,6 +334,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       const courseSettings = projectData["Course Settings"] || {};
       const finalHTML = buildModuleFrameHTML(selectedMod, {
         ...courseSettings,
+        hubConfig: projectData.hubConfig,
         __courseName: courseSettings.courseName || projectData["Current Course"]?.name || "Course",
         __toolkit: projectData["Global Toolkit"] || [],
         __materials: projectData["Current Course"]?.materials || []
@@ -651,9 +651,9 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
     const a = document.createElement("a");
     a.href = url;
     
-    // Apply export settings from Phase 5
+    // Apply export settings from Phase 5 Ops
     const exportSettings = projectData["Course Settings"]?.exportSettings || {};
-    const courseName = projectData["Course Settings"]?.courseName || "course";
+    const courseName = getHubTitle(projectData) || "course";
     let filename = exportSettings.filenamePattern || "{courseName}_compiled";
     
     // Replace placeholders

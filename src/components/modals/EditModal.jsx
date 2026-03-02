@@ -835,6 +835,7 @@ export default function EditModal({
     return (
       buildModuleFrameHTML(previewModule, {
         ...courseSettings,
+        hubConfig: projectData?.hubConfig,
         __courseName: courseSettings.courseName || projectData?.['Current Course']?.name || 'Course',
         __toolkit: projectData?.['Global Toolkit'] || [],
         __materials: projectData?.['Current Course']?.materials || [],

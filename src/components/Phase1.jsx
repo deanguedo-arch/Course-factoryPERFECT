@@ -108,6 +108,12 @@ import {
   normalizeFinlitHeroForSave,
   normalizeFinlitTemplateForSave,
 } from '../utils/finlitHero.js';
+import {
+  HUB_SKIN_OPTIONS,
+  HUB_TEMPLATE_OPTIONS,
+  resolveHubConfigFromProject,
+  resolveHubPresentation,
+} from '../utils/hubConfig.js';
 import { resolveFinlitTabComposerState } from '../utils/finlitTabActivities.js';
 import { COMPOSER_THEME_OPTIONS } from '../composer/themeCatalog.js';
 import {
@@ -441,6 +447,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerSavedDrafts, setModuleManagerSavedDrafts] = useState([]);
   const [moduleManagerSelectedDraftId, setModuleManagerSelectedDraftId] = useState('');
   const [moduleManagerDownloadDraftOnSave, setModuleManagerDownloadDraftOnSave] = useState(true);
+  const [moduleManagerSessionExpanded, setModuleManagerSessionExpanded] = useState(false);
   const [moduleManagerSetupExpanded, setModuleManagerSetupExpanded] = useState(false);
   const [moduleManagerIdExpanded, setModuleManagerIdExpanded] = useState(false);
 
@@ -505,6 +512,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [migrateCode, setMigrateCode] = useState("");
   const [migratePrompt, setMigratePrompt] = useState("");
   const [migrateOutput, setMigrateOutput] = useState("");
+  const [hubSettingsExpanded, setHubSettingsExpanded] = useState(false);
 
   // Assessment override colors (Phase 1 Edit modal) - "Use course default" + common colors
   const assessmentOverrideOptions = [
@@ -559,6 +567,25 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const moduleManagerComposerLayoutMode = normalizedModuleManagerLayout.mode;
   const isModuleManagerCanvasMode = moduleManagerComposerLayoutMode === 'canvas';
   const courseTemplateDefault = String(projectData?.['Course Settings']?.templateDefault || 'deck').trim().toLowerCase();
+  const hubConfig = useMemo(() => resolveHubConfigFromProject(projectData), [projectData]);
+  const hubPresentation = useMemo(() => resolveHubPresentation(hubConfig), [hubConfig]);
+  const hubPreviewTitle = hubConfig.brand.title || projectData?.['Current Course']?.name || 'Course';
+  const updateHubConfig = (updates) => {
+    setProjectData((prev) => {
+      const currentHubConfig = resolveHubConfigFromProject(prev);
+      return {
+        ...prev,
+        hubConfig: {
+          ...currentHubConfig,
+          ...(updates || {}),
+          brand: {
+            ...currentHubConfig.brand,
+            ...((updates && updates.brand) || {}),
+          },
+        },
+      };
+    });
+  };
   const moduleManagerEffectiveTemplate = resolveTemplateKey(moduleManagerTemplate, courseTemplateDefault);
   const showModuleManagerFinlitOptions = moduleManagerType === 'composer' && moduleManagerEffectiveTemplate === 'finlit';
   const moduleManagerResolvedId = useMemo(() => {
@@ -570,11 +597,13 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     () => moduleManagerSavedDrafts.find((draft) => draft.id === moduleManagerSelectedDraftId) || null,
     [moduleManagerSavedDrafts, moduleManagerSelectedDraftId],
   );
+  const moduleManagerSelectedDraftLabel = moduleManagerSelectedDraft?.label || 'Unsaved session';
   const moduleManagerTemplateLabel =
     MODULE_TEMPLATE_OPTIONS.find((option) => option.value === moduleManagerTemplate)?.label || 'Use Course Default';
   const moduleManagerThemeLabel =
     MODULE_THEME_OPTIONS.find((option) => option.value === moduleManagerTheme)?.label || 'Use Course Default';
   const moduleManagerSetupNeedsAttention = !moduleManagerTitle.trim() || !moduleManagerID.trim();
+  const moduleManagerSetupStatusLabel = moduleManagerSetupNeedsAttention ? 'Setup required' : 'Ready';
   const moduleManagerShowSetupEditor = moduleManagerSetupExpanded || moduleManagerSetupNeedsAttention;
   const moduleManagerShowIdField = moduleManagerIdExpanded || !moduleManagerID.trim();
   const moduleManagerSetupSummary = [
@@ -2335,6 +2364,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     return (
       buildModuleFrameHTML(previewModule, {
         ...courseSettings,
+        hubConfig: projectData?.hubConfig,
         __courseName: courseSettings.courseName || projectData?.['Current Course']?.name || 'Course',
         __toolkit: projectData?.['Global Toolkit'] || [],
         __materials: projectData?.['Current Course']?.materials || [],
@@ -2396,6 +2426,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     return (
       buildModuleFrameHTML(previewModule, {
         ...courseSettings,
+        hubConfig: projectData?.hubConfig,
         __courseName: courseSettings.courseName || projectData?.['Current Course']?.name || 'Course',
         __toolkit: projectData?.['Global Toolkit'] || [],
         __materials: [previewMaterial],
@@ -6629,13 +6660,430 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     }
   };
 
+  const hubPreviewPalette = hubPresentation.palette;
+  const hubPreviewShellStyle = {
+    background: hubPreviewPalette.background,
+    color: hubPreviewPalette.text,
+    borderColor: hubPreviewPalette.border,
+    boxShadow: hubPreviewPalette.shadow,
+  };
+  const hubPreviewPanelStyle = {
+    background: hubPreviewPalette.panel,
+    borderColor: hubPreviewPalette.border,
+  };
+  const hubPreviewPanelStrongStyle = {
+    background: hubPreviewPalette.panelStrong,
+    borderColor: hubPreviewPalette.border,
+  };
+  const hubPreviewBadgeStyle = {
+    background: hubPreviewPalette.accentSoft,
+    color: hubPreviewPalette.accent,
+  };
+  const moduleManagerComposerRailItems = [
+    { value: 'hub', label: 'Hub', icon: Box },
+    { value: 'drafts', label: 'Drafts', icon: Save, badge: moduleManagerSavedDrafts.length > 0 ? moduleManagerSavedDrafts.length : null },
+    { value: 'setup', label: 'Setup', icon: Edit, badge: moduleManagerSetupNeedsAttention ? '!' : null },
+    { value: 'grid', label: 'Add', icon: Plus },
+    { value: 'outline', label: 'Outline', icon: Clipboard },
+    { value: 'templates', label: 'Library', icon: FolderOpen },
+    {
+      value: 'issues',
+      label: 'Audit',
+      icon: AlertTriangle,
+      badge:
+        Number(moduleManagerComposerValidationTotals?.error || 0) + Number(moduleManagerComposerValidationTotals?.warn || 0) > 0
+          ? Number(moduleManagerComposerValidationTotals?.error || 0) + Number(moduleManagerComposerValidationTotals?.warn || 0)
+          : null,
+    },
+  ];
+  const moduleManagerComposerDrawerTitle = {
+    hub: 'Hub Settings',
+    drafts: 'Session & Drafts',
+    setup: 'Module Setup',
+    grid: 'Add & Layout',
+    outline: 'Outline',
+    templates: 'Library',
+    issues: 'Audit',
+  }[moduleManagerComposerSidebarMode] || 'Canvas Tools';
+  const moduleManagerComposerDrawerContent = (() => {
+    if (moduleManagerComposerSidebarMode === 'hub') {
+      return (
+        <div className="space-y-4">
+          <div className="rounded-xl border p-3" style={hubPreviewShellStyle}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">{hubPreviewTitle}</p>
+                <p className="mt-1 text-[10px]" style={{ color: hubPreviewPalette.muted }}>
+                  {hubConfig.template} / {hubConfig.skin}
+                </p>
+              </div>
+              <span className="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em]" style={hubPreviewBadgeStyle}>
+                {hubConfig.skin}
+              </span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="rounded-lg border px-2 py-1.5 text-[10px]" style={hubPreviewPanelStrongStyle}>Nav</div>
+              <div className="rounded-lg border px-2 py-1.5 text-[10px]" style={hubPreviewPanelStyle}>Content</div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Template</label>
+              <select
+                value={hubConfig.template}
+                onChange={(e) => updateHubConfig({ template: e.target.value })}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white"
+              >
+                <option value="minimal">Minimal</option>
+                <option value="sidebar">Sidebar</option>
+                <option value="cards">Cards</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Skin</label>
+              <div className="grid grid-cols-2 gap-2">
+                {['light', 'dark'].map((skin) => (
+                  <button
+                    key={`composer-hub-skin-${skin}`}
+                    type="button"
+                    onClick={() => updateHubConfig({ skin })}
+                    className={`rounded-xl border px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-colors ${
+                      hubConfig.skin === skin
+                        ? 'border-indigo-500 bg-indigo-600 text-white'
+                        : 'border-slate-700/80 bg-slate-900/80 text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    {skin}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Course Title</label>
+              <input
+                type="text"
+                value={hubConfig.brand.title || ''}
+                onChange={(e) => updateHubConfig({ brand: { title: e.target.value } })}
+                placeholder="Course title"
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Logo URL</label>
+              <input
+                type="text"
+                value={hubConfig.brand.logoUrl || ''}
+                onChange={(e) => updateHubConfig({ brand: { logoUrl: e.target.value } })}
+                placeholder="https://..."
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Accent</label>
+              <div className="flex items-center gap-2">
+                <span
+                  className="h-9 w-9 shrink-0 rounded-xl border"
+                  style={{
+                    background: hubConfig.brand.accent || hubPreviewPalette.accent,
+                    borderColor: hubPreviewPalette.border,
+                  }}
+                />
+                <input
+                  type="text"
+                  value={hubConfig.brand.accent || ''}
+                  onChange={(e) => updateHubConfig({ brand: { accent: e.target.value } })}
+                  placeholder="#2563eb"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (moduleManagerComposerSidebarMode === 'drafts') {
+      return (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-slate-800/80 bg-slate-950/55 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Current Draft</p>
+              <span className="inline-flex items-center rounded-full border border-slate-700/80 bg-slate-900/70 px-2 py-0.5 text-[10px] font-bold text-slate-300">
+                {moduleManagerSavedDrafts.length}
+              </span>
+            </div>
+            <p className="mt-2 text-sm font-semibold text-white">{moduleManagerSelectedDraftLabel}</p>
+            <p className="mt-1 text-[11px] text-slate-500">
+              {moduleManagerSelectedDraft?.savedAt
+                ? `Saved ${new Date(moduleManagerSelectedDraft.savedAt).toLocaleString()}`
+                : 'Autosave runs locally until you save a named checkpoint.'}
+            </p>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => saveModuleManagerDraft({ overwriteSelected: false })}
+              className="inline-flex items-center justify-center gap-1 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-indigo-500"
+            >
+              <Save size={12} /> Save New
+            </button>
+            <button
+              type="button"
+              onClick={updateModuleManagerSelectedDraft}
+              disabled={!moduleManagerSelectedDraftId}
+              className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <RefreshCw size={12} /> Update
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            <select
+              value={moduleManagerSelectedDraftId}
+              onChange={(e) => setModuleManagerSelectedDraftId(e.target.value)}
+              className="min-w-0 rounded-xl border border-slate-800/80 bg-slate-950 px-3 py-2.5 text-xs text-white"
+            >
+              {moduleManagerSavedDrafts.length === 0 && <option value="">No saved drafts</option>}
+              {moduleManagerSavedDrafts.map((draft) => (
+                <option key={draft.id} value={draft.id}>
+                  {draft.label} ({draft.savedAt ? new Date(draft.savedAt).toLocaleString() : 'no timestamp'})
+                </option>
+              ))}
+            </select>
+
+            <div className="grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)]">
+              <button
+                type="button"
+                onClick={loadModuleManagerDraft}
+                disabled={!moduleManagerSelectedDraftId}
+                className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <FolderOpen size={12} /> Load
+              </button>
+              <label className="inline-flex items-center gap-2 rounded-xl border border-slate-800/80 bg-slate-950/80 px-3 py-2 text-[11px] text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={moduleManagerDownloadDraftOnSave}
+                  onChange={(event) => setModuleManagerDownloadDraftOnSave(event.target.checked)}
+                  className="h-4 w-4"
+                />
+                Download JSON on save
+              </label>
+            </div>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={triggerModuleManagerDraftImport}
+              className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800"
+            >
+              <FolderOpen size={12} /> Import File
+            </button>
+            <button
+              type="button"
+              onClick={exportModuleManagerSelectedDraft}
+              disabled={!moduleManagerSelectedDraftId}
+              className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <FileJson size={12} /> Export File
+            </button>
+            <button
+              type="button"
+              onClick={deleteModuleManagerDraft}
+              disabled={!moduleManagerSelectedDraftId}
+              className="inline-flex items-center justify-center gap-1 rounded-xl bg-rose-700/85 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Trash2 size={12} /> Delete Draft
+            </button>
+            <button
+              type="button"
+              onClick={resetModuleManagerBuilder}
+              className="inline-flex items-center justify-center gap-1 rounded-xl bg-amber-700/85 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-amber-600"
+            >
+              <RotateCcw size={12} /> Reset Builder
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (moduleManagerComposerSidebarMode === 'setup') {
+      return (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-slate-800/80 bg-slate-950/55 p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-semibold text-white">{moduleManagerTitle.trim() || 'Untitled module'}</p>
+              <span
+                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] ${
+                  moduleManagerSetupNeedsAttention
+                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+                    : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
+                }`}
+              >
+                {moduleManagerSetupStatusLabel}
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] text-slate-500">{moduleManagerSetupSummary}</p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+              Module Title <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={moduleManagerTitle}
+              onChange={(e) => setModuleManagerTitle(e.target.value)}
+              placeholder="HSS3020 Course"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+            />
+          </div>
+
+          <div className="rounded-xl border border-slate-800/80 bg-slate-950/55 p-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                  Module ID <span className="text-rose-500">*</span>
+                </label>
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Prefixed with <span className="font-mono text-slate-400">view-</span> if needed.
+                </p>
+              </div>
+              {moduleManagerID.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => setModuleManagerIdExpanded((prev) => !prev)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/80 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300 transition-colors hover:bg-slate-800"
+                >
+                  {moduleManagerShowIdField ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  {moduleManagerShowIdField ? 'Hide ID' : 'Edit ID'}
+                </button>
+              ) : null}
+            </div>
+            {moduleManagerShowIdField ? (
+              <div className="mt-3 space-y-2">
+                <input
+                  type="text"
+                  value={moduleManagerID}
+                  onChange={(e) => setModuleManagerID(e.target.value)}
+                  placeholder="hss3020 or view-hss3020"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 font-mono text-sm text-white outline-none focus:border-indigo-500"
+                />
+                {moduleManagerResolvedId ? (
+                  <p className="text-[10px] text-slate-500">
+                    Final ID: <span className="font-mono text-slate-300">{moduleManagerResolvedId}</span>
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <div className="mt-3 rounded-xl border border-slate-800/80 bg-slate-900/70 px-3 py-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Current ID</p>
+                <p className="mt-1 font-mono text-xs text-white">{moduleManagerResolvedId}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Template</label>
+              <select
+                value={moduleManagerTemplate}
+                onChange={(e) => handleModuleManagerTemplateChange(e.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white"
+              >
+                {MODULE_TEMPLATE_OPTIONS.map((option) => (
+                  <option key={`composer-module-template-${option.value || 'default'}`} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Theme</label>
+              <select
+                value={moduleManagerTheme}
+                onChange={(e) => setModuleManagerTheme(e.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white"
+              >
+                {MODULE_THEME_OPTIONS.map((option) => (
+                  <option key={`composer-module-theme-${option.value || 'default'}`} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (moduleManagerComposerSidebarMode) {
+      return (
+        <ComposerCanvasDrawer
+          accent="indigo"
+          mode={moduleManagerComposerSidebarMode}
+          activities={moduleManagerComposerActivities}
+          activityTypeGroups={moduleManagerActivityTypeGroups}
+          containerPadding={normalizedModuleManagerLayout.containerPadding}
+          courseComponents={courseComposerComponents}
+          getActivityLabel={(activityType) => getActivityDefinition(activityType)?.label || activityType}
+          isCanvasMode={isModuleManagerCanvasMode}
+          layoutMode={moduleManagerComposerLayoutMode}
+          margin={normalizedModuleManagerLayout.margin}
+          maxColumns={moduleManagerComposerMaxColumns}
+          newActivityType={moduleManagerComposerStarterType}
+          onAddActivity={addComposerActivityDraft}
+          onAddOpenRow={addComposerEmptyRowDraft}
+          onCanvasLayoutChange={updateSelectedComposerActivityCanvasLayout}
+          onCanvasMetricChange={updateComposerCanvasMetric}
+          onDeleteCourseComponent={deleteCourseComposerComponent}
+          onDeleteSelected={removeSelectedComposerActivityDraft}
+          onDetachSelectedComponent={detachSelectedLinkedCourseComposerComponent}
+          onDuplicateSelected={duplicateSelectedComposerActivityDraft}
+          onFixDuplicateIds={fixModuleManagerComposerDuplicateIds}
+          onFixImageAltText={fixModuleManagerComposerImageAltIssues}
+          onFixMobileStacking={fixModuleManagerComposerMobileStackingIssues}
+          onInsertActivity={addComposerActivityFromTemplate}
+          onInsertLinkedActivity={insertLinkedCourseComposerComponent}
+          onLayoutModeChange={updateComposerLayoutMode}
+          onMaxColumnsChange={updateComposerMaxColumns}
+          onMove={moveSelectedComposerActivityDraft}
+          onNewActivityTypeChange={setModuleManagerComposerStarterType}
+          onQuickAddActivityType={addComposerActivityOfType}
+          onSaveCourseComponent={saveCourseComposerComponent}
+          onSelectIndex={setModuleManagerComposerSelectedIndex}
+          onSimpleMatchTallestRowChange={updateComposerSimpleMatchTallestRow}
+          onSpanChange={updateSelectedComposerActivitySpan}
+          onUpdateSelectedCourseComponent={updateSelectedLinkedCourseComposerComponent}
+          onUpdateSelectedCourseComponentInstances={updateSelectedLinkedCourseComposerInstances}
+          rowHeight={normalizedModuleManagerLayout.rowHeight}
+          selectedActivity={selectedComposerActivity}
+          selectedComponentStatus={selectedComposerComponentStatus}
+          selectedIndex={moduleManagerComposerSelectedIndex}
+          simpleMatchTallestRow={normalizedModuleManagerLayout.simpleMatchTallestRow === true}
+          validationResults={moduleManagerComposerValidationResults}
+          validationTotals={moduleManagerComposerValidationTotals}
+        />
+      );
+    }
+
+    return null;
+  })();
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
           <FileJson className="text-yellow-400" /> Phase 1: Harvest
         </h2>
-        
+
         {/* HARVEST TYPE TOGGLE */}
         <div className="mb-6">
             <div className="flex gap-2 bg-slate-900 p-1 rounded-lg border border-slate-700 w-full md:w-auto overflow-x-auto">
@@ -7360,7 +7808,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
 
                                                 <div>
                                                     <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Text Color Override</label>
-                                                    <p className="text-[10px] text-slate-500 mb-1 italic">Overrides Phase 5 Assessment Text Color for this assessment only</p>
+                                                    <p className="text-[10px] text-slate-500 mb-1 italic">Overrides the course assessment text default for this assessment only</p>
                                                     <select
                                                         value={editingAssessment.textColorOverride ?? ''}
                                                         onChange={(e) => setEditingAssessment({ ...editingAssessment, textColorOverride: e.target.value || null })}
@@ -7373,7 +7821,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Box Color Override</label>
-                                                    <p className="text-[10px] text-slate-500 mb-1 italic">Overrides Phase 5 Assessment Box Color for this assessment only</p>
+                                                    <p className="text-[10px] text-slate-500 mb-1 italic">Overrides the course assessment box default for this assessment only</p>
                                                     <select
                                                         value={editingAssessment.boxColorOverride ?? ''}
                                                         onChange={(e) => setEditingAssessment({ ...editingAssessment, boxColorOverride: e.target.value || null })}
@@ -8310,7 +8758,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         </div>
                                         <div>
                                             <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Card theme</label>
-                                            <p className="text-[10px] text-slate-500 mb-1 italic">Overrides Phase 5 default for this material</p>
+                                            <p className="text-[10px] text-slate-500 mb-1 italic">Overrides the course default for this material</p>
                                             <select
                                                 value={materialForm.themeOverride ?? ''}
                                                 onChange={(e) => setMaterialForm({...materialForm, themeOverride: e.target.value || null})}
@@ -8458,296 +8906,463 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
 
             {harvestType === 'MODULE_MANAGER' && (
                 <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
-                    <div className="p-6 bg-indigo-900/20 border border-indigo-700/50 rounded-xl">
-                        <h3 className="text-lg font-bold text-indigo-400 mb-2 flex items-center gap-2">
-                            <Box size={20} /> Module Manager
-                        </h3>
-                        <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-                            Add complete HTML pages as modules. Each module runs in its own <span className="text-emerald-400 font-bold">isolated iframe</span> - your code works exactly as you created it with no modifications.
-                        </p>
-                        
-                        {/* Type Selector */}
-                        <div className="flex gap-2 mb-6 bg-slate-900 p-1 rounded-lg border border-slate-700">
-                            <button
-                                onClick={() => {
-                                    setModuleManagerType('standalone');
-                                    setLinkTestResult(null);
-                                }}
-                                className={`flex-1 py-2 px-4 rounded text-xs font-bold transition-all ${moduleManagerType === 'standalone' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                            >
-                                Standalone HTML
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setModuleManagerType('composer');
-                                    setLinkTestResult(null);
-                                }}
-                                className={`flex-1 py-2 px-4 rounded text-xs font-bold transition-all ${moduleManagerType === 'composer' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                            >
-                                Composer Module
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setModuleManagerType('external');
-                                    setLinkTestResult(null);
-                                }}
-                                className={`flex-1 py-2 px-4 rounded text-xs font-bold transition-all ${moduleManagerType === 'external' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                            >
-                                External Link
-                            </button>
-                        </div>
+                    <input
+                        ref={moduleManagerDraftImportRef}
+                        type="file"
+                        accept=".json,application/json"
+                        className="hidden"
+                        onChange={importModuleManagerDraftFile}
+                    />
 
-                        <div className="mb-5 rounded-2xl border border-slate-800/80 bg-slate-950/68 p-3 shadow-[0_14px_28px_rgba(2,6,23,0.14)]">
-                            <input
-                                ref={moduleManagerDraftImportRef}
-                                type="file"
-                                accept=".json,application/json"
-                                className="hidden"
-                                onChange={importModuleManagerDraftFile}
-                            />
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                                <div className="space-y-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Session</p>
-                                        <span className="inline-flex items-center rounded-full border border-slate-700/80 bg-slate-900/70 px-2 py-0.5 text-[10px] font-bold text-slate-300">
-                                            {moduleManagerSavedDrafts.length} drafts
-                                        </span>
-                                    </div>
-                                    <p className="text-sm font-semibold text-white">
-                                        {moduleManagerSelectedDraft ? moduleManagerSelectedDraft.label : 'Draft Saves'}
-                                    </p>
-                                    <p className="text-[11px] text-slate-500">
-                                        {moduleManagerSelectedDraft?.savedAt
-                                            ? `Selected draft saved ${new Date(moduleManagerSelectedDraft.savedAt).toLocaleString()}.`
-                                            : 'Autosave still runs locally. Save named checkpoints only when you want a milestone.'}
-                                    </p>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => saveModuleManagerDraft({ overwriteSelected: false })}
-                                        className="inline-flex items-center justify-center gap-1 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-indigo-500"
-                                    >
-                                        <Save size={12} /> Save New
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={updateModuleManagerSelectedDraft}
-                                        disabled={!moduleManagerSelectedDraftId}
-                                        className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
-                                    >
-                                        <RefreshCw size={12} /> Update
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="mt-3 grid gap-2 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-                                <select
-                                    value={moduleManagerSelectedDraftId}
-                                    onChange={(e) => setModuleManagerSelectedDraftId(e.target.value)}
-                                    className="min-w-0 rounded-xl border border-slate-800/80 bg-slate-950 px-3 py-2.5 text-xs text-white"
+                    <div className="rounded-2xl border border-indigo-700/40 bg-slate-950/70 p-3 shadow-[0_14px_30px_rgba(2,6,23,0.18)]">
+                        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                            <div className="flex flex-wrap gap-2 rounded-xl border border-slate-800/80 bg-slate-900/85 p-1">
+                                <button
+                                    onClick={() => {
+                                        setModuleManagerType('standalone');
+                                        setLinkTestResult(null);
+                                    }}
+                                    className={`rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-all ${
+                                        moduleManagerType === 'standalone' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                    }`}
                                 >
-                                    {moduleManagerSavedDrafts.length === 0 && <option value="">No saved drafts</option>}
-                                    {moduleManagerSavedDrafts.map((draft) => (
-                                        <option key={draft.id} value={draft.id}>
-                                            {draft.label} ({draft.savedAt ? new Date(draft.savedAt).toLocaleString() : 'no timestamp'})
-                                        </option>
-                                    ))}
-                                </select>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={loadModuleManagerDraft}
-                                        disabled={!moduleManagerSelectedDraftId}
-                                        className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
-                                    >
-                                        <FolderOpen size={12} /> Load
-                                    </button>
-                                    <label className="inline-flex items-center gap-2 rounded-xl border border-slate-800/80 bg-slate-950/80 px-3 py-2 text-[11px] text-slate-300">
-                                        <input
-                                            type="checkbox"
-                                            checked={moduleManagerDownloadDraftOnSave}
-                                            onChange={(event) => setModuleManagerDownloadDraftOnSave(event.target.checked)}
-                                            className="h-4 w-4"
-                                        />
-                                        Download JSON on save
-                                    </label>
-                                </div>
+                                    Standalone
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setModuleManagerType('composer');
+                                        setLinkTestResult(null);
+                                    }}
+                                    className={`rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-all ${
+                                        moduleManagerType === 'composer' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                    }`}
+                                >
+                                    Composer
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setModuleManagerType('external');
+                                        setLinkTestResult(null);
+                                    }}
+                                    className={`rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-all ${
+                                        moduleManagerType === 'external' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                    }`}
+                                >
+                                    External
+                                </button>
                             </div>
-                            <details className="group mt-2 rounded-xl border border-slate-800/80 bg-slate-950/55">
-                                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200">
-                                    <span>Manage Drafts</span>
-                                    <div className="flex items-center gap-2 text-slate-500">
-                                        <span className="hidden sm:inline">Import, export, delete, reset</span>
-                                        <ChevronDown size={12} />
-                                    </div>
-                                </summary>
-                                <div className="grid gap-2 border-t border-slate-800/70 p-3 sm:grid-cols-2 xl:grid-cols-4">
-                                    <button
-                                        type="button"
-                                        onClick={triggerModuleManagerDraftImport}
-                                        className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800"
-                                    >
-                                        <FolderOpen size={12} /> Import File
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={exportModuleManagerSelectedDraft}
-                                        disabled={!moduleManagerSelectedDraftId}
-                                        className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
-                                    >
-                                        <FileJson size={12} /> Export File
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={deleteModuleManagerDraft}
-                                        disabled={!moduleManagerSelectedDraftId}
-                                        className="inline-flex items-center justify-center gap-1 rounded-xl bg-rose-700/85 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
-                                    >
-                                        <Trash2 size={12} /> Delete Draft
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={resetModuleManagerBuilder}
-                                        className="inline-flex items-center justify-center gap-1 rounded-xl bg-amber-700/85 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-amber-600"
-                                    >
-                                        <RotateCcw size={12} /> Reset Builder
-                                    </button>
-                                </div>
-                            </details>
-                        </div>
 
-                        <div className="mb-4 rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4 shadow-[0_14px_30px_rgba(2,6,23,0.14)]">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                                <div className="space-y-1.5">
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Setup</p>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <h4 className="text-base font-semibold text-white">Module Setup</h4>
-                                        <span
-                                            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${
-                                                moduleManagerSetupNeedsAttention
-                                                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
-                                                    : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
-                                            }`}
-                                        >
-                                            {moduleManagerSetupNeedsAttention ? 'Setup Required' : 'Ready'}
-                                        </span>
-                                    </div>
-                                    <p className="text-[11px] text-slate-500">{moduleManagerSetupSummary}</p>
-                                </div>
-                                {moduleManagerSetupNeedsAttention ? (
-                                    <span className="inline-flex items-center rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-100">
-                                        Finish required fields
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="inline-flex items-center gap-2 rounded-xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-[11px] text-slate-300">
+                                    <span className="font-bold uppercase tracking-[0.14em] text-slate-500">Draft</span>
+                                    <span className="max-w-[220px] truncate text-white">{moduleManagerSelectedDraftLabel}</span>
+                                </span>
+                                <span
+                                    className={`inline-flex items-center rounded-xl border px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] ${
+                                        moduleManagerSetupNeedsAttention
+                                            ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+                                            : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
+                                    }`}
+                                >
+                                    {moduleManagerSetupStatusLabel}
+                                </span>
+                                {moduleManagerResolvedId ? (
+                                    <span className="inline-flex items-center rounded-xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 font-mono text-[11px] text-slate-300">
+                                        {moduleManagerResolvedId}
                                     </span>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={() => setModuleManagerSetupExpanded((prev) => !prev)}
-                                        className="inline-flex items-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200 transition-colors hover:bg-slate-800"
-                                    >
-                                        {moduleManagerShowSetupEditor ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                        {moduleManagerShowSetupEditor ? 'Collapse' : 'Edit Setup'}
-                                    </button>
-                                )}
+                                ) : null}
                             </div>
+                        </div>
+                    </div>
 
-                            {moduleManagerShowSetupEditor ? (
-                                <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,1fr)]">
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="mb-2 block text-xs font-bold uppercase text-slate-300">
-                                                Module Title <span className="text-rose-500">*</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={moduleManagerTitle}
-                                                onChange={(e) => setModuleManagerTitle(e.target.value)}
-                                                placeholder="HSS3020 Course"
-                                                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm text-white outline-none focus:border-indigo-500"
-                                            />
-                                            <p className="mt-1 text-[10px] italic text-slate-500">
-                                                Display name for the sidebar button.
-                                            </p>
-                                        </div>
+                    <div className={`grid gap-4 ${moduleManagerType === 'composer' ? 'grid-cols-1' : 'xl:grid-cols-[320px_minmax(0,1fr)] xl:items-start'}`}>
+                        {moduleManagerType !== 'composer' ? (
+                        <aside className="order-2 space-y-3 xl:order-1 xl:sticky xl:top-4">
+                            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/65 shadow-[0_14px_30px_rgba(2,6,23,0.16)]">
+                                <button
+                                    type="button"
+                                    onClick={() => setHubSettingsExpanded((prev) => !prev)}
+                                    className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
+                                >
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Hub Settings</p>
+                                        <p className="mt-1 truncate text-sm font-semibold text-white">{hubPreviewTitle}</p>
+                                        <p className="mt-1 text-[11px] text-slate-500">
+                                            {hubConfig.template} / {hubConfig.skin}
+                                            {hubConfig.brand.logoUrl ? ' / logo set' : ''}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span
+                                            className="h-3 w-3 shrink-0 rounded-full border"
+                                            style={{
+                                                background: hubConfig.brand.accent || hubPreviewPalette.accent,
+                                                borderColor: hubPreviewPalette.border,
+                                            }}
+                                        />
+                                        {hubSettingsExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                    </div>
+                                </button>
 
-                                        <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
-                                            <div className="flex flex-wrap items-start justify-between gap-2">
-                                                <div>
-                                                    <label className="block text-xs font-bold uppercase text-slate-300">
-                                                        Module ID <span className="text-rose-500">*</span>
-                                                    </label>
-                                                    <p className="mt-1 text-[10px] text-slate-500">
-                                                        Stable identifier. It will be prefixed with <span className="font-mono text-slate-400">view-</span> if needed.
+                                {hubSettingsExpanded ? (
+                                    <div className="border-t border-slate-800/80 px-4 pb-4 pt-3">
+                                        <div className="rounded-xl border p-3" style={hubPreviewShellStyle}>
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-xs font-semibold">{hubPreviewTitle}</p>
+                                                    <p className="mt-1 text-[10px]" style={{ color: hubPreviewPalette.muted }}>
+                                                        {hubConfig.template} shell preview
                                                     </p>
                                                 </div>
-                                                {moduleManagerID.trim() ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setModuleManagerIdExpanded((prev) => !prev)}
-                                                        className="inline-flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/80 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300 transition-colors hover:bg-slate-800"
-                                                    >
-                                                        {moduleManagerShowIdField ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                                        {moduleManagerShowIdField ? 'Hide ID' : 'Edit ID'}
-                                                    </button>
-                                                ) : null}
+                                                <span
+                                                    className="inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.16em]"
+                                                    style={hubPreviewBadgeStyle}
+                                                >
+                                                    {hubConfig.skin}
+                                                </span>
                                             </div>
-                                            {moduleManagerShowIdField ? (
-                                                <div className="mt-3 space-y-2">
+                                            <div className="mt-3 grid grid-cols-2 gap-2">
+                                                <div className="rounded-lg border px-2 py-1.5 text-[10px]" style={hubPreviewPanelStrongStyle}>Nav</div>
+                                                <div className="rounded-lg border px-2 py-1.5 text-[10px]" style={hubPreviewPanelStyle}>Content</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3 space-y-3">
+                                            <div>
+                                                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Template</label>
+                                                <select
+                                                    value={hubConfig.template}
+                                                    onChange={(e) => updateHubConfig({ template: e.target.value })}
+                                                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white"
+                                                >
+                                                    <option value="minimal">Minimal</option>
+                                                    <option value="sidebar">Sidebar</option>
+                                                    <option value="cards">Cards</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Skin</label>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {['light', 'dark'].map((skin) => (
+                                                        <button
+                                                            key={`hub-skin-${skin}`}
+                                                            type="button"
+                                                            onClick={() => updateHubConfig({ skin })}
+                                                            className={`rounded-xl border px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-colors ${
+                                                                hubConfig.skin === skin
+                                                                    ? 'border-indigo-500 bg-indigo-600 text-white'
+                                                                    : 'border-slate-700/80 bg-slate-900/80 text-slate-300 hover:bg-slate-800'
+                                                            }`}
+                                                        >
+                                                            {skin}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Course Title</label>
+                                                <input
+                                                    type="text"
+                                                    value={hubConfig.brand.title || ''}
+                                                    onChange={(e) => updateHubConfig({ brand: { title: e.target.value } })}
+                                                    placeholder="Course title"
+                                                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Logo URL</label>
+                                                <input
+                                                    type="text"
+                                                    value={hubConfig.brand.logoUrl || ''}
+                                                    onChange={(e) => updateHubConfig({ brand: { logoUrl: e.target.value } })}
+                                                    placeholder="https://..."
+                                                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Accent</label>
+                                                <div className="flex items-center gap-2">
+                                                    <span
+                                                        className="h-9 w-9 shrink-0 rounded-xl border"
+                                                        style={{
+                                                            background: hubConfig.brand.accent || hubPreviewPalette.accent,
+                                                            borderColor: hubPreviewPalette.border,
+                                                        }}
+                                                    />
                                                     <input
                                                         type="text"
-                                                        value={moduleManagerID}
-                                                        onChange={(e) => setModuleManagerID(e.target.value)}
-                                                        placeholder="hss3020 or view-hss3020"
-                                                        className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 font-mono text-sm text-white outline-none focus:border-indigo-500"
+                                                        value={hubConfig.brand.accent || ''}
+                                                        onChange={(e) => updateHubConfig({ brand: { accent: e.target.value } })}
+                                                        placeholder="#2563eb"
+                                                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500"
                                                     />
-                                                    {moduleManagerResolvedId ? (
-                                                        <p className="text-[10px] text-slate-500">
-                                                            Final ID: <span className="font-mono text-slate-300">{moduleManagerResolvedId}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/65 shadow-[0_14px_30px_rgba(2,6,23,0.16)]">
+                                <button
+                                    type="button"
+                                    onClick={() => setModuleManagerSessionExpanded((prev) => !prev)}
+                                    className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
+                                >
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Session & Drafts</p>
+                                            <span className="inline-flex items-center rounded-full border border-slate-700/80 bg-slate-900/70 px-2 py-0.5 text-[10px] font-bold text-slate-300">
+                                                {moduleManagerSavedDrafts.length}
+                                            </span>
+                                        </div>
+                                        <p className="mt-1 truncate text-sm font-semibold text-white">{moduleManagerSelectedDraftLabel}</p>
+                                        <p className="mt-1 text-[11px] text-slate-500">
+                                            {moduleManagerSelectedDraft?.savedAt
+                                                ? `Saved ${new Date(moduleManagerSelectedDraft.savedAt).toLocaleString()}`
+                                                : 'Autosave runs locally until you save a named checkpoint.'}
+                                        </p>
+                                    </div>
+                                    {moduleManagerSessionExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                </button>
+
+                                {moduleManagerSessionExpanded ? (
+                                    <div className="border-t border-slate-800/80 px-4 pb-4 pt-3">
+                                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => saveModuleManagerDraft({ overwriteSelected: false })}
+                                                className="inline-flex items-center justify-center gap-1 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-indigo-500"
+                                            >
+                                                <Save size={12} /> Save New
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={updateModuleManagerSelectedDraft}
+                                                disabled={!moduleManagerSelectedDraftId}
+                                                className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                                            >
+                                                <RefreshCw size={12} /> Update
+                                            </button>
+                                        </div>
+
+                                        <div className="mt-3 space-y-2">
+                                            <select
+                                                value={moduleManagerSelectedDraftId}
+                                                onChange={(e) => setModuleManagerSelectedDraftId(e.target.value)}
+                                                className="min-w-0 rounded-xl border border-slate-800/80 bg-slate-950 px-3 py-2.5 text-xs text-white"
+                                            >
+                                                {moduleManagerSavedDrafts.length === 0 && <option value="">No saved drafts</option>}
+                                                {moduleManagerSavedDrafts.map((draft) => (
+                                                    <option key={draft.id} value={draft.id}>
+                                                        {draft.label} ({draft.savedAt ? new Date(draft.savedAt).toLocaleString() : 'no timestamp'})
+                                                    </option>
+                                                ))}
+                                            </select>
+
+                                            <div className="grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)] xl:grid-cols-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={loadModuleManagerDraft}
+                                                    disabled={!moduleManagerSelectedDraftId}
+                                                    className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                                                >
+                                                    <FolderOpen size={12} /> Load
+                                                </button>
+                                                <label className="inline-flex items-center gap-2 rounded-xl border border-slate-800/80 bg-slate-950/80 px-3 py-2 text-[11px] text-slate-300">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={moduleManagerDownloadDraftOnSave}
+                                                        onChange={(event) => setModuleManagerDownloadDraftOnSave(event.target.checked)}
+                                                        className="h-4 w-4"
+                                                    />
+                                                    Download JSON on save
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <details className="group mt-3 rounded-xl border border-slate-800/80 bg-slate-950/55">
+                                            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200">
+                                                <span>Manage Drafts</span>
+                                                <div className="flex items-center gap-2 text-slate-500">
+                                                    <span className="hidden sm:inline xl:hidden">Import, export, delete, reset</span>
+                                                    <ChevronDown size={12} />
+                                                </div>
+                                            </summary>
+                                            <div className="grid gap-2 border-t border-slate-800/70 p-3 sm:grid-cols-2 xl:grid-cols-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={triggerModuleManagerDraftImport}
+                                                    className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800"
+                                                >
+                                                    <FolderOpen size={12} /> Import File
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={exportModuleManagerSelectedDraft}
+                                                    disabled={!moduleManagerSelectedDraftId}
+                                                    className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                                                >
+                                                    <FileJson size={12} /> Export File
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={deleteModuleManagerDraft}
+                                                    disabled={!moduleManagerSelectedDraftId}
+                                                    className="inline-flex items-center justify-center gap-1 rounded-xl bg-rose-700/85 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                                >
+                                                    <Trash2 size={12} /> Delete Draft
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={resetModuleManagerBuilder}
+                                                    className="inline-flex items-center justify-center gap-1 rounded-xl bg-amber-700/85 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-amber-600"
+                                                >
+                                                    <RotateCcw size={12} /> Reset Builder
+                                                </button>
+                                            </div>
+                                        </details>
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/65 shadow-[0_14px_30px_rgba(2,6,23,0.16)]">
+                                <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
+                                    <div className="min-w-0 space-y-1">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Module Setup</p>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <p className="truncate text-sm font-semibold text-white">{moduleManagerTitle.trim() || 'Untitled module'}</p>
+                                            <span
+                                                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] ${
+                                                    moduleManagerSetupNeedsAttention
+                                                        ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+                                                        : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
+                                                }`}
+                                            >
+                                                {moduleManagerSetupStatusLabel}
+                                            </span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-500">{moduleManagerSetupSummary}</p>
+                                    </div>
+                                    {moduleManagerSetupNeedsAttention ? (
+                                        <span className="inline-flex items-center rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-100">
+                                            Required
+                                        </span>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => setModuleManagerSetupExpanded((prev) => !prev)}
+                                            className="inline-flex items-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200 transition-colors hover:bg-slate-800"
+                                        >
+                                            {moduleManagerShowSetupEditor ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                            {moduleManagerShowSetupEditor ? 'Collapse' : 'Edit'}
+                                        </button>
+                                    )}
+                                </div>
+
+                                {moduleManagerShowSetupEditor ? (
+                                    <div className="border-t border-slate-800/80 px-4 pb-4 pt-3">
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                                                    Module Title <span className="text-rose-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={moduleManagerTitle}
+                                                    onChange={(e) => setModuleManagerTitle(e.target.value)}
+                                                    placeholder="HSS3020 Course"
+                                                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                                                />
+                                                <p className="mt-1 text-[10px] italic text-slate-500">Display name for the sidebar button.</p>
+                                            </div>
+
+                                            <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
+                                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                                                            Module ID <span className="text-rose-500">*</span>
+                                                        </label>
+                                                        <p className="mt-1 text-[10px] text-slate-500">
+                                                            Prefixed with <span className="font-mono text-slate-400">view-</span> if needed.
                                                         </p>
+                                                    </div>
+                                                    {moduleManagerID.trim() ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setModuleManagerIdExpanded((prev) => !prev)}
+                                                            className="inline-flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/80 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300 transition-colors hover:bg-slate-800"
+                                                        >
+                                                            {moduleManagerShowIdField ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                                            {moduleManagerShowIdField ? 'Hide ID' : 'Edit ID'}
+                                                        </button>
                                                     ) : null}
                                                 </div>
-                                            ) : (
-                                                <div className="mt-3 rounded-xl border border-slate-800/80 bg-slate-900/70 px-3 py-2">
-                                                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Current ID</p>
-                                                    <p className="mt-1 font-mono text-xs text-white">{moduleManagerResolvedId}</p>
+                                                {moduleManagerShowIdField ? (
+                                                    <div className="mt-3 space-y-2">
+                                                        <input
+                                                            type="text"
+                                                            value={moduleManagerID}
+                                                            onChange={(e) => setModuleManagerID(e.target.value)}
+                                                            placeholder="hss3020 or view-hss3020"
+                                                            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 font-mono text-sm text-white outline-none focus:border-indigo-500"
+                                                        />
+                                                        {moduleManagerResolvedId ? (
+                                                            <p className="text-[10px] text-slate-500">
+                                                                Final ID: <span className="font-mono text-slate-300">{moduleManagerResolvedId}</span>
+                                                            </p>
+                                                        ) : null}
+                                                    </div>
+                                                ) : (
+                                                    <div className="mt-3 rounded-xl border border-slate-800/80 bg-slate-900/70 px-3 py-2">
+                                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Current ID</p>
+                                                        <p className="mt-1 font-mono text-xs text-white">{moduleManagerResolvedId}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                                                <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
+                                                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Template</label>
+                                                    <select
+                                                        value={moduleManagerTemplate}
+                                                        onChange={(e) => handleModuleManagerTemplateChange(e.target.value)}
+                                                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white"
+                                                    >
+                                                        {MODULE_TEMPLATE_OPTIONS.map((option) => (
+                                                            <option key={`module-template-${option.value || 'default'}`} value={option.value}>
+                                                                {option.label}
+                                                            </option>
+                                                        ))}
+                                                    </select>
                                                 </div>
-                                            )}
+                                                <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
+                                                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Theme</label>
+                                                    <select
+                                                        value={moduleManagerTheme}
+                                                        onChange={(e) => setModuleManagerTheme(e.target.value)}
+                                                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white"
+                                                    >
+                                                        {MODULE_THEME_OPTIONS.map((option) => (
+                                                            <option key={`module-theme-${option.value || 'default'}`} value={option.value}>
+                                                                {option.label}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
+                                ) : null}
+                            </div>
+                        </aside>
+                        ) : null}
 
-                                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                                        <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
-                                            <label className="mb-2 block text-xs font-bold uppercase text-slate-300">Template</label>
-                                            <select
-                                                value={moduleManagerTemplate}
-                                                onChange={(e) => handleModuleManagerTemplateChange(e.target.value)}
-                                                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
-                                            >
-                                                {MODULE_TEMPLATE_OPTIONS.map((option) => (
-                                                    <option key={`module-template-${option.value || 'default'}`} value={option.value}>
-                                                        {option.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
-                                            <label className="mb-2 block text-xs font-bold uppercase text-slate-300">Theme</label>
-                                            <select
-                                                value={moduleManagerTheme}
-                                                onChange={(e) => setModuleManagerTheme(e.target.value)}
-                                                className="w-full rounded-xl border border-slate-700 bg-slate-950 p-2.5 text-xs text-white"
-                                            >
-                                                {MODULE_THEME_OPTIONS.map((option) => (
-                                                    <option key={`module-theme-${option.value || 'default'}`} value={option.value}>
-                                                        {option.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : null}
-                        </div>
-
+                        <div className="min-w-0 space-y-4">
                             {showModuleManagerFinlitOptions && (
                                 <details className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
                                     <summary className="cursor-pointer text-xs font-bold text-slate-300 uppercase tracking-wide">
@@ -9168,77 +9783,12 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     <div className={`order-1 min-w-0 ${moduleManagerComposerFocusMode || moduleManagerComposerInspectorCollapsed ? 'xl:col-span-12' : 'xl:col-span-8'}`}>
                                                         <ComposerCanvasShell
                                                             activePanel={moduleManagerComposerSidebarMode}
+                                                            drawerPlacement="side"
                                                             onPanelChange={setModuleManagerComposerSidebarMode}
                                                             showRail={!moduleManagerComposerFocusMode}
-                                                            railItems={[
-                                                                { value: 'grid', label: 'Add', icon: Plus },
-                                                                { value: 'outline', label: 'Outline', icon: Clipboard },
-                                                                { value: 'templates', label: 'Library', icon: FolderOpen },
-                                                                {
-                                                                    value: 'issues',
-                                                                    label: 'Audit',
-                                                                    icon: AlertTriangle,
-                                                                    badge:
-                                                                        Number(moduleManagerComposerValidationTotals?.error || 0) + Number(moduleManagerComposerValidationTotals?.warn || 0) > 0
-                                                                            ? Number(moduleManagerComposerValidationTotals?.error || 0) + Number(moduleManagerComposerValidationTotals?.warn || 0)
-                                                                            : null,
-                                                                },
-                                                            ]}
-                                                            drawerTitle={{
-                                                                grid: 'Add & Layout',
-                                                                outline: 'Outline',
-                                                                templates: 'Library',
-                                                                issues: 'Audit',
-                                                            }[moduleManagerComposerSidebarMode] || 'Canvas Tools'}
-                                                            drawerContent={
-                                                                moduleManagerComposerSidebarMode ? (
-                                                                    <ComposerCanvasDrawer
-                                                                        accent="indigo"
-                                                                        mode={moduleManagerComposerSidebarMode}
-                                                                        activities={moduleManagerComposerActivities}
-                                                                        activityTypeGroups={moduleManagerActivityTypeGroups}
-                                                                        containerPadding={normalizedModuleManagerLayout.containerPadding}
-                                                                        courseComponents={courseComposerComponents}
-                                                                        getActivityLabel={(activityType) => getActivityDefinition(activityType)?.label || activityType}
-                                                                        isCanvasMode={isModuleManagerCanvasMode}
-                                                                        layoutMode={moduleManagerComposerLayoutMode}
-                                                                        margin={normalizedModuleManagerLayout.margin}
-                                                                        maxColumns={moduleManagerComposerMaxColumns}
-                                                                        newActivityType={moduleManagerComposerStarterType}
-                                                                        onAddActivity={addComposerActivityDraft}
-                                                                        onAddOpenRow={addComposerEmptyRowDraft}
-                                                                        onCanvasLayoutChange={updateSelectedComposerActivityCanvasLayout}
-                                                                        onCanvasMetricChange={updateComposerCanvasMetric}
-                                                                        onDeleteCourseComponent={deleteCourseComposerComponent}
-                                                                        onDeleteSelected={removeSelectedComposerActivityDraft}
-                                                                        onDetachSelectedComponent={detachSelectedLinkedCourseComposerComponent}
-                                                                        onDuplicateSelected={duplicateSelectedComposerActivityDraft}
-                                                                        onFixDuplicateIds={fixModuleManagerComposerDuplicateIds}
-                                                                        onFixImageAltText={fixModuleManagerComposerImageAltIssues}
-                                                                        onFixMobileStacking={fixModuleManagerComposerMobileStackingIssues}
-                                                                        onInsertActivity={addComposerActivityFromTemplate}
-                                                                        onInsertLinkedActivity={insertLinkedCourseComposerComponent}
-                                                                        onLayoutModeChange={updateComposerLayoutMode}
-                                                                        onMaxColumnsChange={updateComposerMaxColumns}
-                                                                        onMove={moveSelectedComposerActivityDraft}
-                                                                        onNewActivityTypeChange={setModuleManagerComposerStarterType}
-                                                                        onQuickAddActivityType={addComposerActivityOfType}
-                                                                        onSaveCourseComponent={saveCourseComposerComponent}
-                                                                        onSelectIndex={setModuleManagerComposerSelectedIndex}
-                                                                        onSimpleMatchTallestRowChange={updateComposerSimpleMatchTallestRow}
-                                                                        onSpanChange={updateSelectedComposerActivitySpan}
-                                                                        onUpdateSelectedCourseComponent={updateSelectedLinkedCourseComposerComponent}
-                                                                        onUpdateSelectedCourseComponentInstances={updateSelectedLinkedCourseComposerInstances}
-                                                                        rowHeight={normalizedModuleManagerLayout.rowHeight}
-                                                                        selectedActivity={selectedComposerActivity}
-                                                                        selectedComponentStatus={selectedComposerComponentStatus}
-                                                                        selectedIndex={moduleManagerComposerSelectedIndex}
-                                                                        simpleMatchTallestRow={normalizedModuleManagerLayout.simpleMatchTallestRow === true}
-                                                                        validationResults={moduleManagerComposerValidationResults}
-                                                                        validationTotals={moduleManagerComposerValidationTotals}
-                                                                    />
-                                                                ) : null
-                                                            }
+                                                            railItems={moduleManagerComposerRailItems}
+                                                            drawerTitle={moduleManagerComposerDrawerTitle}
+                                                            drawerContent={moduleManagerComposerDrawerContent}
                                                             previewProps={{
                                                                 description: 'Build on the real lesson page and use the inspector for content.',
                                                                 desktopWidthMode: moduleManagerComposerDesktopWidthMode,
@@ -9481,6 +10031,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                             </div>
                         </div>
                     </div>
+                </div>
             )}
 
             {harvestType === 'AI_MODULE' && (

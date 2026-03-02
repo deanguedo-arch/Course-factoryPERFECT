@@ -2,7 +2,7 @@
 // NOTE: Keep stable; changes affect defaults and legacy template display.
 
 export const PROJECT_DATA = {
-  projectSchemaVersion: 3,
+  projectSchemaVersion: 4,
   "Current Course": {
     name: "Mental Fitness",
     composerComponents: [],
@@ -330,6 +330,15 @@ export const PROJECT_DATA = {
       showSidebar: true,
       showFooter: true,
       navPosition: 'side'
+    }
+  },
+  hubConfig: {
+    template: 'minimal',
+    skin: 'dark',
+    brand: {
+      title: 'Mental Fitness',
+      logoUrl: '',
+      accent: '#38bdf8'
     }
   },
   "Global Toolkit": [

@@ -41,14 +41,26 @@ class DrawerErrorBoundary extends React.Component {
 export default function ComposerCanvasShell({
   activePanel = null,
   drawerContent = null,
+  drawerPlacement = 'stacked',
   drawerTitle = '',
   onPanelChange,
   previewProps = {},
   railItems = [],
   showRail = true,
 }) {
+  const hasDrawer = showRail && activePanel && drawerContent;
+  const useSideDrawer = hasDrawer && drawerPlacement === 'side';
+
   return (
-    <div className={`grid grid-cols-1 gap-3 ${showRail ? 'xl:grid-cols-[52px_minmax(0,1fr)]' : ''}`}>
+    <div
+      className={`grid grid-cols-1 gap-3 ${
+        showRail
+          ? useSideDrawer
+            ? 'xl:grid-cols-[52px_minmax(300px,340px)_minmax(0,1fr)]'
+            : 'xl:grid-cols-[52px_minmax(0,1fr)]'
+          : ''
+      }`}
+    >
       {showRail ? (
         <div className="flex flex-row gap-2 rounded-2xl border border-slate-800/70 bg-slate-950/55 p-1.5 xl:flex-col xl:self-start">
           {railItems.map((item) => {
@@ -78,8 +90,34 @@ export default function ComposerCanvasShell({
         </div>
       ) : null}
 
+      {useSideDrawer ? (
+        <ComposerPaneCard
+          className="rounded-2xl border border-slate-800/80 bg-slate-950/85 p-4 shadow-[0_12px_32px_rgba(2,6,23,0.22)] backdrop-blur-sm xl:self-start"
+          header={(
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-white">{drawerTitle}</p>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Canvas tools and workspace settings.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onPanelChange?.(null)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
+                title="Close drawer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+        >
+          <DrawerErrorBoundary resetKey={activePanel}>
+            {drawerContent}
+          </DrawerErrorBoundary>
+        </ComposerPaneCard>
+      ) : null}
+
       <div className="space-y-4 min-w-0">
-        {showRail && activePanel && drawerContent ? (
+        {hasDrawer && !useSideDrawer ? (
           <ComposerPaneCard
             className="rounded-2xl border border-slate-800/80 bg-slate-950/85 p-4 shadow-[0_12px_32px_rgba(2,6,23,0.22)] backdrop-blur-sm"
             header={(

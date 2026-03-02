@@ -3,8 +3,9 @@ import {
   normalizeComposerThemeValue,
   normalizeComposerVisualQualityValue,
 } from '../composer/themeCatalog.js';
+import { normalizeHubConfig, resolveHubConfigFromProject } from './hubConfig.js';
 
-export const CURRENT_PROJECT_SCHEMA_VERSION = 3;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 4;
 
 const TEMPLATE_OPTIONS = ['deck', 'finlit', 'coursebook', 'toolkit_dashboard'];
 
@@ -52,6 +53,14 @@ function withCourseSettingsDefaults(settings) {
   return next;
 }
 
+function withHubConfigDefaults(hubConfig, projectData) {
+  const legacy = resolveHubConfigFromProject({
+    ...(projectData || {}),
+    hubConfig: null,
+  });
+  return normalizeHubConfig(hubConfig, legacy);
+}
+
 function withCurrentCourseDefaults(course) {
   const next = { ...(course || {}) };
   next.modules = Array.isArray(next.modules) ? next.modules.map(withModuleDefaults) : [];
@@ -83,10 +92,20 @@ function migrateToV3(projectData) {
   return next;
 }
 
+function migrateToV4(projectData) {
+  const next = { ...(projectData || {}) };
+  next['Current Course'] = withCurrentCourseDefaults(next['Current Course']);
+  next['Course Settings'] = withCourseSettingsDefaults(next['Course Settings']);
+  next.hubConfig = withHubConfigDefaults(next.hubConfig, next);
+  next.projectSchemaVersion = 4;
+  return next;
+}
+
 function applyCurrentDefaults(projectData, targetVersion) {
   const next = { ...(projectData || {}) };
   next['Current Course'] = withCurrentCourseDefaults(next['Current Course']);
   next['Course Settings'] = withCourseSettingsDefaults(next['Course Settings']);
+  next.hubConfig = withHubConfigDefaults(next.hubConfig, next);
   if (!Number.isInteger(next.projectSchemaVersion) || next.projectSchemaVersion < targetVersion) {
     next.projectSchemaVersion = targetVersion;
   }
@@ -111,6 +130,8 @@ export function migrateProjectData(projectData, { targetVersion = CURRENT_PROJEC
       working = migrateToV2(working);
     } else if (nextVersion === 3) {
       working = migrateToV3(working);
+    } else if (nextVersion === 4) {
+      working = migrateToV4(working);
     } else {
       throw new Error(`No migration available for schema v${nextVersion}`);
     }
