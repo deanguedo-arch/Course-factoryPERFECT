@@ -3192,7 +3192,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     updateComposerActivities(nextActivities);
   };
 
-  const updateSelectedComposerActivityCanvasLayout = (updates) => {
+  const updateSelectedComposerActivityCanvasLayout = (updates, options = {}) => {
     if (!selectedComposerActivity) return;
     const nextActivities = moduleManagerComposerActivities.map((activity, idx) =>
       idx === moduleManagerComposerSelectedIndex
@@ -3205,7 +3205,19 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           }
         : activity,
     );
-    updateComposerActivities(nextActivities);
+    const interactionModeRaw = String(options?.interaction || '').trim().toLowerCase();
+    const interactionMode = interactionModeRaw === 'resize' ? 'resize' : 'drag';
+    const { activities: resolvedActivities, valid } = resolveCanvasAutoFitWithPushLimit(
+      nextActivities,
+      moduleManagerComposerSelectedIndex,
+      {
+        allowShrink: interactionMode === 'resize',
+        baseActivities: moduleManagerComposerActivities,
+        mode: interactionMode,
+      },
+    );
+    if (!valid) return;
+    updateComposerActivities(resolvedActivities);
   };
 
   const updateSelectedComposerActivityData = (updates) => {

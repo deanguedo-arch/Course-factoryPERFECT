@@ -677,7 +677,9 @@ export default function ComposerCanvasBlockOverlay({
       const shouldCommitSimpleLayout = Boolean(commit && !isCanvasMode && lastProposal && lastProposalValid);
 
       if (shouldCommitCanvas) {
-        onCanvasLayoutChange?.(lastProposal);
+        onCanvasLayoutChange?.(lastProposal, {
+          interaction: operation === 'drag' ? 'drag' : 'resize',
+        });
       } else if (shouldCommitSimpleLayout) {
         onSimpleLayoutChange?.(lastProposal);
       }
