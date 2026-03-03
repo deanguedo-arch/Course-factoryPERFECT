@@ -415,11 +415,10 @@ export default function ComposerCanvasBlockOverlay({
         return;
       } else if (operation === 'drag') {
         const proposedLeft = moveEvent.clientX - startOffsetX;
-        const proposedTop = moveEvent.clientY - startOffsetY;
         const nextSpan = clampInteger(startLayout.colSpan, 1, metrics.cols);
         proposal = {
           row: resolveSimpleRowFromClientY(
-            proposedTop + startFrame.height / 2,
+            moveEvent.clientY,
             metrics,
             startLayout.row,
             startFrame.height + metrics.gapY,

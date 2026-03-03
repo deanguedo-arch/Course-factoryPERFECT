@@ -63,6 +63,18 @@ const checks = [
   {
     type: 'include',
     file: 'overlay',
+    pattern: /resolveSimpleRowFromClientY\(\s*moveEvent\.clientY,/,
+    message: 'Simple drag row targeting is not anchored to pointer position in ComposerCanvasBlockOverlay.jsx',
+  },
+  {
+    type: 'exclude',
+    file: 'overlay',
+    pattern: /resolveSimpleRowFromClientY\(\s*proposedTop \+ startFrame\.height \/ 2,/,
+    message: 'Simple drag row targeting still uses center-of-block positioning in ComposerCanvasBlockOverlay.jsx',
+  },
+  {
+    type: 'include',
+    file: 'overlay',
     pattern: /Math\.max\(1,\s*metrics\.cols\)/,
     message: 'Simple drag column targeting is still clamped by span instead of full-column targeting in ComposerCanvasBlockOverlay.jsx',
   },
