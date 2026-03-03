@@ -421,6 +421,106 @@ function canPlaceCanvas(rect, placed) {
   return !placed.some((candidate) => collides(rect, candidate));
 }
 
+export function validateComposerCanvasProposal(
+  activities,
+  activeIndex,
+  proposal,
+  { maxColumns = COMPOSER_DEFAULT_COLUMNS } = {},
+) {
+  const nextMax = clampComposerColumns(maxColumns);
+  const rect = {
+    x: toInteger(proposal?.x, 0),
+    y: toInteger(proposal?.y, 0),
+    w: toInteger(proposal?.w ?? proposal?.colSpan, 1),
+    h: toInteger(proposal?.h, 1),
+  };
+
+  if (rect.w < 1 || rect.h < 1 || rect.x < 0 || rect.y < 0 || rect.x + rect.w > nextMax) {
+    return { valid: false, reason: 'bounds', rect };
+  }
+
+  const siblings = Array.isArray(activities)
+    ? activities
+        .map((activity, index) => ({ activity, index }))
+        .filter(({ index }) => index !== activeIndex)
+        .map(({ activity, index }) => {
+          const normalized = normalizeComposerActivityShape(activity, index, nextMax, 'canvas');
+          return {
+            index,
+            x: toInteger(normalized?.layout?.x, 0),
+            y: toInteger(normalized?.layout?.y, 0),
+            w: toInteger(normalized?.layout?.w, 1),
+            h: toInteger(normalized?.layout?.h, 1),
+          };
+        })
+    : [];
+
+  const collision = siblings.find((candidate) => collides(rect, candidate));
+  if (collision) {
+    return {
+      valid: false,
+      reason: 'collision',
+      rect,
+      collisionIndex: collision.index,
+    };
+  }
+
+  return { valid: true, reason: null, rect };
+}
+
+export function resolveComposerSimpleInsertionTarget(items, activeIndex, pointerClientY) {
+  const targetY = Number(pointerClientY) || 0;
+  const ordered = Array.isArray(items)
+    ? items
+        .filter((item) => item && Number.isInteger(item.order))
+        .sort((left, right) => {
+          if (left.topClient !== right.topClient) return left.topClient - right.topClient;
+          return left.order - right.order;
+        })
+    : [];
+
+  const remaining = ordered.filter((item) => item.order !== activeIndex);
+  if (!remaining.length) {
+    return {
+      insertionIndex: 0,
+      lineTopClient: targetY,
+      gapHeight: 16,
+    };
+  }
+
+  const gapHeight = 16;
+  const first = remaining[0];
+  const firstMidpoint = first.topClient + (first.bottomClient - first.topClient) / 2;
+
+  if (targetY <= firstMidpoint) {
+    return {
+      insertionIndex: first.order,
+      lineTopClient: first.topClient,
+      gapHeight,
+    };
+  }
+
+  for (let index = 1; index < remaining.length; index += 1) {
+    const current = remaining[index];
+    const midpoint = current.topClient + (current.bottomClient - current.topClient) / 2;
+    if (targetY <= midpoint) {
+      const previous = remaining[index - 1];
+      return {
+        insertionIndex: current.order,
+        lineTopClient: previous.bottomClient + (current.topClient - previous.bottomClient) / 2,
+        gapHeight,
+      };
+    }
+  }
+
+  const last = remaining[remaining.length - 1];
+  return {
+    insertionIndex: ordered.length,
+    lineTopClient: last.bottomClient + gapHeight,
+    gapHeight,
+  };
+}
+
 function normalizeCanvasActivities(activities, maxColumns = COMPOSER_DEFAULT_COLUMNS) {
   const nextMax = clampComposerColumns(maxColumns);
   const normalized = Array.isArray(activities)

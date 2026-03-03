@@ -14,6 +14,12 @@
   - normalized the remaining deep composer control surfaces
   - replaced raw legacy footer, layout, responsive, sidebar, preview, undo/redo, workspace, and hotspot-editor stacks with shared builder primitives
   - added a dedicated Part C verifier
+- Completed the composer canvas validation pass:
+  - added pure canvas proposal validation and stacked insertion-target resolution helpers
+  - added live blocked-red preview for invalid canvas drag/resize targets
+  - added stacked-mode insertion line/gap preview instead of blind row/col guessing
+  - changed stacked drag commit behavior to save by insertion order, not old cell rounding
+  - converted the remaining overlay `Add Section` button to the shared builder button system
 
 ## Files Changed
 
@@ -36,10 +42,14 @@
 - `src/components/composer/ComposerUndoRedoControls.jsx`
 - `src/components/composer/ComposerWorkspaceFrame.jsx`
 - `src/components/composer/HotspotEditor.jsx`
+- `src/composer/layout.js`
 - `scripts/verify_composer_canvas_overlay_redesign.mjs`
+- `scripts/verify_composer_canvas_validation.mjs`
 - `scripts/verify_composer_light_mode_legibility.mjs`
 - `scripts/verify_composer_part_c.mjs`
 - `docs/plans/2026-03-03-composer-canvas-overlay-redesign-implementation.md`
+- `docs/plans/2026-03-03-composer-canvas-validation-design.md`
+- `docs/plans/2026-03-03-composer-canvas-validation-implementation.md`
 - `docs/plans/2026-03-03-composer-light-mode-legibility-design.md`
 - `docs/plans/2026-03-03-composer-light-mode-legibility-implementation.md`
 - `docs/plans/2026-03-03-composer-part-c-design.md`
@@ -49,6 +59,7 @@
 
 Passed:
 
+- `node scripts/verify_composer_canvas_validation.mjs`
 - `node scripts/verify_composer_part_c.mjs`
 - `node scripts/verify_composer_light_mode_legibility.mjs`
 - `node scripts/verify_composer_canvas_overlay_redesign.mjs`
@@ -57,13 +68,14 @@ Passed:
 - `node scripts/verify_ui_consistency.mjs`
 - `node scripts/verify_phase1_micro_controls.mjs`
 - `npm run build`
-- targeted eslint for touched Part C files
+- targeted eslint for the new overlay/layout files
 
 Not clean globally:
 
 - `npm run lint`
+- targeted eslint including `src/components/Phase1.jsx` and `src/components/modals/EditModal.jsx`
 
-Lint is still failing for pre-existing repo debt, including generated `.vite` files and older app-level issues outside this finish pass. This handoff should be treated as build-green and verifier-green, but not full-repo lint-green.
+Lint is still failing for pre-existing repo debt in the large legacy files, especially `src/components/Phase1.jsx` and `src/components/modals/EditModal.jsx`, plus generated-file noise. This handoff should be treated as build-green and verifier-green, but not full-repo lint-green.
 
 ## Current UX State
 
@@ -71,17 +83,18 @@ Lint is still failing for pre-existing repo debt, including generated `.vite` fi
 - The old composer move-block strip is gone from the block overlay.
 - Canvas editing is now aligned with the actual working model: direct manipulation on canvas first, exact controls in the drawer second.
 - The deepest composer legacy pockets are no longer using the old raw dark utility language.
+- Canvas drag/resize now previews validity before commit, so blocked placements do not silently normalize into a different layout.
+- Stacked drag now previews insertion and commits by insertion slot, which is materially more predictable than the old row/col midpoint guess.
 
 ## Recommended Next Phase
 
-`Part C` is complete.
+The intended builder UI plan is effectively complete.
 
 Recommended next move:
 
-1. Do one blunt final visual audit in dark mode and light mode across the main builder flows.
-2. Fix only concrete residual issues found in that audit.
-3. If drag/snapping still feels off at some zoom levels, treat that as a separate layout-math pass.
-4. After UI churn settles, optionally clean targeted lint debt in touched files.
+1. Do an empirical drag/snapping QA pass in the browser at multiple zoom levels and viewport presets.
+2. Only if that surfaces real friction, do a focused layout-math pass.
+3. After UI churn settles, optionally clean targeted lint debt in `Phase1.jsx` and `EditModal.jsx`.
 
 ## Notes For The Next Agent
 
@@ -89,3 +102,7 @@ Recommended next move:
 - If movement still feels wrong, treat that as a layout-math problem, not a styling problem.
 - The light-mode strategy still uses a scoped legacy override layer in `src/index.css`, so future cleanup should keep converting legacy fragments to shared builder classes instead of adding more one-off overrides.
 - The new Part C guardrail is `scripts/verify_composer_part_c.mjs`. Keep it green before calling the composer UI complete.
+- The new interaction guardrail is `scripts/verify_composer_canvas_validation.mjs`. Keep it green before changing overlay movement behavior.
+- Residual risk is low and specific:
+  - stacked insertion is based on current DOM order, so if dense multi-column simple layouts ever need per-cell insertion previews, that would be a deliberate future UX change
+  - freeform drag still depends on the existing pointer-to-grid math, so any remaining oddness at extreme zoom levels should be handled in a separate math pass

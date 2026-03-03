@@ -929,6 +929,12 @@ textarea.cf-input-shell {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--cf-success-border) 72%, transparent);
 }
 
+.cf-composer-block-outline.is-invalid {
+  border-style: solid;
+  border-color: var(--cf-danger-border);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cf-danger-border) 72%, transparent);
+}
+
 .cf-composer-block-overlay {
   border: 1px solid var(--cf-panel-border);
   border-radius: 999px;
@@ -938,6 +944,11 @@ textarea.cf-input-shell {
   color: var(--cf-text-primary);
   backdrop-filter: blur(var(--cf-glass-blur-soft)) saturate(var(--cf-glass-sat-soft));
   -webkit-backdrop-filter: blur(var(--cf-glass-blur-soft)) saturate(var(--cf-glass-sat-soft));
+}
+
+.cf-composer-block-overlay.is-invalid {
+  border-color: color-mix(in srgb, var(--cf-danger-border) 88%, transparent);
+  background: color-mix(in srgb, var(--cf-danger-fill) 78%, var(--cf-glass-fill-strong));
 }
 
 .cf-composer-block-overlay-label {
@@ -961,6 +972,12 @@ textarea.cf-input-shell {
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--cf-text-secondary);
+}
+
+.cf-composer-block-overlay-chip.is-invalid {
+  border-color: color-mix(in srgb, var(--cf-danger-border) 78%, transparent);
+  background: color-mix(in srgb, var(--cf-danger-fill) 72%, var(--cf-panel-fill));
+  color: var(--cf-danger-text);
 }
 
 .cf-composer-block-overlay-grip {
@@ -992,6 +1009,13 @@ textarea.cf-input-shell {
   cursor: grabbing;
 }
 
+.cf-composer-block-overlay-grip.is-invalid,
+.cf-composer-block-handle.is-invalid {
+  border-color: color-mix(in srgb, var(--cf-danger-border) 78%, transparent);
+  background: color-mix(in srgb, var(--cf-danger-fill) 74%, var(--cf-glass-fill-strong));
+  color: var(--cf-danger-text);
+}
+
 .cf-composer-block-handle {
   border: 1px solid var(--cf-panel-border);
   border-radius: 999px;
@@ -1001,6 +1025,27 @@ textarea.cf-input-shell {
 
 .cf-composer-block-handle-corner {
   border-radius: 0.5rem;
+}
+
+.cf-composer-insertion-gap {
+  pointer-events: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cf-primary-fill) 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cf-primary-border) 24%, transparent);
+}
+
+.cf-composer-insertion-line {
+  pointer-events: none;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--cf-primary-border) 24%, transparent),
+    var(--cf-primary-border) 18%,
+    var(--cf-primary-border) 82%,
+    color-mix(in srgb, var(--cf-primary-border) 24%, transparent)
+  );
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cf-primary-border) 18%, transparent);
 }
 
 .cf-preview-shell {

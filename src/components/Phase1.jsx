@@ -89,6 +89,7 @@ import {
   clampComposerColSpan,
   getComposerActivityBreakpointOverride,
   moveComposerActivityToCell,
+  moveComposerActivityToInsertion,
   normalizeComposerActivities,
   normalizeComposerLayout,
   resolveComposerActivityLayoutForBreakpoint,
@@ -4110,6 +4111,32 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       moduleManagerComposerSelectedIndex,
       selectedComposerActivity,
       selectedComposerPlacement,
+      updateComposerActivities,
+    ],
+  );
+
+  const commitSelectedComposerInsertion = React.useCallback(
+    (insertionIndex) => {
+      if (isModuleManagerCanvasMode || !selectedComposerActivity || !Number.isInteger(insertionIndex)) return false;
+      const result = moveComposerActivityToInsertion(
+        moduleManagerComposerActivities,
+        moduleManagerComposerSelectedIndex,
+        insertionIndex,
+        { maxColumns: moduleManagerComposerMaxColumns },
+      );
+      if (!result.changed) return false;
+      const didUpdate = updateComposerActivities(result.activities);
+      if (didUpdate !== false) {
+        setModuleManagerComposerSelectedIndex(result.toIndex);
+      }
+      return didUpdate;
+    },
+    [
+      isModuleManagerCanvasMode,
+      moduleManagerComposerActivities,
+      moduleManagerComposerMaxColumns,
+      moduleManagerComposerSelectedIndex,
+      selectedComposerActivity,
       updateComposerActivities,
     ],
   );
@@ -9844,6 +9871,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                 viewportRef: moduleManagerCanvasViewportRef,
                                                                 frameOverlay: (
                                                                     <ComposerCanvasBlockOverlay
+                                                                        activities={moduleManagerComposerActivities}
                                                                         hidden={moduleManagerComposerPreviewInteractionMode !== 'select'}
                                                                         iframeRef={moduleManagerComposerPreviewIframeRef}
                                                                         viewportRef={moduleManagerCanvasViewportRef}
@@ -9855,7 +9883,9 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                         maxColumns={moduleManagerComposerMaxColumns}
                                                                         onOpenAddPanel={() => setModuleManagerComposerSidebarMode('grid')}
                                                                         onCanvasLayoutChange={updateSelectedComposerActivityCanvasLayout}
+                                                                        onSimpleInsertionChange={commitSelectedComposerInsertion}
                                                                         onSimpleLayoutChange={commitSelectedComposerSimpleLayout}
+                                                                        selectedIndex={moduleManagerComposerSelectedIndex}
                                                                     />
                                                                 ),
                                                                 interactionMode: moduleManagerComposerPreviewInteractionMode,
