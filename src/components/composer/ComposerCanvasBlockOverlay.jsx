@@ -283,14 +283,15 @@ function estimateSimpleRowCenterClient(row, metrics) {
   return (first.topClient + first.bottomClient) / 2;
 }
 
-function resolveSimpleDragValidation(activities, selectedIndex, proposal, metrics, targetY) {
+function evaluateSimpleDragPlacements(activities, selectedIndex, proposal, metrics, targetY) {
   const initial = validateComposerSimpleProposal(activities, selectedIndex, proposal, { maxColumns: metrics.cols });
   const rowCandidates = buildSimpleRowCandidates(proposal?.row, targetY, metrics);
   const colCandidates = buildSimpleColCandidates(proposal?.col, metrics?.cols);
   const targetYClient = Number(targetY) || 0;
   const colStep = Math.max(1, Number(metrics?.columnWidth) + Number(metrics?.gapX));
   const proposalCol = clampInteger(proposal?.col, 1, Math.max(1, Number(metrics?.cols) || 1));
-  let best = null;
+  const ranked = [];
+  const seen = new Set();
 
   for (const candidateRow of rowCandidates) {
     for (const candidateCol of colCandidates) {
@@ -306,19 +307,50 @@ function resolveSimpleDragValidation(activities, selectedIndex, proposal, metric
       );
       if (!attempt.valid) continue;
       const layout = attempt.layout || {};
+      const key = `${Math.max(1, Number.parseInt(layout.row, 10) || 1)}-${Math.max(1, Number.parseInt(layout.col, 10) || 1)}-${Math.max(1, Number.parseInt(layout.colSpan, 10) || 1)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
       const rowCenter = estimateSimpleRowCenterClient(layout.row, metrics);
       const rowDistance = Math.abs(targetYClient - rowCenter);
       const colDistance = Math.abs((Number.parseInt(layout.col, 10) || 1) - proposalCol) * colStep;
       const fittedPenalty = attempt.fitted ? 12 : 0;
       const score = rowDistance + colDistance + fittedPenalty;
-      if (!best || score < best.score) {
-        best = { score, validation: attempt };
-      }
+      ranked.push({ score, validation: attempt });
     }
   }
 
-  if (best?.validation) return best.validation;
-  return initial;
+  ranked.sort((left, right) => left.score - right.score);
+  return {
+    initial,
+    ranked,
+  };
+}
+
+function resolveSimpleDragValidation(activities, selectedIndex, proposal, metrics, targetY) {
+  const evaluation = evaluateSimpleDragPlacements(activities, selectedIndex, proposal, metrics, targetY);
+  return evaluation.ranked[0]?.validation || evaluation.initial;
+}
+
+function buildSimpleDropHintFrames(evaluation, metrics, fallbackHeight, limit = 8) {
+  if (!evaluation || !Array.isArray(evaluation.ranked) || evaluation.ranked.length === 0) return [];
+  const maxHints = Math.max(1, Number.parseInt(limit, 10) || 8);
+  const frames = [];
+  for (let index = 0; index < evaluation.ranked.length && frames.length < maxHints; index += 1) {
+    const candidate = evaluation.ranked[index];
+    const layout = candidate?.validation?.layout;
+    if (!layout) continue;
+    const frame = frameFromSimpleLayout(layout, metrics, fallbackHeight);
+    if (!frame) continue;
+    frames.push({
+      key: `${layout.row}-${layout.col}-${layout.colSpan}-${index}`,
+      left: frame.left,
+      top: frame.top,
+      width: frame.width,
+      height: frame.height,
+      isPrimary: index === 0,
+    });
+  }
+  return frames;
 }
 
 function formatLayoutChip(layout, isCanvasMode) {
@@ -353,6 +385,7 @@ export default function ComposerCanvasBlockOverlay({
   const [draftFrame, setDraftFrame] = React.useState(null);
   const [draftChip, setDraftChip] = React.useState('');
   const [previewKind, setPreviewKind] = React.useState('idle');
+  const [simpleDropHints, setSimpleDropHints] = React.useState([]);
   const metricsRef = React.useRef(null);
   const interactionCleanupRef = React.useRef(null);
 
@@ -361,12 +394,14 @@ export default function ComposerCanvasBlockOverlay({
     interactionCleanupRef.current = null;
     setPreviewKind('idle');
     setDraftChip('');
+    setSimpleDropHints([]);
   }, []);
 
   const updateFrame = React.useCallback(() => {
     if (hidden) {
       metricsRef.current = null;
       setFrame(null);
+      setSimpleDropHints([]);
       return;
     }
     const targetId = String(selectedActivityId || '').trim();
@@ -376,6 +411,7 @@ export default function ComposerCanvasBlockOverlay({
     if (!targetId || !iframe || !viewport || !doc) {
       metricsRef.current = null;
       setFrame(null);
+      setSimpleDropHints([]);
       return;
     }
 
@@ -383,6 +419,7 @@ export default function ComposerCanvasBlockOverlay({
     if (!target) {
       metricsRef.current = null;
       setFrame(null);
+      setSimpleDropHints([]);
       return;
     }
 
@@ -468,6 +505,7 @@ export default function ComposerCanvasBlockOverlay({
 
   React.useEffect(() => {
     setDraftFrame(null);
+    setSimpleDropHints([]);
     clearInteraction();
   }, [clearInteraction, selectedActivityId, syncKey]);
 
@@ -528,6 +566,7 @@ export default function ComposerCanvasBlockOverlay({
       let nextFrame = null;
 
       if (isCanvasMode) {
+        setSimpleDropHints([]);
         if (operation === 'drag') {
           const proposedLeft = moveEvent.clientX - startOffsetX;
           const proposedTop = moveEvent.clientY - startOffsetY;
@@ -581,16 +620,25 @@ export default function ComposerCanvasBlockOverlay({
           ),
           colSpan: nextSpan,
         };
+        const simpleEvaluation = evaluateSimpleDragPlacements(
+          activities,
+          selectedIndex,
+          proposal,
+          metrics,
+          moveEvent.clientY,
+        );
         const validation = resolveSimpleDragValidation(activities, selectedIndex, proposal, metrics, moveEvent.clientY);
         lastProposal = validation.layout;
         lastProposalValid = validation.valid;
         nextFrame = frameFromSimpleLayout(validation.layout, metrics, startFrame.height);
+        setSimpleDropHints(buildSimpleDropHintFrames(simpleEvaluation, metrics, startFrame.height));
         setPreviewKind(validation.valid ? 'simple-valid' : 'simple-invalid');
         if (!nextFrame) return;
         setDraftFrame(nextFrame);
         setDraftChip(validation.valid ? formatLayoutChip(validation.layout, false) : 'Blocked');
         return;
       } else {
+        setSimpleDropHints([]);
         const nextSpan = clampInteger(
           startLayout.colSpan + Math.round((moveEvent.clientX - event.clientX) / stepX),
           1,
@@ -642,6 +690,7 @@ export default function ComposerCanvasBlockOverlay({
           setDraftFrame(null);
           setPreviewKind('idle');
           setDraftChip('');
+          setSimpleDropHints([]);
           updateFrame();
         }, 120);
         return;
@@ -649,6 +698,7 @@ export default function ComposerCanvasBlockOverlay({
       setDraftFrame(null);
       setPreviewKind('idle');
       setDraftChip('');
+      setSimpleDropHints([]);
       updateFrame();
     };
 
@@ -673,6 +723,7 @@ export default function ComposerCanvasBlockOverlay({
       setDraftFrame(null);
       setPreviewKind('idle');
       setDraftChip('');
+      setSimpleDropHints([]);
     };
   };
 
@@ -687,6 +738,21 @@ export default function ComposerCanvasBlockOverlay({
 
   return (
     <>
+      {!isCanvasMode && simpleDropHints.length > 0
+        ? simpleDropHints.map((hint) => (
+            <div
+              key={hint.key}
+              className={`cf-composer-drop-slot absolute z-[18] ${hint.isPrimary ? 'is-primary' : ''}`}
+              style={{
+                left: `${hint.left}px`,
+                top: `${hint.top}px`,
+                width: `${hint.width}px`,
+                height: `${hint.height}px`,
+              }}
+            />
+          ))
+        : null}
+
       <div
         className={`cf-composer-block-outline absolute z-20 ${draftFrame ? 'is-draft' : ''} ${isInvalidPreview ? 'is-invalid' : ''}`}
         style={{

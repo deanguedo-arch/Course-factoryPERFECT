@@ -935,6 +935,23 @@ textarea.cf-input-shell {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--cf-danger-border) 72%, transparent);
 }
 
+.cf-composer-drop-slot {
+  pointer-events: none;
+  border: 1px dashed color-mix(in srgb, var(--cf-primary-border) 62%, transparent);
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--cf-primary-fill) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cf-primary-border) 28%, transparent);
+}
+
+.cf-composer-drop-slot.is-primary {
+  border-style: solid;
+  border-color: var(--cf-success-border);
+  background: color-mix(in srgb, var(--cf-success-fill) 22%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--cf-success-border) 46%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--cf-success-border) 36%, transparent);
+}
+
 .cf-composer-block-overlay {
   border: 1px solid var(--cf-panel-border);
   border-radius: 999px;

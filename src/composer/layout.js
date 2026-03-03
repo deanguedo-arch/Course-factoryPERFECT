@@ -344,6 +344,28 @@ function normalizeComposerActivityShape(activity, index, maxColumns = COMPOSER_D
   return next;
 }
 
+function compactSimplePlacementRows(placements) {
+  if (!(placements instanceof Map) || placements.size === 0) return placements;
+
+  const rows = Array.from(placements.values())
+    .map((placement) => clampComposerRow(placement?.row || 1))
+    .sort((a, b) => a - b)
+    .filter((row, index, list) => index === 0 || row !== list[index - 1]);
+
+  if (rows.length <= 1) return placements;
+
+  const rowMap = new Map(rows.map((row, index) => [row, index + 1]));
+  const compacted = new Map();
+  placements.forEach((placement, index) => {
+    const sourceRow = clampComposerRow(placement?.row || 1);
+    compacted.set(index, {
+      ...placement,
+      row: rowMap.get(sourceRow) || sourceRow,
+    });
+  });
+  return compacted;
+}
+
 function packComposerActivities(activities, maxColumns = COMPOSER_DEFAULT_COLUMNS, { fixedPlacement } = {}) {
   const nextMax = clampComposerColumns(maxColumns);
   const nextActivities = Array.isArray(activities)
@@ -391,8 +413,10 @@ function packComposerActivities(activities, maxColumns = COMPOSER_DEFAULT_COLUMN
     markOccupied(occupied, cell.row, cell.col, entry.colSpan);
   });
 
+  const compactedPlacements = compactSimplePlacementRows(placed);
+
   return nextActivities.map((activity, index) => {
-    const placement = placed.get(index) || {
+    const placement = compactedPlacements.get(index) || {
       row: clampComposerRow(activity?.layout?.row || 1),
       col: clampComposerColStart(activity?.layout?.col || 1, nextMax, activity?.layout?.colSpan || 1),
       colSpan: clampComposerColSpan(activity?.layout?.colSpan, nextMax),

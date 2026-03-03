@@ -32,6 +32,12 @@ const checks = [
   },
   {
     type: 'include',
+    file: 'layout',
+    pattern: /function compactSimplePlacementRows\(/,
+    message: 'Simple layout packing is missing empty-row compaction helper in src/composer/layout.js',
+  },
+  {
+    type: 'include',
     file: 'overlay',
     pattern: /previewKind/,
     message: 'Missing preview-kind state in ComposerCanvasBlockOverlay.jsx',
@@ -63,6 +69,18 @@ const checks = [
   {
     type: 'include',
     file: 'overlay',
+    pattern: /const \[simpleDropHints,\s*setSimpleDropHints\]/,
+    message: 'Missing simple drop hint state in ComposerCanvasBlockOverlay.jsx',
+  },
+  {
+    type: 'include',
+    file: 'overlay',
+    pattern: /function buildSimpleDropHintFrames\(/,
+    message: 'Missing simple drop hint frame builder in ComposerCanvasBlockOverlay.jsx',
+  },
+  {
+    type: 'include',
+    file: 'overlay',
     pattern: /onSimpleLayoutChange/,
     message: 'Missing simple layout commit callback in ComposerCanvasBlockOverlay.jsx',
   },
@@ -83,6 +101,12 @@ const checks = [
     file: 'overlay',
     pattern: /resolveSimpleDragValidation\([\s\S]*moveEvent\.clientY[\s\S]*\)/,
     message: 'Simple drag validation is not using pointer position for forgiving placement',
+  },
+  {
+    type: 'include',
+    file: 'overlay',
+    pattern: /setSimpleDropHints\(/,
+    message: 'Simple drag flow is not updating drop hint overlays in ComposerCanvasBlockOverlay.jsx',
   },
   {
     type: 'include',
