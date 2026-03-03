@@ -1,18 +1,6 @@
 import * as React from 'react';
 
-const ACCENT_CLASS_MAP = {
-  blue: {
-    activeButton: 'bg-blue-600 border-blue-400 text-white',
-    toggleOn: 'border-blue-300 bg-blue-500',
-  },
-  indigo: {
-    activeButton: 'bg-indigo-600 border-indigo-400 text-white',
-    toggleOn: 'border-indigo-300 bg-indigo-500',
-  },
-};
-
 export default function ComposerLayoutControls({
-  accent = 'indigo',
   containerPadding = [12, 12],
   layoutMode = 'simple',
   margin = [12, 12],
@@ -25,7 +13,6 @@ export default function ComposerLayoutControls({
   onSimpleMatchTallestRowChange,
 }) {
   const [showAdvancedCanvasMetrics, setShowAdvancedCanvasMetrics] = React.useState(false);
-  const accentClasses = ACCENT_CLASS_MAP[accent] || ACCENT_CLASS_MAP.indigo;
   const gapX = Array.isArray(margin) ? margin[0] : 12;
   const gapY = Array.isArray(margin) ? margin[1] : 12;
   const padX = Array.isArray(containerPadding) ? containerPadding[0] : 12;
@@ -33,9 +20,12 @@ export default function ComposerLayoutControls({
   const isCanvasMode = layoutMode === 'canvas';
 
   return (
-    <div className="mb-3 p-2 rounded border border-slate-700 bg-slate-900/60">
-      <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Arrange</label>
-      <div className="grid grid-cols-2 gap-2 mb-2">
+    <div className="cf-composer-panel-soft mb-3 space-y-3 p-3">
+      <div>
+        <p className="cf-meta-label">Arrange</p>
+        <p className="cf-meta-copy mt-1">Choose whether sections snap to the lesson flow or move freely on the canvas.</p>
+      </div>
+      <div className="cf-tab-rail grid grid-cols-2 gap-2 p-1">
         {[
           { value: 'simple', label: 'Stacked' },
           { value: 'canvas', label: 'Freeform' },
@@ -44,10 +34,8 @@ export default function ComposerLayoutControls({
             key={option.value}
             type="button"
             onClick={() => onLayoutModeChange?.(option.value)}
-            className={`rounded px-2 py-1 text-[10px] font-black uppercase tracking-wide border ${
-              layoutMode === option.value
-                ? accentClasses.activeButton
-                : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'
+            className={`cf-tab-btn px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] ${
+              layoutMode === option.value ? 'cf-tab-btn-active' : ''
             }`}
           >
             {option.label}
@@ -55,11 +43,12 @@ export default function ComposerLayoutControls({
         ))}
       </div>
 
-      <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Page Width</label>
+      <label className="space-y-2">
+        <span className="cf-meta-label">Page Width</span>
       <select
         value={maxColumns}
         onChange={(event) => onMaxColumnsChange?.(event.target.value)}
-        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+        className="cf-input-shell px-3 py-2 text-xs"
       >
         {[1, 2, 3, 4].map((count) => (
           <option key={count} value={count}>
@@ -67,59 +56,60 @@ export default function ComposerLayoutControls({
           </option>
         ))}
       </select>
+      </label>
 
       {isCanvasMode ? (
-        <div className="mt-2 rounded border border-slate-700 bg-slate-950/60 p-2">
+        <div className="cf-panel-muted space-y-3 p-3">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-wide text-slate-200">Advanced Canvas Metrics</p>
-              <p className="text-[10px] text-slate-500">Only adjust these if spacing feels wrong.</p>
+              <p className="cf-meta-label">Advanced Canvas Metrics</p>
+              <p className="cf-meta-copy mt-1">Only adjust these if spacing feels wrong.</p>
             </div>
             <button
               type="button"
               onClick={() => setShowAdvancedCanvasMetrics((prev) => !prev)}
-              className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-200 hover:bg-slate-800"
+              className="cf-btn cf-btn-secondary px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em]"
             >
               {showAdvancedCanvasMetrics ? 'Hide' : 'Show'}
             </button>
           </div>
           {showAdvancedCanvasMetrics ? (
             <div className="mt-2 grid grid-cols-5 gap-2">
-              <label className="text-[10px] text-slate-400">
-                Row H
+              <label className="space-y-1">
+                <span className="cf-meta-label">Row H</span>
                 <input
                   type="number"
                   min="8"
                   max="200"
                   value={rowHeight}
                   onChange={(event) => onCanvasMetricChange?.('rowHeight', event.target.value)}
-                  className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                  className="cf-input-shell px-2 py-1.5 text-xs"
                 />
               </label>
-              <label className="text-[10px] text-slate-400">
-                Gap X
+              <label className="space-y-1">
+                <span className="cf-meta-label">Gap X</span>
                 <input
                   type="number"
                   min="0"
                   max="200"
                   value={gapX}
                   onChange={(event) => onCanvasMetricChange?.('margin', [Number.parseInt(event.target.value, 10) || 0, gapY])}
-                  className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                  className="cf-input-shell px-2 py-1.5 text-xs"
                 />
               </label>
-              <label className="text-[10px] text-slate-400">
-                Gap Y
+              <label className="space-y-1">
+                <span className="cf-meta-label">Gap Y</span>
                 <input
                   type="number"
                   min="0"
                   max="200"
                   value={gapY}
                   onChange={(event) => onCanvasMetricChange?.('margin', [gapX, Number.parseInt(event.target.value, 10) || 0])}
-                  className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                  className="cf-input-shell px-2 py-1.5 text-xs"
                 />
               </label>
-              <label className="text-[10px] text-slate-400">
-                Pad X
+              <label className="space-y-1">
+                <span className="cf-meta-label">Pad X</span>
                 <input
                   type="number"
                   min="0"
@@ -128,11 +118,11 @@ export default function ComposerLayoutControls({
                   onChange={(event) =>
                     onCanvasMetricChange?.('containerPadding', [Number.parseInt(event.target.value, 10) || 0, padY])
                   }
-                  className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                  className="cf-input-shell px-2 py-1.5 text-xs"
                 />
               </label>
-              <label className="text-[10px] text-slate-400">
-                Pad Y
+              <label className="space-y-1">
+                <span className="cf-meta-label">Pad Y</span>
                 <input
                   type="number"
                   min="0"
@@ -141,31 +131,25 @@ export default function ComposerLayoutControls({
                   onChange={(event) =>
                     onCanvasMetricChange?.('containerPadding', [padX, Number.parseInt(event.target.value, 10) || 0])
                   }
-                  className="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-1 text-white text-xs"
+                  className="cf-input-shell px-2 py-1.5 text-xs"
                 />
               </label>
             </div>
           ) : null}
         </div>
       ) : (
-        <label className="mt-2 flex items-center justify-between gap-3 rounded border border-slate-700 bg-slate-900/70 px-2 py-2 text-[10px] text-slate-300">
+        <label className="cf-panel-muted mt-2 flex items-center justify-between gap-3 px-3 py-3">
           <div>
-            <p className="font-black uppercase tracking-wide text-slate-200">Equalize Row Heights</p>
-            <p className="text-slate-500">Keep blocks in the same row visually aligned.</p>
+            <p className="cf-meta-label">Equalize Row Heights</p>
+            <p className="cf-meta-copy mt-1">Keep blocks in the same row visually aligned.</p>
           </div>
           <button
             type="button"
             onClick={() => onSimpleMatchTallestRowChange?.(!(simpleMatchTallestRow === true))}
-            className={`inline-flex h-5 w-9 items-center rounded-full border transition-colors ${
-              simpleMatchTallestRow === true ? accentClasses.toggleOn : 'border-slate-600 bg-slate-800'
-            }`}
+            className={`cf-toggle-switch ${simpleMatchTallestRow === true ? 'is-on' : ''}`}
             aria-label="Toggle simple row height matching"
           >
-            <span
-              className={`mx-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-                simpleMatchTallestRow === true ? 'translate-x-4' : ''
-              }`}
-            />
+            <span className="cf-toggle-knob" />
           </button>
         </label>
       )}

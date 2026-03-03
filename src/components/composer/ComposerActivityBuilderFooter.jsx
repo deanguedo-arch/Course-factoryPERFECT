@@ -45,12 +45,16 @@ export default function ComposerActivityBuilderFooter({
   selectedSpan = 1,
 }) {
   const quickInsertTypes = ['title_block', 'content_block', 'reflection_journal', 'knowledge_check', 'resource_list', 'tabs_block'];
+  const controlButtonClass = 'cf-btn cf-btn-secondary px-3 py-2 text-[11px] font-semibold';
 
   return (
     <>
-      <div className="rounded border border-slate-700 bg-slate-900/60 p-2">
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-300">Add Section</p>
-        <div className="mb-2 flex flex-wrap gap-2">
+      <div className="cf-composer-panel-soft space-y-3 p-3">
+        <div>
+          <p className="cf-meta-label">Add Section</p>
+          <p className="cf-meta-copy mt-1">Start from a strong section pattern, then tune it in the inspector.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           {quickInsertTypes.map((type) => (
             <button
               key={type}
@@ -59,7 +63,7 @@ export default function ComposerActivityBuilderFooter({
                 onNewActivityTypeChange?.(type);
                 onQuickAddActivityType?.(type);
               }}
-              className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-bold text-slate-200 hover:border-emerald-500/60 hover:text-white"
+              className={controlButtonClass}
             >
               {getActivityLabel ? getActivityLabel(type) : type}
             </button>
@@ -69,7 +73,7 @@ export default function ComposerActivityBuilderFooter({
           <select
             value={newActivityType}
             onChange={(event) => onNewActivityTypeChange?.(event.target.value)}
-            className="col-span-2 rounded border border-slate-700 bg-slate-900 p-2 text-xs text-white"
+            className="cf-input-shell col-span-2 px-3 py-2 text-xs"
           >
             {activityTypeGroups.map((group) => (
               <optgroup key={group.category} label={group.label}>
@@ -84,7 +88,7 @@ export default function ComposerActivityBuilderFooter({
           <button
             type="button"
             onClick={onAddActivity}
-            className="inline-flex items-center justify-center gap-1 rounded bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-500"
+            className="cf-btn cf-btn-success py-2 text-xs font-bold"
           >
             <Plus size={12} /> Add Section
           </button>
@@ -96,18 +100,18 @@ export default function ComposerActivityBuilderFooter({
           <button
             type="button"
             onClick={onAddOpenRow}
-            className="mt-2 inline-flex w-full items-center justify-center gap-1 rounded border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-white hover:bg-slate-700"
+            className="cf-btn cf-btn-secondary mt-2 w-full py-2 text-xs font-bold"
             title="Add one open row below the selected block (or at bottom if none selected)"
           >
             <Plus size={12} /> Add Open Row
           </button>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <label className="self-center text-[11px] font-bold uppercase text-slate-400">Section Width</label>
+          <div className="cf-panel-muted mt-2 grid grid-cols-[auto,1fr] items-center gap-3 p-3">
+            <label className="cf-meta-label">Section Width</label>
             <select
               value={selectedSpan}
               onChange={(event) => onSpanChange?.(event.target.value)}
               disabled={!selectedActivity}
-              className="rounded border border-slate-700 bg-slate-900 p-2 text-xs text-white disabled:opacity-40"
+              className="cf-input-shell px-3 py-2 text-xs disabled:opacity-40"
             >
               {Array.from({ length: maxColumns }, (_, idx) => idx + 1).map((span) => (
                 <option key={span} value={span}>
@@ -121,7 +125,7 @@ export default function ComposerActivityBuilderFooter({
               type="button"
               onClick={onMoveLeft}
               disabled={moveLeftDisabled}
-              className="inline-flex items-center justify-center gap-1 rounded bg-slate-700 px-2 py-1.5 text-xs text-white hover:bg-slate-600 disabled:opacity-40"
+              className="cf-btn cf-btn-secondary px-2 py-2 text-xs font-bold"
               title="Move left"
             >
               <ChevronLeft size={12} /> Left
@@ -130,7 +134,7 @@ export default function ComposerActivityBuilderFooter({
               type="button"
               onClick={onMoveRight}
               disabled={moveRightDisabled}
-              className="inline-flex items-center justify-center gap-1 rounded bg-slate-700 px-2 py-1.5 text-xs text-white hover:bg-slate-600 disabled:opacity-40"
+              className="cf-btn cf-btn-secondary px-2 py-2 text-xs font-bold"
               title="Move right"
             >
               <ChevronRight size={12} /> Right
@@ -139,7 +143,7 @@ export default function ComposerActivityBuilderFooter({
               type="button"
               onClick={onMoveUp}
               disabled={moveUpDisabled}
-              className="inline-flex items-center justify-center gap-1 rounded bg-slate-700 px-2 py-1.5 text-xs text-white hover:bg-slate-600 disabled:opacity-40"
+              className="cf-btn cf-btn-secondary px-2 py-2 text-xs font-bold"
             >
               <ChevronUp size={12} /> Up
             </button>
@@ -147,7 +151,7 @@ export default function ComposerActivityBuilderFooter({
               type="button"
               onClick={onMoveDown}
               disabled={moveDownDisabled}
-              className="inline-flex items-center justify-center gap-1 rounded bg-slate-700 px-2 py-1.5 text-xs text-white hover:bg-slate-600 disabled:opacity-40"
+              className="cf-btn cf-btn-secondary px-2 py-2 text-xs font-bold"
             >
               <ChevronDown size={12} /> Down
             </button>
@@ -155,31 +159,31 @@ export default function ComposerActivityBuilderFooter({
         </>
       ) : (
         <>
-          <div className="mt-2 grid grid-cols-4 gap-2">
-            <label className="text-[10px] text-slate-400">
-              X
+          <div className="cf-panel-muted mt-2 grid grid-cols-4 gap-2 p-3">
+            <label className="space-y-1">
+              <span className="cf-meta-label">X</span>
               <input
                 type="number"
                 min="0"
                 value={canvasX}
                 onChange={(event) => onCanvasXChange?.(event.target.value)}
                 disabled={!selectedActivity}
-                className="mt-1 w-full rounded border border-slate-700 bg-slate-900 p-1 text-xs text-white disabled:opacity-40"
+                className="cf-input-shell w-full px-2 py-1.5 text-xs disabled:opacity-40"
               />
             </label>
-            <label className="text-[10px] text-slate-400">
-              Y
+            <label className="space-y-1">
+              <span className="cf-meta-label">Y</span>
               <input
                 type="number"
                 min="0"
                 value={canvasY}
                 onChange={(event) => onCanvasYChange?.(event.target.value)}
                 disabled={!selectedActivity}
-                className="mt-1 w-full rounded border border-slate-700 bg-slate-900 p-1 text-xs text-white disabled:opacity-40"
+                className="cf-input-shell w-full px-2 py-1.5 text-xs disabled:opacity-40"
               />
             </label>
-            <label className="text-[10px] text-slate-400">
-              W
+            <label className="space-y-1">
+              <span className="cf-meta-label">W</span>
               <input
                 type="number"
                 min="1"
@@ -187,18 +191,18 @@ export default function ComposerActivityBuilderFooter({
                 value={canvasW}
                 onChange={(event) => onCanvasWChange?.(event.target.value)}
                 disabled={!selectedActivity}
-                className="mt-1 w-full rounded border border-slate-700 bg-slate-900 p-1 text-xs text-white disabled:opacity-40"
+                className="cf-input-shell w-full px-2 py-1.5 text-xs disabled:opacity-40"
               />
             </label>
-            <label className="text-[10px] text-slate-400">
-              H
+            <label className="space-y-1">
+              <span className="cf-meta-label">H</span>
               <input
                 type="number"
                 min="1"
                 value={canvasH}
                 onChange={(event) => onCanvasHChange?.(event.target.value)}
                 disabled={!selectedActivity}
-                className="mt-1 w-full rounded border border-slate-700 bg-slate-900 p-1 text-xs text-white disabled:opacity-40"
+                className="cf-input-shell w-full px-2 py-1.5 text-xs disabled:opacity-40"
               />
             </label>
           </div>
@@ -215,7 +219,7 @@ export default function ComposerActivityBuilderFooter({
           type="button"
           onClick={onDuplicate}
           disabled={!selectedActivity}
-          className="flex-1 inline-flex items-center justify-center gap-1 rounded bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-500 disabled:opacity-40"
+          className="cf-btn cf-btn-primary flex-1 px-3 py-2 text-xs font-bold"
           title="Duplicate selected activity"
         >
           <Copy size={12} /> Duplicate
@@ -224,7 +228,7 @@ export default function ComposerActivityBuilderFooter({
           type="button"
           onClick={onDelete}
           disabled={!selectedActivity}
-          className="flex-1 inline-flex items-center justify-center gap-1 rounded bg-rose-600 px-3 py-1.5 text-xs text-white hover:bg-rose-500 disabled:opacity-40"
+          className="cf-btn cf-btn-danger flex-1 px-3 py-2 text-xs font-bold"
           title="Delete selected activity"
         >
           <Trash2 size={12} /> Delete

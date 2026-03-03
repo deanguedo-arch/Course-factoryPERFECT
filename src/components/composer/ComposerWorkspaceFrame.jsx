@@ -24,7 +24,7 @@ export default function ComposerWorkspaceFrame({
     <div className="space-y-4">
       {shouldShowHeader ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          {title ? <h4 className="text-sm font-bold text-white">{title}</h4> : <div />}
+          {title ? <h4 className="text-sm font-semibold" style={{ color: 'var(--cf-text-primary)' }}>{title}</h4> : <div />}
           {headerActions}
         </div>
       ) : null}
@@ -32,7 +32,7 @@ export default function ComposerWorkspaceFrame({
       {showControls && controls}
 
       {shouldShowEmptyState ? (
-        <div className="rounded-lg border border-slate-700 bg-slate-950 p-4 text-xs text-slate-400">{emptyMessage}</div>
+        <div className="cf-panel-muted p-4 text-xs" style={{ color: 'var(--cf-text-secondary)' }}>{emptyMessage}</div>
       ) : isSplitLayout ? (
         <div className="flex flex-col gap-4 lg:flex-row">
           {showMainPane ? (

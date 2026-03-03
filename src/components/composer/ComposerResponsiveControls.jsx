@@ -35,11 +35,11 @@ export default function ComposerResponsiveControls({
   const summaryLabel = isDesktop ? 'Desktop uses the base layout.' : `Adjust ${label.toLowerCase()} only when the page needs a device-specific fix.`;
 
   return (
-    <div className="mt-3 rounded-lg border border-slate-700 bg-slate-900/60 p-3">
+    <div className="cf-composer-panel-soft mt-3 space-y-3 p-3">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-300">Device Overrides</p>
-          <p className="text-[10px] text-slate-500">{summaryLabel}</p>
+          <p className="cf-meta-label">Device Overrides</p>
+          <p className="cf-meta-copy mt-1">{summaryLabel}</p>
         </div>
         <div className="flex items-center gap-2">
           {!isDesktop ? (
@@ -47,7 +47,7 @@ export default function ComposerResponsiveControls({
               type="button"
               onClick={onReset}
               disabled={!canReset}
-              className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-200 hover:bg-slate-800 disabled:opacity-40"
+              className="cf-btn cf-btn-secondary px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em]"
             >
               Use Desktop
             </button>
@@ -55,7 +55,7 @@ export default function ComposerResponsiveControls({
           <button
             type="button"
             onClick={() => setIsOpen((prev) => !prev)}
-            className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-200 hover:bg-slate-800"
+            className="cf-btn cf-btn-secondary px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em]"
           >
             {isOpen ? 'Hide' : 'Show'}
           </button>
@@ -63,13 +63,13 @@ export default function ComposerResponsiveControls({
       </div>
 
       {isOpen ? (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <label className="inline-flex items-center gap-2 text-[11px] text-slate-300">
+        <div className="cf-panel-muted mt-3 space-y-3 p-3">
+          <label className="inline-flex items-center gap-2 text-[11px]" style={{ color: 'var(--cf-text-secondary)' }}>
             <input
               type="checkbox"
               checked={hidden}
               onChange={(event) => onHiddenChange?.(event.target.checked)}
-              className="h-4 w-4 rounded border-slate-600 bg-slate-950 text-indigo-500"
+              className="cf-check"
               disabled={isDesktop}
             />
             Hide on {label}
@@ -78,30 +78,30 @@ export default function ComposerResponsiveControls({
           {!hidden ? (
             isCanvasMode ? (
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <label className="text-[10px] text-slate-400">
-                  X
+                <label className="space-y-1">
+                  <span className="cf-meta-label">X</span>
                   <input
                     type="number"
                     min="0"
                     value={x}
                     onChange={(event) => onCanvasXChange?.(event.target.value)}
                     disabled={isDesktop}
-                    className="mt-1 w-16 rounded border border-slate-700 bg-slate-950 p-1 text-xs text-white disabled:opacity-40"
+                    className="cf-input-shell w-16 px-2 py-1.5 text-xs disabled:opacity-40"
                   />
                 </label>
-                <label className="text-[10px] text-slate-400">
-                  Y
+                <label className="space-y-1">
+                  <span className="cf-meta-label">Y</span>
                   <input
                     type="number"
                     min="0"
                     value={y}
                     onChange={(event) => onCanvasYChange?.(event.target.value)}
                     disabled={isDesktop}
-                    className="mt-1 w-16 rounded border border-slate-700 bg-slate-950 p-1 text-xs text-white disabled:opacity-40"
+                    className="cf-input-shell w-16 px-2 py-1.5 text-xs disabled:opacity-40"
                   />
                 </label>
-                <label className="text-[10px] text-slate-400">
-                  W
+                <label className="space-y-1">
+                  <span className="cf-meta-label">W</span>
                   <input
                     type="number"
                     min="1"
@@ -109,36 +109,36 @@ export default function ComposerResponsiveControls({
                     value={width}
                     onChange={(event) => onCanvasWChange?.(event.target.value)}
                     disabled={isDesktop}
-                    className="mt-1 w-16 rounded border border-slate-700 bg-slate-950 p-1 text-xs text-white disabled:opacity-40"
+                    className="cf-input-shell w-16 px-2 py-1.5 text-xs disabled:opacity-40"
                   />
                 </label>
-                <label className="text-[10px] text-slate-400">
-                  H
+                <label className="space-y-1">
+                  <span className="cf-meta-label">H</span>
                   <input
                     type="number"
                     min="1"
                     value={height}
                     onChange={(event) => onCanvasHChange?.(event.target.value)}
                     disabled={isDesktop}
-                    className="mt-1 w-16 rounded border border-slate-700 bg-slate-950 p-1 text-xs text-white disabled:opacity-40"
+                    className="cf-input-shell w-16 px-2 py-1.5 text-xs disabled:opacity-40"
                   />
                 </label>
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-2">
-                <label className="text-[10px] text-slate-400">
-                  {label} Row
+                <label className="space-y-1">
+                  <span className="cf-meta-label">{label} Row</span>
                   <input
                     type="number"
                     min="1"
                     value={row}
                     onChange={(event) => onRowChange?.(event.target.value)}
                     disabled={isDesktop}
-                    className="mt-1 w-full rounded border border-slate-700 bg-slate-950 p-1.5 text-xs text-white disabled:opacity-40"
+                    className="cf-input-shell px-2 py-1.5 text-xs disabled:opacity-40"
                   />
                 </label>
-                <label className="text-[10px] text-slate-400">
-                  {label} Col
+                <label className="space-y-1">
+                  <span className="cf-meta-label">{label} Col</span>
                   <input
                     type="number"
                     min="1"
@@ -146,16 +146,16 @@ export default function ComposerResponsiveControls({
                     value={col}
                     onChange={(event) => onColChange?.(event.target.value)}
                     disabled={isDesktop}
-                    className="mt-1 w-full rounded border border-slate-700 bg-slate-950 p-1.5 text-xs text-white disabled:opacity-40"
+                    className="cf-input-shell px-2 py-1.5 text-xs disabled:opacity-40"
                   />
                 </label>
-                <label className="text-[10px] text-slate-400">
-                  {label} Span
+                <label className="space-y-1">
+                  <span className="cf-meta-label">{label} Span</span>
                   <select
                     value={span}
                     onChange={(event) => onSpanChange?.(event.target.value)}
                     disabled={isDesktop}
-                    className="mt-1 w-full rounded border border-slate-700 bg-slate-950 p-1.5 text-xs text-white disabled:opacity-40"
+                    className="cf-input-shell px-2 py-1.5 text-xs disabled:opacity-40"
                   >
                     {Array.from({ length: maxColumns }, (_, idx) => idx + 1).map((value) => (
                       <option key={value} value={value}>
@@ -171,7 +171,7 @@ export default function ComposerResponsiveControls({
       ) : null}
 
       {isOpen && isCanvasMode ? (
-        <p className="mt-2 text-[10px] text-slate-500">
+        <p className="cf-meta-copy mt-2">
           Desktop positions remain the base in canvas mode. Use device overrides only when a specific screen needs a fix.
         </p>
       ) : null}

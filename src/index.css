@@ -496,6 +496,64 @@ textarea.cf-input-shell {
   border-color: color-mix(in srgb, var(--cf-input-border) 82%, transparent);
 }
 
+.cf-meta-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cf-text-secondary);
+}
+
+.cf-meta-copy {
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--cf-text-tertiary);
+}
+
+.cf-check {
+  height: 1rem;
+  width: 1rem;
+  flex-shrink: 0;
+  border: 1px solid var(--cf-input-border);
+  border-radius: 0.35rem;
+  background: var(--cf-input-fill);
+  color: var(--cf-accent-primary);
+}
+
+.cf-toggle-switch {
+  display: inline-flex;
+  height: 1.5rem;
+  width: 2.75rem;
+  align-items: center;
+  border: 1px solid var(--cf-control-border);
+  border-radius: 999px;
+  background: var(--cf-control-fill);
+  padding: 0.15rem;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+  box-shadow: var(--cf-glass-shadow-soft);
+}
+
+.cf-toggle-switch.is-on {
+  border-color: var(--cf-success-border);
+  background: var(--cf-success-fill);
+}
+
+.cf-toggle-knob {
+  height: 1rem;
+  width: 1rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.18);
+  transition: transform 180ms ease;
+}
+
+.cf-toggle-switch.is-on .cf-toggle-knob {
+  transform: translateX(1.2rem);
+}
+
 .cf-panel-muted {
   border: 1px solid var(--cf-panel-border);
   border-radius: 1rem;
@@ -945,6 +1003,80 @@ textarea.cf-input-shell {
   border-radius: 0.5rem;
 }
 
+.cf-preview-shell {
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 1.75rem;
+  background: var(--cf-glass-fill-strong);
+  box-shadow: var(--cf-glass-shadow-soft);
+  padding: 0.5rem;
+  backdrop-filter: blur(var(--cf-glass-blur-soft)) saturate(var(--cf-glass-sat-soft));
+  -webkit-backdrop-filter: blur(var(--cf-glass-blur-soft)) saturate(var(--cf-glass-sat-soft));
+}
+
+.cf-preview-viewport {
+  position: relative;
+  margin-inline: auto;
+  overflow: auto;
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 1.35rem;
+  background: linear-gradient(180deg, rgba(4, 10, 24, 0.94), rgba(10, 16, 32, 0.88));
+  box-shadow: 0 20px 48px rgba(2, 6, 23, 0.28);
+  transition: all 200ms ease;
+}
+
+.cf-preview-empty {
+  color: var(--cf-text-tertiary);
+}
+
+.cf-hotspot-stage {
+  position: relative;
+  overflow: hidden;
+  min-height: 220px;
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 1rem;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--cf-bg-elevated) 72%, transparent), var(--cf-panel-fill));
+  user-select: none;
+}
+
+.cf-hotspot-empty {
+  color: var(--cf-text-tertiary);
+}
+
+.cf-hotspot-marker {
+  position: absolute;
+  display: inline-flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 999px;
+  background: var(--cf-control-fill);
+  color: var(--cf-text-primary);
+  box-shadow: var(--cf-glass-shadow-soft);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.cf-hotspot-marker:hover,
+.cf-hotspot-marker.is-active {
+  border-color: var(--cf-primary-border);
+  background: var(--cf-primary-fill);
+  color: var(--cf-primary-text);
+}
+
+.cf-hotspot-item.is-active {
+  border-color: var(--cf-primary-border);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--cf-accent-primary) 12%, transparent), var(--cf-panel-fill));
+}
+
+.cf-hotspot-coordinate {
+  color: var(--cf-text-muted);
+}
+
 html[data-builder-theme='light'] .cf-composer-panel,
 html[data-builder-theme='light'] .cf-composer-panel-soft,
 html[data-builder-theme='light'] .cf-composer-section,
@@ -1045,6 +1177,11 @@ html[data-builder-theme='light'] .cf-app-shell [class~='text-rose-600'] {
 html[data-builder-theme='light'] .cf-btn-success,
 html[data-builder-theme='light'] .cf-composer-toolbar-action.is-success {
   color: #0f5a43 !important;
+}
+
+html[data-builder-theme='light'] .cf-preview-viewport {
+  background: linear-gradient(180deg, rgba(232, 240, 250, 0.92), rgba(218, 230, 244, 0.84));
+  box-shadow: 0 20px 42px rgba(149, 169, 197, 0.18);
 }
 
 html[data-builder-theme='light'] .cf-app-shell [class~='bg-black'],

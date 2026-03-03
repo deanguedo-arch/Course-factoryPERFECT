@@ -52,9 +52,12 @@ export default function ComposerPreviewPane({
   );
 
   const applyPreviewScaleToIframe = React.useCallback(() => {
-    const doc = iframeRef?.current?.contentDocument || iframeRef?.current?.contentWindow?.document;
-    if (!doc?.documentElement) return;
-    doc.documentElement.style.zoom = `${zoomValue}`;
+    const iframeElement = iframeRef?.current;
+    const doc = iframeElement?.contentDocument || iframeElement?.contentWindow?.document;
+    const rootElement = doc?.documentElement;
+    if (!rootElement) return;
+    // eslint-disable-next-line react-hooks/immutability
+    rootElement.style.zoom = `${zoomValue}`;
   }, [iframeRef, zoomValue]);
 
   React.useEffect(() => {
@@ -70,10 +73,10 @@ export default function ComposerPreviewPane({
   );
 
   return (
-    <div className="min-w-0 rounded-[26px] border border-slate-800/80 bg-slate-950/88 p-2 shadow-[0_16px_40px_rgba(2,6,23,0.24)] backdrop-blur-sm">
+    <div className="cf-preview-shell min-w-0">
       <div
         ref={viewportRef}
-        className="relative mx-auto overflow-auto rounded-[20px] border border-slate-800/80 bg-black/90 shadow-[0_20px_48px_rgba(2,6,23,0.42)] transition-all duration-200"
+        className="cf-preview-viewport"
         style={{ width: '100%', maxWidth: '100%' }}
       >
         {srcDoc ? (
@@ -93,7 +96,7 @@ export default function ComposerPreviewPane({
             {frameOverlay ? <div className="pointer-events-none absolute inset-0 z-10">{frameOverlay}</div> : null}
           </>
         ) : (
-          <div className="flex h-48 items-center justify-center text-xs text-slate-500">{emptyMessage}</div>
+          <div className="cf-preview-empty flex h-48 items-center justify-center text-xs">{emptyMessage}</div>
         )}
       </div>
     </div>

@@ -14,6 +14,81 @@ const { useEffect, useMemo, useState } = React;
 
 const TEMPLATES_STORAGE_KEY = 'course_factory_composer_activity_templates_v1';
 const MAX_TEMPLATES = 50;
+const ACTION_VARIANT_CLASS_MAP = {
+  secondary: 'cf-btn-secondary',
+  primary: 'cf-btn-primary',
+  success: 'cf-btn-success',
+  warning: 'cf-btn-warning',
+  danger: 'cf-btn-danger',
+};
+
+function SidebarCard({ children, className = '' }) {
+  return <div className={`cf-panel-muted p-3 ${className}`.trim()}>{children}</div>;
+}
+
+function SidebarActionButton({ children, className = '', title, variant = 'secondary', ...props }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      className={`cf-btn ${ACTION_VARIANT_CLASS_MAP[variant] || ACTION_VARIANT_CLASS_MAP.secondary} ${className}`.trim()}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+function StatusBadge({ children, tone = 'neutral' }) {
+  const toneStyleMap = {
+    neutral: {
+      borderColor: 'var(--cf-pill-border)',
+      background: 'var(--cf-pill-fill)',
+      color: 'var(--cf-pill-text)',
+    },
+    success: {
+      borderColor: 'var(--cf-success-border)',
+      background: 'var(--cf-success-fill)',
+      color: 'var(--cf-success-soft)',
+    },
+    warning: {
+      borderColor: 'var(--cf-warning-border)',
+      background: 'var(--cf-warning-fill)',
+      color: 'var(--cf-warning-soft)',
+    },
+    danger: {
+      borderColor: 'var(--cf-danger-border)',
+      background: 'var(--cf-danger-fill)',
+      color: 'var(--cf-danger-soft)',
+    },
+  };
+
+  return (
+    <span className="cf-pill" style={toneStyleMap[tone] || toneStyleMap.neutral}>
+      {children}
+    </span>
+  );
+}
+
+function SelectableRow({ children, isSelected = false, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="cf-panel-muted w-full p-3 text-left transition duration-150 hover:-translate-y-0.5"
+      style={
+        isSelected
+          ? {
+              borderColor: 'var(--cf-success-border)',
+              background: 'linear-gradient(160deg, color-mix(in srgb, var(--cf-success) 14%, transparent), var(--cf-panel-fill))',
+            }
+          : undefined
+      }
+    >
+      {children}
+    </button>
+  );
+}
 
 function safeJsonParse(raw, fallback) {
   try {
@@ -75,7 +150,7 @@ const ComposerSidebarTools = ({
     if (!selectedActivity) return;
     const def = getActivityDefinition(selectedActivity.type);
     setTemplateName(def?.label ? `${def.label} Template` : `${selectedActivity.type} Template`);
-  }, [selectedActivity?.id, selectedActivity?.type]);
+  }, [selectedActivity]);
 
   const filteredActivities = useMemo(() => {
     const term = String(search || '').trim().toLowerCase();
@@ -115,53 +190,61 @@ const ComposerSidebarTools = ({
   if (mode === 'templates') {
     return (
       <div className="space-y-3">
-        <div className="p-2 rounded border border-slate-700 bg-slate-900/60">
-          <p className="text-[11px] font-bold text-slate-400 uppercase mb-1">Component Library</p>
-          <p className="text-[10px] text-slate-500">
+        <SidebarCard className="space-y-2">
+          <p className="cf-meta-label">Component Library</p>
+          <p className="cf-meta-copy">
             Save an activity as a reusable component. Course components travel with project data. Browser snippets stay local.
           </p>
-        </div>
+        </SidebarCard>
 
         <div className="grid grid-cols-12 gap-2">
           <input
             type="text"
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
-            className="col-span-9 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+            className="cf-input-shell col-span-9 px-3 py-2 text-xs"
             placeholder="Template name"
           />
-          <button
-            type="button"
+          <SidebarActionButton
             onClick={saveTemplateFromSelected}
             disabled={!selectedActivity}
-            className="col-span-3 rounded bg-emerald-600 text-xs font-bold text-white inline-flex items-center justify-center gap-1 hover:bg-emerald-500 disabled:opacity-40"
+            variant="success"
+            className="col-span-3 px-2 py-2 text-xs font-bold"
             title="Save the selected activity as a browser-local snippet"
           >
             <Copy size={12} /> Local
-          </button>
+          </SidebarActionButton>
         </div>
 
         {onSaveCourseComponent ? (
-          <button
-            type="button"
+          <SidebarActionButton
             onClick={() => selectedActivity && onSaveCourseComponent(buildComposerComponentEntry(templateName, selectedActivity, { prefix: 'course-cmp' }))}
             disabled={!selectedActivity}
-            className="w-full rounded border border-indigo-500/40 bg-indigo-600/15 px-3 py-2 text-xs font-bold text-indigo-100 hover:bg-indigo-600/25 disabled:opacity-40"
+            variant="primary"
+            className="w-full px-3 py-2 text-xs font-bold"
             title="Save the selected activity into the shared course component library"
           >
             Save To Course Library
-          </button>
+          </SidebarActionButton>
         ) : null}
 
         {selectedComponentStatus?.linked ? (
-          <div className="rounded border border-indigo-500/30 bg-indigo-950/20 p-3 space-y-2">
+          <div
+            className={`cf-alert p-3 space-y-2 ${
+              selectedComponentStatus?.missingSource
+                ? 'cf-alert-danger'
+                : selectedComponentStatus?.stale
+                  ? 'cf-alert-warning'
+                  : 'cf-alert-success'
+            }`}
+          >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-200">Selected Link</p>
-                <p className="text-xs font-bold text-white truncate">
+                <p className="cf-meta-label">Selected Link</p>
+                <p className="truncate text-xs font-bold" style={{ color: 'var(--cf-text-primary)' }}>
                   {selectedComponentStatus?.sourceEntry?.name || selectedComponentStatus?.link?.sourceName || 'Course Component'}
                 </p>
-                <p className="text-[10px] text-slate-400 truncate">
+                <p className="truncate text-[11px]" style={{ color: 'var(--cf-text-secondary)' }}>
                   {selectedComponentStatus?.missingSource
                     ? 'Source component was removed from the course library.'
                     : selectedComponentStatus?.stale
@@ -169,53 +252,53 @@ const ComposerSidebarTools = ({
                       : 'Instance is linked to the course library source.'}
                 </p>
               </div>
-              <span
-                className={`rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${
+              <StatusBadge
+                tone={
                   selectedComponentStatus?.missingSource
-                    ? 'bg-rose-500/15 text-rose-100'
+                    ? 'danger'
                     : selectedComponentStatus?.stale
-                      ? 'bg-amber-500/15 text-amber-100'
-                      : 'bg-emerald-500/15 text-emerald-100'
-                }`}
+                      ? 'warning'
+                      : 'success'
+                }
               >
                 {selectedComponentStatus?.missingSource ? 'Missing' : selectedComponentStatus?.stale ? 'Out Of Sync' : 'Linked'}
-              </span>
+              </StatusBadge>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {onUpdateSelectedCourseComponent ? (
-                <button
-                  type="button"
+                <SidebarActionButton
                   onClick={onUpdateSelectedCourseComponent}
                   disabled={!selectedComponentStatus?.sourceEntry}
-                  className="rounded bg-indigo-600/20 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-indigo-100 hover:bg-indigo-600/30 disabled:opacity-40"
+                  variant="primary"
+                  className="px-2 py-2 text-[10px] font-bold uppercase tracking-[0.12em]"
                   title="Overwrite the course component source from the selected linked block"
                 >
                   <Upload size={11} className="mx-auto mb-1" />
                   Source
-                </button>
+                </SidebarActionButton>
               ) : null}
               {onUpdateSelectedCourseComponentInstances ? (
-                <button
-                  type="button"
+                <SidebarActionButton
                   onClick={onUpdateSelectedCourseComponentInstances}
                   disabled={!selectedComponentStatus?.sourceEntry}
-                  className="rounded bg-emerald-600/20 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-emerald-100 hover:bg-emerald-600/30 disabled:opacity-40"
+                  variant="success"
+                  className="px-2 py-2 text-[10px] font-bold uppercase tracking-[0.12em]"
                   title="Push the selected linked block to every linked instance in the course"
                 >
                   <RefreshCw size={11} className="mx-auto mb-1" />
                   Update All
-                </button>
+                </SidebarActionButton>
               ) : null}
               {onDetachSelectedComponent ? (
-                <button
-                  type="button"
+                <SidebarActionButton
                   onClick={onDetachSelectedComponent}
-                  className="rounded bg-rose-600/20 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-rose-100 hover:bg-rose-600/30"
+                  variant="danger"
+                  className="px-2 py-2 text-[10px] font-bold uppercase tracking-[0.12em]"
                   title="Detach the selected block from the course component source"
                 >
                   <Unlink size={11} className="mx-auto mb-1" />
                   Detach
-                </button>
+                </SidebarActionButton>
               ) : null}
             </div>
           </div>
@@ -223,53 +306,53 @@ const ComposerSidebarTools = ({
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Course Components</p>
-            <span className="text-[10px] text-slate-500">{normalizedCourseComponents.length} shared</span>
+            <p className="cf-meta-label">Course Components</p>
+            <span className="text-[11px]" style={{ color: 'var(--cf-text-secondary)' }}>{normalizedCourseComponents.length} shared</span>
           </div>
-          <div className="max-h-48 overflow-y-auto pr-1 space-y-2">
+          <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
             {normalizedCourseComponents.length === 0 ? (
-              <p className="text-xs text-slate-500">No shared course components yet.</p>
+              <p className="cf-meta-copy">No shared course components yet.</p>
             ) : (
               normalizedCourseComponents.map((tpl) => (
-                <div key={tpl.id} className="p-2 rounded border border-indigo-500/20 bg-slate-950">
+                <SidebarCard key={tpl.id}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-white truncate">{tpl.name}</p>
-                      <p className="text-[10px] text-indigo-300 truncate">Course component</p>
-                      <p className="text-[10px] text-slate-500 font-mono truncate">{tpl.activity?.type || ''}</p>
+                      <p className="truncate text-xs font-bold" style={{ color: 'var(--cf-text-primary)' }}>{tpl.name}</p>
+                      <p className="truncate text-[11px]" style={{ color: 'var(--cf-accent-primary)' }}>Course component</p>
+                      <p className="truncate font-mono text-[11px]" style={{ color: 'var(--cf-text-muted)' }}>{tpl.activity?.type || ''}</p>
                     </div>
                     <div className="flex gap-2">
                       {onInsertLinkedActivity ? (
-                        <button
-                          type="button"
+                        <SidebarActionButton
                           onClick={() => onInsertLinkedActivity(tpl)}
-                          className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-[10px] font-bold text-white inline-flex items-center gap-1"
+                          variant="success"
+                          className="px-2 py-1.5 text-[10px] font-bold"
                           title="Insert as a linked course component"
                         >
                           <Link2 size={11} /> Link
-                        </button>
+                        </SidebarActionButton>
                       ) : null}
-                      <button
-                        type="button"
+                      <SidebarActionButton
                         onClick={() => onInsertActivity && onInsertActivity(tpl.activity)}
-                        className="px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-[10px] font-bold text-white inline-flex items-center gap-1"
+                        variant="primary"
+                        className="px-2 py-1.5 text-[10px] font-bold"
                         title="Insert a detached copy"
                       >
                         <Copy size={11} /> Copy
-                      </button>
+                      </SidebarActionButton>
                       {onDeleteCourseComponent ? (
-                        <button
-                          type="button"
+                        <SidebarActionButton
                           onClick={() => onDeleteCourseComponent(tpl.id)}
-                          className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-[10px] font-bold text-white"
+                          variant="danger"
+                          className="px-2 py-1.5 text-[10px] font-bold"
                           title="Delete course component"
                         >
                           <Trash2 size={12} />
-                        </button>
+                        </SidebarActionButton>
                       ) : null}
                     </div>
                   </div>
-                </div>
+                </SidebarCard>
               ))
             )}
           </div>
@@ -277,39 +360,39 @@ const ComposerSidebarTools = ({
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Browser Snippets</p>
-            <span className="text-[10px] text-slate-500">{(templates || []).length} local</span>
+            <p className="cf-meta-label">Browser Snippets</p>
+            <span className="text-[11px]" style={{ color: 'var(--cf-text-secondary)' }}>{(templates || []).length} local</span>
           </div>
-          <div className="max-h-72 overflow-y-auto pr-1 space-y-2">
+          <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
             {(templates || []).length === 0 ? (
-              <p className="text-xs text-slate-500">No browser snippets saved yet.</p>
+              <p className="cf-meta-copy">No browser snippets saved yet.</p>
             ) : (
               (templates || []).map((tpl) => (
-                <div key={tpl.id} className="p-2 rounded border border-slate-700 bg-slate-950">
+                <SidebarCard key={tpl.id}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-white truncate">{tpl.name}</p>
-                      <p className="text-[10px] text-slate-500 font-mono truncate">{tpl.activity?.type || ''}</p>
+                      <p className="truncate text-xs font-bold" style={{ color: 'var(--cf-text-primary)' }}>{tpl.name}</p>
+                      <p className="truncate font-mono text-[11px]" style={{ color: 'var(--cf-text-muted)' }}>{tpl.activity?.type || ''}</p>
                     </div>
                     <div className="flex gap-2">
-                      <button
-                        type="button"
+                      <SidebarActionButton
                         onClick={() => onInsertActivity && onInsertActivity(tpl.activity)}
-                        className="px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-[10px] font-bold text-white"
+                        variant="primary"
+                        className="px-2 py-1.5 text-[10px] font-bold"
                       >
                         Insert
-                      </button>
-                      <button
-                        type="button"
+                      </SidebarActionButton>
+                      <SidebarActionButton
                         onClick={() => deleteTemplate(tpl.id)}
-                        className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-[10px] font-bold text-white"
+                        variant="danger"
+                        className="px-2 py-1.5 text-[10px] font-bold"
                         title="Delete template"
                       >
                         <Trash2 size={12} />
-                      </button>
+                      </SidebarActionButton>
                     </div>
                   </div>
-                </div>
+                </SidebarCard>
               ))
             )}
           </div>
@@ -321,96 +404,92 @@ const ComposerSidebarTools = ({
   if (mode === 'issues') {
     return (
       <div className="space-y-3">
-        <div className="p-2 rounded border border-slate-700 bg-slate-900/60">
+        <SidebarCard className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-bold text-slate-400 uppercase">Validation</p>
-            <div className="flex items-center gap-2 text-[10px] font-bold">
-              <span className={validationTotals.error ? 'text-rose-400' : 'text-slate-500'}>
+            <p className="cf-meta-label">Validation</p>
+            <div className="flex items-center gap-2 text-[11px] font-bold">
+              <span style={{ color: validationTotals.error ? 'var(--cf-danger-soft)' : 'var(--cf-text-muted)' }}>
                 {validationTotals.error} errors
               </span>
-              <span className={validationTotals.warn ? 'text-amber-300' : 'text-slate-500'}>
+              <span style={{ color: validationTotals.warn ? 'var(--cf-warning-soft)' : 'var(--cf-text-muted)' }}>
                 {validationTotals.warn} warnings
               </span>
             </div>
           </div>
-          <p className="text-[10px] text-slate-500">Click an activity to jump to it.</p>
+          <p className="cf-meta-copy">Click an activity to jump to it.</p>
           {onFixDuplicateIds || onFixImageAltText || onFixMobileStacking ? (
             <div className="mt-2 grid grid-cols-3 gap-2">
               {onFixDuplicateIds ? (
-                <button
-                  type="button"
+                <SidebarActionButton
                   onClick={onFixDuplicateIds}
-                  className="rounded bg-rose-600/15 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-rose-100 hover:bg-rose-600/25"
+                  variant="danger"
+                  className="px-2 py-2 text-[10px] font-bold uppercase tracking-[0.12em]"
                 >
                   Fix IDs
-                </button>
+                </SidebarActionButton>
               ) : null}
               {onFixImageAltText ? (
-                <button
-                  type="button"
+                <SidebarActionButton
                   onClick={onFixImageAltText}
-                  className="rounded bg-amber-500/15 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-amber-100 hover:bg-amber-500/25"
+                  variant="warning"
+                  className="px-2 py-2 text-[10px] font-bold uppercase tracking-[0.12em]"
                 >
                   Fill Alt Text
-                </button>
+                </SidebarActionButton>
               ) : null}
               {onFixMobileStacking ? (
-                <button
-                  type="button"
+                <SidebarActionButton
                   onClick={onFixMobileStacking}
-                  className="rounded bg-sky-500/15 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-sky-100 hover:bg-sky-500/25"
+                  variant="primary"
+                  className="px-2 py-2 text-[10px] font-bold uppercase tracking-[0.12em]"
                 >
                   Stack Mobile
-                </button>
+                </SidebarActionButton>
               ) : null}
             </div>
           ) : null}
-        </div>
+        </SidebarCard>
 
-        <div className="max-h-72 overflow-y-auto pr-1 space-y-2">
+        <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
           {rowsWithIssues.length === 0 ? (
-            <p className="text-xs text-slate-500">No issues found.</p>
+            <p className="cf-meta-copy">No issues found.</p>
           ) : (
             rowsWithIssues.map((row) => {
               const def = getActivityDefinition(row.type);
               const isSelected = row.index === selectedIndex;
               return (
-                <button
+                <SelectableRow
                   key={`${row.id || row.index}`}
-                  type="button"
+                  isSelected={isSelected}
                   onClick={() => onSelectIndex && onSelectIndex(row.index)}
-                  className={`w-full text-left p-2 rounded border transition-colors ${
-                    isSelected
-                      ? 'bg-emerald-900/30 border-emerald-600 text-white'
-                      : 'bg-slate-950 border-slate-700 text-slate-200 hover:bg-slate-900'
-                  }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-xs font-bold truncate">{def?.label || row.type}</p>
-                      <p className="text-[10px] text-slate-500 font-mono truncate">{row.id || `activity-${row.index + 1}`}</p>
+                      <p className="truncate text-xs font-bold" style={{ color: 'var(--cf-text-primary)' }}>{def?.label || row.type}</p>
+                      <p className="truncate font-mono text-[11px]" style={{ color: 'var(--cf-text-muted)' }}>
+                        {row.id || `activity-${row.index + 1}`}
+                      </p>
                     </div>
                     <AlertTriangle
                       size={14}
-                      className={row.issues.some((i) => i.level === 'error') ? 'text-rose-400' : 'text-amber-300'}
+                      style={{ color: row.issues.some((i) => i.level === 'error') ? 'var(--cf-danger-soft)' : 'var(--cf-warning-soft)' }}
                     />
                   </div>
                   <div className="mt-2 space-y-1">
                     {row.issues.slice(0, 3).map((issue, idx) => (
                       <p
                         key={`${row.index}-issue-${idx}`}
-                        className={`text-[10px] ${
-                          issue.level === 'error' ? 'text-rose-300' : 'text-amber-200'
-                        }`}
+                        className="text-[11px]"
+                        style={{ color: issue.level === 'error' ? 'var(--cf-danger-soft)' : 'var(--cf-warning-soft)' }}
                       >
                         {issue.level === 'error' ? 'Error' : 'Warn'}: {issue.message}
                       </p>
                     ))}
                     {row.issues.length > 3 ? (
-                      <p className="text-[10px] text-slate-500">+{row.issues.length - 3} more…</p>
+                      <p className="text-[11px]" style={{ color: 'var(--cf-text-muted)' }}>+{row.issues.length - 3} more...</p>
                     ) : null}
                   </div>
-                </button>
+                </SelectableRow>
               );
             })
           )}
@@ -419,65 +498,61 @@ const ComposerSidebarTools = ({
     );
   }
 
-  // Outline view
   return (
     <div className="space-y-3">
       <div className="relative">
-        <Search className="absolute left-3 top-3 text-slate-500" size={16} />
+        <Search className="absolute left-3 top-3" size={16} style={{ color: 'var(--cf-text-muted)' }} />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-slate-950 border border-slate-700 rounded p-2 pl-9 text-white text-xs"
+          className="cf-input-shell w-full py-2 pl-9 pr-3 text-xs"
           placeholder="Search by type or id..."
         />
       </div>
 
-      <div className="max-h-72 overflow-y-auto pr-1 space-y-1">
+      <div className="max-h-72 space-y-1 overflow-y-auto pr-1">
         {filteredActivities.length === 0 ? (
-          <p className="text-xs text-slate-500">No matching activities.</p>
+          <p className="cf-meta-copy">No matching activities.</p>
         ) : (
           filteredActivities.map(({ activity, idx }) => {
             const def = getActivityDefinition(activity?.type);
             const isSelected = idx === selectedIndex;
             return (
-              <button
+              <SelectableRow
                 key={activity?.id || `${activity?.type}-${idx}`}
-                type="button"
+                isSelected={isSelected}
                 onClick={() => onSelectIndex && onSelectIndex(idx)}
-                className={`w-full text-left p-2 rounded border transition-colors ${
-                  isSelected
-                    ? 'bg-emerald-900/30 border-emerald-600 text-white'
-                    : 'bg-slate-950 border-slate-700 text-slate-200 hover:bg-slate-900'
-                }`}
               >
-                <p className="text-xs font-bold truncate">
+                <p className="truncate text-xs font-bold" style={{ color: 'var(--cf-text-primary)' }}>
                   {idx + 1}. {def?.label || activity?.type || 'Unknown'}
                 </p>
-                <p className="text-[10px] text-slate-500 font-mono truncate">{activity?.id || `activity-${idx + 1}`}</p>
-              </button>
+                <p className="truncate font-mono text-[11px]" style={{ color: 'var(--cf-text-muted)' }}>
+                  {activity?.id || `activity-${idx + 1}`}
+                </p>
+              </SelectableRow>
             );
           })
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
-        <button
-          type="button"
+      <div className="grid grid-cols-2 gap-2 border-t pt-3" style={{ borderColor: 'var(--cf-panel-border)' }}>
+        <SidebarActionButton
           onClick={onDuplicateSelected}
           disabled={!selectedActivity}
-          className="rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold py-2 inline-flex items-center justify-center gap-1"
+          variant="primary"
+          className="py-2 text-xs font-bold"
         >
           <Copy size={12} /> Duplicate
-        </button>
-        <button
-          type="button"
+        </SidebarActionButton>
+        <SidebarActionButton
           onClick={onDeleteSelected}
           disabled={!selectedActivity}
-          className="rounded bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white text-xs font-bold py-2 inline-flex items-center justify-center gap-1"
+          variant="danger"
+          className="py-2 text-xs font-bold"
         >
           <Trash2 size={12} /> Delete
-        </button>
+        </SidebarActionButton>
       </div>
     </div>
   );
