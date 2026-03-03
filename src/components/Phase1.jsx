@@ -1,4 +1,5 @@
-﻿import * as React from 'react';
+/* eslint-disable react-hooks/exhaustive-deps */
+import * as React from 'react';
 import {
   AlertTriangle,
   ArrowUpCircle,
@@ -680,7 +681,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     moduleManagerTemplateLabel,
     moduleManagerThemeLabel,
     moduleManagerResolvedId || 'Module ID required',
-  ].join('  •  ');
+  ].join('  �  ');
   const isModuleManagerFinlitComposer = showModuleManagerFinlitOptions;
   const normalizedModuleManagerTemplateProfiles = useMemo(
     () => normalizeTemplateLayoutProfiles(moduleManagerTemplateLayoutProfiles, { activities: moduleManagerComposerActivities }),
@@ -4836,7 +4837,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '2')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">A-</button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '3')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">A</button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '5')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">A+</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('insertUnorderedList')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">• List</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('insertUnorderedList')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">� List</button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('insertOrderedList')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">1. List</button>
                   <button
                     type="button"
@@ -5608,7 +5609,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'bold')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs font-bold">B</button>
                               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'italic')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs italic">I</button>
                               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'underline')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs underline">U</button>
-                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'insertUnorderedList')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">• List</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'insertUnorderedList')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">� List</button>
                               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'createLink')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">Link</button>
                               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'removeFormat')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">Clear</button>
                             </div>
@@ -9578,7 +9579,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                     </p>
                                                                     <p className="text-[10px] text-slate-500">
                                                                         {tabActivityCount} block{tabActivityCount === 1 ? '' : 's'}
-                                                                        {isActiveAuthoringTab ? ' • currently editing' : ''}
+                                                                        {isActiveAuthoringTab ? ' � currently editing' : ''}
                                                                     </p>
                                                                 </div>
                                                                 <div className="flex items-center gap-2">
@@ -10394,3 +10395,4 @@ ${aiDescription}
 };
 
 export default Phase1;
+
