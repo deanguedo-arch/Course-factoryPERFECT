@@ -3755,7 +3755,11 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     const resizedHorizontally = isResize && activeProposedRect.w !== activeBaseRect.w;
     const resizedVertically = isResize && activeProposedRect.h !== activeBaseRect.h;
     const pushUnit = Math.max(1, activeBaseRect.h);
-    const maxPushUnits = isResize && resizedHorizontally && !resizedVertically ? 0 : pushUnit;
+    const pushStep = isResize && resizedHorizontally && !resizedVertically ? 0 : pushUnit;
+    const pushBudget =
+      isResize && resizedHorizontally && !resizedVertically
+        ? 0
+        : Math.max(pushUnit, pushUnit * Math.max(2, baseRects.length + 1));
     const shrinkNeighbors = allowShrink && (!isResize || (resizedHorizontally && !resizedVertically));
     const baseBottomWithoutActive = baseRects.reduce((largest, rect, idx) => {
       if (idx === activeIndex || !rect) return largest;
@@ -3811,7 +3815,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           if (idx === activeIndex) {
             rect = { ...activeProposedRect };
           } else if (baseRect.y >= pushStartY) {
-            rect = { ...baseRect, y: baseRect.y + maxPushUnits };
+            rect = { ...baseRect, y: baseRect.y + pushStep };
           }
           return {
             ...activity,
@@ -3903,7 +3907,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         if (!rectsOverlap(item.rect, activeRect)) continue;
         const baseRect = baseRects[item.idx] || item.rect;
         const nextY = activeRect.y + activeRect.h;
-        if (nextY > baseRect.y + maxPushUnits) {
+        if (nextY > baseRect.y + pushBudget) {
           valid = false;
           break;
         }
@@ -3923,7 +3927,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               if (!rectsOverlap(sorted[i].rect, sorted[j].rect)) continue;
               const baseRect = baseRects[sorted[j].idx] || sorted[j].rect;
               const nextY = sorted[i].rect.y + sorted[i].rect.h;
-              if (nextY > baseRect.y + maxPushUnits) {
+              if (nextY > baseRect.y + pushBudget) {
                 valid = false;
                 break;
               }
@@ -3967,7 +3971,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       const rowOffsets =
         isResize && resizedHorizontally && !resizedVertically
           ? [0]
-          : [0, maxPushUnits];
+          : [0, pushStep];
       for (const nextW of widthCandidates) {
         const maxX = Math.max(0, moduleManagerComposerMaxColumns - nextW);
         const preferredX = Math.max(0, Math.min(maxX, baseRect.x));
@@ -4028,7 +4032,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       const rect = clampCanvasRectToColumns(activity?.layout || {});
       return Math.max(largest, rect.y + rect.h);
     }, 0);
-    if (nextBottomWithoutActive > baseBottomWithoutActive + maxPushUnits || nextBottomRow < 0) {
+    if (nextBottomWithoutActive > baseBottomWithoutActive + pushBudget || nextBottomRow < 0) {
       valid = false;
     }
 
@@ -4093,7 +4097,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         mode: interactionMode,
       });
       if (!valid) {
-        // Enforce capped push behavior for drag/resize: reject attempts that require more than one pushed row.
+        // Reject only when a proposal exceeds the broader cascade budget.
         return { changed: false, activities: moduleManagerComposerActivities };
       }
       const beforeSignature = JSON.stringify(nextActivities);

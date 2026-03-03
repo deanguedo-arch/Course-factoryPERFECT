@@ -290,7 +290,8 @@ function evaluateSimpleDragPlacements(activities, selectedIndex, proposal, metri
   const targetYClient = Number(targetY) || 0;
   const colStep = Math.max(1, Number(metrics?.columnWidth) + Number(metrics?.gapX));
   const proposalCol = clampInteger(proposal?.col, 1, Math.max(1, Number(metrics?.cols) || 1));
-  const ranked = [];
+  const strictRanked = [];
+  const fittedRanked = [];
   const seen = new Set();
 
   for (const candidateRow of rowCandidates) {
@@ -313,22 +314,30 @@ function evaluateSimpleDragPlacements(activities, selectedIndex, proposal, metri
       const rowCenter = estimateSimpleRowCenterClient(layout.row, metrics);
       const rowDistance = Math.abs(targetYClient - rowCenter);
       const colDistance = Math.abs((Number.parseInt(layout.col, 10) || 1) - proposalCol) * colStep;
-      const fittedPenalty = attempt.fitted ? 12 : 0;
-      const score = rowDistance + colDistance + fittedPenalty;
-      ranked.push({ score, validation: attempt });
+      const score = rowDistance + colDistance;
+      const entry = { score, validation: attempt };
+      if (attempt.fitted) {
+        fittedRanked.push(entry);
+      } else {
+        strictRanked.push(entry);
+      }
     }
   }
 
-  ranked.sort((left, right) => left.score - right.score);
+  strictRanked.sort((left, right) => left.score - right.score);
+  fittedRanked.sort((left, right) => left.score - right.score);
+  const ranked = [...strictRanked, ...fittedRanked];
   return {
     initial,
+    strictRanked,
+    fittedRanked,
     ranked,
   };
 }
 
 function resolveSimpleDragValidation(activities, selectedIndex, proposal, metrics, targetY) {
   const evaluation = evaluateSimpleDragPlacements(activities, selectedIndex, proposal, metrics, targetY);
-  return evaluation.ranked[0]?.validation || evaluation.initial;
+  return evaluation.strictRanked[0]?.validation || evaluation.fittedRanked[0]?.validation || evaluation.initial;
 }
 
 function buildSimpleDropHintFrames(evaluation, metrics, fallbackHeight, limit = 8) {
