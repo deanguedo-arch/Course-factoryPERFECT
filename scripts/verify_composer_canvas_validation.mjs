@@ -21,8 +21,8 @@ const checks = [
   {
     type: 'include',
     file: 'layout',
-    pattern: /export function resolveComposerSimpleInsertionTarget/,
-    message: 'Missing exported stacked insertion target resolver in src/composer/layout.js',
+    pattern: /export function validateComposerSimpleProposal/,
+    message: 'Missing exported simple proposal validator in src/composer/layout.js',
   },
   {
     type: 'include',
@@ -39,14 +39,26 @@ const checks = [
   {
     type: 'include',
     file: 'overlay',
-    pattern: /onSimpleInsertionChange/,
-    message: 'Missing stacked insertion commit callback in ComposerCanvasBlockOverlay.jsx',
+    pattern: /validateComposerSimpleProposal/,
+    message: 'Missing simple proposal validation in ComposerCanvasBlockOverlay.jsx',
   },
   {
     type: 'include',
     file: 'overlay',
-    pattern: /cf-composer-insertion-line/,
-    message: 'Missing stacked insertion line hook in ComposerCanvasBlockOverlay.jsx',
+    pattern: /onSimpleLayoutChange/,
+    message: 'Missing simple layout commit callback in ComposerCanvasBlockOverlay.jsx',
+  },
+  {
+    type: 'include',
+    file: 'overlay',
+    pattern: /else if \(operation === 'drag'\)[\s\S]*?validateComposerSimpleProposal/,
+    message: 'Simple drag path is not using proposal validation in ComposerCanvasBlockOverlay.jsx',
+  },
+  {
+    type: 'exclude',
+    file: 'overlay',
+    pattern: /previewKind === 'simple-insert'|cf-composer-insertion-line|onSimpleInsertionChange/,
+    message: 'Overlay still contains insertion-only simple mode behavior',
   },
   {
     type: 'include',
@@ -55,16 +67,16 @@ const checks = [
     message: 'Missing invalid canvas preview style in src/index.css',
   },
   {
-    type: 'include',
+    type: 'exclude',
     file: 'css',
     pattern: /\.cf-composer-insertion-line/,
-    message: 'Missing insertion line style in src/index.css',
+    message: 'Legacy insertion line style should be removed from src/index.css',
   },
   {
-    type: 'include',
+    type: 'exclude',
     file: 'css',
     pattern: /\.cf-composer-insertion-gap/,
-    message: 'Missing insertion gap style in src/index.css',
+    message: 'Legacy insertion gap style should be removed from src/index.css',
   },
 ];
 

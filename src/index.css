@@ -1027,27 +1027,6 @@ textarea.cf-input-shell {
   border-radius: 0.5rem;
 }
 
-.cf-composer-insertion-gap {
-  pointer-events: none;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--cf-primary-fill) 18%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cf-primary-border) 24%, transparent);
-}
-
-.cf-composer-insertion-line {
-  pointer-events: none;
-  height: 2px;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--cf-primary-border) 24%, transparent),
-    var(--cf-primary-border) 18%,
-    var(--cf-primary-border) 82%,
-    color-mix(in srgb, var(--cf-primary-border) 24%, transparent)
-  );
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cf-primary-border) 18%, transparent);
-}
-
 .cf-preview-shell {
   border: 1px solid var(--cf-panel-border);
   border-radius: 1.75rem;

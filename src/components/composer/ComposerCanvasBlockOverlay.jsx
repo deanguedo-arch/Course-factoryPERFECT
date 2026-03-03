@@ -4,7 +4,7 @@ import {
   Plus,
 } from 'lucide-react';
 import {
-  resolveComposerSimpleInsertionTarget,
+  validateComposerSimpleProposal,
   validateComposerCanvasProposal,
 } from '../../composer/layout.js';
 
@@ -50,24 +50,6 @@ function buildSimpleRowBands(doc, iframeRect, viewportRect) {
   });
 
   return Array.from(grouped.values()).sort((left, right) => left.row - right.row);
-}
-
-function buildSimpleInsertionItems(doc, iframeRect, activities) {
-  if (!doc || !iframeRect || !Array.isArray(activities)) return [];
-  return activities
-    .map((activity, order) => {
-      const activityId = String(activity?.id || '').trim();
-      if (!activityId) return null;
-      const node = doc.querySelector(`[data-activity-id="${escapeSelectorAttr(activityId)}"]`);
-      if (!node) return null;
-      const rect = node.getBoundingClientRect();
-      return {
-        order,
-        topClient: iframeRect.top + rect.top,
-        bottomClient: iframeRect.top + rect.bottom,
-      };
-    })
-    .filter(Boolean);
 }
 
 function computeGridMetrics({ doc, iframe, maxColumns = 1, viewport }) {
@@ -163,6 +145,31 @@ function frameFromSimpleLayout(layout, metrics, fallbackHeight) {
   };
 }
 
+function resolveSimpleRowFromClientY(clientY, metrics, fallbackRow, fallbackHeight) {
+  const targetY = Number(clientY) || 0;
+  const bands = Array.isArray(metrics?.rowBands) ? metrics.rowBands : [];
+  if (!bands.length) return Math.max(1, Number.parseInt(fallbackRow, 10) || 1);
+
+  const first = bands[0];
+  if (targetY <= first.topClient) {
+    return first.row;
+  }
+
+  for (let index = 0; index < bands.length - 1; index += 1) {
+    const current = bands[index];
+    const next = bands[index + 1];
+    const midpoint = current.bottomClient + (next.topClient - current.bottomClient) / 2;
+    if (targetY <= midpoint) return current.row;
+  }
+
+  const last = bands[bands.length - 1];
+  if (targetY <= last.bottomClient) {
+    return last.row;
+  }
+  const step = Math.max(32, Number(fallbackHeight) || (last.bottomClient - last.topClient) || 120);
+  return last.row + Math.max(1, Math.round((targetY - last.bottomClient) / step));
+}
+
 function formatLayoutChip(layout, isCanvasMode) {
   if (!layout || typeof layout !== 'object') return '';
   if (isCanvasMode) {
@@ -183,7 +190,6 @@ export default function ComposerCanvasBlockOverlay({
   maxColumns = 1,
   onCanvasLayoutChange,
   onOpenAddPanel,
-  onSimpleInsertionChange,
   onSimpleLayoutChange,
   selectedActivity = null,
   selectedActivityId = '',
@@ -196,7 +202,6 @@ export default function ComposerCanvasBlockOverlay({
   const [draftFrame, setDraftFrame] = React.useState(null);
   const [draftChip, setDraftChip] = React.useState('');
   const [previewKind, setPreviewKind] = React.useState('idle');
-  const [insertionPreview, setInsertionPreview] = React.useState(null);
   const metricsRef = React.useRef(null);
   const interactionCleanupRef = React.useRef(null);
 
@@ -204,7 +209,6 @@ export default function ComposerCanvasBlockOverlay({
     interactionCleanupRef.current?.();
     interactionCleanupRef.current = null;
     setPreviewKind('idle');
-    setInsertionPreview(null);
     setDraftChip('');
   }, []);
 
@@ -313,7 +317,6 @@ export default function ComposerCanvasBlockOverlay({
 
   React.useEffect(() => {
     setDraftFrame(null);
-    setInsertionPreview(null);
     clearInteraction();
   }, [clearInteraction, selectedActivityId, syncKey]);
 
@@ -334,9 +337,9 @@ export default function ComposerCanvasBlockOverlay({
   const h = Math.max(1, Number.parseInt(layout.h, 10) || 1);
   const row = Math.max(1, Number.parseInt(layout.row, 10) || y + 1);
   const col = Math.max(1, Number.parseInt(layout.col, 10) || x + 1);
-  const activeFrame = previewKind === 'simple-insert' ? frame : (draftFrame || frame);
+  const activeFrame = draftFrame || frame;
   const positionChip = draftChip || formatLayoutChip(isCanvasMode ? { x, y } : { row, col }, isCanvasMode);
-  const isInvalidCanvasPreview = previewKind === 'canvas-invalid';
+  const isInvalidPreview = previewKind === 'canvas-invalid' || previewKind === 'simple-invalid';
 
   const beginPointerInteraction = (operation) => (event) => {
     if (!selectedActivity) return;
@@ -365,7 +368,6 @@ export default function ComposerCanvasBlockOverlay({
     const stepY = Math.max(1, metrics.rowHeight + metrics.gapY);
     let lastProposal = null;
     let lastProposalValid = false;
-    let lastInsertion = null;
 
     const handleMove = (moveEvent) => {
       moveEvent.preventDefault();
@@ -405,38 +407,38 @@ export default function ComposerCanvasBlockOverlay({
         const validation = validateComposerCanvasProposal(activities, selectedIndex, proposal, { maxColumns: metrics.cols });
         lastProposal = validation.rect;
         lastProposalValid = validation.valid;
-        lastInsertion = null;
         nextFrame = frameFromCanvasLayout(validation.rect, metrics);
         setPreviewKind(validation.valid ? 'canvas-valid' : 'canvas-invalid');
-        setInsertionPreview(null);
         if (!nextFrame) return;
         setDraftFrame(nextFrame);
         setDraftChip(validation.valid ? formatLayoutChip(validation.rect, true) : 'Blocked');
         return;
       } else if (operation === 'drag') {
-        const insertion = resolveComposerSimpleInsertionTarget(
-          buildSimpleInsertionItems(metrics.doc, metrics.iframeRect, activities),
-          selectedIndex,
-          moveEvent.clientY,
-        );
-        lastInsertion = insertion;
-        lastProposal = null;
-        lastProposalValid = false;
-        setPreviewKind('simple-insert');
-        setDraftFrame(null);
-        setDraftChip(Number.isInteger(insertion?.insertionIndex) ? `Slot ${insertion.insertionIndex + 1}` : '');
-        if (!insertion) {
-          setInsertionPreview(null);
-          return;
-        }
-        const lineTop = insertion.lineTopClient - metrics.viewportRect.top;
-        setInsertionPreview({
-          left: metrics.rootOverlayLeft + metrics.paddingLeft,
-          top: lineTop,
-          width: metrics.contentWidth,
-          gapHeight: insertion.gapHeight,
-          gapTop: lineTop - insertion.gapHeight / 2,
-        });
+        const proposedLeft = moveEvent.clientX - startOffsetX;
+        const proposedTop = moveEvent.clientY - startOffsetY;
+        const nextSpan = clampInteger(startLayout.colSpan, 1, metrics.cols);
+        proposal = {
+          row: resolveSimpleRowFromClientY(
+            proposedTop + startFrame.height / 2,
+            metrics,
+            startLayout.row,
+            startFrame.height + metrics.gapY,
+          ),
+          col: clampInteger(
+            Math.round((proposedLeft - (metrics.rootClientLeft + metrics.paddingLeft)) / stepX) + 1,
+            1,
+            Math.max(1, metrics.cols - nextSpan + 1),
+          ),
+          colSpan: nextSpan,
+        };
+        const validation = validateComposerSimpleProposal(activities, selectedIndex, proposal, { maxColumns: metrics.cols });
+        lastProposal = validation.layout;
+        lastProposalValid = validation.valid;
+        nextFrame = frameFromSimpleLayout(validation.layout, metrics, startFrame.height);
+        setPreviewKind(validation.valid ? 'simple-valid' : 'simple-invalid');
+        if (!nextFrame) return;
+        setDraftFrame(nextFrame);
+        setDraftChip(validation.valid ? formatLayoutChip(validation.layout, false) : 'Blocked');
         return;
       } else {
         const nextSpan = clampInteger(
@@ -449,17 +451,17 @@ export default function ComposerCanvasBlockOverlay({
           col: clampInteger(startLayout.col, 1, Math.max(1, metrics.cols - nextSpan + 1)),
           colSpan: nextSpan,
         };
-        nextFrame = frameFromSimpleLayout(proposal, metrics, startFrame.height);
+        const validation = validateComposerSimpleProposal(activities, selectedIndex, proposal, { maxColumns: metrics.cols });
+        lastProposal = validation.layout;
+        lastProposalValid = validation.valid;
+        nextFrame = frameFromSimpleLayout(validation.layout, metrics, startFrame.height);
+        setPreviewKind(validation.valid ? 'simple-valid' : 'simple-invalid');
+        if (!nextFrame) return;
+        setDraftFrame(nextFrame);
+        setDraftChip(validation.valid ? formatLayoutChip(validation.layout, false) : 'Blocked');
+        return;
       }
 
-      if (!proposal || !nextFrame) return;
-      lastProposal = proposal;
-      lastProposalValid = true;
-      lastInsertion = null;
-      setPreviewKind('idle');
-      setInsertionPreview(null);
-      setDraftFrame(nextFrame);
-      setDraftChip(formatLayoutChip(proposal, isCanvasMode));
     };
 
     const finishInteraction = (endEvent, { commit = true } = {}) => {
@@ -477,26 +479,17 @@ export default function ComposerCanvasBlockOverlay({
       interactionCleanupRef.current = null;
 
       const shouldCommitCanvas = Boolean(commit && isCanvasMode && lastProposal && lastProposalValid);
-      const shouldCommitSimpleInsertion = Boolean(
-        commit &&
-        !isCanvasMode &&
-        operation === 'drag' &&
-        Number.isInteger(lastInsertion?.insertionIndex),
-      );
-      const shouldCommitSimpleLayout = Boolean(commit && !isCanvasMode && operation !== 'drag' && lastProposal);
+      const shouldCommitSimpleLayout = Boolean(commit && !isCanvasMode && lastProposal && lastProposalValid);
 
       if (shouldCommitCanvas) {
         onCanvasLayoutChange?.(lastProposal);
-      } else if (shouldCommitSimpleInsertion) {
-        onSimpleInsertionChange?.(lastInsertion.insertionIndex);
       } else if (shouldCommitSimpleLayout) {
         onSimpleLayoutChange?.(lastProposal);
       }
 
-      if (shouldCommitCanvas || shouldCommitSimpleInsertion || shouldCommitSimpleLayout) {
+      if (shouldCommitCanvas || shouldCommitSimpleLayout) {
         window.setTimeout(() => {
           setDraftFrame(null);
-          setInsertionPreview(null);
           setPreviewKind('idle');
           setDraftChip('');
           updateFrame();
@@ -504,7 +497,6 @@ export default function ComposerCanvasBlockOverlay({
         return;
       }
       setDraftFrame(null);
-      setInsertionPreview(null);
       setPreviewKind('idle');
       setDraftChip('');
       updateFrame();
@@ -529,7 +521,6 @@ export default function ComposerCanvasBlockOverlay({
       handleElement.removeEventListener('pointercancel', handleCancel);
       window.removeEventListener('blur', handleCancel);
       setDraftFrame(null);
-      setInsertionPreview(null);
       setPreviewKind('idle');
       setDraftChip('');
     };
@@ -546,30 +537,8 @@ export default function ComposerCanvasBlockOverlay({
 
   return (
     <>
-      {previewKind === 'simple-insert' && insertionPreview ? (
-        <>
-          <div
-            className="cf-composer-insertion-gap absolute z-20"
-            style={{
-              left: `${insertionPreview.left}px`,
-              top: `${insertionPreview.gapTop}px`,
-              width: `${insertionPreview.width}px`,
-              height: `${insertionPreview.gapHeight}px`,
-            }}
-          />
-          <div
-            className="cf-composer-insertion-line absolute z-30"
-            style={{
-              left: `${insertionPreview.left}px`,
-              top: `${insertionPreview.top}px`,
-              width: `${insertionPreview.width}px`,
-            }}
-          />
-        </>
-      ) : null}
-
       <div
-        className={`cf-composer-block-outline absolute z-20 ${draftFrame ? 'is-draft' : ''} ${isInvalidCanvasPreview ? 'is-invalid' : ''}`}
+        className={`cf-composer-block-outline absolute z-20 ${draftFrame ? 'is-draft' : ''} ${isInvalidPreview ? 'is-invalid' : ''}`}
         style={{
           left: `${activeFrame.left}px`,
           top: `${activeFrame.top}px`,
@@ -579,18 +548,18 @@ export default function ComposerCanvasBlockOverlay({
       />
 
       <div
-        className={`cf-composer-block-overlay pointer-events-auto absolute z-30 inline-flex max-w-[calc(100%-16px)] items-center gap-1.5 ${isInvalidCanvasPreview ? 'is-invalid' : ''}`}
+        className={`cf-composer-block-overlay pointer-events-auto absolute z-30 inline-flex max-w-[calc(100%-16px)] items-center gap-1.5 ${isInvalidPreview ? 'is-invalid' : ''}`}
         style={{
           left: `${toolbarLeft}px`,
           top: `${toolbarTop}px`,
         }}
       >
         <span className="cf-composer-block-overlay-label">{selectedLabel}</span>
-        <span className={`cf-composer-block-overlay-chip ${isInvalidCanvasPreview ? 'is-invalid' : ''}`}>{positionChip}</span>
+        <span className={`cf-composer-block-overlay-chip ${isInvalidPreview ? 'is-invalid' : ''}`}>{positionChip}</span>
         <button
           type="button"
           onPointerDown={beginPointerInteraction('drag')}
-          className={`cf-composer-block-overlay-grip cf-canvas-handle ${isInvalidCanvasPreview ? 'is-invalid' : ''}`}
+          className={`cf-composer-block-overlay-grip cf-canvas-handle ${isInvalidPreview ? 'is-invalid' : ''}`}
           title="Drag section"
           aria-label="Drag section"
         >
@@ -601,7 +570,7 @@ export default function ComposerCanvasBlockOverlay({
       <button
         type="button"
         onPointerDown={beginPointerInteraction('resize-x')}
-        className={`cf-composer-block-handle pointer-events-auto absolute z-30 ${isInvalidCanvasPreview ? 'is-invalid' : ''}`}
+        className={`cf-composer-block-handle pointer-events-auto absolute z-30 ${isInvalidPreview ? 'is-invalid' : ''}`}
         style={{
           left: `${rightHandleLeft}px`,
           top: `${rightHandleTop}px`,
@@ -616,7 +585,7 @@ export default function ComposerCanvasBlockOverlay({
         <button
           type="button"
           onPointerDown={beginPointerInteraction('resize-both')}
-          className={`cf-composer-block-handle cf-composer-block-handle-corner pointer-events-auto absolute z-30 ${isInvalidCanvasPreview ? 'is-invalid' : ''}`}
+          className={`cf-composer-block-handle cf-composer-block-handle-corner pointer-events-auto absolute z-30 ${isInvalidPreview ? 'is-invalid' : ''}`}
           style={{
             left: `${cornerHandleLeft}px`,
             top: `${cornerHandleTop}px`,

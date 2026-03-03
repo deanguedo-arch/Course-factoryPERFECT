@@ -32,7 +32,6 @@ import {
   clampComposerColSpan,
   getComposerActivityBreakpointOverride,
   moveComposerActivityToCell,
-  moveComposerActivityToInsertion,
   normalizeComposerActivities,
   normalizeComposerLayout,
   resolveComposerActivityLayoutForBreakpoint,
@@ -1512,29 +1511,6 @@ export default function EditModal({
       selectedActivity,
       selectedActivityIndex,
       selectedPlacement,
-      updateActivities,
-    ],
-  );
-
-  const commitSelectedActivityInsertion = React.useCallback(
-    (insertionIndex) => {
-      if (isCanvasMode || !selectedActivity || !Number.isInteger(insertionIndex)) return false;
-      const result = moveComposerActivityToInsertion(activities, selectedActivityIndex, insertionIndex, {
-        maxColumns: composerMaxColumns,
-      });
-      if (!result.changed) return false;
-      const didUpdate = updateActivities(result.activities);
-      if (didUpdate !== false) {
-        setSelectedActivityIndex(result.toIndex);
-      }
-      return didUpdate;
-    },
-    [
-      activities,
-      composerMaxColumns,
-      isCanvasMode,
-      selectedActivity,
-      selectedActivityIndex,
       updateActivities,
     ],
   );
@@ -4958,7 +4934,6 @@ export default function EditModal({
                                     maxColumns={composerMaxColumns}
                                     onOpenAddPanel={() => setComposerSidebarMode('grid')}
                                     onCanvasLayoutChange={updateSelectedActivityCanvasLayout}
-                                    onSimpleInsertionChange={commitSelectedActivityInsertion}
                                     onSimpleLayoutChange={commitSelectedActivitySimpleLayout}
                                     selectedIndex={selectedActivityIndex}
                                   />

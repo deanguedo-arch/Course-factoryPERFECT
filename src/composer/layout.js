@@ -468,57 +468,61 @@ export function validateComposerCanvasProposal(
   return { valid: true, reason: null, rect };
 }
 
-export function resolveComposerSimpleInsertionTarget(items, activeIndex, pointerClientY) {
-  const targetY = Number(pointerClientY) || 0;
-  const ordered = Array.isArray(items)
-    ? items
-        .filter((item) => item && Number.isInteger(item.order))
-        .sort((left, right) => {
-          if (left.topClient !== right.topClient) return left.topClient - right.topClient;
-          return left.order - right.order;
+function simpleRangesOverlap(aStart, aSpan, bStart, bSpan) {
+  const aEnd = aStart + aSpan - 1;
+  const bEnd = bStart + bSpan - 1;
+  return !(aEnd < bStart || bEnd < aStart);
+}
+
+export function validateComposerSimpleProposal(
+  activities,
+  activeIndex,
+  proposal,
+  { maxColumns = COMPOSER_DEFAULT_COLUMNS } = {},
+) {
+  const nextMax = clampComposerColumns(maxColumns);
+  const layout = {
+    row: clampComposerRow(proposal?.row || 1),
+    colSpan: clampComposerColSpan(proposal?.colSpan, nextMax),
+  };
+  layout.col = clampComposerColStart(proposal?.col || 1, nextMax, layout.colSpan);
+
+  const rawRow = toInteger(proposal?.row, 1);
+  const rawCol = toInteger(proposal?.col, 1);
+  const rawSpan = toInteger(proposal?.colSpan, 1);
+  if (rawRow < 1 || rawCol < 1 || rawSpan < 1 || rawCol + rawSpan - 1 > nextMax) {
+    return { valid: false, reason: 'bounds', layout };
+  }
+
+  const siblings = Array.isArray(activities)
+    ? activities
+        .map((activity, index) => ({ activity, index }))
+        .filter(({ index }) => index !== activeIndex)
+        .map(({ activity, index }) => {
+          const normalized = normalizeComposerActivityShape(activity, index, nextMax, 'simple');
+          return {
+            index,
+            row: clampComposerRow(normalized?.layout?.row || 1),
+            col: clampComposerColStart(normalized?.layout?.col || 1, nextMax, normalized?.layout?.colSpan || 1),
+            colSpan: clampComposerColSpan(normalized?.layout?.colSpan, nextMax),
+          };
         })
     : [];
 
-  const remaining = ordered.filter((item) => item.order !== activeIndex);
-  if (!remaining.length) {
+  const collision = siblings.find((candidate) => (
+    candidate.row === layout.row &&
+    simpleRangesOverlap(layout.col, layout.colSpan, candidate.col, candidate.colSpan)
+  ));
+  if (collision) {
     return {
-      insertionIndex: 0,
-      lineTopClient: targetY,
-      gapHeight: 16,
+      valid: false,
+      reason: 'collision',
+      layout,
+      collisionIndex: collision.index,
     };
   }
 
-  const gapHeight = 16;
-  const first = remaining[0];
-  const firstMidpoint = first.topClient + (first.bottomClient - first.topClient) / 2;
-
-  if (targetY <= firstMidpoint) {
-    return {
-      insertionIndex: first.order,
-      lineTopClient: first.topClient,
-      gapHeight,
-    };
-  }
-
-  for (let index = 1; index < remaining.length; index += 1) {
-    const current = remaining[index];
-    const midpoint = current.topClient + (current.bottomClient - current.topClient) / 2;
-    if (targetY <= midpoint) {
-      const previous = remaining[index - 1];
-      return {
-        insertionIndex: current.order,
-        lineTopClient: previous.bottomClient + (current.topClient - previous.bottomClient) / 2,
-        gapHeight,
-      };
-    }
-  }
-
-  const last = remaining[remaining.length - 1];
-  return {
-    insertionIndex: ordered.length,
-    lineTopClient: last.bottomClient + gapHeight,
-    gapHeight,
-  };
+  return { valid: true, reason: null, layout };
 }
 
 function normalizeCanvasActivities(activities, maxColumns = COMPOSER_DEFAULT_COLUMNS) {

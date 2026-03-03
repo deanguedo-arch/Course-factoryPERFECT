@@ -15,11 +15,16 @@
   - replaced raw legacy footer, layout, responsive, sidebar, preview, undo/redo, workspace, and hotspot-editor stacks with shared builder primitives
   - added a dedicated Part C verifier
 - Completed the composer canvas validation pass:
-  - added pure canvas proposal validation and stacked insertion-target resolution helpers
+  - added pure canvas proposal validation helpers
   - added live blocked-red preview for invalid canvas drag/resize targets
-  - added stacked-mode insertion line/gap preview instead of blind row/col guessing
-  - changed stacked drag commit behavior to save by insertion order, not old cell rounding
+  - added proposal-driven preview/commit gating in overlay movement paths
   - converted the remaining overlay `Add Section` button to the shared builder button system
+- Completed the simple-mode drag correction pass:
+  - replaced insertion-only stacked drag behavior with real simple-grid movement (`row/col/colSpan`)
+  - added pure simple proposal validation with bounds/collision checks
+  - added blocked-red preview for invalid simple drag/resize targets
+  - commits now happen only for valid simple proposals through `onSimpleLayoutChange`
+  - removed legacy insertion-line/gap preview hooks and obsolete insertion callback wiring
 
 ## Files Changed
 
@@ -50,6 +55,8 @@
 - `docs/plans/2026-03-03-composer-canvas-overlay-redesign-implementation.md`
 - `docs/plans/2026-03-03-composer-canvas-validation-design.md`
 - `docs/plans/2026-03-03-composer-canvas-validation-implementation.md`
+- `docs/plans/2026-03-03-simple-mode-grid-drag-fix-design.md`
+- `docs/plans/2026-03-03-simple-mode-grid-drag-fix-implementation.md`
 - `docs/plans/2026-03-03-composer-light-mode-legibility-design.md`
 - `docs/plans/2026-03-03-composer-light-mode-legibility-implementation.md`
 - `docs/plans/2026-03-03-composer-part-c-design.md`
@@ -84,7 +91,7 @@ Lint is still failing for pre-existing repo debt in the large legacy files, espe
 - Canvas editing is now aligned with the actual working model: direct manipulation on canvas first, exact controls in the drawer second.
 - The deepest composer legacy pockets are no longer using the old raw dark utility language.
 - Canvas drag/resize now previews validity before commit, so blocked placements do not silently normalize into a different layout.
-- Stacked drag now previews insertion and commits by insertion slot, which is materially more predictable than the old row/col midpoint guess.
+- Simple/stacked drag now uses direct grid placement preview and commit gating, so movement works again in all directions when targets fit.
 
 ## Recommended Next Phase
 
@@ -104,5 +111,4 @@ Recommended next move:
 - The new Part C guardrail is `scripts/verify_composer_part_c.mjs`. Keep it green before calling the composer UI complete.
 - The new interaction guardrail is `scripts/verify_composer_canvas_validation.mjs`. Keep it green before changing overlay movement behavior.
 - Residual risk is low and specific:
-  - stacked insertion is based on current DOM order, so if dense multi-column simple layouts ever need per-cell insertion previews, that would be a deliberate future UX change
   - freeform drag still depends on the existing pointer-to-grid math, so any remaining oddness at extreme zoom levels should be handled in a separate math pass
