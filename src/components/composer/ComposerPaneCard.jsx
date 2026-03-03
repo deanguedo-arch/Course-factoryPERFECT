@@ -3,7 +3,7 @@ import * as React from 'react';
 export default function ComposerPaneCard({
   bodyClassName = '',
   children,
-  className = 'rounded-2xl border border-slate-800/80 bg-slate-950/85 p-4 shadow-[0_12px_32px_rgba(2,6,23,0.22)] backdrop-blur-sm',
+  className = 'cf-composer-panel p-4',
   header = null,
 }) {
   return (

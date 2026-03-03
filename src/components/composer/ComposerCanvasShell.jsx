@@ -62,7 +62,7 @@ export default function ComposerCanvasShell({
       }`}
     >
       {showRail ? (
-        <div className="flex flex-row gap-2 rounded-2xl border border-slate-800/70 bg-slate-950/55 p-1.5 xl:flex-col xl:self-start">
+        <div className="cf-composer-rail flex-row p-1.5 xl:flex-col xl:self-start">
           {railItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.value === activePanel;
@@ -71,16 +71,12 @@ export default function ComposerCanvasShell({
                 key={item.value}
                 type="button"
                 onClick={() => onPanelChange?.(isActive ? null : item.value)}
-                className={`relative inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-colors ${
-                  isActive
-                    ? 'border-indigo-400/80 bg-indigo-600 text-white shadow-[0_8px_24px_rgba(79,70,229,0.28)]'
-                    : 'border-slate-800/80 bg-slate-950/80 text-slate-400 hover:bg-slate-900 hover:text-white'
-                }`}
+                className={`cf-composer-rail-btn relative ${isActive ? 'is-active' : ''}`}
                 title={item.label}
               >
                 {Icon ? <Icon size={15} /> : <span className="text-xs font-bold">{item.label.slice(0, 1)}</span>}
                 {item.badge ? (
-                  <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-slate-950">
+                  <span className="cf-composer-rail-badge">
                     {item.badge}
                   </span>
                 ) : null}
@@ -92,17 +88,17 @@ export default function ComposerCanvasShell({
 
       {useSideDrawer ? (
         <ComposerPaneCard
-          className="rounded-2xl border border-slate-800/80 bg-slate-950/85 p-4 shadow-[0_12px_32px_rgba(2,6,23,0.22)] backdrop-blur-sm xl:self-start"
+          className="cf-composer-panel p-4 xl:self-start"
           header={(
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-white">{drawerTitle}</p>
-                <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Canvas tools and workspace settings.</p>
+                <p className="text-[11px] text-slate-500">Canvas tools and workspace settings.</p>
               </div>
               <button
                 type="button"
                 onClick={() => onPanelChange?.(null)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
+                className="cf-composer-toolbar-action h-8 w-8 p-0"
                 title="Close drawer"
               >
                 <X size={14} />
@@ -119,17 +115,17 @@ export default function ComposerCanvasShell({
       <div className="space-y-4 min-w-0">
         {hasDrawer && !useSideDrawer ? (
           <ComposerPaneCard
-            className="rounded-2xl border border-slate-800/80 bg-slate-950/85 p-4 shadow-[0_12px_32px_rgba(2,6,23,0.22)] backdrop-blur-sm"
+            className="cf-composer-panel p-4"
             header={(
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-white">{drawerTitle}</p>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-slate-500">Secondary tools stay tucked away until needed.</p>
+                  <p className="text-[11px] text-slate-500">Secondary tools stay tucked away until needed.</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => onPanelChange?.(null)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
+                  className="cf-composer-toolbar-action h-8 w-8 p-0"
                   title="Close drawer"
                 >
                   <X size={14} />

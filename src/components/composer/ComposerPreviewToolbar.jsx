@@ -105,15 +105,13 @@ export default function ComposerPreviewToolbar({
     [onPreviewScaleChange],
   );
 
-  const segmentedGroupClass = 'inline-flex max-w-full items-center gap-1 rounded-xl border border-slate-800/80 bg-slate-950/70 p-1';
-  const sectionLabelClass = 'shrink-0 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500';
-  const compactButtonClass =
-    'inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-300 transition-colors hover:bg-slate-800 hover:text-white';
-  const utilityButtonClass =
-    'inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-800/80 bg-slate-950/70 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-200 transition-colors hover:bg-slate-800';
+  const segmentedGroupClass = 'cf-composer-toolbar-group';
+  const sectionLabelClass = 'cf-composer-toolbar-label';
+  const compactButtonClass = 'cf-composer-toolbar-btn';
+  const utilityButtonClass = 'cf-composer-toolbar-action';
 
   return (
-    <div className="rounded-2xl border border-slate-800/80 bg-[linear-gradient(180deg,rgba(8,15,34,0.92),rgba(9,14,28,0.74))] px-3 py-2 shadow-[0_16px_32px_rgba(2,6,23,0.18)]">
+    <div className="cf-composer-toolbar">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
           {showInteractionModeControls ? (
@@ -122,7 +120,7 @@ export default function ComposerPreviewToolbar({
               <button
                 type="button"
                 onClick={() => onInteractionModeChange?.(inspectMode ? 'live' : 'select')}
-                className={`${utilityButtonClass} ${inspectMode ? 'border-emerald-500/60 bg-emerald-500/12 text-emerald-100' : 'text-slate-300'}`}
+                className={`${utilityButtonClass} ${inspectMode ? 'is-success' : ''}`}
                 title={inspectMode ? 'Select blocks directly in preview' : 'Preview interactions run normally'}
               >
                 <MousePointerClick size={11} />
@@ -143,9 +141,7 @@ export default function ComposerPreviewToolbar({
                       key={option.value}
                       type="button"
                       onClick={() => onViewportModeChange?.(option.value)}
-                      className={`${compactButtonClass} ${
-                        isActive ? 'bg-indigo-600 text-white shadow-[0_8px_20px_rgba(79,70,229,0.24)]' : ''
-                      }`}
+                      className={`${compactButtonClass} ${isActive ? 'is-active' : ''}`}
                       title={`Preview ${option.label.toLowerCase()} width`}
                     >
                       <Icon size={11} />
@@ -168,7 +164,7 @@ export default function ComposerPreviewToolbar({
                       key={option.value}
                       type="button"
                       onClick={() => onDesktopWidthModeChange?.(option.value)}
-                      className={`${compactButtonClass} ${isActive ? 'bg-slate-100 text-slate-950' : ''}`}
+                      className={`${compactButtonClass} ${isActive ? 'is-active' : ''}`}
                       title={`Preview a ${option.label.toLowerCase()} desktop stage`}
                     >
                       {option.label}
@@ -182,7 +178,7 @@ export default function ComposerPreviewToolbar({
           {showPreviewScaleControls ? (
             <div className="flex min-w-[240px] flex-1 items-center gap-2 xl:max-w-[360px]">
               <span className={sectionLabelClass}>Zoom</span>
-              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-800/80 bg-slate-950/70 px-2 py-1.5">
+              <div className="cf-composer-toolbar-group flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5">
                 <input
                   type="range"
                   min={PREVIEW_SCALE_MIN}
@@ -203,7 +199,7 @@ export default function ComposerPreviewToolbar({
                       key={option.label}
                       type="button"
                       onClick={() => onPreviewScaleChange?.(option.value)}
-                      className={`${compactButtonClass} ${isActive ? 'bg-slate-100 text-slate-950' : ''}`}
+                      className={`${compactButtonClass} ${isActive ? 'is-active' : ''}`}
                       title={`Set preview zoom to ${option.label}`}
                     >
                       {option.label}
@@ -220,7 +216,7 @@ export default function ComposerPreviewToolbar({
             <button
               type="button"
               onClick={() => onInspectorCollapsedChange?.(!inspectorCollapsed)}
-              className={`${utilityButtonClass} ${!inspectorCollapsed ? 'border-sky-500/60 bg-sky-500/10 text-sky-100' : ''}`}
+              className={`${utilityButtonClass} ${!inspectorCollapsed ? 'is-active' : ''}`}
               title={inspectorCollapsed ? 'Show inspector' : 'Hide inspector'}
             >
               Inspector
@@ -231,7 +227,7 @@ export default function ComposerPreviewToolbar({
             <button
               type="button"
               onClick={() => onFocusModeChange?.(!focusMode)}
-              className={`${utilityButtonClass} ${focusMode ? 'border-emerald-500/60 bg-emerald-500/12 text-emerald-100' : ''}`}
+              className={`${utilityButtonClass} ${focusMode ? 'is-success' : ''}`}
               title={focusMode ? 'Exit focus mode' : 'Expand canvas and hide chrome'}
             >
               <Maximize2 size={11} />

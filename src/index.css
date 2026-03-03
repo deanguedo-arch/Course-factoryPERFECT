@@ -655,6 +655,338 @@ textarea.cf-input-shell {
   color: var(--cf-text-primary);
 }
 
+.cf-composer-panel {
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 1rem;
+  background: var(--cf-glass-fill-strong);
+  box-shadow: var(--cf-glass-shadow-soft);
+  color: var(--cf-text-primary);
+  backdrop-filter: blur(var(--cf-glass-blur-soft)) saturate(var(--cf-glass-sat-soft));
+  -webkit-backdrop-filter: blur(var(--cf-glass-blur-soft)) saturate(var(--cf-glass-sat-soft));
+}
+
+.cf-composer-panel-soft {
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 1rem;
+  background: var(--cf-panel-fill);
+  box-shadow: var(--cf-glass-shadow-soft);
+  color: var(--cf-text-primary);
+}
+
+.cf-composer-section {
+  overflow: hidden;
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 1rem;
+  background: var(--cf-panel-fill);
+  box-shadow: var(--cf-glass-shadow-soft);
+}
+
+.cf-composer-section-trigger {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  text-align: left;
+}
+
+.cf-composer-section-title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cf-text-secondary);
+}
+
+.cf-composer-section-description {
+  margin-top: 0.25rem;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--cf-text-tertiary);
+}
+
+.cf-composer-section-body {
+  border-top: 1px solid var(--cf-panel-border);
+  padding: 1rem;
+}
+
+.cf-composer-toolbar {
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 1rem;
+  background: var(--cf-glass-fill-nav);
+  box-shadow: var(--cf-glass-shadow-soft);
+  padding: 0.75rem;
+}
+
+.cf-composer-toolbar-group {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 0.95rem;
+  background: var(--cf-panel-fill);
+  padding: 0.25rem;
+}
+
+.cf-composer-toolbar-label {
+  flex-shrink: 0;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--cf-text-muted);
+}
+
+.cf-composer-toolbar-btn,
+.cf-composer-toolbar-action,
+.cf-composer-rail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 0.8rem;
+  background: transparent;
+  color: var(--cf-text-secondary);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.cf-composer-toolbar-btn,
+.cf-composer-toolbar-action {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cf-composer-rail-btn {
+  height: 2.75rem;
+  width: 2.75rem;
+}
+
+.cf-composer-toolbar-btn:hover,
+.cf-composer-toolbar-action:hover,
+.cf-composer-rail-btn:hover {
+  border-color: var(--cf-tab-hover-border);
+  background: var(--cf-tab-hover-fill);
+  color: var(--cf-text-primary);
+  transform: translateY(-1px);
+}
+
+.cf-composer-toolbar-btn.is-active,
+.cf-composer-toolbar-action.is-active,
+.cf-composer-rail-btn.is-active {
+  border-color: var(--cf-primary-border);
+  background: var(--cf-primary-fill);
+  color: var(--cf-primary-text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.cf-composer-toolbar-action.is-success {
+  border-color: var(--cf-success-border);
+  background: var(--cf-success-fill);
+  color: var(--cf-success-soft);
+}
+
+.cf-composer-rail {
+  display: flex;
+  gap: 0.5rem;
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 1rem;
+  background: var(--cf-panel-fill);
+  padding: 0.4rem;
+}
+
+.cf-composer-rail-badge {
+  position: absolute;
+  right: -0.25rem;
+  top: -0.25rem;
+  border-radius: 999px;
+  border: 1px solid var(--cf-warning-border);
+  background: var(--cf-warning-fill);
+  padding: 0.1rem 0.35rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--cf-warning-soft);
+}
+
+.cf-composer-toolbar-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--cf-panel-border);
+  background: var(--cf-panel-fill);
+  padding: 0.55rem;
+}
+
+.cf-composer-toolbar-strip-secondary {
+  padding-top: 0;
+}
+
+.cf-composer-toolbar-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 0.85rem;
+  background: var(--cf-control-fill);
+  padding: 0.45rem 0.6rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cf-text-secondary);
+}
+
+.cf-composer-editor-surface {
+  overflow: hidden;
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 1rem;
+  background: var(--cf-panel-fill);
+}
+
+.cf-composer-editor-input {
+  background: var(--cf-input-fill) !important;
+  color: var(--cf-input-text) !important;
+}
+
+.cf-composer-block-outline {
+  border: 1px solid var(--cf-primary-border);
+  border-radius: 1rem;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cf-focus-outline) 72%, transparent);
+}
+
+.cf-composer-block-outline.is-draft {
+  border-style: dashed;
+  border-color: var(--cf-success-border);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cf-success-border) 72%, transparent);
+}
+
+.cf-composer-block-overlay {
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 999px;
+  background: var(--cf-glass-fill-strong);
+  box-shadow: var(--cf-glass-shadow-soft);
+  padding: 0.35rem 0.45rem 0.35rem 0.6rem;
+  color: var(--cf-text-primary);
+  backdrop-filter: blur(var(--cf-glass-blur-soft)) saturate(var(--cf-glass-sat-soft));
+  -webkit-backdrop-filter: blur(var(--cf-glass-blur-soft)) saturate(var(--cf-glass-sat-soft));
+}
+
+.cf-composer-block-overlay-label {
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--cf-text-primary);
+}
+
+.cf-composer-block-overlay-chip {
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 999px;
+  background: var(--cf-panel-fill);
+  padding: 0.18rem 0.45rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--cf-text-secondary);
+}
+
+.cf-composer-block-overlay-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.95rem;
+  height: 1.95rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--cf-text-secondary);
+  cursor: grab;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.cf-composer-block-overlay-grip:hover {
+  border-color: var(--cf-tab-hover-border);
+  background: var(--cf-tab-hover-fill);
+  color: var(--cf-text-primary);
+  transform: translateY(-1px);
+}
+
+.cf-composer-block-overlay-grip:active {
+  cursor: grabbing;
+}
+
+.cf-composer-block-handle {
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 999px;
+  background: var(--cf-glass-fill-strong);
+  box-shadow: var(--cf-glass-shadow-soft);
+}
+
+.cf-composer-block-handle-corner {
+  border-radius: 0.5rem;
+}
+
+html[data-builder-theme='light'] .cf-composer-panel,
+html[data-builder-theme='light'] .cf-composer-panel-soft,
+html[data-builder-theme='light'] .cf-composer-section,
+html[data-builder-theme='light'] .cf-composer-toolbar,
+html[data-builder-theme='light'] .cf-composer-rail,
+html[data-builder-theme='light'] .cf-composer-editor-surface {
+  color: var(--cf-text-primary);
+}
+
+html[data-builder-theme='light'] .cf-composer-panel {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.88), rgba(233, 242, 252, 0.78));
+}
+
+html[data-builder-theme='light'] .cf-composer-panel-soft,
+html[data-builder-theme='light'] .cf-composer-section,
+html[data-builder-theme='light'] .cf-composer-toolbar,
+html[data-builder-theme='light'] .cf-composer-rail,
+html[data-builder-theme='light'] .cf-composer-editor-surface {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.78), rgba(233, 242, 252, 0.72));
+}
+
+html[data-builder-theme='light'] .cf-composer-toolbar-btn,
+html[data-builder-theme='light'] .cf-composer-toolbar-action,
+html[data-builder-theme='light'] .cf-composer-rail-btn {
+  color: var(--cf-text-secondary);
+}
+
+html[data-builder-theme='light'] .cf-composer-toolbar-field,
+html[data-builder-theme='light'] .cf-composer-section-title {
+  color: var(--cf-text-secondary);
+}
+
+html[data-builder-theme='light'] .cf-composer-section-description,
+html[data-builder-theme='light'] .cf-composer-toolbar-label {
+  color: var(--cf-text-tertiary);
+}
+
+html[data-builder-theme='light'] .cf-composer-block-overlay,
+html[data-builder-theme='light'] .cf-composer-block-handle {
+  color: var(--cf-text-primary);
+}
+
 html[data-builder-theme='light'] .cf-app-shell {
   color: var(--cf-text-primary);
 }
@@ -684,11 +1016,16 @@ html[data-builder-theme='light'] .cf-app-shell [class~='text-purple-600'] {
 }
 
 html[data-builder-theme='light'] .cf-app-shell [class~='text-emerald-300'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-emerald-200'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-emerald-100'],
 html[data-builder-theme='light'] .cf-app-shell [class~='text-emerald-400'],
 html[data-builder-theme='light'] .cf-app-shell [class~='text-emerald-600'] {
   color: var(--cf-success) !important;
 }
 
+html[data-builder-theme='light'] .cf-app-shell [class~='text-amber-100'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-amber-200'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-amber-300'],
 html[data-builder-theme='light'] .cf-app-shell [class~='text-amber-400'],
 html[data-builder-theme='light'] .cf-app-shell [class~='text-amber-500'],
 html[data-builder-theme='light'] .cf-app-shell [class~='text-orange-400'],
@@ -696,11 +1033,18 @@ html[data-builder-theme='light'] .cf-app-shell [class~='text-orange-600'] {
   color: var(--cf-warning) !important;
 }
 
+html[data-builder-theme='light'] .cf-app-shell [class~='text-rose-100'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-rose-200'],
 html[data-builder-theme='light'] .cf-app-shell [class~='text-rose-300'],
 html[data-builder-theme='light'] .cf-app-shell [class~='text-rose-400'],
 html[data-builder-theme='light'] .cf-app-shell [class~='text-rose-500'],
 html[data-builder-theme='light'] .cf-app-shell [class~='text-rose-600'] {
   color: var(--cf-danger) !important;
+}
+
+html[data-builder-theme='light'] .cf-btn-success,
+html[data-builder-theme='light'] .cf-composer-toolbar-action.is-success {
+  color: #0f5a43 !important;
 }
 
 html[data-builder-theme='light'] .cf-app-shell [class~='bg-black'],

@@ -2562,13 +2562,13 @@ export default function EditModal({
       (selectedActivity.type === 'title_block' ? '#1e1b4b' : themePreview.containerBg || '#0f172a');
     const effectiveTextColor = data.blockTextColor || themePreview.textColor || '#e2e8f0';
     return (
-      <div className={embedded ? 'space-y-2' : 'mb-3 rounded-lg border border-slate-700 bg-slate-900/60 p-3 space-y-2'}>
+      <div className={embedded ? 'space-y-2' : 'cf-panel-muted mb-3 p-3 space-y-2'}>
         <div className="flex items-center justify-between">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-300">Block Style</p>
+          <p className="text-[11px] font-semibold text-slate-300">Block style</p>
           <button
             type="button"
             onClick={resetSelectedActivityStyle}
-            className="rounded bg-slate-800 hover:bg-slate-700 px-2 py-1 text-[10px] font-bold text-slate-200"
+            className="cf-btn cf-btn-secondary px-2 py-1 text-[10px] font-bold text-slate-200"
             title="Reset block and body styles to defaults"
           >
             Reset Style
@@ -2580,7 +2580,7 @@ export default function EditModal({
             <select
               value={themeValue}
               onChange={(e) => updateSelectedActivityData({ blockTheme: e.target.value })}
-              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+              className="cf-input-shell w-full px-2 py-1 text-xs"
             >
               {BLOCK_THEME_OPTIONS.map((themeOption) => (
                 <option key={`modal-block-theme-${themeOption.value}`} value={themeOption.value}>
@@ -2594,7 +2594,7 @@ export default function EditModal({
             <select
               value={data.blockFontFamily || ''}
               onChange={(e) => updateSelectedActivityData({ blockFontFamily: e.target.value })}
-              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+              className="cf-input-shell w-full px-2 py-1 text-xs"
             >
               <option value="">Default</option>
               {RICH_EDITOR_FONT_OPTIONS.map((fontOption) => (
@@ -2606,7 +2606,7 @@ export default function EditModal({
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+          <label className="cf-composer-toolbar-field">
             <span>Text Color</span>
             <input
               type="color"
@@ -2617,7 +2617,7 @@ export default function EditModal({
               aria-label="Block text color"
             />
           </label>
-          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+          <label className="cf-composer-toolbar-field">
             <span>Container Fill</span>
             <input
               type="color"
@@ -2635,7 +2635,7 @@ export default function EditModal({
             <select
               value={styleMeta.variant === 'flat' ? 'flat' : 'card'}
               onChange={(e) => updateSelectedActivityMeta('style', { variant: e.target.value })}
-              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+              className="cf-input-shell w-full px-2 py-1 text-xs"
             >
               <option value="card">Card</option>
               <option value="flat">Flat</option>
@@ -2646,7 +2646,7 @@ export default function EditModal({
             <select
               value={styleMeta.padding || 'md'}
               onChange={(e) => updateSelectedActivityMeta('style', { padding: e.target.value })}
-              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+              className="cf-input-shell w-full px-2 py-1 text-xs"
             >
               <option value="sm">Small</option>
               <option value="md">Medium</option>
@@ -2658,7 +2658,7 @@ export default function EditModal({
             <select
               value={styleMeta.titleVariant || 'md'}
               onChange={(e) => updateSelectedActivityMeta('style', { titleVariant: e.target.value })}
-              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+              className="cf-input-shell w-full px-2 py-1 text-xs"
             >
               {['xs', 'sm', 'md', 'lg', 'xl'].map((value) => (
                 <option key={`modal-title-variant-${value}`} value={value}>
@@ -2667,7 +2667,7 @@ export default function EditModal({
               ))}
             </select>
           </div>
-          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+          <label className="cf-composer-toolbar-field">
             <span>Border</span>
             <input
               type="checkbox"
@@ -2676,7 +2676,7 @@ export default function EditModal({
               className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-blue-500"
             />
           </label>
-          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+          <label className="cf-composer-toolbar-field">
             <span>Collapsible</span>
             <input
               type="checkbox"
@@ -2690,7 +2690,7 @@ export default function EditModal({
               className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-blue-500"
             />
           </label>
-          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+          <label className="cf-composer-toolbar-field">
             <span>Start Collapsed</span>
             <input
               type="checkbox"
@@ -2727,7 +2727,7 @@ export default function EditModal({
                 type="text"
                 value={data[richConfig.titleInputKey] || ''}
                 onChange={(e) => updateSelectedActivityData({ [richConfig.titleInputKey]: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+                className="cf-input-shell w-full p-2 text-sm"
               />
             </div>
           ) : null}
@@ -2738,7 +2738,7 @@ export default function EditModal({
                 <select
                   value={data.align || 'left'}
                   onChange={(e) => updateSelectedActivityData({ align: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+                  className="cf-input-shell w-full p-2 text-sm"
                 >
                   <option value="left">Left</option>
                   <option value="center">Center</option>
@@ -2753,18 +2753,18 @@ export default function EditModal({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-bold text-slate-300">{richConfig.plainLabel}</label>
-              <div className="inline-flex bg-slate-950 border border-slate-700 rounded p-0.5">
+              <div className="cf-tab-rail p-0.5">
                 <button
                   type="button"
                   onClick={() => updateSelectedActivityData({ [richConfig.modeKey]: 'rich' })}
-                  className={`px-2 py-1 rounded text-[10px] font-bold ${bodyMode === 'rich' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  className={`cf-tab-btn px-2 py-1 text-[10px] font-bold ${bodyMode === 'rich' ? 'cf-tab-btn-active' : ''}`}
                 >
                   Rich
                 </button>
                 <button
                   type="button"
                   onClick={() => updateSelectedActivityData({ [richConfig.modeKey]: 'plain' })}
-                  className={`px-2 py-1 rounded text-[10px] font-bold ${bodyMode === 'plain' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  className={`cf-tab-btn px-2 py-1 text-[10px] font-bold ${bodyMode === 'plain' ? 'cf-tab-btn-active' : ''}`}
                 >
                   Plain
                 </button>
@@ -2779,22 +2779,22 @@ export default function EditModal({
                     [richConfig.textKey]: e.target.value,
                   })
                 }
-                className={`w-full ${richConfig.plainRowsClass} bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm`}
+                className={`cf-input-shell w-full text-sm ${richConfig.plainRowsClass}`}
               />
             ) : (
-              <div className="rounded border border-slate-700 bg-slate-950 overflow-hidden">
-                <div className="flex flex-wrap gap-1 p-2 border-b border-slate-700 bg-slate-900/80">
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('bold')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">B</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('italic')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs italic">I</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('underline')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs underline">U</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', 'P')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">P</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', 'H2')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H2</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', 'H3')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H3</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '2')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A-</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '3')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '5')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A+</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('insertUnorderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">• List</button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('insertOrderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">1. List</button>
+              <div className="cf-composer-editor-surface">
+                <div className="cf-composer-toolbar-strip">
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('bold')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs font-bold">B</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('italic')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs italic">I</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('underline')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs underline">U</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', 'P')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">P</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', 'H2')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs font-bold">H2</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('formatBlock', 'H3')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs font-bold">H3</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '2')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">A-</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '3')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">A</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('fontSize', '5')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">A+</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('insertUnorderedList')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">• List</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('insertOrderedList')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">1. List</button>
                   <button
                     type="button"
                     onMouseDown={preserveRichSelection}
@@ -2803,13 +2803,13 @@ export default function EditModal({
                       if (!url) return;
                       runRichEditorCommand('createLink', url);
                     }}
-                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs"
+                    className="cf-btn cf-btn-secondary px-2 py-1 text-xs"
                   >
                     Link
                   </button>
-                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('removeFormat')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Clear</button>
+                  <button type="button" onMouseDown={preserveRichSelection} onClick={() => runRichEditorCommand('removeFormat')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">Clear</button>
                 </div>
-                <div className="px-2 pb-2 bg-slate-900/80 border-b border-slate-700">
+                <div className="cf-composer-toolbar-strip cf-composer-toolbar-strip-secondary">
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                     <select
                       defaultValue=""
@@ -2818,7 +2818,7 @@ export default function EditModal({
                         if (!font) return;
                         runRichEditorCommand('fontName', font);
                       }}
-                      className="w-full rounded bg-slate-800 border border-slate-700 px-2 py-1 text-[11px] text-white"
+                      className="cf-input-shell text-[11px]"
                       aria-label="Font family"
                     >
                       <option value="">Font Family</option>
@@ -2828,7 +2828,7 @@ export default function EditModal({
                         </option>
                       ))}
                     </select>
-                    <label className="flex items-center justify-between rounded bg-slate-800 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+                    <label className="cf-composer-toolbar-field">
                       <span>Text Color</span>
                       <input
                         type="color"
@@ -2839,7 +2839,7 @@ export default function EditModal({
                         aria-label="Set text color"
                       />
                     </label>
-                    <label className="flex items-center justify-between rounded bg-slate-800 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+                    <label className="cf-composer-toolbar-field">
                       <span>Container Fill</span>
                       <input
                         type="color"
@@ -2857,7 +2857,7 @@ export default function EditModal({
                       type="button"
                       onMouseDown={preserveRichSelection}
                       onClick={resetSelectedActivityBodyStyle}
-                      className="rounded bg-slate-800 hover:bg-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-200"
+                      className="cf-btn cf-btn-secondary px-2 py-1 text-[10px] font-bold text-slate-200"
                       title="Reset body style overrides"
                     >
                       Reset Body Style
@@ -2882,7 +2882,7 @@ export default function EditModal({
                     captureRichSelection();
                     queueRichEditorUpdate(html, text, true);
                   }}
-                  className="cf-rich-editor min-h-[180px] p-3 text-sm text-white outline-none"
+                  className="cf-rich-editor cf-composer-editor-input min-h-[180px] p-3 text-sm outline-none"
                 />
               </div>
             )}
@@ -2900,7 +2900,7 @@ export default function EditModal({
               type="text"
               value={data.url || ''}
               onChange={(e) => updateSelectedActivityData({ url: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
               placeholder="https://..."
             />
           </div>
@@ -2910,7 +2910,7 @@ export default function EditModal({
               type="text"
               value={data.caption || ''}
               onChange={(e) => updateSelectedActivityData({ caption: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
             />
           </div>
         </div>
@@ -2927,7 +2927,7 @@ export default function EditModal({
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
             />
           </div>
           <div className="space-y-2">
@@ -2941,7 +2941,7 @@ export default function EditModal({
                     nextItems[idx] = { ...(nextItems[idx] || {}), label: e.target.value };
                     updateSelectedActivityData({ items: nextItems });
                   }}
-                  className="col-span-3 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  className="cf-input-shell col-span-3 p-2 text-xs"
                   placeholder="Label"
                 />
                 <input
@@ -2952,7 +2952,7 @@ export default function EditModal({
                     nextItems[idx] = { ...(nextItems[idx] || {}), viewUrl: e.target.value };
                     updateSelectedActivityData({ items: nextItems });
                   }}
-                  className="col-span-4 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  className="cf-input-shell col-span-4 p-2 text-xs"
                   placeholder="View URL"
                 />
                 <button
@@ -2974,7 +2974,7 @@ export default function EditModal({
                     nextItems[idx] = { ...(nextItems[idx] || {}), downloadUrl: e.target.value };
                     updateSelectedActivityData({ items: nextItems });
                   }}
-                  className="col-span-6 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  className="cf-input-shell col-span-6 p-2 text-xs"
                   placeholder="Download URL"
                 />
                 <input
@@ -2985,7 +2985,7 @@ export default function EditModal({
                     nextItems[idx] = { ...(nextItems[idx] || {}), description: e.target.value };
                     updateSelectedActivityData({ items: nextItems });
                   }}
-                  className="col-span-6 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  className="cf-input-shell col-span-6 p-2 text-xs"
                   placeholder="Optional description"
                 />
               </div>
@@ -3003,7 +3003,7 @@ export default function EditModal({
                 <select
                   value={selectedMaterialId}
                   onChange={(e) => setSelectedMaterialId(e.target.value)}
-                  className="col-span-9 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  className="cf-input-shell col-span-9 p-2 text-xs"
                 >
                   {moduleBankMaterials.length === 0 && <option value="">No stored materials</option>}
                   {moduleBankMaterials.map((mat) => (
@@ -3057,7 +3057,7 @@ export default function EditModal({
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
               placeholder="Knowledge Check"
             />
           </div>
@@ -3114,7 +3114,7 @@ export default function EditModal({
                           });
                           updateSelectedActivityData({ questions: nextQuestions });
                         }}
-                        className="col-span-3 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                        className="cf-input-shell col-span-3 p-2 text-xs"
                       >
                         <option value="multiple_choice">Multiple Choice</option>
                         <option value="short_answer">Short Answer</option>
@@ -3173,7 +3173,7 @@ export default function EditModal({
                           const nextQuestions = questions.map((item, idx) => (idx === qIdx ? { ...item, prompt: e.target.value } : item));
                           updateSelectedActivityData({ questions: nextQuestions });
                         }}
-                        className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                        className="cf-input-shell w-full h-20 p-2 text-xs"
                       />
                     </div>
                     {isShortAnswer ? (
@@ -3186,7 +3186,7 @@ export default function EditModal({
                             const nextQuestions = questions.map((item, idx) => (idx === qIdx ? { ...item, placeholder: e.target.value } : item));
                             updateSelectedActivityData({ questions: nextQuestions });
                           }}
-                          className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                          className="cf-input-shell w-full p-2 text-xs"
                           placeholder="Write your response..."
                         />
                       </div>
@@ -3207,7 +3207,7 @@ export default function EditModal({
                                 });
                                 updateSelectedActivityData({ questions: nextQuestions });
                               }}
-                              className="col-span-10 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                              className="cf-input-shell col-span-10 p-2 text-xs"
                             />
                             <input
                               type="radio"
@@ -3320,7 +3320,7 @@ export default function EditModal({
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
               placeholder="Worksheet"
             />
           </div>
@@ -3373,7 +3373,7 @@ export default function EditModal({
                           });
                           updateSelectedActivityData({ blocks: nextBlocks });
                         }}
-                        className="col-span-3 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                        className="cf-input-shell col-span-3 p-2 text-xs"
                       >
                         <option value="field">Field</option>
                         <option value="title">Title + Instructions</option>
@@ -3435,7 +3435,7 @@ export default function EditModal({
                               const nextBlocks = blocks.map((item, idx) => (idx === blockIdx ? { ...item, title: e.target.value } : item));
                               updateSelectedActivityData({ blocks: nextBlocks });
                             }}
-                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                            className="cf-input-shell w-full p-2 text-xs"
                             placeholder="Section title"
                           />
                         </div>
@@ -3459,7 +3459,7 @@ export default function EditModal({
                               const nextBlocks = blocks.map((item, idx) => (idx === blockIdx ? { ...item, content: e.target.value } : item));
                               updateSelectedActivityData({ blocks: nextBlocks });
                             }}
-                            className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs disabled:opacity-50"
+                            className="cf-input-shell w-full h-20 p-2 text-xs disabled:opacity-50"
                             placeholder="Add instructions or context for this section."
                             disabled={!block.showContent}
                           />
@@ -3474,7 +3474,7 @@ export default function EditModal({
                               type="text"
                               value={block.label || ''}
                               onChange={(e) => setWorksheetBlockField(blockIdx, { label: e.target.value })}
-                              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                              className="cf-input-shell w-full p-2 text-xs"
                               placeholder="Field label"
                             />
                           </div>
@@ -3483,7 +3483,7 @@ export default function EditModal({
                             <select
                               value={block.fieldType || 'text'}
                               onChange={(e) => setWorksheetBlockField(blockIdx, { fieldType: e.target.value || 'text' })}
-                              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                              className="cf-input-shell w-full p-2 text-xs"
                             >
                               <option value="text">Text</option>
                               <option value="textarea">Textarea</option>
@@ -3496,7 +3496,7 @@ export default function EditModal({
                               type="text"
                               value={block.placeholder || ''}
                               onChange={(e) => setWorksheetBlockField(blockIdx, { placeholder: e.target.value })}
-                              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                              className="cf-input-shell w-full p-2 text-xs"
                               placeholder="Optional placeholder"
                             />
                           </div>
@@ -3506,7 +3506,7 @@ export default function EditModal({
                           <select
                             value={block.helperMode === 'rich' ? 'rich' : 'plain'}
                             onChange={(e) => setWorksheetBlockField(blockIdx, { helperMode: e.target.value === 'rich' ? 'rich' : 'plain' })}
-                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                            className="cf-input-shell w-full p-2 text-xs"
                           >
                             <option value="plain">Plain Prompt</option>
                             <option value="rich">Rich Prompt</option>
@@ -3515,12 +3515,12 @@ export default function EditModal({
                         {block.helperMode === 'rich' ? (
                           <div className="space-y-1">
                             <div className="flex flex-wrap items-center gap-1">
-                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'bold')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">B</button>
-                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'italic')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs italic">I</button>
-                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'underline')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs underline">U</button>
-                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'insertUnorderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">• List</button>
-                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'createLink')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Link</button>
-                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'removeFormat')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Clear</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'bold')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs font-bold">B</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'italic')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs italic">I</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'underline')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs underline">U</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'insertUnorderedList')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">• List</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'createLink')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">Link</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'removeFormat')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">Clear</button>
                             </div>
                             <div className="rounded border border-slate-700 bg-slate-950">
                               <div
@@ -3547,7 +3547,7 @@ export default function EditModal({
                             <textarea
                               value={block.helperText || ''}
                               onChange={(e) => setWorksheetBlockField(blockIdx, { helperText: e.target.value })}
-                              className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                              className="cf-input-shell w-full h-20 p-2 text-xs"
                               placeholder="Add context/instructions shown above this field."
                             />
                           </div>
@@ -3603,7 +3603,7 @@ export default function EditModal({
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
               placeholder="Fillable Chart"
             />
           </div>
@@ -3612,7 +3612,7 @@ export default function EditModal({
             <textarea
               value={data.description || ''}
               onChange={(e) => updateSelectedActivityData({ description: e.target.value })}
-              className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full h-20 p-2 text-sm"
               placeholder="Explain how students should use the chart."
             />
           </div>
@@ -3625,7 +3625,7 @@ export default function EditModal({
                 max="8"
                 value={chart.rowCount}
                 onChange={(e) => updateChart({ rowCount: Math.max(1, Math.min(8, Number.parseInt(e.target.value, 10) || 1)) })}
-                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                className="cf-input-shell w-full p-2 text-xs"
               />
             </div>
             <div className="col-span-3">
@@ -3636,7 +3636,7 @@ export default function EditModal({
                 max="8"
                 value={chart.colCount}
                 onChange={(e) => updateChart({ colCount: Math.max(1, Math.min(8, Number.parseInt(e.target.value, 10) || 1)) })}
-                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                className="cf-input-shell w-full p-2 text-xs"
               />
             </div>
             <div className="col-span-3">
@@ -3657,7 +3657,7 @@ export default function EditModal({
                 type="text"
                 value={chart.rowLabelHeader || ''}
                 onChange={(e) => updateChart({ rowLabelHeader: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs disabled:opacity-50"
+                className="cf-input-shell w-full p-2 text-xs disabled:opacity-50"
                 placeholder="Rows"
                 disabled={chart.showRowLabels === false}
               />
@@ -3690,7 +3690,7 @@ export default function EditModal({
               </button>
             </div>
           </div>
-          <div className="rounded border border-slate-700 bg-slate-900/60 p-2 space-y-2">
+          <div className="cf-panel-muted p-2 space-y-2">
             <label className="block text-[11px] font-bold text-slate-400 uppercase">Column Labels</label>
             {chart.columns.map((column, colIdx) => (
               <input
@@ -3701,15 +3701,15 @@ export default function EditModal({
                   const nextColumns = chart.columns.map((item, idx) => (idx === colIdx ? { ...item, label: e.target.value } : item));
                   updateChart({ columns: nextColumns });
                 }}
-                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                className="cf-input-shell w-full p-2 text-xs"
                 placeholder={`Column ${colIdx + 1}`}
               />
             ))}
           </div>
-          <div className="rounded border border-slate-700 bg-slate-900/60 p-2 space-y-2">
+          <div className="cf-panel-muted p-2 space-y-2">
             <label className="block text-[11px] font-bold text-slate-400 uppercase">Cells</label>
             {chart.rows.map((row, rowIdx) => (
-              <div key={`chart-cell-row-${rowIdx}`} className="rounded border border-slate-700 bg-slate-950/60 p-2 space-y-2">
+              <div key={`chart-cell-row-${rowIdx}`} className="cf-panel-muted p-2 space-y-2">
                 {chart.showRowLabels !== false && (
                   <div className="grid grid-cols-12 gap-2 items-center">
                     <span className="col-span-2 text-[11px] font-bold text-slate-400 uppercase">Row Label</span>
@@ -3720,7 +3720,7 @@ export default function EditModal({
                         const nextRows = chart.rows.map((item, idx) => (idx === rowIdx ? { ...item, label: e.target.value } : item));
                         updateChart({ rows: nextRows });
                       }}
-                      className="col-span-10 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                      className="cf-input-shell col-span-10 p-2 text-xs"
                       placeholder={`Row ${rowIdx + 1}`}
                     />
                   </div>
@@ -3739,7 +3739,7 @@ export default function EditModal({
                           );
                           updateChart({ cells: nextCells });
                         }}
-                        className="col-span-4 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                        className="cf-input-shell col-span-4 p-2 text-xs"
                         placeholder="Cell label/content"
                       />
                       <label className="col-span-2 inline-flex items-center gap-1 text-[11px] text-slate-300">
@@ -3765,7 +3765,7 @@ export default function EditModal({
                           );
                           updateChart({ cells: nextCells });
                         }}
-                        className="col-span-3 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                        className="cf-input-shell col-span-3 p-2 text-xs"
                         placeholder="Placeholder"
                         disabled={cell.editable === false}
                       />
@@ -3788,14 +3788,14 @@ export default function EditModal({
               type="text"
               value={data.url || ''}
               onChange={(e) => updateSelectedActivityData({ url: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
               placeholder="https://... or /assets/image.jpg"
             />
             <div className="grid grid-cols-12 gap-2 mt-2">
               <select
                 value={selectedImageMaterialId}
                 onChange={(e) => setSelectedImageMaterialId(e.target.value)}
-                className="col-span-10 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                className="cf-input-shell col-span-10 p-2 text-xs"
               >
                 {moduleBankImageAssets.length === 0 && <option value="">No image materials found</option>}
                 {moduleBankImageAssets.map((asset) => (
@@ -3830,7 +3830,7 @@ export default function EditModal({
               type="text"
               value={data.alt || ''}
               onChange={(e) => updateSelectedActivityData({ alt: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
             />
           </div>
           <div>
@@ -3839,7 +3839,7 @@ export default function EditModal({
               type="text"
               value={data.caption || ''}
               onChange={(e) => updateSelectedActivityData({ caption: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
             />
           </div>
           <div>
@@ -3847,7 +3847,7 @@ export default function EditModal({
             <select
               value={data.width || 'full'}
               onChange={(e) => updateSelectedActivityData({ width: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
             >
               <option value="full">Full width</option>
               <option value="wide">Wide</option>
@@ -3873,7 +3873,7 @@ export default function EditModal({
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
             />
           </div>
           <div className="space-y-2">
@@ -3899,7 +3899,7 @@ export default function EditModal({
             <select
               value={selectedAssessmentId}
               onChange={(e) => setSelectedAssessmentId(e.target.value)}
-              className="col-span-9 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+              className="cf-input-shell col-span-9 p-2 text-xs"
             >
               {availableAssessments.length === 0 && <option value="">No saved assessments</option>}
               {availableAssessments.map((assessment) => (
@@ -3962,7 +3962,7 @@ export default function EditModal({
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
             />
           </div>
           <div>
@@ -3970,7 +3970,7 @@ export default function EditModal({
             <textarea
               value={data.instructions || ''}
               onChange={(e) => updateSelectedActivityData({ instructions: e.target.value })}
-              className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full h-20 p-2 text-sm"
             />
           </div>
           <div className="grid grid-cols-12 gap-2">
@@ -3979,7 +3979,7 @@ export default function EditModal({
               <select
                 value={rowCount}
                 onChange={(e) => applyRubricShape(Number.parseInt(e.target.value, 10), colCount)}
-                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+                className="cf-input-shell w-full p-2 text-sm"
               >
                 {[2, 3, 4, 5].map((count) => (
                   <option key={`rubric-row-count-${count}`} value={count}>
@@ -3993,7 +3993,7 @@ export default function EditModal({
               <select
                 value={colCount}
                 onChange={(e) => applyRubricShape(rowCount, Number.parseInt(e.target.value, 10))}
-                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+                className="cf-input-shell w-full p-2 text-sm"
               >
                 {[2, 3, 4, 5].map((count) => (
                   <option key={`rubric-col-count-${count}`} value={count}>
@@ -4020,7 +4020,7 @@ export default function EditModal({
               type="text"
               value={data.totalLabel || 'Self Score Total'}
               onChange={(e) => updateSelectedActivityData({ totalLabel: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
               disabled={!rubric.selfScoringEnabled}
             />
           </div>
@@ -4035,7 +4035,7 @@ export default function EditModal({
                     const nextColumns = columns.map((item, idx) => (idx === colIdx ? { ...item, label: e.target.value } : item));
                     updateSelectedActivityData({ rowCount, colCount, rows, columns: nextColumns, cells });
                   }}
-                  className="col-span-8 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                  className="cf-input-shell col-span-8 p-2 text-xs"
                   placeholder={`Column ${colIdx + 1} label`}
                 />
                 <input
@@ -4049,7 +4049,7 @@ export default function EditModal({
                     );
                     updateSelectedActivityData({ rowCount, colCount, rows, columns: nextColumns, cells });
                   }}
-                  className="col-span-4 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                  className="cf-input-shell col-span-4 p-2 text-xs"
                   placeholder="Score"
                   title="Column score value"
                 />
@@ -4067,7 +4067,7 @@ export default function EditModal({
                   const nextRows = rows.map((item, idx) => (idx === rowIdx ? { ...item, label: e.target.value } : item));
                   updateSelectedActivityData({ rowCount, colCount, rows: nextRows, columns, cells });
                 }}
-                className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                className="cf-input-shell w-full p-2 text-xs"
                 placeholder={`Criterion ${rowIdx + 1}`}
               />
             ))}
@@ -4104,7 +4104,7 @@ export default function EditModal({
                               );
                               updateSelectedActivityData({ rowCount, colCount, rows, columns, cells: nextCells });
                             }}
-                            className="w-full h-20 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                            className="cf-input-shell w-full h-20 p-2 text-xs"
                             placeholder={`Describe "${column.label || `Column ${colIdx + 1}`}"`}
                           />
                         </td>
@@ -4130,7 +4130,7 @@ export default function EditModal({
               max="600"
               value={Number.isFinite(Number(data.height)) ? data.height : 48}
               onChange={(e) => updateSelectedActivityData({ height: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
             />
           </div>
           <p className="text-[11px] text-slate-500">
@@ -4149,7 +4149,7 @@ export default function EditModal({
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
             />
           </div>
           <div>
@@ -4158,7 +4158,7 @@ export default function EditModal({
               type="text"
               value={data.buttonLabel || ''}
               onChange={(e) => updateSelectedActivityData({ buttonLabel: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
             />
           </div>
         </div>
@@ -4174,7 +4174,7 @@ export default function EditModal({
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
             />
           </div>
           <div>
@@ -4182,7 +4182,7 @@ export default function EditModal({
             <textarea
               value={data.description || ''}
               onChange={(e) => updateSelectedActivityData({ description: e.target.value })}
-              className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full h-20 p-2 text-sm"
             />
           </div>
           <div>
@@ -4191,7 +4191,7 @@ export default function EditModal({
               type="text"
               value={data.fileName || ''}
               onChange={(e) => updateSelectedActivityData({ fileName: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
               placeholder="module-progress"
             />
           </div>
@@ -4274,7 +4274,7 @@ export default function EditModal({
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell w-full p-2 text-sm"
               placeholder="Tab Group"
             />
             <p className="text-[11px] text-slate-500 mt-1">
@@ -4293,7 +4293,7 @@ export default function EditModal({
                       type="text"
                       value={tab.label}
                       onChange={(e) => upsertTab(spec, (prev) => ({ ...prev, label: e.target.value }))}
-                      className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                      className="cf-input-shell w-full p-2 text-xs"
                       placeholder={spec.defaultLabel}
                     />
                   </div>
@@ -4399,7 +4399,7 @@ export default function EditModal({
                   type="text"
                   value={editForm.title || ''}
                   onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                  className="cf-input-shell w-full p-3 text-sm"
                   placeholder="Module title"
                 />
               </div>
@@ -4410,7 +4410,7 @@ export default function EditModal({
                   <select
                     value={editForm.template || ''}
                     onChange={(e) => handleTemplateChange(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                    className="cf-input-shell w-full p-2 text-xs"
                   >
                     {MODULE_TEMPLATE_OPTIONS.map((option) => (
                       <option key={`edit-template-${option.value || 'default'}`} value={option.value}>
@@ -4424,7 +4424,7 @@ export default function EditModal({
                   <select
                     value={editForm.theme || ''}
                     onChange={(e) => setEditForm({ ...editForm, theme: e.target.value || null })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                    className="cf-input-shell w-full p-2 text-xs"
                   >
                     {MODULE_THEME_OPTIONS.map((option) => (
                       <option key={`edit-theme-${option.value || 'default'}`} value={option.value}>
@@ -4436,10 +4436,10 @@ export default function EditModal({
               </div>
 
               {showFinlitOptions && (
-                <details className="mb-4 rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+                <details className="cf-panel-muted mb-4 p-3">
                   <summary className="cursor-pointer text-xs font-bold text-slate-300 uppercase tracking-wide">FinLit Options</summary>
                   <div className="mt-3 space-y-3">
-                    <div className="rounded border border-slate-700 bg-slate-900/60 p-3 space-y-3">
+                    <div className="cf-panel-muted p-3 space-y-3">
                       <div>
                         <h4 className="text-[11px] font-bold text-slate-300 uppercase">Hero</h4>
                         <p className="text-[11px] text-slate-500 mt-1">Optional header content for FinLit modules.</p>
@@ -4451,7 +4451,7 @@ export default function EditModal({
                             type="text"
                             value={finlitHero.title}
                             onChange={(e) => updateFinlitHeroField('title', e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                            className="cf-input-shell w-full p-2 text-xs"
                             placeholder="Module hero title"
                           />
                         </div>
@@ -4461,7 +4461,7 @@ export default function EditModal({
                             type="text"
                             value={finlitHero.progressLabel}
                             onChange={(e) => updateFinlitHeroField('progressLabel', e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                            className="cf-input-shell w-full p-2 text-xs"
                             placeholder="Week 1 of 6"
                           />
                         </div>
@@ -4472,7 +4472,7 @@ export default function EditModal({
                           type="text"
                           value={finlitHero.subtitle}
                           onChange={(e) => updateFinlitHeroField('subtitle', e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                          className="cf-input-shell w-full p-2 text-xs"
                           placeholder="Short supporting line under the hero title"
                         />
                       </div>
@@ -4482,7 +4482,7 @@ export default function EditModal({
                           <select
                             value={finlitHero.mediaType}
                             onChange={(e) => updateFinlitHeroField('mediaType', e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                            className="cf-input-shell w-full p-2 text-xs"
                           >
                             <option value="auto">Auto Detect</option>
                             <option value="image">Image</option>
@@ -4497,7 +4497,7 @@ export default function EditModal({
                               type="text"
                               value={finlitHero.mediaUrl}
                               onChange={(e) => updateFinlitHeroField('mediaUrl', e.target.value)}
-                              className="col-span-9 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                              className="cf-input-shell col-span-9 p-2 text-xs"
                               placeholder="https://... /materials/... / YouTube embed URL"
                             />
                             <button
@@ -4516,7 +4516,7 @@ export default function EditModal({
                       </div>
                     </div>
 
-                    <div className="rounded border border-slate-700 bg-slate-900/60 p-3 space-y-3">
+                    <div className="cf-panel-muted p-3 space-y-3">
                       <div className="flex items-center justify-between gap-2">
                         <div>
                           <h4 className="text-[11px] font-bold text-slate-300 uppercase">Tabs</h4>
@@ -4539,7 +4539,7 @@ export default function EditModal({
                           const tabActivityCount = Array.isArray(tab?.activities) ? tab.activities.length : 0;
                           const isActiveAuthoringTab = activeFinlitTabId === tabId;
                           return (
-                            <div key={`edit-finlit-tab-${tabId}`} className="rounded border border-slate-700 bg-slate-950/70 p-3 space-y-2">
+                            <div key={`edit-finlit-tab-${tabId}`} className="cf-panel-muted p-3 space-y-2">
                               <div className="flex items-center justify-between">
                                 <div>
                                   <p className="text-[11px] font-bold text-slate-300 uppercase">
@@ -4578,7 +4578,7 @@ export default function EditModal({
                                     type="text"
                                     value={tab?.label || ''}
                                     onChange={(e) => updateFinlitTab(tabId, { label: e.target.value })}
-                                    className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                    className="cf-input-shell w-full p-2 text-xs"
                                     placeholder={`Tab ${tabIndex + 1}`}
                                   />
                                 </div>
@@ -4656,7 +4656,7 @@ export default function EditModal({
                                   <p className="text-[11px] text-slate-500">No links added yet.</p>
                                 ) : (
                                   tabLinks.map((link, index) => (
-                                    <div key={`${tabId}-link-${index}`} className="rounded border border-slate-700 bg-slate-950/70 p-2 space-y-2">
+                                    <div key={`${tabId}-link-${index}`} className="cf-panel-muted p-2 space-y-2">
                                       <div className="flex items-center justify-between">
                                         <p className="text-[11px] font-bold text-slate-300 uppercase">Link {index + 1}</p>
                                         <button
@@ -4671,14 +4671,14 @@ export default function EditModal({
                                         type="text"
                                         value={link?.title || ''}
                                         onChange={(e) => updateFinlitTabLink(tabId, index, { title: e.target.value })}
-                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                        className="cf-input-shell w-full p-2 text-xs"
                                         placeholder="Link title"
                                       />
                                       <input
                                         type="text"
                                         value={link?.url || ''}
                                         onChange={(e) => updateFinlitTabLink(tabId, index, { url: e.target.value })}
-                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs font-mono"
+                                        className="cf-input-shell w-full p-2 text-xs font-mono"
                                         placeholder="https://example.com/resource"
                                       />
                                       <textarea
@@ -4707,7 +4707,7 @@ export default function EditModal({
                       type="text"
                       value={editForm.url || ''}
                       onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white font-mono text-sm"
+                      className="cf-input-shell w-full p-3 font-mono text-sm"
                       placeholder="https://example.com/module"
                     />
                   </div>
@@ -4932,10 +4932,6 @@ export default function EditModal({
                                     isCanvasMode={isCanvasMode}
                                     maxColumns={composerMaxColumns}
                                     onOpenAddPanel={() => setComposerSidebarMode('grid')}
-                                    onDuplicate={duplicateSelectedActivity}
-                                    onDelete={removeSelectedActivity}
-                                    onMove={moveSelectedActivity}
-                                    onSpanChange={updateSelectedActivitySpan}
                                     onCanvasLayoutChange={updateSelectedActivityCanvasLayout}
                                     onSimpleLayoutChange={commitSelectedActivitySimpleLayout}
                                   />
@@ -5211,3 +5207,4 @@ export default function EditModal({
     </>
   );
 }
+

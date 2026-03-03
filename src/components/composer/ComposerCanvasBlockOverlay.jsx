@@ -1,15 +1,7 @@
 import * as React from 'react';
 import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  Copy,
-  Maximize2,
-  Minimize2,
-  Move,
+  GripVertical,
   Plus,
-  Trash2,
 } from 'lucide-react';
 
 function escapeSelectorAttr(value) {
@@ -173,18 +165,26 @@ function resolveSimpleRowFromClientY(clientY, metrics, fallbackRow, fallbackHeig
   return last.row + Math.max(1, Math.round((targetY - last.bottomClient) / step));
 }
 
+function formatLayoutChip(layout, isCanvasMode) {
+  if (!layout || typeof layout !== 'object') return '';
+  if (isCanvasMode) {
+    const x = Math.max(0, Number.parseInt(layout.x, 10) || 0);
+    const y = Math.max(0, Number.parseInt(layout.y, 10) || 0);
+    return `X${x} Y${y}`;
+  }
+  const row = Math.max(1, Number.parseInt(layout.row, 10) || 1);
+  const col = Math.max(1, Number.parseInt(layout.col, 10) || 1);
+  return `R${row} C${col}`;
+}
+
 export default function ComposerCanvasBlockOverlay({
   hidden = false,
   iframeRef,
   isCanvasMode = false,
   maxColumns = 1,
   onCanvasLayoutChange,
-  onDelete,
-  onDuplicate,
-  onMove,
   onOpenAddPanel,
   onSimpleLayoutChange,
-  onSpanChange,
   selectedActivity = null,
   selectedActivityId = '',
   selectedLabel = 'Section',
@@ -193,12 +193,14 @@ export default function ComposerCanvasBlockOverlay({
 }) {
   const [frame, setFrame] = React.useState(null);
   const [draftFrame, setDraftFrame] = React.useState(null);
+  const [draftChip, setDraftChip] = React.useState('');
   const metricsRef = React.useRef(null);
   const interactionCleanupRef = React.useRef(null);
 
   const clearInteraction = React.useCallback(() => {
     interactionCleanupRef.current?.();
     interactionCleanupRef.current = null;
+    setDraftChip('');
   }, []);
 
   const updateFrame = React.useCallback(() => {
@@ -327,6 +329,7 @@ export default function ComposerCanvasBlockOverlay({
   const row = Math.max(1, Number.parseInt(layout.row, 10) || y + 1);
   const col = Math.max(1, Number.parseInt(layout.col, 10) || x + 1);
   const activeFrame = draftFrame || frame;
+  const positionChip = draftChip || formatLayoutChip(isCanvasMode ? { x, y } : { row, col }, isCanvasMode);
 
   const beginPointerInteraction = (operation) => (event) => {
     if (!selectedActivity) return;
@@ -427,6 +430,7 @@ export default function ComposerCanvasBlockOverlay({
       if (!proposal || !nextFrame) return;
       lastProposal = proposal;
       setDraftFrame(nextFrame);
+      setDraftChip(formatLayoutChip(proposal, isCanvasMode));
     };
 
     const finishInteraction = (endEvent, { commit = true } = {}) => {
@@ -451,11 +455,13 @@ export default function ComposerCanvasBlockOverlay({
         }
         window.setTimeout(() => {
           setDraftFrame(null);
+          setDraftChip('');
           updateFrame();
         }, 120);
         return;
       }
       setDraftFrame(null);
+      setDraftChip('');
       updateFrame();
     };
 
@@ -478,11 +484,12 @@ export default function ComposerCanvasBlockOverlay({
       handleElement.removeEventListener('pointercancel', handleCancel);
       window.removeEventListener('blur', handleCancel);
       setDraftFrame(null);
+      setDraftChip('');
     };
   };
 
   const toolbarTop = activeFrame.top > 44 ? activeFrame.top - 36 : Math.max(8, Math.min(activeFrame.top + 8, activeFrame.top + activeFrame.height - 40));
-  const toolbarLeft = Math.max(8, Math.min(activeFrame.left + 8, activeFrame.left + Math.max(8, activeFrame.width - 392)));
+  const toolbarLeft = Math.max(8, Math.min(activeFrame.left + 8, activeFrame.left + Math.max(8, activeFrame.width - 220)));
   const addTop = Math.max(8, Math.min(activeFrame.top + activeFrame.height - 42, activeFrame.top + activeFrame.height - 42));
   const addLeft = Math.max(8, Math.min(activeFrame.left + 8, activeFrame.left + Math.max(8, activeFrame.width - 120)));
   const rightHandleLeft = Math.max(6, activeFrame.left + activeFrame.width - 10);
@@ -493,9 +500,7 @@ export default function ComposerCanvasBlockOverlay({
   return (
     <>
       <div
-        className={`absolute z-20 rounded-xl border shadow-[0_0_0_3px_rgba(99,102,241,0.24)] ${
-          draftFrame ? 'border-dashed border-emerald-400/90' : 'border-indigo-300/80'
-        }`}
+        className={`cf-composer-block-outline absolute z-20 ${draftFrame ? 'is-draft' : ''}`}
         style={{
           left: `${activeFrame.left}px`,
           top: `${activeFrame.top}px`,
@@ -505,169 +510,29 @@ export default function ComposerCanvasBlockOverlay({
       />
 
       <div
-        className="pointer-events-auto absolute z-30 flex max-w-[calc(100%-16px)] flex-wrap items-center gap-1 rounded-xl border border-slate-800/80 bg-slate-950/88 p-1.5 shadow-[0_14px_36px_rgba(2,6,23,0.32)] backdrop-blur-sm"
+        className="cf-composer-block-overlay pointer-events-auto absolute z-30 inline-flex max-w-[calc(100%-16px)] items-center gap-1.5"
         style={{
           left: `${toolbarLeft}px`,
           top: `${toolbarTop}px`,
         }}
       >
-        <span className="rounded-lg bg-slate-900/80 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-200">
-          {selectedLabel}
-        </span>
-        <span className="rounded-lg bg-indigo-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-100">
-          {isCanvasMode ? 'Freeform' : 'Arrange'}
-        </span>
+        <span className="cf-composer-block-overlay-label">{selectedLabel}</span>
+        <span className="cf-composer-block-overlay-chip">{positionChip}</span>
         <button
           type="button"
           onPointerDown={beginPointerInteraction('drag')}
-          className="cursor-grab rounded-lg bg-slate-800/90 p-1 text-slate-200 hover:bg-slate-700 active:cursor-grabbing"
+          className="cf-composer-block-overlay-grip cf-canvas-handle"
           title="Drag section"
+          aria-label="Drag section"
         >
-          <Move size={13} />
-        </button>
-
-        {!isCanvasMode ? (
-          <>
-            <button
-              type="button"
-              onClick={() => onMove?.('up')}
-              className="rounded-lg bg-slate-800/90 p-1 text-slate-200 hover:bg-slate-700"
-              title="Move up"
-            >
-              <ChevronUp size={13} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onMove?.('down')}
-              className="rounded-lg bg-slate-800/90 p-1 text-slate-200 hover:bg-slate-700"
-              title="Move down"
-            >
-              <ChevronDown size={13} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onMove?.('left')}
-              className="rounded-lg bg-slate-800/90 p-1 text-slate-200 hover:bg-slate-700"
-              title="Move left"
-            >
-              <ChevronLeft size={13} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onMove?.('right')}
-              className="rounded-lg bg-slate-800/90 p-1 text-slate-200 hover:bg-slate-700"
-              title="Move right"
-            >
-              <ChevronRight size={13} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onSpanChange?.(Math.max(1, colSpan - 1))}
-              className="rounded bg-slate-800 p-1 text-slate-200 hover:bg-slate-700"
-              title="Narrower"
-            >
-              <Minimize2 size={13} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onSpanChange?.(Math.min(maxColumns, colSpan + 1))}
-              className="rounded bg-slate-800 p-1 text-slate-200 hover:bg-slate-700"
-              title="Wider"
-            >
-              <Maximize2 size={13} />
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => onCanvasLayoutChange?.({ x: Math.max(0, x - 1) })}
-              className="rounded bg-slate-800 p-1 text-slate-200 hover:bg-slate-700"
-              title="Move left"
-            >
-              <ChevronLeft size={13} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onCanvasLayoutChange?.({ x: Math.min(Math.max(0, maxColumns - w), x + 1) })}
-              className="rounded bg-slate-800 p-1 text-slate-200 hover:bg-slate-700"
-              title="Move right"
-            >
-              <ChevronRight size={13} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onCanvasLayoutChange?.({ y: Math.max(0, y - 1) })}
-              className="rounded bg-slate-800 p-1 text-slate-200 hover:bg-slate-700"
-              title="Move up"
-            >
-              <ChevronUp size={13} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onCanvasLayoutChange?.({ y: y + 1 })}
-              className="rounded bg-slate-800 p-1 text-slate-200 hover:bg-slate-700"
-              title="Move down"
-            >
-              <ChevronDown size={13} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onCanvasLayoutChange?.({ w: Math.max(1, w - 1), colSpan: Math.max(1, w - 1) })}
-              className="rounded bg-slate-800 p-1 text-slate-200 hover:bg-slate-700"
-              title="Narrower"
-            >
-              <Minimize2 size={13} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onCanvasLayoutChange?.({ w: Math.min(maxColumns, w + 1), colSpan: Math.min(maxColumns, w + 1) })}
-              className="rounded bg-slate-800 p-1 text-slate-200 hover:bg-slate-700"
-              title="Wider"
-            >
-              <Maximize2 size={13} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onCanvasLayoutChange?.({ h: Math.max(1, h - 1) })}
-              className="rounded bg-slate-800 px-1.5 py-1 text-[10px] font-bold text-slate-200 hover:bg-slate-700"
-              title="Shorter"
-            >
-              -H
-            </button>
-            <button
-              type="button"
-              onClick={() => onCanvasLayoutChange?.({ h: h + 1 })}
-              className="rounded bg-slate-800 px-1.5 py-1 text-[10px] font-bold text-slate-200 hover:bg-slate-700"
-              title="Taller"
-            >
-              +H
-            </button>
-          </>
-        )}
-
-        <button
-          type="button"
-          onClick={() => onDuplicate?.()}
-          className="rounded bg-slate-800 p-1 text-slate-200 hover:bg-slate-700"
-          title="Duplicate"
-        >
-          <Copy size={13} />
-        </button>
-        <button
-          type="button"
-          onClick={() => onDelete?.()}
-          className="rounded bg-rose-600/90 p-1 text-white hover:bg-rose-500"
-          title="Delete"
-        >
-          <Trash2 size={13} />
+          <GripVertical size={13} />
         </button>
       </div>
 
       <button
         type="button"
         onPointerDown={beginPointerInteraction('resize-x')}
-        className="pointer-events-auto absolute z-30 rounded-full border border-white/60 bg-slate-950/90 shadow-lg hover:bg-slate-900"
+        className="cf-composer-block-handle pointer-events-auto absolute z-30"
         style={{
           left: `${rightHandleLeft}px`,
           top: `${rightHandleTop}px`,
@@ -682,7 +547,7 @@ export default function ComposerCanvasBlockOverlay({
         <button
           type="button"
           onPointerDown={beginPointerInteraction('resize-both')}
-          className="pointer-events-auto absolute z-30 rounded border border-white/60 bg-slate-950/90 shadow-lg hover:bg-slate-900"
+          className="cf-composer-block-handle cf-composer-block-handle-corner pointer-events-auto absolute z-30"
           style={{
             left: `${cornerHandleLeft}px`,
             top: `${cornerHandleTop}px`,

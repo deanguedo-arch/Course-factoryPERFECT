@@ -22,17 +22,17 @@ export default function ComposerWorkspaceControls({
   if (!showAnything) return null;
 
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-950/60 p-3 space-y-3">
+    <div className="cf-composer-panel-soft space-y-3 p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-300">Workspace Settings</p>
-          <p className="text-[10px] text-slate-500">These controls only change the editor workspace. They do not affect the published lesson.</p>
+          <p className="text-[11px] font-semibold text-slate-300">Workspace settings</p>
+          <p className="text-[11px] text-slate-500">These controls only change the editor workspace. They do not affect the published lesson.</p>
         </div>
       </div>
       {showPreviewWidth ? (
-        <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+        <div className="cf-composer-panel-soft p-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Canvas Split</label>
+            <label className="text-[11px] font-semibold text-slate-400 whitespace-nowrap">Canvas split</label>
             <input
               type="range"
               min="30"
@@ -49,9 +49,9 @@ export default function ComposerWorkspaceControls({
       ) : null}
 
       {showPreviewHeight ? (
-        <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3">
+        <div className="cf-composer-panel-soft p-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Preview Height</label>
+            <label className="text-[11px] font-semibold text-slate-400 whitespace-nowrap">Preview height</label>
             <input
               type="range"
               min="420"
@@ -67,9 +67,9 @@ export default function ComposerWorkspaceControls({
       ) : null}
 
       {showBuilderSizing ? (
-        <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-3 space-y-3">
+        <div className="cf-composer-panel-soft space-y-3 p-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Builder Height</label>
+            <label className="text-[11px] font-semibold text-slate-400 whitespace-nowrap">Builder height</label>
             <input
               type="range"
               min="360"
@@ -82,7 +82,7 @@ export default function ComposerWorkspaceControls({
             <p className="text-[11px] text-slate-400 whitespace-nowrap">{builderHeight}px tall</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-[11px] font-bold text-slate-400 uppercase whitespace-nowrap">Builder Scale</label>
+            <label className="text-[11px] font-semibold text-slate-400 whitespace-nowrap">Builder scale</label>
             <input
               type="range"
               min="140"
@@ -95,7 +95,7 @@ export default function ComposerWorkspaceControls({
             <p className="text-[11px] text-slate-400 whitespace-nowrap">{builderCellWidth}px per column</p>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <label className="inline-flex items-center gap-2 text-[11px] text-slate-300 whitespace-nowrap">
+            <label className="inline-flex items-center gap-2 whitespace-nowrap text-[11px] text-slate-300">
               <input
                 type="checkbox"
                 checked={lockBuilderScale}

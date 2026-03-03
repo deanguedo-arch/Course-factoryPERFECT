@@ -27,9 +27,9 @@ const QUICK_INSERT_TYPES = [
 
 function SectionCard({ title, description = '', children }) {
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3">
+    <div className="cf-panel-muted p-3">
       <div className="mb-2">
-        <p className="text-[11px] font-bold uppercase tracking-wide text-slate-200">{title}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-200">{title}</p>
         {description ? <p className="mt-1 text-[11px] text-slate-500">{description}</p> : null}
       </div>
       {children}
@@ -47,19 +47,19 @@ function ActionButton({
 }) {
   const toneClass =
     tone === 'danger'
-      ? 'bg-rose-600 text-white hover:bg-rose-500'
+      ? 'cf-btn cf-btn-danger'
       : tone === 'primary'
-        ? 'bg-emerald-600 text-white hover:bg-emerald-500'
+        ? 'cf-btn cf-btn-success'
         : tone === 'secondary'
-          ? 'bg-indigo-600 text-white hover:bg-indigo-500'
-          : 'bg-slate-800 text-slate-100 hover:bg-slate-700';
+          ? 'cf-btn cf-btn-primary'
+          : 'cf-btn cf-btn-secondary';
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`inline-flex items-center justify-center gap-1 rounded px-3 py-2 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${toneClass} ${className}`}
+      className={`inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-40 ${toneClass} ${className}`}
     >
       {children}
     </button>
@@ -164,7 +164,7 @@ export default function ComposerCanvasDrawer({
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="w-full rounded border border-slate-700 bg-slate-950 p-2 text-xs text-white"
+            className="cf-input-shell w-full p-2 text-xs"
             placeholder="Search by name or id..."
           />
         </SectionCard>
@@ -440,7 +440,7 @@ export default function ComposerCanvasDrawer({
           <select
             value={newActivityType}
             onChange={(event) => onNewActivityTypeChange?.(event.target.value)}
-            className="rounded border border-slate-700 bg-slate-950 p-2 text-xs text-white"
+            className="cf-input-shell p-2 text-xs"
           >
             {activityTypeGroups.map((group) => (
               <optgroup key={group.category} label={group.label}>
@@ -468,7 +468,7 @@ export default function ComposerCanvasDrawer({
           title="Selected Section"
           description="You can move and size the selected block directly on the canvas. These controls are the precise fallback."
         >
-          <div className="mb-3 rounded border border-slate-700 bg-slate-950/70 p-2">
+          <div className="cf-panel-muted mb-3 p-2">
             <p className="text-xs font-bold text-white">
               {getActivityDefinition(selectedActivity.type)?.label || selectedActivity.type || 'Section'}
             </p>
@@ -488,7 +488,7 @@ export default function ComposerCanvasDrawer({
                 <select
                   value={selectedSpan}
                   onChange={(event) => onSpanChange?.(event.target.value)}
-                  className="rounded border border-slate-700 bg-slate-950 p-2 text-xs text-white"
+                  className="cf-input-shell w-full p-2 text-xs"
                 >
                   {Array.from({ length: maxColumns }, (_, index) => index + 1).map((span) => (
                     <option key={span} value={span}>
@@ -508,7 +508,7 @@ export default function ComposerCanvasDrawer({
                     min="0"
                     value={selectedX}
                     onChange={(event) => onCanvasLayoutChange?.({ x: Math.max(0, Number.parseInt(event.target.value, 10) || 0) })}
-                    className="mt-1 w-full rounded border border-slate-700 bg-slate-950 p-1 text-xs text-white"
+                    className="cf-input-shell mt-1 w-full p-1 text-xs"
                   />
                 </label>
                 <label className="text-[10px] text-slate-400">
@@ -518,7 +518,7 @@ export default function ComposerCanvasDrawer({
                     min="0"
                     value={selectedY}
                     onChange={(event) => onCanvasLayoutChange?.({ y: Math.max(0, Number.parseInt(event.target.value, 10) || 0) })}
-                    className="mt-1 w-full rounded border border-slate-700 bg-slate-950 p-1 text-xs text-white"
+                    className="cf-input-shell mt-1 w-full p-1 text-xs"
                   />
                 </label>
                 <label className="text-[10px] text-slate-400">
@@ -532,7 +532,7 @@ export default function ComposerCanvasDrawer({
                       const nextW = Math.max(1, Number.parseInt(event.target.value, 10) || 1);
                       onCanvasLayoutChange?.({ w: nextW, colSpan: nextW });
                     }}
-                    className="mt-1 w-full rounded border border-slate-700 bg-slate-950 p-1 text-xs text-white"
+                    className="cf-input-shell mt-1 w-full p-1 text-xs"
                   />
                 </label>
                 <label className="text-[10px] text-slate-400">
@@ -542,36 +542,13 @@ export default function ComposerCanvasDrawer({
                     min="1"
                     value={selectedH}
                     onChange={(event) => onCanvasLayoutChange?.({ h: Math.max(1, Number.parseInt(event.target.value, 10) || 1) })}
-                    className="mt-1 w-full rounded border border-slate-700 bg-slate-950 p-1 text-xs text-white"
+                    className="cf-input-shell mt-1 w-full p-1 text-xs"
                   />
                 </label>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <ActionButton onClick={() => onCanvasLayoutChange?.({ y: Math.max(0, selectedY - 1) })}>Up</ActionButton>
-                <ActionButton onClick={() => onCanvasLayoutChange?.({ y: selectedY + 1 })}>Down</ActionButton>
-                <ActionButton onClick={() => onCanvasLayoutChange?.({ x: Math.max(0, selectedX - 1) })}>Left</ActionButton>
-                <ActionButton
-                  onClick={() => onCanvasLayoutChange?.({ x: Math.min(Math.max(0, maxColumns - selectedW), selectedX + 1) })}
-                >
-                  Right
-                </ActionButton>
-                <ActionButton
-                  onClick={() => {
-                    const nextW = Math.max(1, selectedW - 1);
-                    onCanvasLayoutChange?.({ w: nextW, colSpan: nextW });
-                  }}
-                >
-                  Narrower
-                </ActionButton>
-                <ActionButton
-                  onClick={() => {
-                    const nextW = Math.min(maxColumns, selectedW + 1);
-                    onCanvasLayoutChange?.({ w: nextW, colSpan: nextW });
-                  }}
-                >
-                  Wider
-                </ActionButton>
-              </div>
+              <p className="mt-3 text-[11px] text-slate-500">
+                Drag on the canvas to move and resize. Use these fields only when you need exact placement.
+              </p>
             </>
           )}
 

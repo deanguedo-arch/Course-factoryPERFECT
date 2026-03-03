@@ -4771,8 +4771,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                 className={`cf-input-shell w-full text-sm ${richConfig.plainRowsClass}`}
               />
             ) : (
-              <div className="cf-panel-muted overflow-hidden rounded">
-                <div className="flex flex-wrap gap-1 border-b border-slate-700 p-2 bg-slate-900/80">
+              <div className="cf-composer-editor-surface">
+                <div className="cf-composer-toolbar-strip">
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('bold')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs font-bold">B</button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('italic')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs italic">I</button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('underline')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs underline">U</button>
@@ -4798,7 +4798,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                   </button>
                   <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('removeFormat')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">Clear</button>
                 </div>
-                <div className="px-2 pb-2 bg-slate-900/80 border-b border-slate-700">
+                <div className="cf-composer-toolbar-strip cf-composer-toolbar-strip-secondary">
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                     <select
                       defaultValue=""
@@ -4817,7 +4817,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                         </option>
                       ))}
                     </select>
-                    <label className="flex items-center justify-between rounded bg-slate-800 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+                    <label className="cf-composer-toolbar-field">
                       <span>Text Color</span>
                       <input
                         type="color"
@@ -4828,7 +4828,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                         aria-label="Set text color"
                       />
                     </label>
-                    <label className="flex items-center justify-between rounded bg-slate-800 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+                    <label className="cf-composer-toolbar-field">
                       <span>Container Fill</span>
                       <input
                         type="color"
@@ -4846,7 +4846,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                       type="button"
                       onMouseDown={preserveModuleManagerRichSelection}
                       onClick={resetSelectedComposerBodyStyle}
-                      className="cf-btn cf-btn-secondary px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-200"
+                      className="cf-btn cf-btn-secondary px-2 py-1 text-[10px] font-bold text-slate-200"
                       title="Reset body style overrides"
                     >
                       Reset Body Style
@@ -4871,7 +4871,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                     captureModuleManagerRichSelection();
                     queueModuleManagerRichEditorUpdate(html, text, true);
                   }}
-                  className="cf-rich-editor min-h-[180px] p-3 text-sm text-white outline-none"
+                  className="cf-rich-editor cf-composer-editor-input min-h-[180px] p-3 text-sm outline-none"
                 />
               </div>
             )}
@@ -9854,10 +9854,6 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                         isCanvasMode={isModuleManagerCanvasMode}
                                                                         maxColumns={moduleManagerComposerMaxColumns}
                                                                         onOpenAddPanel={() => setModuleManagerComposerSidebarMode('grid')}
-                                                                        onDuplicate={duplicateSelectedComposerActivityDraft}
-                                                                        onDelete={removeSelectedComposerActivityDraft}
-                                                                        onMove={moveSelectedComposerActivityDraft}
-                                                                        onSpanChange={updateSelectedComposerActivitySpan}
                                                                         onCanvasLayoutChange={updateSelectedComposerActivityCanvasLayout}
                                                                         onSimpleLayoutChange={commitSelectedComposerSimpleLayout}
                                                                     />

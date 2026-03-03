@@ -3,7 +3,7 @@ import ComposerPaneCard from './ComposerPaneCard.jsx';
 
 export default function ComposerActivityEditorPane({
   children,
-  className = 'rounded-2xl border border-slate-800/80 bg-slate-950/85 p-4 shadow-[0_12px_32px_rgba(2,6,23,0.2)] backdrop-blur-sm',
+  className = 'cf-composer-panel p-4',
   headerActions = null,
   title = 'Activity Editor',
 }) {
