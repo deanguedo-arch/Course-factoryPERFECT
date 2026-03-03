@@ -4,6 +4,7 @@ import {
   Plus,
 } from 'lucide-react';
 import {
+  moveComposerActivityToCell,
   validateComposerSimpleProposal,
   validateComposerCanvasProposal,
 } from '../../composer/layout.js';
@@ -24,8 +25,14 @@ function clampInteger(value, min, max) {
   return Math.max(min, Math.min(max, parsed));
 }
 
-function buildSimpleRowBands(doc, iframeRect, viewportRect) {
-  const nodes = Array.from(doc?.querySelectorAll?.('[data-activity-id]') || []);
+function buildSimpleRowBands(root, iframeRect, viewportRect) {
+  let nodes = Array.from(root?.children || []).filter((node) => node?.hasAttribute?.('data-activity-id'));
+  if (!nodes.length) {
+    nodes = Array.from(root?.querySelectorAll?.(':scope > [data-activity-id]') || []);
+  }
+  if (!nodes.length) {
+    nodes = Array.from(root?.querySelectorAll?.('[data-activity-id]') || []);
+  }
   const grouped = new Map();
 
   nodes.forEach((node) => {
@@ -95,7 +102,7 @@ function computeGridMetrics({ doc, iframe, maxColumns = 1, viewport }) {
     rootClientTop,
     rootOverlayLeft,
     rootOverlayTop,
-    rowBands: buildSimpleRowBands(doc, iframeRect, viewportRect),
+    rowBands: buildSimpleRowBands(root, iframeRect, viewportRect),
     rowHeight,
     scaleX,
     scaleY,
@@ -277,35 +284,57 @@ function evaluateSimpleDragPlacements(activities, selectedIndex, proposal, metri
   const targetYClient = Number(targetY) || 0;
   const colStep = Math.max(1, Number(metrics?.columnWidth) + Number(metrics?.gapX));
   const proposalCol = clampInteger(proposal?.col, 1, Math.max(1, Number(metrics?.cols) || 1));
+  const proposalSpan = clampInteger(proposal?.colSpan, 1, Math.max(1, Number(metrics?.cols) || 1));
   const strictRanked = [];
   const fittedRanked = [];
   const ranked = [];
   const seen = new Set();
+  const baseActivities = Array.isArray(activities)
+    ? activities.map((activity, index) =>
+        index === selectedIndex
+          ? {
+              ...activity,
+              layout: {
+                ...(activity?.layout || {}),
+                colSpan: proposalSpan,
+              },
+            }
+          : activity,
+      )
+    : [];
 
   for (const candidateRow of rowCandidates) {
     for (const candidateCol of colCandidates) {
-      const attempt = validateComposerSimpleProposal(
-        activities,
+      const moved = moveComposerActivityToCell(
+        baseActivities,
         selectedIndex,
-        {
-          ...proposal,
-          row: candidateRow,
-          col: candidateCol,
-        },
+        candidateRow,
+        candidateCol,
         { maxColumns: metrics.cols },
       );
-      if (!attempt.valid) continue;
-      const layout = attempt.layout || {};
+      const layout = moved?.activities?.[selectedIndex]?.layout || null;
+      if (!layout) continue;
       const key = `${Math.max(1, Number.parseInt(layout.row, 10) || 1)}-${Math.max(1, Number.parseInt(layout.col, 10) || 1)}-${Math.max(1, Number.parseInt(layout.colSpan, 10) || 1)}`;
       if (seen.has(key)) continue;
       seen.add(key);
       const rowCenter = estimateSimpleRowCenterClient(layout.row, metrics);
       const rowDistance = Math.abs(targetYClient - rowCenter);
       const colDistance = Math.abs((Number.parseInt(layout.col, 10) || 1) - proposalCol) * colStep;
-      const fittedPenalty = attempt.fitted ? colStep * 0.8 : 0;
+      const fitted = Math.max(1, Number.parseInt(layout.colSpan, 10) || 1) < proposalSpan;
+      const fittedPenalty = fitted ? colStep * 0.8 : 0;
       const score = rowDistance + colDistance + fittedPenalty;
-      const entry = { score, validation: attempt };
-      if (attempt.fitted) {
+      const validation = {
+        valid: true,
+        reason: fitted ? 'autofit' : null,
+        fitted,
+        layout: {
+          row: Math.max(1, Number.parseInt(layout.row, 10) || 1),
+          col: Math.max(1, Number.parseInt(layout.col, 10) || 1),
+          colSpan: Math.max(1, Number.parseInt(layout.colSpan, 10) || 1),
+        },
+      };
+      const entry = { score, validation };
+      if (fitted) {
         fittedRanked.push(entry);
       } else {
         strictRanked.push(entry);
@@ -594,13 +623,15 @@ export default function ComposerCanvasBlockOverlay({
           };
         }
         const validation = validateComposerCanvasProposal(activities, selectedIndex, proposal, { maxColumns: metrics.cols });
+        const collisionCanResolve = validation.reason === 'collision';
+        const canApply = validation.valid || collisionCanResolve;
         lastProposal = validation.rect;
-        lastProposalValid = validation.valid;
+        lastProposalValid = canApply;
         nextFrame = frameFromCanvasLayout(validation.rect, metrics);
-        setPreviewKind(validation.valid ? 'canvas-valid' : 'canvas-invalid');
+        setPreviewKind(canApply ? 'canvas-valid' : 'canvas-invalid');
         if (!nextFrame) return;
         setDraftFrame(nextFrame);
-        setDraftChip(validation.valid ? formatLayoutChip(validation.rect, true) : 'Blocked');
+        setDraftChip(canApply ? formatLayoutChip(validation.rect, true) : 'Blocked');
         return;
       } else if (operation === 'drag') {
         const proposedLeft = moveEvent.clientX - startOffsetX;
