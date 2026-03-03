@@ -3768,10 +3768,9 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     const resizedVertically = isResize && activeProposedRect.h !== activeBaseRect.h;
     const pushUnit = Math.max(1, activeBaseRect.h);
     const pushStep = isResize && resizedHorizontally && !resizedVertically ? 0 : pushUnit;
-    const pushBudget =
-      isResize && resizedHorizontally && !resizedVertically
-        ? 0
-        : Math.max(pushUnit, pushUnit * Math.max(2, baseRects.length + 1));
+    const pushBudget = isResize
+      ? (resizedHorizontally && !resizedVertically ? 0 : Number.POSITIVE_INFINITY)
+      : Math.max(pushUnit, pushUnit * Math.max(2, baseRects.length + 1));
     const shrinkNeighbors = allowShrink && (!isResize || (resizedHorizontally && !resizedVertically));
     const baseBottomWithoutActive = baseRects.reduce((largest, rect, idx) => {
       if (idx === activeIndex || !rect) return largest;
