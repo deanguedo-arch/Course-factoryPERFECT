@@ -193,8 +193,7 @@ function buildSimpleRowCandidates(targetRow, targetY, metrics) {
     return left.row - right.row;
   });
 
-  const cap = Math.min(ranked.length, 36);
-  return ranked.slice(0, cap).map((entry) => entry.row);
+  return ranked.map((entry) => entry.row);
 }
 
 function buildSimpleColCandidates(targetCol, maxColumns) {
@@ -280,6 +279,7 @@ function evaluateSimpleDragPlacements(activities, selectedIndex, proposal, metri
   const proposalCol = clampInteger(proposal?.col, 1, Math.max(1, Number(metrics?.cols) || 1));
   const strictRanked = [];
   const fittedRanked = [];
+  const ranked = [];
   const seen = new Set();
 
   for (const candidateRow of rowCandidates) {
@@ -302,19 +302,21 @@ function evaluateSimpleDragPlacements(activities, selectedIndex, proposal, metri
       const rowCenter = estimateSimpleRowCenterClient(layout.row, metrics);
       const rowDistance = Math.abs(targetYClient - rowCenter);
       const colDistance = Math.abs((Number.parseInt(layout.col, 10) || 1) - proposalCol) * colStep;
-      const score = rowDistance + colDistance;
+      const fittedPenalty = attempt.fitted ? colStep * 0.8 : 0;
+      const score = rowDistance + colDistance + fittedPenalty;
       const entry = { score, validation: attempt };
       if (attempt.fitted) {
         fittedRanked.push(entry);
       } else {
         strictRanked.push(entry);
       }
+      ranked.push(entry);
     }
   }
 
   strictRanked.sort((left, right) => left.score - right.score);
   fittedRanked.sort((left, right) => left.score - right.score);
-  const ranked = [...strictRanked, ...fittedRanked];
+  ranked.sort((left, right) => left.score - right.score);
   return {
     initial,
     strictRanked,
@@ -325,7 +327,7 @@ function evaluateSimpleDragPlacements(activities, selectedIndex, proposal, metri
 
 function resolveSimpleDragValidation(activities, selectedIndex, proposal, metrics, targetY) {
   const evaluation = evaluateSimpleDragPlacements(activities, selectedIndex, proposal, metrics, targetY);
-  return evaluation.strictRanked[0]?.validation || evaluation.fittedRanked[0]?.validation || evaluation.initial;
+  return evaluation.ranked[0]?.validation || evaluation.initial;
 }
 
 function buildSimpleDropHintFrames(evaluation, metrics, fallbackHeight, limit = 8) {
