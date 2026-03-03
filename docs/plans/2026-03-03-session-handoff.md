@@ -25,6 +25,10 @@
   - added blocked-red preview for invalid simple drag/resize targets
   - commits now happen only for valid simple proposals through `onSimpleLayoutChange`
   - removed legacy insertion-line/gap preview hooks and obsolete insertion callback wiring
+- Completed simple-mode auto-fit enhancement:
+  - simple validator now auto-fits `colSpan` to remaining contiguous row space on drag/resize
+  - if at least one slot is available, preview stays valid and drops in place with fitted width
+  - invalid state now appears only when no slot is available at the proposed start column
 
 ## Files Changed
 
@@ -57,6 +61,8 @@
 - `docs/plans/2026-03-03-composer-canvas-validation-implementation.md`
 - `docs/plans/2026-03-03-simple-mode-grid-drag-fix-design.md`
 - `docs/plans/2026-03-03-simple-mode-grid-drag-fix-implementation.md`
+- `docs/plans/2026-03-03-simple-mode-autofit-design.md`
+- `docs/plans/2026-03-03-simple-mode-autofit-implementation.md`
 - `docs/plans/2026-03-03-composer-light-mode-legibility-design.md`
 - `docs/plans/2026-03-03-composer-light-mode-legibility-implementation.md`
 - `docs/plans/2026-03-03-composer-part-c-design.md`
@@ -92,6 +98,7 @@ Lint is still failing for pre-existing repo debt in the large legacy files, espe
 - The deepest composer legacy pockets are no longer using the old raw dark utility language.
 - Canvas drag/resize now previews validity before commit, so blocked placements do not silently normalize into a different layout.
 - Simple/stacked drag now uses direct grid placement preview and commit gating, so movement works again in all directions when targets fit.
+- Simple/stacked drag also auto-fits block width into partial row openings, so adjacent placement works without forcing a drop to a later row.
 
 ## Recommended Next Phase
 

@@ -427,7 +427,7 @@ export default function ComposerCanvasBlockOverlay({
           col: clampInteger(
             Math.round((proposedLeft - (metrics.rootClientLeft + metrics.paddingLeft)) / stepX) + 1,
             1,
-            Math.max(1, metrics.cols - nextSpan + 1),
+            Math.max(1, metrics.cols),
           ),
           colSpan: nextSpan,
         };

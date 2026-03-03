@@ -26,6 +26,12 @@ const checks = [
   },
   {
     type: 'include',
+    file: 'layout',
+    pattern: /availableSpan|fittedSpan|autofit/i,
+    message: 'Simple proposal validator is missing auto-fit span logic in src/composer/layout.js',
+  },
+  {
+    type: 'include',
     file: 'overlay',
     pattern: /previewKind/,
     message: 'Missing preview-kind state in ComposerCanvasBlockOverlay.jsx',
@@ -53,6 +59,12 @@ const checks = [
     file: 'overlay',
     pattern: /else if \(operation === 'drag'\)[\s\S]*?validateComposerSimpleProposal/,
     message: 'Simple drag path is not using proposal validation in ComposerCanvasBlockOverlay.jsx',
+  },
+  {
+    type: 'include',
+    file: 'overlay',
+    pattern: /Math\.max\(1,\s*metrics\.cols\)/,
+    message: 'Simple drag column targeting is still clamped by span instead of full-column targeting in ComposerCanvasBlockOverlay.jsx',
   },
   {
     type: 'exclude',

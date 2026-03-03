@@ -481,16 +481,17 @@ export function validateComposerSimpleProposal(
   { maxColumns = COMPOSER_DEFAULT_COLUMNS } = {},
 ) {
   const nextMax = clampComposerColumns(maxColumns);
-  const layout = {
-    row: clampComposerRow(proposal?.row || 1),
-    colSpan: clampComposerColSpan(proposal?.colSpan, nextMax),
-  };
-  layout.col = clampComposerColStart(proposal?.col || 1, nextMax, layout.colSpan);
+  const requestedRow = toInteger(proposal?.row, 1);
+  const requestedCol = toInteger(proposal?.col, 1);
+  const requestedSpan = toInteger(proposal?.colSpan, 1);
 
-  const rawRow = toInteger(proposal?.row, 1);
-  const rawCol = toInteger(proposal?.col, 1);
-  const rawSpan = toInteger(proposal?.colSpan, 1);
-  if (rawRow < 1 || rawCol < 1 || rawSpan < 1 || rawCol + rawSpan - 1 > nextMax) {
+  const layout = {
+    row: clampComposerRow(requestedRow),
+    colSpan: clampComposerColSpan(requestedSpan, nextMax),
+  };
+  layout.col = clampComposerColStart(requestedCol, nextMax, 1);
+
+  if (requestedRow < 1 || requestedCol < 1 || requestedSpan < 1) {
     return { valid: false, reason: 'bounds', layout };
   }
 
@@ -509,20 +510,45 @@ export function validateComposerSimpleProposal(
         })
     : [];
 
-  const collision = siblings.find((candidate) => (
-    candidate.row === layout.row &&
-    simpleRangesOverlap(layout.col, layout.colSpan, candidate.col, candidate.colSpan)
-  ));
-  if (collision) {
+  const rowSiblings = siblings.filter((candidate) => candidate.row === layout.row);
+  const occupied = new Set();
+  rowSiblings.forEach((candidate) => {
+    const end = candidate.col + candidate.colSpan - 1;
+    for (let col = candidate.col; col <= end; col += 1) {
+      occupied.add(col);
+    }
+  });
+
+  let availableSpan = 0;
+  for (let col = layout.col; col <= nextMax; col += 1) {
+    if (occupied.has(col)) break;
+    availableSpan += 1;
+  }
+  if (availableSpan < 1) {
+    const collision = rowSiblings.find((candidate) =>
+      simpleRangesOverlap(layout.col, 1, candidate.col, candidate.colSpan),
+    );
     return {
       valid: false,
       reason: 'collision',
-      layout,
-      collisionIndex: collision.index,
+      layout: {
+        ...layout,
+        colSpan: 1,
+      },
+      collisionIndex: collision?.index,
     };
   }
 
-  return { valid: true, reason: null, layout };
+  const fittedSpan = Math.max(1, Math.min(layout.colSpan, availableSpan));
+  return {
+    valid: true,
+    reason: fittedSpan < layout.colSpan ? 'autofit' : null,
+    layout: {
+      ...layout,
+      colSpan: fittedSpan,
+    },
+    fitted: fittedSpan < layout.colSpan,
+  };
 }
 
 function normalizeCanvasActivities(activities, maxColumns = COMPOSER_DEFAULT_COLUMNS) {
