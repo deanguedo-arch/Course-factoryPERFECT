@@ -635,13 +635,16 @@ export default function ComposerCanvasBlockOverlay({
 
   const beginPointerInteraction = (operation) => (event) => {
     if (!selectedActivity) return;
-    const metrics = metricsRef.current || computeGridMetrics({
-      doc: iframeRef?.current?.contentDocument || iframeRef?.current?.contentWindow?.document,
-      iframe: iframeRef?.current,
-      maxColumns,
-      viewport: viewportRef?.current,
-    });
+    const readMetrics = () =>
+      computeGridMetrics({
+        doc: iframeRef?.current?.contentDocument || iframeRef?.current?.contentWindow?.document,
+        iframe: iframeRef?.current,
+        maxColumns,
+        viewport: viewportRef?.current,
+      });
+    const metrics = metricsRef.current || readMetrics();
     if (!metrics || !viewportRef?.current) return;
+    metricsRef.current = metrics;
 
     clearInteraction();
     event.preventDefault();
@@ -656,14 +659,17 @@ export default function ComposerCanvasBlockOverlay({
       : { row, col, colSpan };
     const startOffsetX = event.clientX - startFrameClientLeft;
     const startOffsetY = event.clientY - startFrameClientTop;
-    const stepX = Math.max(1, metrics.columnWidth + metrics.gapX);
-    const stepY = Math.max(1, metrics.rowHeight + metrics.gapY);
     let lastProposal = null;
     let lastProposalValid = false;
 
     const handleMove = (moveEvent) => {
       moveEvent.preventDefault();
       moveEvent.stopPropagation();
+      const activeMetrics = readMetrics() || metricsRef.current || metrics;
+      if (!activeMetrics) return;
+      metricsRef.current = activeMetrics;
+      const stepX = Math.max(1, activeMetrics.columnWidth + activeMetrics.gapX);
+      const stepY = Math.max(1, activeMetrics.rowHeight + activeMetrics.gapY);
 
       let proposal = null;
       let nextFrame = null;
@@ -675,8 +681,8 @@ export default function ComposerCanvasBlockOverlay({
           const proposedTop = moveEvent.clientY - startOffsetY;
           proposal = {
             ...startLayout,
-            x: Math.round((proposedLeft - (metrics.rootClientLeft + metrics.paddingLeft)) / stepX),
-            y: Math.round((proposedTop - (metrics.rootClientTop + metrics.paddingTop)) / stepY),
+            x: Math.round((proposedLeft - (activeMetrics.rootClientLeft + activeMetrics.paddingLeft)) / stepX),
+            y: Math.round((proposedTop - (activeMetrics.rootClientTop + activeMetrics.paddingTop)) / stepY),
           };
         } else if (operation === 'resize-x') {
           const nextW = Math.max(1, startLayout.w + Math.round((moveEvent.clientX - event.clientX) / stepX));
@@ -697,12 +703,12 @@ export default function ComposerCanvasBlockOverlay({
             x: startLayout.x,
           };
         }
-        const validation = validateComposerCanvasProposal(activities, selectedIndex, proposal, { maxColumns: metrics.cols });
+        const validation = validateComposerCanvasProposal(activities, selectedIndex, proposal, { maxColumns: activeMetrics.cols });
         const collisionCanResolve = validation.reason === 'collision';
         const canApply = validation.valid || collisionCanResolve;
         lastProposal = validation.rect;
         lastProposalValid = canApply;
-        nextFrame = frameFromCanvasLayout(validation.rect, metrics);
+        nextFrame = frameFromCanvasLayout(validation.rect, activeMetrics);
         setPreviewKind(canApply ? 'canvas-valid' : 'canvas-invalid');
         if (!nextFrame) return;
         setDraftFrame(nextFrame);
@@ -710,18 +716,18 @@ export default function ComposerCanvasBlockOverlay({
         return;
       } else if (operation === 'drag') {
         const proposedLeft = moveEvent.clientX - startOffsetX;
-        const nextSpan = clampInteger(startLayout.colSpan, 1, metrics.cols);
+        const nextSpan = clampInteger(startLayout.colSpan, 1, activeMetrics.cols);
         proposal = {
           row: resolveSimpleRowFromClientY(
             moveEvent.clientY,
-            metrics,
+            activeMetrics,
             startLayout.row,
-            startFrame.height + metrics.gapY,
+            startFrame.height + activeMetrics.gapY,
           ),
           col: clampInteger(
-            Math.round((proposedLeft - (metrics.rootClientLeft + metrics.paddingLeft)) / stepX) + 1,
+            Math.round((proposedLeft - (activeMetrics.rootClientLeft + activeMetrics.paddingLeft)) / stepX) + 1,
             1,
-            Math.max(1, metrics.cols),
+            Math.max(1, activeMetrics.cols),
           ),
           colSpan: nextSpan,
         };
@@ -729,14 +735,14 @@ export default function ComposerCanvasBlockOverlay({
           activities,
           selectedIndex,
           proposal,
-          metrics,
+          activeMetrics,
           moveEvent.clientY,
         );
-        const validation = resolveSimpleDragValidation(activities, selectedIndex, proposal, metrics, moveEvent.clientY);
+        const validation = resolveSimpleDragValidation(activities, selectedIndex, proposal, activeMetrics, moveEvent.clientY);
         lastProposal = validation.layout;
         lastProposalValid = validation.valid;
-        nextFrame = frameFromSimpleLayout(validation.layout, metrics, startFrame.height);
-        setSimpleDropHints(buildSimpleDropHintFrames(simpleEvaluation, metrics, startFrame.height));
+        nextFrame = frameFromSimpleLayout(validation.layout, activeMetrics, startFrame.height);
+        setSimpleDropHints(buildSimpleDropHintFrames(simpleEvaluation, activeMetrics, startFrame.height));
         setPreviewKind(validation.valid ? 'simple-valid' : 'simple-invalid');
         if (!nextFrame) return;
         setDraftFrame(nextFrame);
@@ -747,17 +753,17 @@ export default function ComposerCanvasBlockOverlay({
         const nextSpan = clampInteger(
           startLayout.colSpan + Math.round((moveEvent.clientX - event.clientX) / stepX),
           1,
-          metrics.cols,
+          activeMetrics.cols,
         );
         proposal = {
           row: startLayout.row,
-          col: clampInteger(startLayout.col, 1, Math.max(1, metrics.cols - nextSpan + 1)),
+          col: clampInteger(startLayout.col, 1, Math.max(1, activeMetrics.cols - nextSpan + 1)),
           colSpan: nextSpan,
         };
-        const validation = validateComposerSimpleProposal(activities, selectedIndex, proposal, { maxColumns: metrics.cols });
+        const validation = validateComposerSimpleProposal(activities, selectedIndex, proposal, { maxColumns: activeMetrics.cols });
         lastProposal = validation.layout;
         lastProposalValid = validation.valid;
-        nextFrame = frameFromSimpleLayout(validation.layout, metrics, startFrame.height);
+        nextFrame = frameFromSimpleLayout(validation.layout, activeMetrics, startFrame.height);
         setPreviewKind(validation.valid ? 'simple-valid' : 'simple-invalid');
         if (!nextFrame) return;
         setDraftFrame(nextFrame);
