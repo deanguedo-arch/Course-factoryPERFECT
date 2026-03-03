@@ -25,7 +25,30 @@ function clampInteger(value, min, max) {
   return Math.max(min, Math.min(max, parsed));
 }
 
-function buildSimpleRowBands(root, iframeRect, viewportRect) {
+function resolveSimpleNodeRow(node, win) {
+  const attrRow = Number.parseInt(node?.getAttribute?.('data-composer-row'), 10);
+  if (Number.isFinite(attrRow) && attrRow >= 1) return attrRow;
+
+  const attrY = Number.parseInt(node?.getAttribute?.('data-composer-y'), 10);
+  if (Number.isFinite(attrY) && attrY >= 0) return attrY + 1;
+
+  const inlineRowStart = Number.parseInt(node?.style?.gridRowStart, 10);
+  if (Number.isFinite(inlineRowStart) && inlineRowStart >= 1) return inlineRowStart;
+
+  const inlineGridRowStart = Number.parseInt(String(node?.style?.gridRow || '').split('/')[0], 10);
+  if (Number.isFinite(inlineGridRowStart) && inlineGridRowStart >= 1) return inlineGridRowStart;
+
+  const computed = win?.getComputedStyle?.(node);
+  const computedRowStart = Number.parseInt(computed?.gridRowStart, 10);
+  if (Number.isFinite(computedRowStart) && computedRowStart >= 1) return computedRowStart;
+
+  const computedGridRowStart = Number.parseInt(String(computed?.gridRow || '').split('/')[0], 10);
+  if (Number.isFinite(computedGridRowStart) && computedGridRowStart >= 1) return computedGridRowStart;
+
+  return 1;
+}
+
+function buildSimpleRowBands(root, iframeRect, viewportRect, win) {
   let nodes = Array.from(root?.children || []).filter((node) => node?.hasAttribute?.('data-activity-id'));
   if (!nodes.length) {
     nodes = Array.from(root?.querySelectorAll?.(':scope > [data-activity-id]') || []);
@@ -34,14 +57,16 @@ function buildSimpleRowBands(root, iframeRect, viewportRect) {
     nodes = Array.from(root?.querySelectorAll?.('[data-activity-id]') || []);
   }
   const grouped = new Map();
+  const positions = [];
 
   nodes.forEach((node) => {
-    const row = Math.max(1, Number.parseInt(node.getAttribute('data-composer-row'), 10) || 1);
+    const row = resolveSimpleNodeRow(node, win);
     const rect = node.getBoundingClientRect();
     const topClient = iframeRect.top + rect.top;
     const bottomClient = iframeRect.top + rect.bottom;
     const top = topClient - viewportRect.top;
     const bottom = bottomClient - viewportRect.top;
+    positions.push({ topClient, bottomClient });
     const existing = grouped.get(row) || {
       row,
       top,
@@ -56,7 +81,36 @@ function buildSimpleRowBands(root, iframeRect, viewportRect) {
     grouped.set(row, existing);
   });
 
-  return Array.from(grouped.values()).sort((left, right) => left.row - right.row);
+  if (grouped.size > 1 || positions.length <= 1) {
+    return Array.from(grouped.values()).sort((left, right) => left.row - right.row);
+  }
+
+  // Fallback for imported/simple markup that does not carry row attributes.
+  const sorted = positions
+    .slice()
+    .sort((left, right) => left.topClient - right.topClient);
+  const inferred = [];
+  const topTolerance = 14;
+
+  sorted.forEach((entry) => {
+    const match = inferred.find((band) => Math.abs(entry.topClient - band.topClient) <= topTolerance);
+    if (match) {
+      match.bottomClient = Math.max(match.bottomClient, entry.bottomClient);
+      return;
+    }
+    inferred.push({
+      topClient: entry.topClient,
+      bottomClient: entry.bottomClient,
+    });
+  });
+
+  return inferred.map((band, index) => ({
+    row: index + 1,
+    top: band.topClient - viewportRect.top,
+    bottom: band.bottomClient - viewportRect.top,
+    topClient: band.topClient,
+    bottomClient: band.bottomClient,
+  }));
 }
 
 function computeGridMetrics({ doc, iframe, maxColumns = 1, viewport }) {
@@ -102,7 +156,7 @@ function computeGridMetrics({ doc, iframe, maxColumns = 1, viewport }) {
     rootClientTop,
     rootOverlayLeft,
     rootOverlayTop,
-    rowBands: buildSimpleRowBands(root, iframeRect, viewportRect),
+    rowBands: buildSimpleRowBands(root, iframeRect, viewportRect, win),
     rowHeight,
     scaleX,
     scaleY,
@@ -352,22 +406,32 @@ function evaluateSimpleDragPlacements(activities, selectedIndex, proposal, metri
   strictRanked.sort((left, right) => left.score - right.score);
   fittedRanked.sort((left, right) => left.score - right.score);
   ranked.sort((left, right) => left.score - right.score);
-  const prioritized = [...sameRowRanked, ...ranked].filter((entry, index, list) => {
-    const key = `${entry.validation.layout.row}-${entry.validation.layout.col}-${entry.validation.layout.colSpan}`;
-    return list.findIndex((candidate) => `${candidate.validation.layout.row}-${candidate.validation.layout.col}-${candidate.validation.layout.colSpan}` === key) === index;
-  });
   return {
     initial,
     sameRowRanked,
     strictRanked,
     fittedRanked,
-    ranked: prioritized,
+    ranked,
   };
 }
 
 function resolveSimpleDragValidation(activities, selectedIndex, proposal, metrics, targetY) {
   const evaluation = evaluateSimpleDragPlacements(activities, selectedIndex, proposal, metrics, targetY);
-  return evaluation.sameRowRanked[0]?.validation || evaluation.ranked[0]?.validation || evaluation.initial;
+  const bestOverall = evaluation.ranked[0];
+  const bestSameRow = evaluation.sameRowRanked[0];
+
+  if (!bestOverall) {
+    return bestSameRow?.validation || evaluation.initial;
+  }
+  if (!bestSameRow) {
+    return bestOverall.validation || evaluation.initial;
+  }
+
+  const tieAllowance = Math.max(16, Number(metrics?.rowHeight || 0) * 0.45);
+  if ((bestSameRow.score || 0) <= (bestOverall.score || 0) + tieAllowance) {
+    return bestSameRow.validation || evaluation.initial;
+  }
+  return bestOverall.validation || evaluation.initial;
 }
 
 function buildSimpleDropHintFrames(evaluation, metrics, fallbackHeight, limit = 8) {

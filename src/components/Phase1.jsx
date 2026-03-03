@@ -3905,7 +3905,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       }
     }
 
-    if (isResize && resizedVertically && !resizedHorizontally) {
+    if (isResize && resizedVertically) {
       const workingRects = baseRects.map((rect, idx) => ({
         idx,
         rect: idx === activeIndex ? { ...activeProposedRect } : { ...(rect || clampCanvasRectToColumns(nextActivities[idx]?.layout || {})) },
