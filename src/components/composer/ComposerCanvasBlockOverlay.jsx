@@ -209,24 +209,115 @@ function buildSimpleRowCandidates(targetRow, targetY, metrics) {
   return candidates;
 }
 
-function resolveSimpleDragValidation(activities, selectedIndex, proposal, metrics, targetY) {
-  const initial = validateComposerSimpleProposal(activities, selectedIndex, proposal, { maxColumns: metrics.cols });
-  if (initial.valid || initial.reason !== 'collision') return initial;
+function buildSimpleColCandidates(targetCol, maxColumns) {
+  const cols = Math.max(1, Number.parseInt(maxColumns, 10) || 1);
+  const parsedTargetCol = clampInteger(targetCol, 1, cols);
+  const candidates = [];
+  const seen = new Set();
+  const pushCandidate = (value) => {
+    const col = clampInteger(value, 1, cols);
+    if (seen.has(col)) return;
+    seen.add(col);
+    candidates.push(col);
+  };
 
-  const rowCandidates = buildSimpleRowCandidates(proposal?.row, targetY, metrics).filter((row) => row !== proposal?.row);
-  for (const candidateRow of rowCandidates) {
-    const attempt = validateComposerSimpleProposal(
-      activities,
-      selectedIndex,
-      {
-        ...proposal,
-        row: candidateRow,
-      },
-      { maxColumns: metrics.cols },
-    );
-    if (attempt.valid) return attempt;
+  pushCandidate(parsedTargetCol);
+  for (let offset = 1; offset < cols; offset += 1) {
+    pushCandidate(parsedTargetCol - offset);
+    pushCandidate(parsedTargetCol + offset);
   }
 
+  return candidates;
+}
+
+function estimateSimpleRowCenterClient(row, metrics) {
+  const targetRow = Math.max(1, Number.parseInt(row, 10) || 1);
+  const bands = Array.isArray(metrics?.rowBands) ? metrics.rowBands : [];
+  const defaultStep = Math.max(
+    32,
+    Number(metrics?.rowHeight) || 0,
+    (Number(metrics?.rowHeight) || 0) + (Number(metrics?.gapY) || 0),
+  );
+
+  if (!bands.length) {
+    const baseTop = Number(metrics?.rootClientTop) + Number(metrics?.paddingTop);
+    return baseTop + (targetRow - 0.5) * defaultStep;
+  }
+
+  const normalized = bands
+    .map((band) => ({
+      row: Math.max(1, Number.parseInt(band?.row, 10) || 1),
+      topClient: Number(band?.topClient) || 0,
+      bottomClient: Number(band?.bottomClient) || 0,
+    }))
+    .sort((left, right) => left.row - right.row);
+
+  const direct = normalized.find((band) => band.row === targetRow);
+  if (direct) return (direct.topClient + direct.bottomClient) / 2;
+
+  const first = normalized[0];
+  const last = normalized[normalized.length - 1];
+  const inferredStep = Math.max(
+    defaultStep,
+    (Number(last.bottomClient) - Number(last.topClient)) || 0,
+  );
+
+  if (targetRow < first.row) {
+    return first.topClient - (first.row - targetRow - 0.5) * inferredStep;
+  }
+
+  if (targetRow > last.row) {
+    return last.bottomClient + (targetRow - last.row - 0.5) * inferredStep;
+  }
+
+  for (let index = 0; index < normalized.length - 1; index += 1) {
+    const current = normalized[index];
+    const next = normalized[index + 1];
+    if (targetRow <= current.row || targetRow >= next.row) continue;
+    const fraction = (targetRow - current.row) / Math.max(1, next.row - current.row);
+    const currentCenter = (current.topClient + current.bottomClient) / 2;
+    const nextCenter = (next.topClient + next.bottomClient) / 2;
+    return currentCenter + (nextCenter - currentCenter) * fraction;
+  }
+
+  return (first.topClient + first.bottomClient) / 2;
+}
+
+function resolveSimpleDragValidation(activities, selectedIndex, proposal, metrics, targetY) {
+  const initial = validateComposerSimpleProposal(activities, selectedIndex, proposal, { maxColumns: metrics.cols });
+  const rowCandidates = buildSimpleRowCandidates(proposal?.row, targetY, metrics);
+  const colCandidates = buildSimpleColCandidates(proposal?.col, metrics?.cols);
+  const targetYClient = Number(targetY) || 0;
+  const colStep = Math.max(1, Number(metrics?.columnWidth) + Number(metrics?.gapX));
+  const proposalCol = clampInteger(proposal?.col, 1, Math.max(1, Number(metrics?.cols) || 1));
+  let best = null;
+
+  for (const candidateRow of rowCandidates) {
+    for (const candidateCol of colCandidates) {
+      const attempt = validateComposerSimpleProposal(
+        activities,
+        selectedIndex,
+        {
+          ...proposal,
+          row: candidateRow,
+          col: candidateCol,
+        },
+        { maxColumns: metrics.cols },
+      );
+      if (!attempt.valid) continue;
+      const layout = attempt.layout || {};
+      const rowCenter = estimateSimpleRowCenterClient(layout.row, metrics);
+      const rowDistance = Math.abs(targetYClient - rowCenter);
+      const colDistance = Math.abs((Number.parseInt(layout.col, 10) || 1) - proposalCol) * colStep;
+      const fittedPenalty = attempt.fitted ? 12 : 0;
+      const score = rowDistance + colDistance + fittedPenalty;
+      if (!best || score < best.score) {
+        best = { score, validation: attempt };
+      }
+    }
+  }
+
+  if (best?.validation) return best.validation;
   return initial;
 }
 
