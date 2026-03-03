@@ -362,7 +362,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [importPreview, setImportPreview] = useState([]); 
   
   // MODULE MANAGER STATE
-  const [moduleManagerType, setModuleManagerType] = useState('standalone'); // 'standalone' | 'composer' | 'external'
+  const [moduleManagerType, setModuleManagerType] = useState('composer'); // 'standalone' | 'composer' | 'external'
   const [moduleManagerTemplate, setModuleManagerTemplate] = useState('');
   const [moduleManagerTemplateLayoutProfiles, setModuleManagerTemplateLayoutProfiles] = useState({});
   const [moduleManagerTheme, setModuleManagerTheme] = useState('');
@@ -4551,13 +4551,13 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       (selectedComposerActivity.type === 'title_block' ? '#1e1b4b' : themePreview.containerBg || '#0f172a');
     const effectiveTextColor = data.blockTextColor || themePreview.textColor || '#e2e8f0';
     return (
-      <div className={embedded ? 'space-y-2' : 'mb-3 rounded-lg border border-slate-700 bg-slate-900/60 p-3 space-y-2'}>
+      <div className={embedded ? 'space-y-2' : 'cf-panel-muted mb-3 space-y-2 rounded-xl p-3'}>
         <div className="flex items-center justify-between">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-slate-300">Block Style</p>
+          <p className="text-[11px] font-semibold text-slate-300">Block Style</p>
           <button
             type="button"
             onClick={resetSelectedComposerActivityStyle}
-            className="rounded bg-slate-800 hover:bg-slate-700 px-2 py-1 text-[10px] font-bold text-slate-200"
+            className="cf-btn cf-btn-secondary px-2 py-1 text-[10px] font-bold text-slate-200"
             title="Reset block and body styles to defaults"
           >
             Reset Style
@@ -4565,11 +4565,11 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Theme</label>
+            <label className="mb-1 block text-[11px] font-semibold text-slate-400">Theme</label>
             <select
               value={themeValue}
               onChange={(e) => updateSelectedComposerActivityData({ blockTheme: e.target.value })}
-              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+              className="cf-input-shell px-2 py-1 text-xs"
             >
               {BLOCK_THEME_OPTIONS.map((themeOption) => (
                 <option key={`block-theme-${themeOption.value}`} value={themeOption.value}>
@@ -4579,11 +4579,11 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Font Family</label>
+            <label className="mb-1 block text-[11px] font-semibold text-slate-400">Font family</label>
             <select
               value={data.blockFontFamily || ''}
               onChange={(e) => updateSelectedComposerActivityData({ blockFontFamily: e.target.value })}
-              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+              className="cf-input-shell px-2 py-1 text-xs"
             >
               <option value="">Default</option>
               {RICH_EDITOR_FONT_OPTIONS.map((fontOption) => (
@@ -4595,7 +4595,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+          <label className="cf-panel-muted flex items-center justify-between rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-300">
             <span>Text Color</span>
             <input
               type="color"
@@ -4606,7 +4606,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               aria-label="Block text color"
             />
           </label>
-          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+          <label className="cf-panel-muted flex items-center justify-between rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-300">
             <span>Container Fill</span>
             <input
               type="color"
@@ -4620,22 +4620,22 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Variant</label>
+            <label className="mb-1 block text-[11px] font-semibold text-slate-400">Variant</label>
             <select
               value={styleMeta.variant === 'flat' ? 'flat' : 'card'}
               onChange={(e) => updateSelectedComposerActivityMeta('style', { variant: e.target.value })}
-              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+              className="cf-input-shell px-2 py-1 text-xs"
             >
               <option value="card">Card</option>
               <option value="flat">Flat</option>
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Padding</label>
+            <label className="mb-1 block text-[11px] font-semibold text-slate-400">Padding</label>
             <select
               value={styleMeta.padding || 'md'}
               onChange={(e) => updateSelectedComposerActivityMeta('style', { padding: e.target.value })}
-              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+              className="cf-input-shell px-2 py-1 text-xs"
             >
               <option value="sm">Small</option>
               <option value="md">Medium</option>
@@ -4643,11 +4643,11 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Title Scale</label>
+            <label className="mb-1 block text-[11px] font-semibold text-slate-400">Title scale</label>
             <select
               value={styleMeta.titleVariant || 'md'}
               onChange={(e) => updateSelectedComposerActivityMeta('style', { titleVariant: e.target.value })}
-              className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-white"
+              className="cf-input-shell px-2 py-1 text-xs"
             >
               {['xs', 'sm', 'md', 'lg', 'xl'].map((value) => (
                 <option key={`composer-title-variant-${value}`} value={value}>
@@ -4656,7 +4656,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               ))}
             </select>
           </div>
-          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+          <label className="cf-panel-muted flex items-center justify-between rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-300">
             <span>Border</span>
             <input
               type="checkbox"
@@ -4665,7 +4665,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-indigo-500"
             />
           </label>
-          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+          <label className="cf-panel-muted flex items-center justify-between rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-300">
             <span>Collapsible</span>
             <input
               type="checkbox"
@@ -4679,7 +4679,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-indigo-500"
             />
           </label>
-          <label className="flex items-center justify-between rounded bg-slate-950 border border-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-300">
+          <label className="cf-panel-muted flex items-center justify-between rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-300">
             <span>Start Collapsed</span>
             <input
               type="checkbox"
@@ -4716,7 +4716,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                 type="text"
                 value={data[richConfig.titleInputKey] || ''}
                 onChange={(e) => updateSelectedComposerActivityData({ [richConfig.titleInputKey]: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+                className="cf-input-shell text-sm"
               />
             </div>
           ) : null}
@@ -4727,7 +4727,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                 <select
                   value={data.align || 'left'}
                   onChange={(e) => updateSelectedComposerActivityData({ align: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+                  className="cf-input-shell text-sm"
                 >
                   <option value="left">Left</option>
                   <option value="center">Center</option>
@@ -4742,18 +4742,18 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-bold text-slate-300">{richConfig.plainLabel}</label>
-              <div className="inline-flex bg-slate-950 border border-slate-700 rounded p-0.5">
+              <div className="cf-tab-rail p-0.5">
                 <button
                   type="button"
                   onClick={() => updateSelectedComposerActivityData({ [richConfig.modeKey]: 'rich' })}
-                  className={`px-2 py-1 rounded text-[10px] font-bold ${bodyMode === 'rich' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  className={`cf-tab-btn px-2 py-1 text-[10px] font-bold ${bodyMode === 'rich' ? 'cf-tab-btn-active' : ''}`}
                 >
                   Rich
                 </button>
                 <button
                   type="button"
                   onClick={() => updateSelectedComposerActivityData({ [richConfig.modeKey]: 'plain' })}
-                  className={`px-2 py-1 rounded text-[10px] font-bold ${bodyMode === 'plain' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  className={`cf-tab-btn px-2 py-1 text-[10px] font-bold ${bodyMode === 'plain' ? 'cf-tab-btn-active' : ''}`}
                 >
                   Plain
                 </button>
@@ -4768,22 +4768,22 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                     [richConfig.textKey]: e.target.value,
                   })
                 }
-                className={`w-full ${richConfig.plainRowsClass} bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm`}
+                className={`cf-input-shell w-full text-sm ${richConfig.plainRowsClass}`}
               />
             ) : (
-              <div className="rounded border border-slate-700 bg-slate-950 overflow-hidden">
-                <div className="flex flex-wrap gap-1 p-2 border-b border-slate-700 bg-slate-900/80">
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('bold')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">B</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('italic')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs italic">I</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('underline')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs underline">U</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', 'P')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">P</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', 'H2')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H2</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', 'H3')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">H3</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '2')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A-</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '3')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '5')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">A+</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('insertUnorderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">• List</button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('insertOrderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">1. List</button>
+              <div className="cf-panel-muted overflow-hidden rounded">
+                <div className="flex flex-wrap gap-1 border-b border-slate-700 p-2 bg-slate-900/80">
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('bold')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs font-bold">B</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('italic')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs italic">I</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('underline')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs underline">U</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', 'P')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">P</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', 'H2')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs font-bold">H2</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('formatBlock', 'H3')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs font-bold">H3</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '2')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">A-</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '3')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">A</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('fontSize', '5')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">A+</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('insertUnorderedList')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">• List</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('insertOrderedList')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">1. List</button>
                   <button
                     type="button"
                     onMouseDown={preserveModuleManagerRichSelection}
@@ -4792,11 +4792,11 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                       if (!url) return;
                       runModuleManagerRichEditorCommand('createLink', url);
                     }}
-                    className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs"
+                    className="cf-btn cf-btn-secondary px-2 py-1 text-xs"
                   >
                     Link
                   </button>
-                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('removeFormat')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Clear</button>
+                  <button type="button" onMouseDown={preserveModuleManagerRichSelection} onClick={() => runModuleManagerRichEditorCommand('removeFormat')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">Clear</button>
                 </div>
                 <div className="px-2 pb-2 bg-slate-900/80 border-b border-slate-700">
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
@@ -4807,7 +4807,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                         if (!font) return;
                         runModuleManagerRichEditorCommand('fontName', font);
                       }}
-                      className="w-full rounded bg-slate-800 border border-slate-700 px-2 py-1 text-[11px] text-white"
+                      className="cf-input-shell text-[11px]"
                       aria-label="Font family"
                     >
                       <option value="">Font Family</option>
@@ -4846,7 +4846,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                       type="button"
                       onMouseDown={preserveModuleManagerRichSelection}
                       onClick={resetSelectedComposerBodyStyle}
-                      className="rounded bg-slate-800 hover:bg-slate-700 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-200"
+                      className="cf-btn cf-btn-secondary px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-200"
                       title="Reset body style overrides"
                     >
                       Reset Body Style
@@ -4889,7 +4889,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.url || ''}
               onChange={(e) => updateSelectedComposerActivityData({ url: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
               placeholder="https://..."
             />
           </div>
@@ -4899,7 +4899,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.caption || ''}
               onChange={(e) => updateSelectedComposerActivityData({ caption: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
             />
           </div>
         </div>
@@ -4916,7 +4916,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
             />
           </div>
           <div className="space-y-2">
@@ -4930,7 +4930,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                     nextItems[idx] = { ...(nextItems[idx] || {}), label: e.target.value };
                     updateSelectedComposerActivityData({ items: nextItems });
                   }}
-                  className="col-span-3 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  className="cf-input-shell col-span-3 text-xs"
                   placeholder="Label"
                 />
                 <input
@@ -4941,7 +4941,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                     nextItems[idx] = { ...(nextItems[idx] || {}), viewUrl: e.target.value };
                     updateSelectedComposerActivityData({ items: nextItems });
                   }}
-                  className="col-span-3 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  className="cf-input-shell col-span-3 text-xs"
                   placeholder="View URL"
                 />
                 <button
@@ -4950,7 +4950,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                     setVaultTargetField({ target: 'composer-resource', itemIndex: idx, field: 'viewUrl' });
                     setIsVaultOpen(true);
                   }}
-                  className="col-span-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded p-2 text-slate-200 flex items-center justify-center"
+                  className="cf-btn cf-btn-secondary col-span-1 p-2 text-slate-200"
                   title="Select view URL from vault"
                 >
                   <FolderOpen size={12} />
@@ -4963,7 +4963,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                     nextItems[idx] = { ...(nextItems[idx] || {}), downloadUrl: e.target.value };
                     updateSelectedComposerActivityData({ items: nextItems });
                   }}
-                  className="col-span-3 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  className="cf-input-shell col-span-3 text-xs"
                   placeholder="Download URL"
                 />
                 <button
@@ -4972,7 +4972,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                     setVaultTargetField({ target: 'composer-resource', itemIndex: idx, field: 'downloadUrl' });
                     setIsVaultOpen(true);
                   }}
-                  className="col-span-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded p-2 text-slate-200 flex items-center justify-center"
+                  className="cf-btn cf-btn-secondary col-span-1 p-2 text-slate-200"
                   title="Select download URL from vault"
                 >
                   <FolderOpen size={12} />
@@ -4996,7 +4996,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                     nextItems[idx] = { ...(nextItems[idx] || {}), description: e.target.value };
                     updateSelectedComposerActivityData({ items: nextItems });
                   }}
-                  className="col-span-12 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  className="cf-input-shell col-span-12 text-xs"
                   placeholder="Optional description"
                 />
               </div>
@@ -5004,7 +5004,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
             <button
               type="button"
               onClick={() => updateSelectedComposerActivityData({ items: [...items, { label: '', viewUrl: '', downloadUrl: '', description: '' }] })}
-              className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
+              className="cf-btn cf-btn-secondary px-3 py-1.5 text-xs font-bold"
             >
               <Plus size={12} /> Add Resource
             </button>
@@ -5014,7 +5014,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                 setVaultTargetField({ target: 'composer-resource-folder-import' });
                 setIsVaultOpen(true);
               }}
-              className="ml-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-xs text-slate-100 font-bold inline-flex items-center gap-1"
+              className="cf-btn cf-btn-secondary ml-2 px-3 py-1.5 text-xs font-bold text-slate-100"
               title="Select a vault folder and append all its files as resources"
             >
               <FolderOpen size={12} /> Import Vault Folder
@@ -5025,7 +5025,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                 <select
                   value={moduleManagerResourceMaterialId}
                   onChange={(e) => setModuleManagerResourceMaterialId(e.target.value)}
-                  className="col-span-9 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                  className="cf-input-shell col-span-9 text-xs"
                 >
                   {moduleBankMaterials.length === 0 && <option value="">No stored materials</option>}
                   {moduleBankMaterials.map((mat) => (
@@ -5054,7 +5054,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                     updateSelectedComposerActivityData({ items: nextItems });
                   }}
                   disabled={!moduleManagerResourceMaterialId || moduleBankMaterials.length === 0}
-                  className="col-span-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded text-xs font-bold text-white"
+                  className="cf-btn cf-btn-primary col-span-3 text-xs font-bold disabled:opacity-40"
                 >
                   Add
                 </button>
@@ -5079,7 +5079,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
               placeholder="Knowledge Check"
             />
           </div>
@@ -5139,7 +5139,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                           });
                           updateSelectedComposerActivityData({ questions: nextQuestions });
                         }}
-                        className="col-span-3 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                        className="cf-input-shell col-span-3 text-xs"
                       >
                         <option value="multiple_choice">Multiple Choice</option>
                         <option value="short_answer">Short Answer</option>
@@ -5158,7 +5158,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                           setModuleManagerKnowledgeDragIndex(null);
                           setModuleManagerKnowledgeDragOverIndex(null);
                         }}
-                        className="col-span-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded p-2 text-xs font-black cursor-grab active:cursor-grabbing"
+                        className="cf-btn cf-btn-secondary col-span-1 p-2 text-xs font-black text-slate-200 cursor-grab active:cursor-grabbing"
                         title="Drag to reorder"
                       >
                         ::
@@ -5167,7 +5167,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                         type="button"
                         onClick={() => moveKnowledgeQuestion(qIdx, Math.max(0, qIdx - 1))}
                         disabled={qIdx === 0}
-                        className="col-span-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded p-2 flex items-center justify-center"
+                        className="cf-btn cf-btn-secondary col-span-1 p-2 text-slate-200 disabled:opacity-40"
                         title="Move up"
                       >
                         <ChevronUp size={12} />
@@ -5176,7 +5176,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                         type="button"
                         onClick={() => moveKnowledgeQuestion(qIdx, Math.min(questions.length - 1, qIdx + 1))}
                         disabled={qIdx >= questions.length - 1}
-                        className="col-span-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded p-2 flex items-center justify-center"
+                        className="cf-btn cf-btn-secondary col-span-1 p-2 text-slate-200 disabled:opacity-40"
                         title="Move down"
                       >
                         <ChevronDown size={12} />
@@ -5198,7 +5198,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                           const nextQuestions = questions.map((item, idx) => (idx === qIdx ? { ...item, prompt: e.target.value } : item));
                           updateSelectedComposerActivityData({ questions: nextQuestions });
                         }}
-                        className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                        className="cf-input-shell h-20 text-xs"
                       />
                     </div>
                     {isShortAnswer ? (
@@ -5211,7 +5211,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                             const nextQuestions = questions.map((item, idx) => (idx === qIdx ? { ...item, placeholder: e.target.value } : item));
                             updateSelectedComposerActivityData({ questions: nextQuestions });
                           }}
-                          className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                          className="cf-input-shell text-xs"
                           placeholder="Write your response..."
                         />
                       </div>
@@ -5232,7 +5232,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                 });
                                 updateSelectedComposerActivityData({ questions: nextQuestions });
                               }}
-                              className="col-span-10 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                              className="cf-input-shell col-span-10 text-xs"
                             />
                             <input
                               type="radio"
@@ -5276,7 +5276,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                             );
                             updateSelectedComposerActivityData({ questions: nextQuestions });
                           }}
-                          className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
+                          className="cf-btn cf-btn-secondary px-3 py-1.5 text-xs font-bold"
                         >
                           <Plus size={12} /> Add Option
                         </button>
@@ -5307,7 +5307,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                   questions: [...questions, createKnowledgeCheckBuilderQuestion('short_answer')],
                 })
               }
-              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
+              className="cf-btn cf-btn-success px-3 py-1.5 text-xs font-bold"
             >
               <Plus size={12} /> Add Short Answer
             </button>
@@ -5353,7 +5353,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
               placeholder="Worksheet"
             />
           </div>
@@ -5409,7 +5409,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                           });
                           updateSelectedComposerActivityData({ blocks: nextBlocks });
                         }}
-                        className="col-span-3 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                        className="cf-input-shell col-span-3 text-xs"
                       >
                         <option value="field">Field</option>
                         <option value="title">Title + Instructions</option>
@@ -5428,7 +5428,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                           setModuleManagerWorksheetDragIndex(null);
                           setModuleManagerWorksheetDragOverIndex(null);
                         }}
-                        className="col-span-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded p-2 text-xs font-black cursor-grab active:cursor-grabbing"
+                        className="cf-btn cf-btn-secondary col-span-1 p-2 text-xs font-black text-slate-200 cursor-grab active:cursor-grabbing"
                         title="Drag to reorder"
                       >
                         ::
@@ -5437,7 +5437,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                         type="button"
                         onClick={() => moveWorksheetBlock(blockIdx, Math.max(0, blockIdx - 1))}
                         disabled={blockIdx === 0}
-                        className="col-span-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded p-2 flex items-center justify-center"
+                        className="cf-btn cf-btn-secondary col-span-1 p-2 text-slate-200 disabled:opacity-40"
                         title="Move up"
                       >
                         <ChevronUp size={12} />
@@ -5446,7 +5446,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                         type="button"
                         onClick={() => moveWorksheetBlock(blockIdx, Math.min(blocks.length - 1, blockIdx + 1))}
                         disabled={blockIdx >= blocks.length - 1}
-                        className="col-span-1 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded p-2 flex items-center justify-center"
+                        className="cf-btn cf-btn-secondary col-span-1 p-2 text-slate-200 disabled:opacity-40"
                         title="Move down"
                       >
                         <ChevronDown size={12} />
@@ -5471,7 +5471,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                               const nextBlocks = blocks.map((item, idx) => (idx === blockIdx ? { ...item, title: e.target.value } : item));
                               updateSelectedComposerActivityData({ blocks: nextBlocks });
                             }}
-                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                            className="cf-input-shell text-xs"
                             placeholder="Section title"
                           />
                         </div>
@@ -5495,7 +5495,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                               const nextBlocks = blocks.map((item, idx) => (idx === blockIdx ? { ...item, content: e.target.value } : item));
                               updateSelectedComposerActivityData({ blocks: nextBlocks });
                             }}
-                            className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs disabled:opacity-50"
+                            className="cf-input-shell h-20 text-xs disabled:opacity-50"
                             placeholder="Add instructions or context for this section."
                             disabled={!block.showContent}
                           />
@@ -5510,7 +5510,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                               type="text"
                               value={block.label || ''}
                               onChange={(e) => setWorksheetBlockField(blockIdx, { label: e.target.value })}
-                              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                              className="cf-input-shell text-xs"
                               placeholder="Field label"
                             />
                           </div>
@@ -5519,7 +5519,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                             <select
                               value={block.fieldType || 'text'}
                               onChange={(e) => setWorksheetBlockField(blockIdx, { fieldType: e.target.value || 'text' })}
-                              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                              className="cf-input-shell text-xs"
                             >
                               <option value="text">Text</option>
                               <option value="textarea">Textarea</option>
@@ -5532,7 +5532,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                               type="text"
                               value={block.placeholder || ''}
                               onChange={(e) => setWorksheetBlockField(blockIdx, { placeholder: e.target.value })}
-                              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                              className="cf-input-shell text-xs"
                               placeholder="Optional placeholder"
                             />
                           </div>
@@ -5542,7 +5542,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                           <select
                             value={block.helperMode === 'rich' ? 'rich' : 'plain'}
                             onChange={(e) => setWorksheetBlockField(blockIdx, { helperMode: e.target.value === 'rich' ? 'rich' : 'plain' })}
-                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                            className="cf-input-shell text-xs"
                           >
                             <option value="plain">Plain Prompt</option>
                             <option value="rich">Rich Prompt</option>
@@ -5551,12 +5551,12 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                         {block.helperMode === 'rich' ? (
                           <div className="space-y-1">
                             <div className="flex flex-wrap items-center gap-1">
-                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'bold')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold">B</button>
-                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'italic')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs italic">I</button>
-                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'underline')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs underline">U</button>
-                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'insertUnorderedList')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">• List</button>
-                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'createLink')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Link</button>
-                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'removeFormat')} className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs">Clear</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'bold')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs font-bold">B</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'italic')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs italic">I</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'underline')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs underline">U</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'insertUnorderedList')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">• List</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'createLink')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">Link</button>
+                              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => runWorksheetHelperRichCommand(blockIdx, 'removeFormat')} className="cf-btn cf-btn-secondary px-2 py-1 text-xs">Clear</button>
                             </div>
                             <div className="rounded border border-slate-700 bg-slate-950">
                               <div
@@ -5583,7 +5583,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                             <textarea
                               value={block.helperText || ''}
                               onChange={(e) => setWorksheetBlockField(blockIdx, { helperText: e.target.value })}
-                              className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                              className="cf-input-shell h-20 text-xs"
                               placeholder="Add context/instructions shown above this field."
                             />
                           </div>
@@ -5604,7 +5604,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                   blocks: [...blocks, createWorksheetBuilderBlock('title')],
                 })
               }
-              className="px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 rounded text-xs text-white font-bold inline-flex items-center gap-1"
+              className="cf-btn cf-btn-primary px-3 py-1.5 text-xs font-bold"
             >
               <Plus size={12} /> Add Title Block
             </button>
@@ -5647,7 +5647,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
               placeholder="Fillable Chart"
             />
           </div>
@@ -5656,7 +5656,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
             <textarea
               value={data.description || ''}
               onChange={(e) => updateSelectedComposerActivityData({ description: e.target.value })}
-              className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell h-20 text-sm"
               placeholder="Explain how students should use the chart."
             />
           </div>
@@ -5669,7 +5669,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                 max="8"
                 value={chart.rowCount}
                 onChange={(e) => updateChart({ rowCount: Math.max(1, Math.min(8, Number.parseInt(e.target.value, 10) || 1)) })}
-                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                className="cf-input-shell text-xs"
               />
             </div>
             <div className="col-span-3">
@@ -5680,7 +5680,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                 max="8"
                 value={chart.colCount}
                 onChange={(e) => updateChart({ colCount: Math.max(1, Math.min(8, Number.parseInt(e.target.value, 10) || 1)) })}
-                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                className="cf-input-shell text-xs"
               />
             </div>
             <div className="col-span-3">
@@ -5701,7 +5701,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                 type="text"
                 value={chart.rowLabelHeader || ''}
                 onChange={(e) => updateChart({ rowLabelHeader: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs disabled:opacity-50"
+                className="cf-input-shell text-xs disabled:opacity-50"
                 placeholder="Rows"
                 disabled={chart.showRowLabels === false}
               />
@@ -5728,7 +5728,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                     cells: nextCells,
                   });
                 }}
-                className="px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white"
+                className="cf-btn cf-btn-primary px-3 py-2 text-xs font-bold"
               >
                 Apply Pros/Cons Preset
               </button>
@@ -5745,7 +5745,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                   const nextColumns = chart.columns.map((item, idx) => (idx === colIdx ? { ...item, label: e.target.value } : item));
                   updateChart({ columns: nextColumns });
                 }}
-                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                className="cf-input-shell text-xs"
                 placeholder={`Column ${colIdx + 1}`}
               />
             ))}
@@ -5783,7 +5783,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                           );
                           updateChart({ cells: nextCells });
                         }}
-                        className="col-span-4 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                        className="cf-input-shell col-span-4 text-xs"
                         placeholder="Cell label/content"
                       />
                       <label className="col-span-2 inline-flex items-center gap-1 text-[11px] text-slate-300">
@@ -5809,7 +5809,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                           );
                           updateChart({ cells: nextCells });
                         }}
-                        className="col-span-3 bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                        className="cf-input-shell col-span-3 text-xs"
                         placeholder="Placeholder"
                         disabled={cell.editable === false}
                       />
@@ -5832,14 +5832,14 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.url || ''}
               onChange={(e) => updateSelectedComposerActivityData({ url: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
               placeholder="https://... or /assets/image.jpg"
             />
             <div className="grid grid-cols-12 gap-2 mt-2">
               <select
                 value={moduleManagerImageMaterialId}
                 onChange={(e) => setModuleManagerImageMaterialId(e.target.value)}
-                className="col-span-8 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                className="cf-input-shell col-span-8 text-xs"
               >
                 {moduleBankImageAssets.length === 0 && <option value="">No image materials found</option>}
                 {moduleBankImageAssets.map((asset) => (
@@ -5859,7 +5859,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                   });
                 }}
                 disabled={!moduleManagerImageMaterialId || moduleBankImageAssets.length === 0}
-                className="col-span-2 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-xs font-bold text-white"
+                className="cf-btn cf-btn-primary col-span-2 text-xs font-bold disabled:opacity-40"
               >
                 Use
               </button>
@@ -5869,7 +5869,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                   setVaultTargetField({ target: 'composer-image' });
                   setIsVaultOpen(true);
                 }}
-                className="col-span-2 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
+                className="cf-btn cf-btn-secondary col-span-2 text-xs font-bold"
                 title="Browse Local Vault"
               >
                 <FolderOpen size={11} /> Vault
@@ -5885,7 +5885,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.alt || ''}
               onChange={(e) => updateSelectedComposerActivityData({ alt: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
             />
           </div>
           <div>
@@ -5894,7 +5894,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.caption || ''}
               onChange={(e) => updateSelectedComposerActivityData({ caption: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
             />
           </div>
           <div>
@@ -5902,7 +5902,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
             <select
               value={data.width || 'full'}
               onChange={(e) => updateSelectedComposerActivityData({ width: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
             >
               <option value="full">Full width</option>
               <option value="wide">Wide</option>
@@ -5928,7 +5928,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
             />
           </div>
           <div className="space-y-2">
@@ -5954,7 +5954,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
             <select
               value={moduleManagerAssessmentId}
               onChange={(e) => setModuleManagerAssessmentId(e.target.value)}
-              className="col-span-9 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+              className="cf-input-shell col-span-9 text-xs"
             >
               {moduleBankAssessments.length === 0 && <option value="">No saved assessments</option>}
               {moduleBankAssessments.map((assessment) => (
@@ -5981,7 +5981,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                 updateSelectedComposerActivityData({ items: nextItems });
               }}
               disabled={!moduleManagerAssessmentId || moduleBankAssessments.length === 0}
-              className="col-span-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded text-xs font-bold text-white"
+              className="cf-btn cf-btn-primary col-span-3 text-xs font-bold disabled:opacity-40"
             >
               Add
             </button>
@@ -6001,7 +6001,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               max="600"
               value={Number.isFinite(Number(data.height)) ? data.height : 48}
               onChange={(e) => updateSelectedComposerActivityData({ height: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
             />
           </div>
           <p className="text-[11px] text-slate-500">
@@ -6020,7 +6020,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
             />
           </div>
           <div>
@@ -6029,7 +6029,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.buttonLabel || ''}
               onChange={(e) => updateSelectedComposerActivityData({ buttonLabel: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
             />
           </div>
         </div>
@@ -6045,7 +6045,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
             />
           </div>
           <div>
@@ -6053,7 +6053,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
             <textarea
               value={data.description || ''}
               onChange={(e) => updateSelectedComposerActivityData({ description: e.target.value })}
-              className="w-full h-20 bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell h-20 text-sm"
             />
           </div>
           <div>
@@ -6062,7 +6062,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.fileName || ''}
               onChange={(e) => updateSelectedComposerActivityData({ fileName: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
               placeholder="module-progress"
             />
           </div>
@@ -6145,7 +6145,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
               type="text"
               value={data.title || ''}
               onChange={(e) => updateSelectedComposerActivityData({ title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm"
+              className="cf-input-shell text-sm"
               placeholder="Tab Group"
             />
             <p className="text-[11px] text-slate-500 mt-1">
@@ -6164,13 +6164,13 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                       type="text"
                       value={tab.label}
                       onChange={(e) => upsertTab(spec, (prev) => ({ ...prev, label: e.target.value }))}
-                      className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                      className="cf-input-shell text-xs"
                       placeholder={spec.defaultLabel}
                     />
                   </div>
                   <div className="col-span-4">
                     <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Tab ID</label>
-                    <div className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-[11px] text-slate-300 font-mono">
+                    <div className="cf-panel-muted p-2 text-[11px] font-mono text-slate-300">
                       {spec.defaultId}
                     </div>
                   </div>
@@ -6182,7 +6182,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                       type="button"
                       onClick={() => upsertTab(spec, (prev) => ({ ...prev, activityIds: linkableActivities.map((entry) => entry.id) }))}
                       disabled={linkableActivities.length === 0}
-                      className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-[10px] font-bold text-white"
+                      className="cf-btn cf-btn-secondary px-2 py-1 text-[10px] font-bold disabled:opacity-40"
                     >
                       Select All
                     </button>
@@ -6190,7 +6190,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                       type="button"
                       onClick={() => upsertTab(spec, (prev) => ({ ...prev, activityIds: [] }))}
                       disabled={selectedIds.length === 0}
-                      className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-[10px] font-bold text-white"
+                      className="cf-btn cf-btn-secondary px-2 py-1 text-[10px] font-bold disabled:opacity-40"
                     >
                       Clear
                     </button>
@@ -6788,10 +6788,10 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                     key={`composer-hub-skin-${skin}`}
                     type="button"
                     onClick={() => updateHubConfig({ skin })}
-                    className={`rounded-xl border px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-colors ${
+                    className={`cf-btn px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] ${
                       hubConfig.skin === skin
-                        ? 'border-indigo-500 bg-indigo-600 text-white'
-                        : 'border-slate-700/80 bg-slate-900/80 text-slate-300 hover:bg-slate-800'
+                        ? 'cf-btn-primary'
+                        : 'cf-btn-secondary text-slate-300'
                     }`}
                   >
                     {skin}
@@ -6868,7 +6868,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
             <button
               type="button"
               onClick={() => saveModuleManagerDraft({ overwriteSelected: false })}
-              className="inline-flex items-center justify-center gap-1 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-indigo-500"
+              className="cf-btn cf-btn-primary inline-flex items-center justify-center px-3 py-2 text-[11px] font-bold"
             >
               <Save size={12} /> Save New
             </button>
@@ -6944,7 +6944,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
             <button
               type="button"
               onClick={resetModuleManagerBuilder}
-              className="inline-flex items-center justify-center gap-1 rounded-xl bg-amber-700/85 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-amber-600"
+              className="cf-btn cf-btn-warning inline-flex items-center justify-center px-3 py-2 text-[11px] font-bold"
             >
               <RotateCcw size={12} /> Reset Builder
             </button>
@@ -7117,25 +7117,25 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   })();
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+    <div className="cf-phase-shell space-y-6 animate-in fade-in duration-500">
+      <div className="cf-glass-surface rounded-2xl border border-slate-700/70 p-6">
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
           <FileJson className="text-yellow-400" /> Phase 1: Harvest
         </h2>
 
         {/* HARVEST TYPE TOGGLE */}
         <div className="mb-6">
-            <div className="flex gap-2 bg-slate-900 p-1 rounded-lg border border-slate-700 w-full md:w-auto overflow-x-auto">
-                <button onClick={() => setHarvestType('ASSESSMENT')} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${harvestType === 'ASSESSMENT' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+            <div className="cf-glass-soft flex w-full gap-1.5 overflow-x-auto rounded-xl border border-slate-800/70 p-1 md:w-auto">
+                <button onClick={() => setHarvestType('ASSESSMENT')} className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-3 py-2.5 text-xs font-bold transition-colors ${harvestType === 'ASSESSMENT' ? 'border-purple-400/25 bg-slate-950/55 text-white' : 'border-transparent text-slate-400 hover:border-slate-800/80 hover:bg-slate-950/35 hover:text-white'}`}>
                 <CheckCircle size={14} /> Assessment
                 </button>
-                <button onClick={() => setHarvestType('MATERIALS')} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${harvestType === 'MATERIALS' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                <button onClick={() => setHarvestType('MATERIALS')} className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-3 py-2.5 text-xs font-bold transition-colors ${harvestType === 'MATERIALS' ? 'border-cyan-400/25 bg-slate-950/55 text-white' : 'border-transparent text-slate-400 hover:border-slate-800/80 hover:bg-slate-950/35 hover:text-white'}`}>
                    <FolderOpen size={14} /> Materials
                 </button>
-                 <button onClick={() => setHarvestType('AI_MODULE')} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${harvestType === 'AI_MODULE' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                 <button onClick={() => setHarvestType('AI_MODULE')} className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-3 py-2.5 text-xs font-bold transition-colors ${harvestType === 'AI_MODULE' ? 'border-emerald-400/25 bg-slate-950/55 text-white' : 'border-transparent text-slate-400 hover:border-slate-800/80 hover:bg-slate-950/35 hover:text-white'}`}>
                      <Sparkles size={14} /> AI Studio
                  </button>
-                 <button onClick={() => setHarvestType('MODULE_MANAGER')} className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all whitespace-nowrap ${harvestType === 'MODULE_MANAGER' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+                 <button onClick={() => setHarvestType('MODULE_MANAGER')} className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-3 py-2.5 text-xs font-bold transition-colors ${harvestType === 'MODULE_MANAGER' ? 'border-indigo-400/25 bg-slate-950/55 text-white' : 'border-transparent text-slate-400 hover:border-slate-800/80 hover:bg-slate-950/35 hover:text-white'}`}>
                      <Box size={14} /> Module Manager
                  </button>
             </div>
@@ -7144,38 +7144,38 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
          <>
             {harvestType === 'ASSESSMENT' && (
              <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
-                     <div className="p-4 bg-purple-900/20 border border-purple-700/50 rounded-lg">
+                     <div className="cf-panel-muted p-4">
                         <h3 className="text-sm font-bold text-purple-400 mb-4">Assessment Center</h3>
                         
                         {/* Assessment Mode Tabs */}
-                        <div className="flex gap-2 mb-6 border-b border-purple-800/50 pb-2 overflow-x-auto">
+                        <div className="cf-tab-rail mb-6">
                             <button 
                                 onClick={() => setMode('ADD')} 
-                                className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'ADD' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
+                                className={`cf-tab-btn px-4 py-2 text-xs font-bold ${mode === 'ADD' ? 'cf-tab-btn-active' : ''}`}
                             >
                                 <Plus size={14} /> Add Questions
                             </button>
                             <button 
                                 onClick={() => setMode('MASTER')} 
-                                className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'MASTER' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
+                                className={`cf-tab-btn px-4 py-2 text-xs font-bold ${mode === 'MASTER' ? 'cf-tab-btn-active' : ''}`}
                             >
                                 <Sparkles size={14} /> Master Assessment
                             </button>
                             <button 
                                 onClick={() => setMode('MANAGE')} 
-                                className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'MANAGE' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
+                                className={`cf-tab-btn px-4 py-2 text-xs font-bold ${mode === 'MANAGE' ? 'cf-tab-btn-active' : ''}`}
                             >
                                 <Clipboard size={14} /> Manage
                             </button>
                             <button 
                                 onClick={() => setMode('MIGRATE')} 
-                                className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'MIGRATE' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
+                                className={`cf-tab-btn px-4 py-2 text-xs font-bold ${mode === 'MIGRATE' ? 'cf-tab-btn-active' : ''}`}
                             >
                                 <RefreshCw size={14} /> Migrate
                             </button>
                             <button 
                                 onClick={() => setMode('IMPORT')} 
-                                className={`px-4 py-2 rounded-t text-xs font-bold transition-colors whitespace-nowrap ${mode === 'IMPORT' ? 'bg-purple-600 text-white' : 'bg-transparent text-slate-400 hover:text-white'}`}
+                                className={`cf-tab-btn px-4 py-2 text-xs font-bold ${mode === 'IMPORT' ? 'cf-tab-btn-active' : ''}`}
                             >
                                 <FileJson size={14} /> Smart Import
                             </button>
@@ -7187,13 +7187,13 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                 <p className="text-xs text-slate-400 italic">Build individual questions to add to your Master Assessment.</p>
                                 
                                 {/* Question Type Selector */}
-                                <div className="flex gap-2 mb-4">
+                                <div className="cf-tab-rail mb-4">
                                     <button 
                                         onClick={() => {
                                             setCurrentQuestionType('multiple-choice');
                                             setCurrentQuestion({ question: '', options: ['', '', '', ''], correct: 0 });
                                         }} 
-                                        className={`flex-1 py-3 px-4 rounded text-xs font-bold transition-all ${currentQuestionType === 'multiple-choice' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                                        className={`cf-tab-btn flex-1 px-4 py-3 text-xs font-bold ${currentQuestionType === 'multiple-choice' ? 'cf-tab-btn-active' : ''}`}
                                     >
                                         <CheckCircle size={14} /> Multiple Choice
                                     </button>
@@ -7202,7 +7202,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                             setCurrentQuestionType('long-answer');
                                             setCurrentQuestion({ question: '', options: ['', '', '', ''], correct: 0 });
                                         }} 
-                                        className={`flex-1 py-3 px-4 rounded text-xs font-bold transition-all ${currentQuestionType === 'long-answer' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                                        className={`cf-tab-btn flex-1 px-4 py-3 text-xs font-bold ${currentQuestionType === 'long-answer' ? 'cf-tab-btn-active' : ''}`}
                                     >
                                         <Edit size={14} /> Long Answer
                                     </button>
@@ -7210,7 +7210,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
 
                                 {/* Multiple Choice Question Builder */}
                                 {currentQuestionType === 'multiple-choice' && (
-                                    <div className="p-4 bg-blue-900/10 border border-blue-700/30 rounded-xl space-y-4">
+                                    <div className="cf-panel-muted space-y-4 p-4">
                                         <h4 className="text-sm font-bold text-blue-400">Multiple Choice Question</h4>
                                         
                                         <div>
@@ -7219,7 +7219,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                 value={currentQuestion.question}
                                                 onChange={(e) => setCurrentQuestion({...currentQuestion, question: e.target.value})}
                                                 placeholder="Enter your question..."
-                                                className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm h-20 resize-none"
+                                                className="cf-input-shell h-20 text-sm"
                                             />
                     </div>
                     
@@ -7244,7 +7244,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                                 setCurrentQuestion({...currentQuestion, options: newOptions});
                                                             }}
                                                             placeholder={`Option ${idx + 1}`}
-                                                            className="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                                            className="cf-input-shell flex-1 text-xs"
                                                         />
                                                     </div>
                                                 ))}
@@ -7270,7 +7270,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                 });
                                                 alert("Question added to Master Assessment.");
                                             }}
-                                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded flex items-center justify-center gap-2"
+                                            className="cf-btn cf-btn-primary w-full py-3 text-sm font-bold"
                                         >
                                             <Plus size={16} /> Add to Master Assessment
                         </button>
@@ -7279,7 +7279,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
 
                                 {/* Long Answer Question Builder */}
                                 {currentQuestionType === 'long-answer' && (
-                                    <div className="p-4 bg-emerald-900/10 border border-emerald-700/30 rounded-xl space-y-4">
+                                    <div className="cf-panel-muted space-y-4 p-4">
                                         <h4 className="text-sm font-bold text-emerald-400">Long Answer Question</h4>
                                         
                                         <div>
@@ -7288,7 +7288,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                 value={currentQuestion.question}
                                                 onChange={(e) => setCurrentQuestion({...currentQuestion, question: e.target.value})}
                                                 placeholder="Enter your question or prompt..."
-                                                className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm h-32 resize-none"
+                                                className="cf-input-shell h-32 text-sm"
                                             />
                                             <p className="text-[9px] text-slate-500 italic mt-2">Students will see a large text area to respond</p>
                                         </div>
@@ -7305,7 +7305,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                 });
                                                 alert("Question added to Master Assessment.");
                                             }}
-                                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded flex items-center justify-center gap-2"
+                                            className="cf-btn cf-btn-success w-full py-3 text-sm font-bold"
                                         >
                                             <Plus size={16} /> Add to Master Assessment
                                         </button>
@@ -7313,7 +7313,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                     )}
 
                                 {/* Quick Info */}
-                                <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg">
+                                <div className="cf-panel-muted p-4">
                                     <p className="text-purple-300 text-xs">
                                         <strong>Tip:</strong> Add all your questions here, then go to the "Master Assessment" tab to organize them and generate the final assessment.
                                     </p>
@@ -7331,26 +7331,26 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                             value={assessmentTitle} 
                             onChange={(e) => setAssessmentTitle(e.target.value)} 
                             placeholder="e.g., Mental Fitness Quiz 1" 
-                            className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                            className="cf-input-shell text-sm"
                         />
                     </div>
 
-                    <div className="flex gap-2 mb-4">
+                    <div className="cf-tab-rail mb-4">
                         <button 
                             onClick={() => setAssessmentType('quiz')} 
-                            className={`flex-1 py-2 px-3 rounded text-xs font-bold ${assessmentType === 'quiz' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                            className={`cf-tab-btn flex-1 px-3 py-2 text-xs font-bold ${assessmentType === 'quiz' ? 'cf-tab-btn-active' : ''}`}
                         >
                             Multiple Choice
                         </button>
                                     <button 
                                         onClick={() => setAssessmentType('longanswer')} 
-                                        className={`flex-1 py-2 px-3 rounded text-xs font-bold ${assessmentType === 'longanswer' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                                        className={`cf-tab-btn flex-1 px-3 py-2 text-xs font-bold ${assessmentType === 'longanswer' ? 'cf-tab-btn-active' : ''}`}
                                     >
                                         Long Answer
                                     </button>
                         <button 
                             onClick={() => setAssessmentType('print')} 
-                            className={`flex-1 py-2 px-3 rounded text-xs font-bold ${assessmentType === 'print' ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                            className={`cf-tab-btn flex-1 px-3 py-2 text-xs font-bold ${assessmentType === 'print' ? 'cf-tab-btn-active' : ''}`}
                         >
                             Print & Submit
                         </button>
@@ -7360,9 +7360,9 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
 
                         {mode === 'CREATE' && assessmentType === 'quiz' && (
                         <div className="space-y-4">
-                            <div className="max-h-96 overflow-y-auto space-y-3 p-3 bg-slate-950 rounded border border-slate-700">
+                            <div className="cf-panel-muted max-h-96 space-y-3 overflow-y-auto p-3">
                                 {quizQuestions.map((q, idx) => (
-                                    <div key={idx} className="p-3 bg-slate-900 rounded border border-slate-800">
+                                    <div key={idx} className="cf-panel-muted p-3">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-xs font-bold text-purple-400">Question {idx + 1}</span>
                                             {quizQuestions.length > 1 && (
@@ -7379,7 +7379,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                             value={q.question}
                                             onChange={(e) => updateQuizQuestion(idx, 'question', e.target.value)}
                                             placeholder="Enter question..."
-                                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs mb-2"
+                                            className="cf-input-shell mb-2 text-xs"
                                         />
                                         <div className="space-y-1">
                                             {q.options.map((opt, optIdx) => (
@@ -7396,7 +7396,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                         value={opt}
                                                         onChange={(e) => updateQuizQuestion(idx, `option-${optIdx}`, e.target.value)}
                                                         placeholder={`Option ${optIdx + 1}`}
-                                                        className="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                                        className="cf-input-shell flex-1 text-xs"
                                                     />
                                                 </div>
                                             ))}
@@ -7406,7 +7406,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                             </div>
                             <button 
                                 onClick={addQuizQuestion}
-                                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded text-xs flex items-center justify-center gap-2"
+                                className="cf-btn cf-btn-secondary w-full py-2 text-xs font-bold"
                             >
                                 <Plus size={14} /> Add Question
                             </button>
@@ -7415,9 +7415,9 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
 
                         {mode === 'CREATE' && assessmentType === 'longanswer' && (
                             <div className="space-y-4">
-                                <div className="max-h-96 overflow-y-auto space-y-3 p-3 bg-slate-950 rounded border border-slate-700">
+                                <div className="cf-panel-muted max-h-96 space-y-3 overflow-y-auto p-3">
                                     {quizQuestions.map((q, idx) => (
-                                        <div key={idx} className="p-3 bg-slate-900 rounded border border-slate-800">
+                                        <div key={idx} className="cf-panel-muted p-3">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-xs font-bold text-purple-400">Prompt {idx + 1}</span>
                                                 {quizQuestions.length > 1 && (
@@ -7433,7 +7433,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                 value={q.question}
                                                 onChange={(e) => updateQuizQuestion(idx, 'question', e.target.value)}
                                                 placeholder="Enter your question or prompt..."
-                                                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs h-20 resize-none"
+                                                className="cf-input-shell h-20 text-xs"
                                             />
                                             <p className="text-[9px] text-slate-500 italic mt-1">Students will see a large text area to respond to this prompt.</p>
                                         </div>
@@ -7441,7 +7441,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                 </div>
                                 <button 
                                     onClick={addQuizQuestion}
-                                    className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2 rounded text-xs flex items-center justify-center gap-2"
+                                    className="cf-btn cf-btn-secondary w-full py-2 text-xs font-bold"
                                 >
                                     <Plus size={14} /> Add Prompt
                                 </button>
@@ -7455,7 +7455,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                     value={printInstructions}
                                     onChange={(e) => setPrintInstructions(e.target.value)}
                                     placeholder="Enter custom instructions for students... (Leave blank for default)"
-                                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-xs h-32 resize-none"
+                                    className="cf-input-shell h-32 text-xs"
                                 />
                                 <p className="text-[9px] text-slate-500 italic">Default: Standard print & submit instructions with name/date fields</p>
                             </div>
@@ -7467,7 +7467,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                         <button 
                             onClick={generateQuizAssessment} 
                                         disabled={!assessmentTitle || (assessmentType === 'quiz' && quizQuestions.some(q => !q.question)) || (assessmentType === 'longanswer' && quizQuestions.some(q => !q.question))}
-                            className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="cf-btn cf-btn-primary flex-1 py-3 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             Generate Assessment Code
                         </button>
@@ -7497,7 +7497,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                     console.error(e);
                                                 }
                                             }}
-                                            className="w-full mt-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded text-xs flex items-center justify-center gap-2"
+                                            className="cf-btn cf-btn-success mt-3 w-full py-3 text-xs font-bold"
                                         >
                                             <Zap size={14} /> Add Assessment to Assessments Module
                                         </button>
@@ -7519,7 +7519,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                         value={masterAssessmentTitle}
                                         onChange={(e) => setMasterAssessmentTitle(e.target.value)}
                                         placeholder="e.g., Mental Fitness Comprehensive Test"
-                                        className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                                        className="cf-input-shell text-sm"
                                     />
                                 </div>
 
@@ -7616,7 +7616,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                             generateMixedAssessment();
                                         }}
                                         disabled={!masterAssessmentTitle}
-                                        className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                                        className="cf-btn cf-btn-primary w-full py-4 text-sm font-bold disabled:opacity-50"
                                     >
                                         <Sparkles size={18} /> Generate Assessment Code
                                     </button>
@@ -7654,7 +7654,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                     console.error(e);
                                                 }
                                             }}
-                                            className="w-full mt-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded text-xs flex items-center justify-center gap-2"
+                                            className="cf-btn cf-btn-success mt-3 w-full py-3 text-xs font-bold"
                                         >
                                             <Zap size={14} /> Add Assessment to Module
                                         </button>
@@ -7780,10 +7780,10 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                         onClick={() => setPhase1AssessmentPreview(null)}
                                     >
                                         <div
-                                            className="bg-slate-900 border border-slate-700 rounded-xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
+                                            className="cf-glass-surface max-w-6xl w-full max-h-[90vh] overflow-hidden rounded-2xl border border-slate-800/70"
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
+                                            <div className="cf-glass-nav border-b border-slate-800/70 p-4 flex items-center justify-between">
                                                 <div>
                                                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
                                                         <Eye size={20} className="text-indigo-300" />
@@ -7815,7 +7815,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                 {/* EDIT ASSESSMENT MODAL */}
                                 {editingAssessment && (
                                     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setEditingAssessment(null)}>
-                                        <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                                        <div className="cf-glass-surface max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-800/70 p-6" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex items-center justify-between mb-6">
                                                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                                                     <PenTool size={20} className="text-purple-400" />
@@ -7833,13 +7833,13 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                         type="text"
                                                         value={editingAssessment.title}
                                                         onChange={(e) => setEditingAssessment({...editingAssessment, title: e.target.value})}
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                                                        className="cf-input-shell text-sm"
                                                     />
                                                 </div>
 
                                                 <div>
                                                     <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Assessment Type</label>
-                                                    <div className="text-sm text-slate-300 bg-slate-950 border border-slate-700 rounded p-3">
+                                                    <div className="cf-panel-muted p-3 text-sm text-slate-300">
                                                         {editingAssessment.type === 'quiz' ? 'Multiple Choice' : editingAssessment.type === 'longanswer' ? 'Long Answer' : 'Print & Submit'}
                                                         <span className="text-[10px] text-slate-500 block mt-1">Type cannot be changed after creation</span>
                                                     </div>
@@ -7851,7 +7851,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                     <select
                                                         value={editingAssessment.textColorOverride ?? ''}
                                                         onChange={(e) => setEditingAssessment({ ...editingAssessment, textColorOverride: e.target.value || null })}
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                                                        className="cf-input-shell text-sm"
                                                     >
                                                         {assessmentOverrideOptions.map((opt) => (
                                                             <option key={opt.value || 'default'} value={opt.value}>{opt.label}</option>
@@ -7864,7 +7864,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                     <select
                                                         value={editingAssessment.boxColorOverride ?? ''}
                                                         onChange={(e) => setEditingAssessment({ ...editingAssessment, boxColorOverride: e.target.value || null })}
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                                                        className="cf-input-shell text-sm"
                                                     >
                                                         {assessmentOverrideOptions.map((opt) => (
                                                             <option key={'box-' + (opt.value || 'default')} value={opt.value}>{opt.label}</option>
@@ -7872,7 +7872,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                     </select>
                                                 </div>
 
-                                                <div className="p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg">
+                                                <div className="cf-alert p-4">
                                                     <p className="text-amber-300 text-xs">
                                                         <strong>Note:</strong> To edit questions/prompts, you'll need to recreate the assessment in the "Create New" tab with your changes.
                                                     </p>
@@ -7881,7 +7881,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                 <div className="flex gap-3 pt-4">
                                                     <button 
                                                         onClick={() => setEditingAssessment(null)}
-                                                        className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded"
+                                                        className="cf-btn cf-btn-secondary flex-1 py-2 font-bold"
                                                     >
                                                         Cancel
                                                     </button>
@@ -7894,7 +7894,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                             });
                                                             setEditingAssessment(null);
                                                         }}
-                                                        className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded flex items-center justify-center gap-2"
+                                                        className="cf-btn cf-btn-primary flex-1 py-2 font-bold"
                                                     >
                                                         <Save size={16} /> Save Changes
                                                     </button>
@@ -7956,7 +7956,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                     onClick={() => setEditingQuestion(null)}
                                 >
                                     <div
-                                        className="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto"
+                                        className="cf-glass-surface max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-800/70 p-6"
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <div className="flex items-center justify-between mb-6">
@@ -7973,16 +7973,16 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                         </div>
 
                                         <div className="space-y-4">
-                                            <div className="flex gap-2">
+                                            <div className="cf-tab-rail">
                                                 <button
                                                     onClick={() => switchQuestionType('multiple-choice')}
-                                                    className={`flex-1 py-2 px-3 rounded text-xs font-bold transition-all ${isMC ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                                                    className={`cf-tab-btn flex-1 px-3 py-2 text-xs font-bold ${isMC ? 'cf-tab-btn-active' : ''}`}
                                                 >
                                                     <CheckCircle size={14} /> Multiple Choice
                                                 </button>
                                                 <button
                                                     onClick={() => switchQuestionType('long-answer')}
-                                                    className={`flex-1 py-2 px-3 rounded text-xs font-bold transition-all ${!isMC ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                                                    className={`cf-tab-btn flex-1 px-3 py-2 text-xs font-bold ${!isMC ? 'cf-tab-btn-active' : ''}`}
                                                 >
                                                     <Edit size={14} /> Long Answer
                                                 </button>
@@ -7996,12 +7996,12 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                     value={editingQuestion.question}
                                                     onChange={(e) => setEditingQuestion({ ...editingQuestion, question: e.target.value })}
                                                     placeholder="Enter your question or prompt..."
-                                                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm h-24 resize-none"
+                                                    className="cf-input-shell h-24 text-sm"
                                                 />
                                             </div>
 
                                             {isMC ? (
-                                                <div className="p-4 bg-blue-900/10 border border-blue-700/30 rounded-xl space-y-3">
+                                                <div className="cf-panel-muted space-y-3 p-4">
                                                     <div>
                                                         <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
                                                             Answer Options
@@ -8021,7 +8021,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                                         value={opt}
                                                                         onChange={(e) => setOptionValue(idx, e.target.value)}
                                                                         placeholder={`Option ${idx + 1}`}
-                                                                        className="flex-1 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                                                        className="cf-input-shell flex-1 text-xs"
                                                                     />
                                                                 </div>
                                                             ))}
@@ -8040,14 +8040,14 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                             <div className="flex gap-3 pt-4">
                                                 <button
                                                     onClick={() => setEditingQuestion(null)}
-                                                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded"
+                                                    className="cf-btn cf-btn-secondary flex-1 py-2 font-bold"
                                                 >
                                                     Cancel
                                                 </button>
                                                 <button
                                                     onClick={saveChanges}
                                                     disabled={!canSave}
-                                                    className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded flex items-center justify-center gap-2 disabled:opacity-50"
+                                                    className="cf-btn cf-btn-primary flex-1 py-2 font-bold disabled:opacity-50"
                                                 >
                                                     <Save size={16} /> Save Changes
                                                 </button>
@@ -8068,7 +8068,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                         value={migrateCode}
                                         onChange={(e) => setMigrateCode(e.target.value)}
                                         placeholder="Paste your existing assessment HTML and JavaScript here..."
-                                        className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-xs font-mono h-48 resize-none"
+                                        className="cf-input-shell h-48 text-xs font-mono"
                                     />
                                     
                                     <button 
@@ -8107,7 +8107,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             setMigratePrompt(prompt);
                                         }}
                                         disabled={!migrateCode.trim()}
-                                        className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded text-xs disabled:opacity-50 flex items-center justify-center gap-2"
+                                        className="cf-btn cf-btn-primary w-full py-2 text-xs font-bold disabled:opacity-50"
                                     >
                                         <Sparkles size={14} /> Generate AI Studio Prompt
                                     </button>
@@ -8120,7 +8120,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     navigator.clipboard.writeText(migratePrompt);
                                                     alert("Prompt copied! Paste it into Google AI Studio.");
                                                 }}
-                                                className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 rounded text-xs flex items-center justify-center gap-2"
+                                                className="cf-btn cf-btn-secondary w-full py-2 text-xs font-bold"
                                             >
                                                 <Copy size={14} /> Copy Prompt to Clipboard
                                             </button>
@@ -8131,7 +8131,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     value={migrateOutput}
                                                     onChange={(e) => setMigrateOutput(e.target.value)}
                                                     placeholder="Paste the JSON output from AI Studio here..."
-                                                    className="w-full bg-slate-950 border border-emerald-700 rounded p-3 text-white text-xs font-mono h-32 resize-none"
+                                                    className="cf-input-shell h-32 text-xs font-mono"
                                                 />
                                                 <button 
                                                     onClick={() => {
@@ -8154,7 +8154,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                         }
                                                     }}
                                                     disabled={!migrateOutput.trim()}
-                                                    className="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded text-xs disabled:opacity-50 flex items-center justify-center gap-2"
+                                                    className="cf-btn cf-btn-success mt-2 w-full py-2 text-xs font-bold disabled:opacity-50"
                                                 >
                                                     <Zap size={14} /> Add Migrated Assessment
                                                 </button>
@@ -8168,7 +8168,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                     <h4 className="text-xs font-bold text-rose-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                                         <AlertTriangle size={14} /> Danger Zone
                                     </h4>
-                                    <div className="p-4 bg-rose-950/30 border border-rose-900/50 rounded-lg space-y-3">
+                                    <div className="cf-alert cf-alert-danger space-y-3 p-4">
                                         <p className="text-xs text-rose-300">
                                             Clear all saved data to start fresh. This will delete your current course, all modules, assessments, and settings. <strong>This cannot be undone.</strong>
                                         </p>
@@ -8363,7 +8363,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             setMode('MASTER');
                                         }}
                                         disabled={importPreview.length === 0}
-                                        className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg shadow-lg disabled:opacity-50 transition-all"
+                                        className="cf-btn cf-btn-primary w-full py-3 text-sm font-bold shadow-lg disabled:opacity-50"
                                     >
                                         Import to Master Assessment
                                     </button>
@@ -8388,12 +8388,12 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                     value={materialForm.number}
                                     onChange={(e) => setMaterialForm({...materialForm, number: e.target.value})}
                                     placeholder="Number (e.g., 05)"
-                                    className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                    className="cf-input-shell text-xs"
                                 />
                                 <select
                                     value={materialForm.color}
                                     onChange={(e) => setMaterialForm({...materialForm, color: e.target.value})}
-                                    className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                    className="cf-input-shell text-xs"
                                 >
                                     <option value="slate">Gray</option>
                                     <option value="rose">Red</option>
@@ -8405,7 +8405,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 <select
                                     value={materialForm.mediaType}
                                     onChange={(e) => setMaterialForm({...materialForm, mediaType: e.target.value})}
-                                    className="bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                    className="cf-input-shell text-xs"
                                 >
                                     <option value="number">Badge: Number</option>
                                     <option value="book">Badge: Book</option>
@@ -8419,7 +8419,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 <select
                                     value={materialForm.themeOverride ?? ''}
                                     onChange={(e) => setMaterialForm({...materialForm, themeOverride: e.target.value || null})}
-                                    className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                    className="cf-input-shell text-xs"
                                 >
                                     {materialThemeOptions.map((opt) => (
                                         <option key={opt.value || 'default'} value={opt.value}>{opt.label}</option>
@@ -8451,7 +8451,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 {materialForm.mediaType !== 'video' && (
                                     <button 
                                         onClick={() => { setVaultTargetField('view'); setIsVaultOpen(true); }}
-                                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded px-3"
+                                        className="cf-btn cf-btn-secondary px-3 text-slate-300"
                                         title="Browse Local Vault"
                                     >
                                         <FolderOpen size={14} />
@@ -8469,7 +8469,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 {materialForm.mediaType !== 'video' && (
                                     <button 
                                         onClick={() => { setVaultTargetField('download'); setIsVaultOpen(true); }}
-                                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded px-3"
+                                        className="cf-btn cf-btn-secondary px-3 text-slate-300"
                                         title="Browse Local Vault"
                                     >
                                         <FolderOpen size={14} />
@@ -8509,7 +8509,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 }
                                             }}
                                             placeholder='{"title": "My Resource", "chapters": [{"number": 1, "title": "Chapter 1", "sections": [{"heading": "Section 1", "content": "Content here..."}]}]}'
-                                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs font-mono h-24 resize-none"
+                                            className="cf-input-shell h-24 text-xs font-mono"
                                         />
                                         {materialForm.digitalContentJson && (
                                             <div className="mt-2">
@@ -8760,7 +8760,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                         {/* EDIT MATERIAL MODAL */}
                         {editingMaterial && (
                             <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-                                <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full p-6">
+                                <div className="cf-glass-surface max-w-2xl w-full rounded-2xl border border-slate-700/70 p-6">
                                     <h3 className="text-lg font-bold text-white mb-4">Edit Material</h3>
                                     <div className="space-y-3">
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -8769,12 +8769,12 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 value={materialForm.number}
                                                 onChange={(e) => setMaterialForm({...materialForm, number: e.target.value})}
                                                 placeholder="Number"
-                                                className="bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                                className="cf-input-shell text-xs"
                                             />
                                             <select
                                                 value={materialForm.color}
                                                 onChange={(e) => setMaterialForm({...materialForm, color: e.target.value})}
-                                                className="bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                                className="cf-input-shell text-xs"
                                             >
                                                 <option value="slate">Gray</option>
                                                 <option value="rose">Red</option>
@@ -8786,7 +8786,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             <select
                                                 value={materialForm.mediaType}
                                                 onChange={(e) => setMaterialForm({...materialForm, mediaType: e.target.value})}
-                                                className="bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                                className="cf-input-shell text-xs"
                                             >
                                                 <option value="number">Badge: Number</option>
                                                 <option value="book">Badge: Book</option>
@@ -8796,12 +8796,12 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Card theme</label>
+                                            <label className="mb-1 block text-[11px] font-semibold text-slate-400">Card theme</label>
                                             <p className="text-[10px] text-slate-500 mb-1 italic">Overrides the course default for this material</p>
                                             <select
                                                 value={materialForm.themeOverride ?? ''}
                                                 onChange={(e) => setMaterialForm({...materialForm, themeOverride: e.target.value || null})}
-                                                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                                className="cf-input-shell text-xs"
                                             >
                                                 {materialThemeOptions.map((opt) => (
                                                     <option key={opt.value || 'default'} value={opt.value}>{opt.label}</option>
@@ -8813,33 +8813,33 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             value={materialForm.title}
                                             onChange={(e) => setMaterialForm({...materialForm, title: e.target.value})}
                                             placeholder="Title"
-                                            className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                                            className="cf-input-shell text-sm"
                                         />
                                         <input 
                                             type="text"
                                             value={materialForm.description}
                                             onChange={(e) => setMaterialForm({...materialForm, description: e.target.value})}
                                             placeholder="Description"
-                                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                            className="cf-input-shell text-xs"
                                         />
                                         <input 
                                             type="text"
                                             value={materialForm.viewUrl}
                                             onChange={(e) => setMaterialForm({...materialForm, viewUrl: e.target.value})}
                                             placeholder="View URL"
-                                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                            className="cf-input-shell text-xs"
                                         />
                                         <input 
                                             type="text"
                                             value={materialForm.downloadUrl}
                                             onChange={(e) => setMaterialForm({...materialForm, downloadUrl: e.target.value})}
                                             placeholder="Download URL"
-                                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                            className="cf-input-shell text-xs"
                                         />
                                         
                                         {/* Module Assignment */}
-                                        <div className="p-3 bg-black/50 rounded border border-slate-700">
-                                            <label className="block text-xs font-bold text-cyan-400 uppercase mb-2">Assign to Modules (Optional)</label>
+                                        <div className="cf-panel-muted rounded-2xl p-3">
+                                            <label className="mb-2 block text-[11px] font-semibold text-blue-400">Assign to Modules (Optional)</label>
                                             <div className="space-y-2 max-h-32 overflow-y-auto">
                                                 {(() => {
                                                     const allModules = projectData["Current Course"]?.modules || [];
@@ -8865,7 +8865,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         </div>
                                         
                                         {/* Digital Content */}
-                                        <div className="p-3 bg-black/50 rounded border border-slate-700">
+                                        <div className="cf-panel-muted rounded-2xl p-3">
                                             <label className="flex items-center gap-2 cursor-pointer mb-2">
                                                 <input 
                                                     type="checkbox"
@@ -8873,7 +8873,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     onChange={(e) => setMaterialForm({...materialForm, hasDigitalContent: e.target.checked})}
                                                     className="rounded border-slate-700 bg-slate-900 text-emerald-600"
                                                 />
-                                                <span className="text-xs font-bold text-emerald-400 uppercase">Enable Digital Resource</span>
+                                                <span className="text-[11px] font-semibold text-emerald-400">Enable Digital Resource</span>
                                             </label>
                                             {materialForm.hasDigitalContent && (
                                                 <div className="mt-2">
@@ -8895,7 +8895,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                             }
                                                         }}
                                                         placeholder='{"title": "My Resource", "chapters": [...]}'
-                                                        className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs font-mono h-32 resize-none"
+                                                        className="cf-input-shell h-32 text-xs font-mono"
                                                     />
                                                     {materialForm.digitalContentJson && (
                                                         <div className="mt-2">
@@ -8921,7 +8921,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 setEditingMaterial(null);
                                                 setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', mediaType: 'number', themeOverride: null, assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
                                             }}
-                                            className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded font-bold"
+                                            className="cf-btn cf-btn-secondary flex-1 py-2 font-bold"
                                         >
                                             Cancel
                                         </button>
@@ -8931,7 +8931,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 setEditingMaterial(null);
                                                 setMaterialForm({ number: '', title: '', description: '', viewUrl: '', downloadUrl: '', color: 'slate', mediaType: 'number', themeOverride: null, assignedModules: [], hasDigitalContent: false, digitalContent: null, digitalContentJson: '' });
                                             }}
-                                            className="flex-1 bg-pink-600 hover:bg-pink-500 text-white py-2 rounded font-bold flex items-center justify-center gap-2"
+                                            className="cf-btn cf-btn-primary flex-1 items-center justify-center py-2 font-bold"
                                         >
                                             <Save size={16} /> Save Changes
                                         </button>
@@ -8953,16 +8953,18 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                         onChange={importModuleManagerDraftFile}
                     />
 
-                    <div className="rounded-2xl border border-indigo-700/40 bg-slate-950/70 p-3 shadow-[0_14px_30px_rgba(2,6,23,0.18)]">
+                    <div className="cf-glass-soft rounded-2xl border border-indigo-500/20 p-3">
                         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                            <div className="flex flex-wrap gap-2 rounded-xl border border-slate-800/80 bg-slate-900/85 p-1">
+                            <div className="cf-glass-soft flex flex-wrap gap-1.5 rounded-xl border border-slate-800/70 p-1">
                                 <button
                                     onClick={() => {
                                         setModuleManagerType('standalone');
                                         setLinkTestResult(null);
                                     }}
-                                    className={`rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-all ${
-                                        moduleManagerType === 'standalone' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                    className={`rounded-lg border px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-colors ${
+                                        moduleManagerType === 'standalone'
+                                            ? 'border-indigo-400/25 bg-slate-950/55 text-white'
+                                            : 'border-transparent text-slate-400 hover:border-slate-800/80 hover:bg-slate-950/35 hover:text-white'
                                     }`}
                                 >
                                     Standalone
@@ -8972,8 +8974,10 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         setModuleManagerType('composer');
                                         setLinkTestResult(null);
                                     }}
-                                    className={`rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-all ${
-                                        moduleManagerType === 'composer' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                    className={`rounded-lg border px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-colors ${
+                                        moduleManagerType === 'composer'
+                                            ? 'border-indigo-400/25 bg-slate-950/55 text-white'
+                                            : 'border-transparent text-slate-400 hover:border-slate-800/80 hover:bg-slate-950/35 hover:text-white'
                                     }`}
                                 >
                                     Composer
@@ -8983,8 +8987,10 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         setModuleManagerType('external');
                                         setLinkTestResult(null);
                                     }}
-                                    className={`rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-all ${
-                                        moduleManagerType === 'external' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                    className={`rounded-lg border px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-colors ${
+                                        moduleManagerType === 'external'
+                                            ? 'border-indigo-400/25 bg-slate-950/55 text-white'
+                                            : 'border-transparent text-slate-400 hover:border-slate-800/80 hover:bg-slate-950/35 hover:text-white'
                                     }`}
                                 >
                                     External
@@ -8992,7 +8998,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2">
-                                <span className="inline-flex items-center gap-2 rounded-xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 text-[11px] text-slate-300">
+                                <span className="inline-flex items-center gap-2 rounded-xl border border-slate-800/70 bg-slate-950/45 px-3 py-2 text-[11px] text-slate-300">
                                     <span className="font-bold uppercase tracking-[0.14em] text-slate-500">Draft</span>
                                     <span className="max-w-[220px] truncate text-white">{moduleManagerSelectedDraftLabel}</span>
                                 </span>
@@ -9006,7 +9012,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                     {moduleManagerSetupStatusLabel}
                                 </span>
                                 {moduleManagerResolvedId ? (
-                                    <span className="inline-flex items-center rounded-xl border border-slate-800/80 bg-slate-900/80 px-3 py-2 font-mono text-[11px] text-slate-300">
+                                    <span className="inline-flex items-center rounded-xl border border-slate-800/70 bg-slate-950/45 px-3 py-2 font-mono text-[11px] text-slate-300">
                                         {moduleManagerResolvedId}
                                     </span>
                                 ) : null}
@@ -9017,7 +9023,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                     <div className={`grid gap-4 ${moduleManagerType === 'composer' ? 'grid-cols-1' : 'xl:grid-cols-[320px_minmax(0,1fr)] xl:items-start'}`}>
                         {moduleManagerType !== 'composer' ? (
                         <aside className="order-2 space-y-3 xl:order-1 xl:sticky xl:top-4">
-                            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/65 shadow-[0_14px_30px_rgba(2,6,23,0.16)]">
+                            <div className="cf-glass-soft rounded-2xl border border-slate-800/70">
                                 <button
                                     type="button"
                                     onClick={() => setHubSettingsExpanded((prev) => !prev)}
@@ -9090,8 +9096,8 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                             onClick={() => updateHubConfig({ skin })}
                                                             className={`rounded-xl border px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-colors ${
                                                                 hubConfig.skin === skin
-                                                                    ? 'border-indigo-500 bg-indigo-600 text-white'
-                                                                    : 'border-slate-700/80 bg-slate-900/80 text-slate-300 hover:bg-slate-800'
+                                                                    ? 'border-indigo-400/25 bg-slate-950/55 text-white'
+                                                                    : 'border-slate-700/80 bg-slate-900/70 text-slate-300 hover:bg-slate-800'
                                                             }`}
                                                         >
                                                             {skin}
@@ -9146,7 +9152,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 ) : null}
                             </div>
 
-                            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/65 shadow-[0_14px_30px_rgba(2,6,23,0.16)]">
+                            <div className="cf-glass-soft rounded-2xl border border-slate-800/70">
                                 <button
                                     type="button"
                                     onClick={() => setModuleManagerSessionExpanded((prev) => !prev)}
@@ -9175,7 +9181,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             <button
                                                 type="button"
                                                 onClick={() => saveModuleManagerDraft({ overwriteSelected: false })}
-                                                className="inline-flex items-center justify-center gap-1 rounded-xl bg-indigo-600 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-indigo-500"
+                                                className="inline-flex items-center justify-center gap-1 rounded-xl border border-indigo-400/25 bg-slate-950/40 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:border-indigo-300/35 hover:bg-slate-900/55"
                                             >
                                                 <Save size={12} /> Save New
                                             </button>
@@ -9183,7 +9189,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 type="button"
                                                 onClick={updateModuleManagerSelectedDraft}
                                                 disabled={!moduleManagerSelectedDraftId}
-                                                className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                                                className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-800/80 bg-slate-950/40 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-900/55 disabled:cursor-not-allowed disabled:opacity-40"
                                             >
                                                 <RefreshCw size={12} /> Update
                                             </button>
@@ -9193,7 +9199,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             <select
                                                 value={moduleManagerSelectedDraftId}
                                                 onChange={(e) => setModuleManagerSelectedDraftId(e.target.value)}
-                                                className="min-w-0 rounded-xl border border-slate-800/80 bg-slate-950 px-3 py-2.5 text-xs text-white"
+                                                className="cf-input-shell min-w-0 text-xs"
                                             >
                                                 {moduleManagerSavedDrafts.length === 0 && <option value="">No saved drafts</option>}
                                                 {moduleManagerSavedDrafts.map((draft) => (
@@ -9208,11 +9214,11 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     type="button"
                                                     onClick={loadModuleManagerDraft}
                                                     disabled={!moduleManagerSelectedDraftId}
-                                                    className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                                                    className="cf-btn cf-btn-secondary inline-flex items-center justify-center gap-1 px-3 py-2 text-[11px] font-bold disabled:cursor-not-allowed disabled:opacity-40"
                                                 >
                                                     <FolderOpen size={12} /> Load
                                                 </button>
-                                                <label className="inline-flex items-center gap-2 rounded-xl border border-slate-800/80 bg-slate-950/80 px-3 py-2 text-[11px] text-slate-300">
+                                                <label className="cf-panel-muted inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] text-slate-300">
                                                     <input
                                                         type="checkbox"
                                                         checked={moduleManagerDownloadDraftOnSave}
@@ -9224,8 +9230,8 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             </div>
                                         </div>
 
-                                        <details className="group mt-3 rounded-xl border border-slate-800/80 bg-slate-950/55">
-                                            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200">
+                                        <details className="group mt-3 rounded-xl border border-slate-800/80 bg-slate-950/45">
+                                            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-[11px] font-semibold text-slate-200">
                                                 <span>Manage Drafts</span>
                                                 <div className="flex items-center gap-2 text-slate-500">
                                                     <span className="hidden sm:inline xl:hidden">Import, export, delete, reset</span>
@@ -9236,7 +9242,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 <button
                                                     type="button"
                                                     onClick={triggerModuleManagerDraftImport}
-                                                    className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800"
+                                                    className="cf-btn cf-btn-secondary inline-flex items-center justify-center gap-1 px-3 py-2 text-[11px] font-bold"
                                                 >
                                                     <FolderOpen size={12} /> Import File
                                                 </button>
@@ -9244,7 +9250,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     type="button"
                                                     onClick={exportModuleManagerSelectedDraft}
                                                     disabled={!moduleManagerSelectedDraftId}
-                                                    className="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                                                    className="cf-btn cf-btn-secondary inline-flex items-center justify-center gap-1 px-3 py-2 text-[11px] font-bold disabled:cursor-not-allowed disabled:opacity-40"
                                                 >
                                                     <FileJson size={12} /> Export File
                                                 </button>
@@ -9252,14 +9258,14 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     type="button"
                                                     onClick={deleteModuleManagerDraft}
                                                     disabled={!moduleManagerSelectedDraftId}
-                                                    className="inline-flex items-center justify-center gap-1 rounded-xl bg-rose-700/85 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                                    className="cf-btn cf-btn-danger inline-flex items-center justify-center gap-1 px-3 py-2 text-[11px] font-bold disabled:cursor-not-allowed disabled:opacity-40"
                                                 >
                                                     <Trash2 size={12} /> Delete Draft
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={resetModuleManagerBuilder}
-                                                    className="inline-flex items-center justify-center gap-1 rounded-xl bg-amber-700/85 px-3 py-2 text-[11px] font-bold text-white transition-colors hover:bg-amber-600"
+                                                    className="cf-btn cf-btn-warning inline-flex items-center justify-center gap-1 px-3 py-2 text-[11px] font-bold"
                                                 >
                                                     <RotateCcw size={12} /> Reset Builder
                                                 </button>
@@ -9269,10 +9275,10 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 ) : null}
                             </div>
 
-                            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/65 shadow-[0_14px_30px_rgba(2,6,23,0.16)]">
+                            <div className="cf-glass-soft rounded-2xl border border-slate-800/70">
                                 <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
                                     <div className="min-w-0 space-y-1">
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Module Setup</p>
+                                        <p className="text-[11px] font-semibold text-slate-500">Module Setup</p>
                                         <div className="flex flex-wrap items-center gap-2">
                                             <p className="truncate text-sm font-semibold text-white">{moduleManagerTitle.trim() || 'Untitled module'}</p>
                                             <span
@@ -9288,14 +9294,14 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         <p className="text-[11px] text-slate-500">{moduleManagerSetupSummary}</p>
                                     </div>
                                     {moduleManagerSetupNeedsAttention ? (
-                                        <span className="inline-flex items-center rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-100">
+                                        <span className="inline-flex items-center rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] font-semibold text-amber-100">
                                             Required
                                         </span>
                                     ) : (
                                         <button
                                             type="button"
                                             onClick={() => setModuleManagerSetupExpanded((prev) => !prev)}
-                                            className="inline-flex items-center gap-1 rounded-xl border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200 transition-colors hover:bg-slate-800"
+                                            className="cf-btn cf-btn-secondary inline-flex items-center gap-1 px-3 py-2 text-[11px] font-bold"
                                         >
                                             {moduleManagerShowSetupEditor ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                                             {moduleManagerShowSetupEditor ? 'Collapse' : 'Edit'}
@@ -9307,7 +9313,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                     <div className="border-t border-slate-800/80 px-4 pb-4 pt-3">
                                         <div className="space-y-3">
                                             <div>
-                                                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                                                <label className="mb-1.5 block text-[11px] font-semibold text-slate-400">
                                                     Module Title <span className="text-rose-500">*</span>
                                                 </label>
                                                 <input
@@ -9315,15 +9321,15 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     value={moduleManagerTitle}
                                                     onChange={(e) => setModuleManagerTitle(e.target.value)}
                                                     placeholder="HSS3020 Course"
-                                                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500"
+                                                    className="cf-input-shell text-sm"
                                                 />
                                                 <p className="mt-1 text-[10px] italic text-slate-500">Display name for the sidebar button.</p>
                                             </div>
 
-                                            <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
+                                            <div className="cf-panel-muted rounded-xl p-3">
                                                 <div className="flex flex-wrap items-start justify-between gap-2">
                                                     <div>
-                                                        <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                                                        <label className="block text-[11px] font-semibold text-slate-400">
                                                             Module ID <span className="text-rose-500">*</span>
                                                         </label>
                                                         <p className="mt-1 text-[10px] text-slate-500">
@@ -9334,7 +9340,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                         <button
                                                             type="button"
                                                             onClick={() => setModuleManagerIdExpanded((prev) => !prev)}
-                                                            className="inline-flex items-center gap-1 rounded-lg border border-slate-700/80 bg-slate-900/80 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300 transition-colors hover:bg-slate-800"
+                                                            className="cf-btn cf-btn-secondary inline-flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold"
                                                         >
                                                             {moduleManagerShowIdField ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                                                             {moduleManagerShowIdField ? 'Hide ID' : 'Edit ID'}
@@ -9348,7 +9354,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                             value={moduleManagerID}
                                                             onChange={(e) => setModuleManagerID(e.target.value)}
                                                             placeholder="hss3020 or view-hss3020"
-                                                            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 font-mono text-sm text-white outline-none focus:border-indigo-500"
+                                                            className="cf-input-shell font-mono text-sm"
                                                         />
                                                         {moduleManagerResolvedId ? (
                                                             <p className="text-[10px] text-slate-500">
@@ -9357,20 +9363,20 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                         ) : null}
                                                     </div>
                                                 ) : (
-                                                    <div className="mt-3 rounded-xl border border-slate-800/80 bg-slate-900/70 px-3 py-2">
-                                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Current ID</p>
+                                                    <div className="cf-panel-muted mt-3 rounded-xl px-3 py-2">
+                                                        <p className="text-[11px] font-semibold text-slate-500">Current ID</p>
                                                         <p className="mt-1 font-mono text-xs text-white">{moduleManagerResolvedId}</p>
                                                     </div>
                                                 )}
                                             </div>
 
                                             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                                                <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
-                                                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Template</label>
+                                                <div className="cf-panel-muted rounded-xl p-3">
+                                                    <label className="mb-1.5 block text-[11px] font-semibold text-slate-400">Template</label>
                                                     <select
                                                         value={moduleManagerTemplate}
                                                         onChange={(e) => handleModuleManagerTemplateChange(e.target.value)}
-                                                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white"
+                                                        className="cf-input-shell text-xs"
                                                     >
                                                         {MODULE_TEMPLATE_OPTIONS.map((option) => (
                                                             <option key={`module-template-${option.value || 'default'}`} value={option.value}>
@@ -9379,12 +9385,12 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                         ))}
                                                     </select>
                                                 </div>
-                                                <div className="rounded-xl border border-slate-800/80 bg-slate-950/70 p-3">
-                                                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Theme</label>
+                                                <div className="cf-panel-muted rounded-xl p-3">
+                                                    <label className="mb-1.5 block text-[11px] font-semibold text-slate-400">Theme</label>
                                                     <select
                                                         value={moduleManagerTheme}
                                                         onChange={(e) => setModuleManagerTheme(e.target.value)}
-                                                        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white"
+                                                        className="cf-input-shell text-xs"
                                                     >
                                                         {MODULE_THEME_OPTIONS.map((option) => (
                                                             <option key={`module-theme-${option.value || 'default'}`} value={option.value}>
@@ -9421,7 +9427,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                         value={moduleManagerHero.title}
                                                         onChange={(e) => updateModuleManagerHeroField('title', e.target.value)}
                                                         placeholder="Module hero title"
-                                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                        className="cf-input-shell text-xs"
                                                     />
                                                 </div>
                                                 <div>
@@ -9431,7 +9437,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                         value={moduleManagerHero.progressLabel}
                                                         onChange={(e) => updateModuleManagerHeroField('progressLabel', e.target.value)}
                                                         placeholder="Week 1 of 6"
-                                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                        className="cf-input-shell text-xs"
                                                     />
                                                 </div>
                                             </div>
@@ -9442,7 +9448,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     value={moduleManagerHero.subtitle}
                                                     onChange={(e) => updateModuleManagerHeroField('subtitle', e.target.value)}
                                                     placeholder="Short supporting line under the hero title"
-                                                    className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                    className="cf-input-shell text-xs"
                                                 />
                                             </div>
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -9451,7 +9457,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     <select
                                                         value={moduleManagerHero.mediaType}
                                                         onChange={(e) => updateModuleManagerHeroField('mediaType', e.target.value)}
-                                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                        className="cf-input-shell text-xs"
                                                     >
                                                         <option value="auto">Auto Detect</option>
                                                         <option value="image">Image</option>
@@ -9475,7 +9481,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                 setVaultTargetField({ target: 'finlit-hero-media' });
                                                                 setIsVaultOpen(true);
                                                             }}
-                                                            className="col-span-3 rounded bg-slate-700 hover:bg-slate-600 border border-slate-600 text-xs font-bold text-white inline-flex items-center justify-center gap-1"
+                                                            className="cf-btn cf-btn-secondary col-span-3 text-xs font-bold"
                                                             title="Select hero media from vault"
                                                         >
                                                             <FolderOpen size={11} /> Vault
@@ -9485,7 +9491,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             </div>
                                         </div>
 
-                                        <div className="rounded border border-slate-700 bg-slate-900/60 p-3 space-y-3">
+                                        <div className="cf-panel-muted space-y-3 p-3">
                                             <div className="flex items-center justify-between gap-2">
                                                 <div>
                                                     <h4 className="text-[11px] font-bold text-slate-300 uppercase">Tabs</h4>
@@ -9496,7 +9502,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 <button
                                                     type="button"
                                                     onClick={addModuleManagerFinlitTab}
-                                                    className="px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-[10px] font-bold text-white inline-flex items-center gap-1"
+                                                    className="cf-btn cf-btn-primary px-2 py-1 text-[10px] font-bold"
                                                 >
                                                     <Plus size={12} /> Add Tab
                                                 </button>
@@ -9510,7 +9516,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     const tabActivityCount = Array.isArray(tab?.activities) ? tab.activities.length : 0;
                                                     const isActiveAuthoringTab = moduleManagerActiveFinlitTabId === tabId;
                                                     return (
-                                                        <div key={`module-finlit-tab-${tabId}`} className="rounded border border-slate-700 bg-slate-950/70 p-3 space-y-2">
+                                                        <div key={`module-finlit-tab-${tabId}`} className="cf-panel-muted space-y-2 p-3">
                                                             <div className="flex items-center justify-between">
                                                                 <div>
                                                                     <p className="text-[11px] font-bold text-slate-300 uppercase">
@@ -9525,9 +9531,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => openModuleManagerFinlitTabInBuilder(tabId)}
-                                                                        className={`px-2 py-1 rounded text-[10px] font-bold text-white ${
-                                                                            isActiveAuthoringTab ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-indigo-600 hover:bg-indigo-500'
-                                                                        }`}
+                                                                        className={`cf-btn px-2 py-1 text-[10px] font-bold ${isActiveAuthoringTab ? 'cf-btn-success' : 'cf-btn-primary'}`}
                                                                     >
                                                                         {isActiveAuthoringTab ? 'Editing This Tab' : 'Open In Builder'}
                                                                     </button>
@@ -9535,7 +9539,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => removeModuleManagerFinlitTab(tabId)}
-                                                                            className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-[10px] font-bold text-white"
+                                                                            className="cf-btn cf-btn-danger px-2 py-1 text-[10px] font-bold"
                                                                         >
                                                                             Remove Tab
                                                                         </button>
@@ -9549,13 +9553,13 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                         type="text"
                                                                         value={tab?.label || ''}
                                                                         onChange={(e) => updateModuleManagerFinlitTab(tabId, { label: e.target.value })}
-                                                                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white text-xs"
+                                                                        className="cf-input-shell text-xs"
                                                                         placeholder={`Tab ${tabIndex + 1}`}
                                                                     />
                                                                 </div>
                                                                 <div className="col-span-4">
                                                                     <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Tab ID</label>
-                                                                    <div className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-[11px] text-slate-300 font-mono">
+                                                                    <div className="cf-panel-muted p-2 text-[11px] font-mono text-slate-300">
                                                                         {tabId}
                                                                     </div>
                                                                 </div>
@@ -9571,7 +9575,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                             })
                                                                         }
                                                                         disabled={moduleManagerFinlitLinkableActivities.length === 0}
-                                                                        className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-[10px] font-bold text-white"
+                                                                        className="cf-btn cf-btn-secondary px-2 py-1 text-[10px] font-bold disabled:opacity-40"
                                                                     >
                                                                         Select All
                                                                     </button>
@@ -9579,7 +9583,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                         type="button"
                                                                         onClick={() => updateModuleManagerFinlitTab(tabId, { activityIds: [] })}
                                                                         disabled={selectedIds.length === 0}
-                                                                        className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-[10px] font-bold text-white"
+                                                                        className="cf-btn cf-btn-secondary px-2 py-1 text-[10px] font-bold disabled:opacity-40"
                                                                     >
                                                                         Clear
                                                                     </button>
@@ -9624,7 +9628,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => addModuleManagerFinlitTabLink(tabId)}
-                                                                        className="px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-[10px] font-bold text-white inline-flex items-center gap-1"
+                                                                        className="cf-btn cf-btn-primary px-2 py-1 text-[10px] font-bold"
                                                                     >
                                                                         <Plus size={12} /> Add Link
                                                                     </button>
@@ -9633,13 +9637,13 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                     <p className="text-[11px] text-slate-500">No links added yet.</p>
                                                                 ) : (
                                                                     tabLinks.map((link, linkIndex) => (
-                                                                        <div key={`${tabId}-link-${linkIndex}`} className="rounded border border-slate-700 bg-slate-900/60 p-2 space-y-2">
+                                                                        <div key={`${tabId}-link-${linkIndex}`} className="cf-panel-muted space-y-2 p-2">
                                                                             <div className="flex items-center justify-between">
                                                                                 <p className="text-[11px] font-bold text-slate-300 uppercase">Link {linkIndex + 1}</p>
                                                                                 <button
                                                                                     type="button"
                                                                                     onClick={() => removeModuleManagerFinlitTabLink(tabId, linkIndex)}
-                                                                                    className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500 text-[10px] font-bold text-white"
+                                                                                    className="cf-btn cf-btn-danger px-2 py-1 text-[10px] font-bold"
                                                                                 >
                                                                                     Remove
                                                                                 </button>
@@ -9649,20 +9653,20 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                                 value={link?.title || ''}
                                                                                 onChange={(e) => updateModuleManagerFinlitTabLink(tabId, linkIndex, { title: e.target.value })}
                                                                                 placeholder="Link title"
-                                                                                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                                                                className="cf-input-shell text-xs"
                                                                             />
                                                                             <input
                                                                                 type="text"
                                                                                 value={link?.url || ''}
                                                                                 onChange={(e) => updateModuleManagerFinlitTabLink(tabId, linkIndex, { url: e.target.value })}
                                                                                 placeholder="https://example.com/resource"
-                                                                                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs font-mono"
+                                                                                className="cf-input-shell text-xs font-mono"
                                                                             />
                                                                             <textarea
                                                                                 value={link?.description || ''}
                                                                                 onChange={(e) => updateModuleManagerFinlitTabLink(tabId, linkIndex, { description: e.target.value })}
                                                                                 placeholder="Short description shown under the link"
-                                                                                className="w-full h-16 bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                                                                                className="cf-input-shell h-16 text-xs"
                                                                             />
                                                                         </div>
                                                                     ))
@@ -9688,7 +9692,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             value={moduleManagerHTML}
                                             onChange={(e) => setModuleManagerHTML(e.target.value)}
                                             placeholder="<!DOCTYPE html>&#10;<html>&#10;<head>...</head>&#10;<body>...</body>&#10;</html>"
-                                            className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-indigo-100 text-xs font-mono h-64 resize-y focus:border-indigo-500 outline-none"
+                                            className="cf-input-shell h-64 text-xs font-mono text-indigo-100"
                                         />
                                         <p className="text-[10px] text-emerald-400 mt-1 font-bold">
                                             Your code runs AS-IS in an isolated iframe - no modifications needed.
@@ -9697,7 +9701,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                     
                                     <button
                                         onClick={addStandaloneModule}
-                                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                                        className="cf-btn cf-btn-primary w-full px-6 py-3 text-sm font-bold active:scale-[0.98]"
                                     >
                                         <Plus size={16} /> Add Standalone Module
                                     </button>
@@ -9734,7 +9738,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 <button
                                                     type="button"
                                                     onClick={() => setModuleManagerComposerWorkspaceControlsCollapsed((prev) => !prev)}
-                                                    className="inline-flex items-center gap-1 rounded-xl border border-slate-800/80 bg-slate-900/70 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-200 hover:bg-slate-800"
+                                                    className="cf-btn cf-btn-secondary inline-flex px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em]"
                                                 >
                                                     {moduleManagerComposerWorkspaceControlsCollapsed ? (
                                                         <>
@@ -9949,7 +9953,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                     </div>
                                     <button
                                         onClick={addComposerModule}
-                                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                                        className="cf-btn cf-btn-success w-full px-6 py-3 text-sm font-bold active:scale-[0.98]"
                                     >
                                         <Plus size={16} /> Add Composer Module
                                     </button>
@@ -9972,7 +9976,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                     setLinkTestResult(null); // Clear test result when URL changes
                                                 }}
                                                 placeholder="https://myhostedmodule.com"
-                                                className="flex-1 bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm font-mono focus:border-indigo-500 outline-none"
+                                                className="cf-input-shell flex-1 text-sm font-mono"
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter' && !testingLink) {
                                                         testExternalLink(moduleManagerURL);
@@ -9982,7 +9986,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             <button
                                                 onClick={() => testExternalLink(moduleManagerURL)}
                                                 disabled={!moduleManagerURL || testingLink}
-                                                className="px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                className="cf-btn cf-btn-secondary px-4 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                                                 title="Test if URL is accessible"
                                             >
                                                 {testingLink ? 'Testing...' : 'Test'}
@@ -10013,7 +10017,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             Link Behavior
                                         </label>
                                         <div className="flex gap-3">
-                                            <label className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500 transition flex-1">
+                                            <label className="cf-panel-muted flex flex-1 items-center gap-2 p-3 cursor-pointer transition hover:border-indigo-500">
                                                 <input
                                                     type="radio"
                                                     name="linkType"
@@ -10024,7 +10028,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 />
                                                 <span className="text-xs text-slate-300">Open in iframe</span>
                                             </label>
-                                            <label className="flex items-center gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800 cursor-pointer hover:border-indigo-500 transition flex-1">
+                                            <label className="cf-panel-muted flex flex-1 items-center gap-2 p-3 cursor-pointer transition hover:border-indigo-500">
                                                 <input
                                                     type="radio"
                                                     name="linkType"
@@ -10040,7 +10044,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                     
                                     <button
                                         onClick={addExternalLinkModule}
-                                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                                        className="cf-btn cf-btn-primary w-full px-6 py-3 text-sm font-bold active:scale-[0.98]"
                                     >
                                         <Plus size={16} /> Add External Link Module
                                     </button>
@@ -10057,7 +10061,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                             )}
                             
                             {/* Help Section */}
-                            <div className="p-4 bg-sky-900/10 border border-sky-500/20 rounded-lg">
+                            <div className="cf-panel-muted p-4">
                                 <h4 className="text-xs font-bold text-sky-400 uppercase mb-2">Module Types</h4>
                                 <ul className="text-[10px] text-slate-400 space-y-1 leading-relaxed">
                                     <li><strong className="text-sky-300">Standalone HTML:</strong> Complete HTML file (like HSS3020). CSS auto-scoped, wrapped in view container.</li>
@@ -10076,7 +10080,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
             {harvestType === 'AI_MODULE' && (
                  <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
                      {/* STEP 1: PROMPT GENERATOR */}
-                     <div className="p-4 bg-emerald-900/20 border border-emerald-700/50 rounded-lg">
+                     <div className="cf-panel-muted p-4">
                         <h3 className="text-sm font-bold text-emerald-400 mb-4 flex items-center gap-2">
                             <Sparkles size={16} /> Step 1: Generate AI Prompt
                         </h3>
@@ -10091,7 +10095,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                 value={aiDescription}
                                 onChange={(e) => setAiDescription(e.target.value)}
                                 placeholder="Example: Create a drag-and-drop goal-setting activity with 3 categories (Personal, Professional, Health). Include a save button that stores goals to localStorage and a reset button."
-                                className="w-full bg-slate-950 border border-emerald-900 rounded-lg p-3 text-sm text-white h-32 focus:border-emerald-500 outline-none resize-y"
+                                className="cf-input-shell h-32 text-sm"
                             />
                             <button 
                                 onClick={() => {
@@ -10165,7 +10169,7 @@ ${aiDescription}
                                     setGeneratedPrompt(safePrompt);
                                 }}
                                 disabled={!aiDescription.trim()}
-                                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="cf-btn cf-btn-success w-full py-3 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Sparkles size={14} /> Generate Full Prompt
                             </button>
@@ -10174,7 +10178,7 @@ ${aiDescription}
                         {generatedPrompt && (
                             <div className="mt-4 pt-4 border-t border-emerald-800">
                                 <CodeBlock label="Copy this prompt to Google AI Studio" code={generatedPrompt} height="h-64" />
-                                <div className="mt-2 p-3 bg-sky-900/20 border border-sky-700/50 rounded text-xs text-sky-200">
+                                <div className="cf-panel-muted mt-2 p-3 text-xs text-sky-200">
                                     <strong>Next:</strong> Copy the prompt above, paste it into Google AI Studio, and copy the JSON response back to Step 2 below.
                                 </div>
                             </div>
@@ -10182,7 +10186,7 @@ ${aiDescription}
                      </div>
 
                      {/* STEP 2: JSON PARSER */}
-                     <div className="p-4 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                     <div className="cf-panel-muted p-4">
                         <h3 className="text-sm font-bold text-blue-400 mb-4 flex items-center gap-2">
                             <FileJson size={16} /> Step 2: Import AI Studio Output
                         </h3>
@@ -10198,7 +10202,7 @@ ${aiDescription}
                                     setParsedAiModule(null);
                                 }}
                                 placeholder='Paste JSON here: { "id": "view-example", "html": "...", "script": "..." }'
-                                className="w-full bg-slate-950 border border-blue-900 rounded-lg p-3 text-xs text-blue-100 font-mono h-48 focus:border-blue-500 outline-none resize-y"
+                                className="cf-input-shell h-48 text-xs font-mono text-blue-100"
                             />
                             
                             {aiParseError && (
@@ -10229,7 +10233,7 @@ ${aiDescription}
                                     value={stagingTitle} 
                                     onChange={(e) => setStagingTitle(e.target.value)} 
                                         placeholder="Module title for sidebar (e.g., Goal Setting Activity)"
-                                        className="w-full bg-slate-950 border border-blue-700 rounded-lg p-3 text-white text-sm"
+                                        className="cf-input-shell text-sm"
                                     />
                                 </div>
                             )}
@@ -10263,7 +10267,7 @@ ${aiDescription}
                                     }
                                 }}
                                 disabled={!aiOutput.trim()}
-                                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="cf-btn cf-btn-primary w-full py-3 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <FileJson size={14} /> Parse & Validate JSON
                                 </button>
@@ -10272,7 +10276,7 @@ ${aiDescription}
 
                      {/* STEP 3: COMMIT */}
                      {parsedAiModule && stagingTitle && (
-                         <div className="p-4 bg-slate-900/50 border border-slate-700 rounded-lg">
+                         <div className="cf-panel-muted p-4">
                             <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
                                 <CheckCircle size={16} /> Step 3: Preview & Commit
                             </h3>
@@ -10287,7 +10291,7 @@ ${aiDescription}
                                         setParsedAiModule(null);
                                         setStagingTitle("");
                                     }}
-                                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm shadow-lg"
+                                    className="cf-btn cf-btn-success flex-1 py-4 text-sm font-bold shadow-lg"
                                 >
                                     <Zap size={16} /> Add to Project
                                 </button>

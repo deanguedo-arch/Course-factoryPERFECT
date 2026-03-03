@@ -62,19 +62,19 @@ const PROJECT_DATA = {
 };`;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+    <div className="cf-phase-shell space-y-6 animate-in fade-in duration-500">
+      <div className="cf-glass-surface rounded-2xl border border-slate-700/70 p-6">
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
           <BookOpen className="text-blue-400" /> Phase 3: Manage & Reset
         </h2>
         
         <div className="space-y-4">
-            <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-700/50">
-                <h3 className="text-sm font-bold text-blue-400 mb-2">1. Backup & Restore</h3>
+            <div className="cf-panel-muted rounded-2xl p-4">
+                <h3 className="mb-2 text-sm font-bold text-blue-400">1. Backup & Restore</h3>
                 <div className="space-y-2">
                     <button 
                         onClick={handleDownload}
-                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all"
+                        className="cf-btn cf-btn-primary inline-flex w-full items-center justify-center py-3 text-sm font-bold"
                     >
                         <Download size={16} /> Download Project Backup
                     </button>
@@ -88,7 +88,7 @@ const PROJECT_DATA = {
                         />
                         <label 
                             htmlFor="restore-upload"
-                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
+                            className="cf-btn cf-btn-success inline-flex w-full cursor-pointer items-center justify-center py-3 text-sm font-bold"
                         >
                             <Upload size={16} /> Upload & Restore Backup
                         </label>
@@ -96,14 +96,14 @@ const PROJECT_DATA = {
                 </div>
             </div>
 
-            <div className={`p-4 rounded-xl border transition-all duration-300 ${unlocked ? 'bg-rose-900/20 border-rose-700/50' : 'bg-slate-900 border-slate-800 opacity-50'}`}>
+            <div className={`rounded-2xl border p-4 transition-all duration-300 ${unlocked ? 'cf-alert cf-alert-danger' : 'cf-panel-muted opacity-70'}`}>
                 <div className="flex items-center justify-between mb-2">
                     <h3 className={`text-sm font-bold ${unlocked ? 'text-rose-400' : 'text-slate-500'}`}>2. Reset Project</h3>
                     {unlocked ? <Unlock size={16} className="text-rose-400"/> : <Lock size={16} className="text-slate-500"/>}
                 </div>
                 
                 {unlocked && !confirmed && (
-                    <div className="animate-in fade-in bg-rose-950/30 p-4 rounded-lg border border-rose-800">
+                    <div className="cf-alert cf-alert-danger animate-in fade-in rounded-2xl p-4">
                         <h4 className="text-rose-400 font-bold text-sm mb-2 flex items-center gap-2">
                             <AlertTriangle size={16}/> Final Safety Check
                         </h4>
@@ -115,13 +115,13 @@ const PROJECT_DATA = {
                         <div className="flex gap-2">
                             <button 
                                 onClick={() => onGoToMaster()} 
-                                className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-3 rounded border border-slate-700 flex items-center justify-center gap-2"
+                                className="cf-btn cf-btn-secondary flex-1 items-center justify-center py-3 text-xs font-bold"
                             >
                                 <ArrowRight size={14} className="rotate-180" /> No, Take me there
                             </button>
                             <button 
                                 onClick={() => setConfirmed(true)} 
-                                className="flex-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold py-3 rounded shadow-lg shadow-rose-900/20"
+                                className="cf-btn cf-btn-danger flex-1 py-3 text-xs font-bold"
                             >
                                 Yes, I Updated It
                             </button>

@@ -31,11 +31,11 @@ export const ToastContainer = ({ toasts, removeToast }) => {
   return (
     <div className="fixed top-4 right-4 z-[9999] space-y-2 max-w-md">
       {toasts.map(toast => {
-        const colors = {
-          success: 'bg-emerald-600 border-emerald-500 text-white',
-          error: 'bg-rose-600 border-rose-500 text-white',
-          warning: 'bg-amber-600 border-amber-500 text-white',
-          info: 'bg-sky-600 border-sky-500 text-white'
+        const tones = {
+          success: 'cf-alert cf-alert-success',
+          error: 'cf-alert cf-alert-danger',
+          warning: 'cf-alert cf-alert-warning',
+          info: 'cf-alert cf-alert-info'
         };
         const icons = {
           success: CheckCircle,
@@ -48,15 +48,15 @@ export const ToastContainer = ({ toasts, removeToast }) => {
         return (
           <div
             key={toast.id}
-            className={`${colors[toast.type] || colors.info} border-2 rounded-lg p-4 shadow-2xl flex items-start gap-3 animate-in slide-in-from-right fade-in duration-300`}
+            className={`${tones[toast.type] || tones.info} flex items-start gap-3 rounded-2xl p-4 animate-in slide-in-from-right fade-in duration-300`}
           >
             <Icon size={20} className="flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold">{toast.message}</p>
+              <p className="text-sm font-semibold">{toast.message}</p>
             </div>
             <button
               onClick={() => removeToast(toast.id)}
-              className="flex-shrink-0 hover:opacity-70 transition-opacity"
+              className="flex-shrink-0 text-slate-400 transition-opacity hover:opacity-70"
             >
               <X size={16} />
             </button>
@@ -94,15 +94,15 @@ export const CodeBlock = ({ label, code, height = "h-32" }) => {
   };
 
   return (
-    <div className="mt-4 border border-slate-700 rounded-lg overflow-hidden bg-slate-950 max-w-full min-w-0">
-      <div className="flex justify-between items-center px-4 py-2 bg-slate-900 border-b border-slate-700">
-        <span className="text-xs font-mono text-slate-400 uppercase">{label}</span>
+    <div className="cf-code-block mt-4 max-w-full min-w-0">
+      <div className="cf-code-block-toolbar">
+        <span className="cf-code-block-label">{label}</span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          className="cf-code-block-copy"
         >
           {copied ? <Check size={14} /> : <Copy size={14} />}
-          {copied ? 'Copied!' : 'Copy Code'}
+          {copied ? 'Copied!' : 'Copy code'}
         </button>
       </div>
       <pre className={`p-4 w-full max-w-full overflow-x-auto text-sm font-mono text-slate-300 leading-relaxed whitespace-pre-wrap break-all ${height}`}>
@@ -113,23 +113,23 @@ export const CodeBlock = ({ label, code, height = "h-32" }) => {
 };
 
 export const Toggle = ({ active, labelA, labelB, labelC, onToggle, iconA: IconA, iconB: IconB, iconC: IconC }) => (
-    <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-700 mb-6">
+    <div className="cf-tab-rail mb-6">
         <button 
             onClick={() => onToggle('A')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-xs font-bold transition-all ${active === 'A' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`cf-tab-btn flex-1 items-center justify-center gap-2 px-4 py-2 text-xs font-bold ${active === 'A' ? 'cf-tab-btn-active' : ''}`}
         >
             <IconA size={14} /> {labelA}
         </button>
         <button 
             onClick={() => onToggle('B')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-xs font-bold transition-all ${active === 'B' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`cf-tab-btn flex-1 items-center justify-center gap-2 px-4 py-2 text-xs font-bold ${active === 'B' ? 'cf-tab-btn-active' : ''}`}
         >
             <IconB size={14} /> {labelB}
         </button>
         {labelC && (
              <button 
                 onClick={() => onToggle('C')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-xs font-bold transition-all ${active === 'C' ? 'bg-pink-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`cf-tab-btn flex-1 items-center justify-center gap-2 px-4 py-2 text-xs font-bold ${active === 'C' ? 'cf-tab-btn-active' : ''}`}
             >
                 <IconC size={14} /> {labelC}
             </button>

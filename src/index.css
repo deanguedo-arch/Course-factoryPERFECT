@@ -1,5 +1,782 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Roboto:wght@400;700;900&family=Open+Sans:wght@400;700;800&family=Lato:wght@400;700;900&family=Montserrat:wght@400;700;900&family=Poppins:wght@400;700;900&family=Raleway:wght@400;700;900&family=Nunito:wght@400;700;900&family=Playfair+Display:wght@400;700;900&family=Merriweather:wght@400;700;900&family=Oswald:wght@400;700&family=Bebas+Neue&display=swap');
 
+:root {
+  color-scheme: dark;
+  --cf-bg-ink: #030712;
+  --cf-bg-deep: #081426;
+  --cf-bg-cool: #12314d;
+  --cf-bg-bottom: #020510;
+  --cf-bg-radial-a: rgba(73, 155, 255, 0.16);
+  --cf-bg-radial-b: rgba(93, 103, 255, 0.14);
+  --cf-bg-radial-c: rgba(45, 212, 191, 0.08);
+  --cf-grid-line: rgba(255, 255, 255, 0.04);
+  --cf-grid-line-soft: rgba(255, 255, 255, 0.03);
+  --cf-grid-blend: soft-light;
+  --cf-text-primary: #f8fbff;
+  --cf-text-secondary: #afbdd0;
+  --cf-text-tertiary: #7d8ea4;
+  --cf-text-muted: #5d6e84;
+  --cf-accent-primary: #80adff;
+  --cf-accent-primary-soft: #d7e4ff;
+  --cf-accent-primary-border: rgba(128, 173, 255, 0.34);
+  --cf-success: #3ad2a1;
+  --cf-success-soft: #d7fff1;
+  --cf-warning: #f3ba57;
+  --cf-warning-soft: #fff3cf;
+  --cf-danger: #f08ca2;
+  --cf-danger-soft: #ffe1e8;
+  --cf-glass-border: rgba(151, 165, 188, 0.2);
+  --cf-glass-border-soft: rgba(151, 165, 188, 0.14);
+  --cf-glass-fill: linear-gradient(150deg, rgba(13, 22, 39, 0.72), rgba(2, 8, 24, 0.56));
+  --cf-glass-fill-nav: linear-gradient(150deg, rgba(6, 15, 30, 0.84), rgba(2, 8, 24, 0.78));
+  --cf-glass-fill-soft: linear-gradient(150deg, rgba(13, 22, 39, 0.56), rgba(2, 8, 24, 0.42));
+  --cf-glass-fill-strong: linear-gradient(150deg, rgba(13, 22, 39, 0.84), rgba(2, 8, 24, 0.72));
+  --cf-glass-shadow: 0 18px 42px rgba(2, 6, 23, 0.28), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  --cf-glass-shadow-soft: 0 12px 28px rgba(2, 6, 23, 0.2), 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  --cf-glass-highlight: linear-gradient(168deg, rgba(211, 228, 255, 0.17), rgba(211, 228, 255, 0) 42%);
+  --cf-glass-blur-main: 14px;
+  --cf-glass-blur-soft: 10px;
+  --cf-glass-sat-main: 118%;
+  --cf-glass-sat-soft: 112%;
+  --cf-control-border: rgba(151, 165, 188, 0.18);
+  --cf-control-fill: linear-gradient(160deg, rgba(2, 8, 24, 0.4), rgba(13, 22, 39, 0.54));
+  --cf-control-fill-hover: linear-gradient(160deg, rgba(13, 22, 39, 0.62), rgba(28, 38, 57, 0.56));
+  --cf-control-text: #dce7f6;
+  --cf-control-text-hover: #ffffff;
+  --cf-focus-outline: rgba(128, 173, 255, 0.34);
+  --cf-focus-ring: rgba(103, 141, 255, 0.18);
+  --cf-primary-fill: linear-gradient(160deg, rgba(73, 110, 255, 0.34), rgba(13, 22, 39, 0.74));
+  --cf-primary-fill-hover: linear-gradient(160deg, rgba(98, 131, 255, 0.4), rgba(24, 34, 53, 0.76));
+  --cf-primary-border: rgba(128, 173, 255, 0.34);
+  --cf-primary-text: #ffffff;
+  --cf-success-fill: linear-gradient(160deg, rgba(10, 103, 78, 0.34), rgba(13, 22, 39, 0.72));
+  --cf-success-fill-hover: linear-gradient(160deg, rgba(17, 143, 107, 0.38), rgba(24, 34, 53, 0.76));
+  --cf-success-border: rgba(58, 210, 161, 0.28);
+  --cf-warning-fill: linear-gradient(160deg, rgba(138, 80, 19, 0.38), rgba(13, 22, 39, 0.74));
+  --cf-warning-fill-hover: linear-gradient(160deg, rgba(171, 95, 23, 0.42), rgba(24, 34, 53, 0.76));
+  --cf-warning-border: rgba(243, 186, 87, 0.28);
+  --cf-danger-fill: linear-gradient(160deg, rgba(111, 29, 51, 0.42), rgba(13, 22, 39, 0.76));
+  --cf-danger-fill-hover: linear-gradient(160deg, rgba(138, 35, 62, 0.44), rgba(24, 34, 53, 0.78));
+  --cf-danger-border: rgba(240, 140, 162, 0.28);
+  --cf-rail-border: rgba(151, 165, 188, 0.12);
+  --cf-rail-fill: linear-gradient(160deg, rgba(2, 8, 24, 0.34), rgba(13, 22, 39, 0.44));
+  --cf-tab-text: var(--cf-text-secondary);
+  --cf-tab-hover-border: rgba(151, 165, 188, 0.18);
+  --cf-tab-hover-fill: rgba(2, 8, 24, 0.28);
+  --cf-tab-active-border: rgba(128, 173, 255, 0.24);
+  --cf-tab-active-fill: linear-gradient(160deg, rgba(73, 110, 255, 0.22), rgba(13, 22, 39, 0.52));
+  --cf-pill-border: rgba(151, 165, 188, 0.18);
+  --cf-pill-fill: rgba(13, 22, 39, 0.52);
+  --cf-pill-text: #d0dced;
+  --cf-input-border: rgba(151, 165, 188, 0.16);
+  --cf-input-fill: linear-gradient(160deg, rgba(2, 8, 24, 0.52), rgba(13, 22, 39, 0.62));
+  --cf-input-text: #ffffff;
+  --cf-input-placeholder: #64748b;
+  --cf-panel-border: rgba(151, 165, 188, 0.14);
+  --cf-panel-fill: linear-gradient(160deg, rgba(2, 8, 24, 0.34), rgba(13, 22, 39, 0.46));
+  --cf-alert-border: rgba(151, 165, 188, 0.16);
+  --cf-alert-fill: linear-gradient(160deg, rgba(13, 22, 39, 0.54), rgba(2, 8, 24, 0.5));
+  --cf-alert-danger-border: rgba(240, 140, 162, 0.24);
+  --cf-alert-danger-fill: linear-gradient(160deg, rgba(98, 27, 48, 0.34), rgba(13, 22, 39, 0.64));
+  --cf-alert-danger-text: #ffe4eb;
+  --cf-nav-text: var(--cf-text-secondary);
+  --cf-nav-hover-border: rgba(151, 165, 188, 0.14);
+  --cf-nav-hover-fill: linear-gradient(160deg, rgba(13, 22, 39, 0.44), rgba(2, 8, 24, 0.28));
+  --cf-nav-active-border: rgba(151, 165, 188, 0.18);
+  --cf-nav-active-fill: linear-gradient(160deg, rgba(22, 36, 58, 0.8), rgba(10, 19, 34, 0.9));
+  --cf-nav-badge-border: rgba(151, 165, 188, 0.18);
+  --cf-nav-badge-fill: rgba(13, 22, 39, 0.72);
+  --cf-nav-badge-text: #ffffff;
+  --cf-nav-badge-accent-fill: rgba(67, 93, 201, 0.8);
+  --cf-theme-toggle-border: rgba(151, 165, 188, 0.18);
+  --cf-theme-toggle-fill: linear-gradient(160deg, rgba(2, 8, 24, 0.42), rgba(13, 22, 39, 0.56));
+  --cf-theme-toggle-btn-fill: transparent;
+  --cf-theme-toggle-btn-text: var(--cf-text-secondary);
+  --cf-theme-toggle-btn-active-fill: linear-gradient(160deg, rgba(76, 112, 255, 0.26), rgba(13, 22, 39, 0.64));
+  --cf-theme-toggle-btn-active-border: rgba(128, 173, 255, 0.28);
+  --cf-theme-toggle-btn-active-text: #ffffff;
+  --cf-hover-shadow: 0 14px 30px rgba(2, 6, 23, 0.24);
+  --cf-nav-active-shadow: 0 12px 24px rgba(2, 6, 23, 0.22);
+  --cf-legacy-fill-black: rgba(5, 10, 24, 0.82);
+  --cf-legacy-fill-strong: rgba(9, 16, 31, 0.8);
+  --cf-legacy-fill-soft: rgba(13, 22, 39, 0.7);
+  --cf-legacy-fill-softer: rgba(13, 22, 39, 0.42);
+  --cf-legacy-border: rgba(151, 165, 188, 0.22);
+}
+
+html[data-builder-theme='dark'] {
+  color-scheme: dark;
+}
+
+html[data-builder-theme='light'] {
+  color-scheme: light;
+  --cf-bg-ink: #eef4fb;
+  --cf-bg-deep: #f7fbff;
+  --cf-bg-cool: #d9e9fb;
+  --cf-bg-bottom: #e8f1fb;
+  --cf-bg-radial-a: rgba(88, 148, 255, 0.22);
+  --cf-bg-radial-b: rgba(157, 199, 255, 0.26);
+  --cf-bg-radial-c: rgba(145, 235, 232, 0.22);
+  --cf-grid-line: rgba(255, 255, 255, 0.18);
+  --cf-grid-line-soft: rgba(101, 137, 182, 0.05);
+  --cf-grid-blend: overlay;
+  --cf-text-primary: #112033;
+  --cf-text-secondary: #52647b;
+  --cf-text-tertiary: #6a7d96;
+  --cf-text-muted: #8293aa;
+  --cf-accent-primary: #3e7fff;
+  --cf-accent-primary-soft: #edf4ff;
+  --cf-accent-primary-border: rgba(62, 127, 255, 0.26);
+  --cf-success: #12a379;
+  --cf-success-soft: #e5fff5;
+  --cf-warning: #d48e1f;
+  --cf-warning-soft: #fff5d9;
+  --cf-danger: #d56588;
+  --cf-danger-soft: #ffe6ee;
+  --cf-glass-border: rgba(168, 188, 214, 0.38);
+  --cf-glass-border-soft: rgba(168, 188, 214, 0.26);
+  --cf-glass-fill: linear-gradient(160deg, rgba(255, 255, 255, 0.66), rgba(233, 242, 252, 0.54));
+  --cf-glass-fill-nav: linear-gradient(160deg, rgba(255, 255, 255, 0.78), rgba(235, 244, 253, 0.68));
+  --cf-glass-fill-soft: linear-gradient(160deg, rgba(255, 255, 255, 0.52), rgba(235, 244, 253, 0.42));
+  --cf-glass-fill-strong: linear-gradient(160deg, rgba(255, 255, 255, 0.84), rgba(229, 239, 250, 0.72));
+  --cf-glass-shadow: 0 22px 56px rgba(144, 164, 188, 0.24), 0 1px 0 rgba(255, 255, 255, 0.65) inset;
+  --cf-glass-shadow-soft: 0 14px 30px rgba(144, 164, 188, 0.16), 0 1px 0 rgba(255, 255, 255, 0.72) inset;
+  --cf-glass-highlight: linear-gradient(168deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.05) 42%);
+  --cf-glass-blur-main: 18px;
+  --cf-glass-blur-soft: 14px;
+  --cf-glass-sat-main: 126%;
+  --cf-glass-sat-soft: 120%;
+  --cf-control-border: rgba(164, 184, 208, 0.36);
+  --cf-control-fill: linear-gradient(160deg, rgba(255, 255, 255, 0.7), rgba(231, 240, 250, 0.72));
+  --cf-control-fill-hover: linear-gradient(160deg, rgba(255, 255, 255, 0.84), rgba(225, 236, 248, 0.76));
+  --cf-control-text: #19304c;
+  --cf-control-text-hover: #112033;
+  --cf-focus-outline: rgba(62, 127, 255, 0.34);
+  --cf-focus-ring: rgba(62, 127, 255, 0.12);
+  --cf-primary-fill: linear-gradient(160deg, rgba(62, 127, 255, 0.22), rgba(235, 244, 253, 0.9));
+  --cf-primary-fill-hover: linear-gradient(160deg, rgba(62, 127, 255, 0.3), rgba(226, 237, 250, 0.94));
+  --cf-primary-border: rgba(62, 127, 255, 0.28);
+  --cf-primary-text: #17345a;
+  --cf-success-fill: linear-gradient(160deg, rgba(18, 163, 121, 0.12), rgba(235, 244, 253, 0.92));
+  --cf-success-fill-hover: linear-gradient(160deg, rgba(18, 163, 121, 0.18), rgba(225, 236, 248, 0.94));
+  --cf-success-border: rgba(18, 163, 121, 0.22);
+  --cf-warning-fill: linear-gradient(160deg, rgba(212, 142, 31, 0.14), rgba(235, 244, 253, 0.92));
+  --cf-warning-fill-hover: linear-gradient(160deg, rgba(212, 142, 31, 0.2), rgba(225, 236, 248, 0.94));
+  --cf-warning-border: rgba(212, 142, 31, 0.2);
+  --cf-danger-fill: linear-gradient(160deg, rgba(213, 101, 136, 0.14), rgba(235, 244, 253, 0.92));
+  --cf-danger-fill-hover: linear-gradient(160deg, rgba(213, 101, 136, 0.2), rgba(225, 236, 248, 0.94));
+  --cf-danger-border: rgba(213, 101, 136, 0.2);
+  --cf-rail-border: rgba(164, 184, 208, 0.32);
+  --cf-rail-fill: linear-gradient(160deg, rgba(255, 255, 255, 0.62), rgba(231, 240, 250, 0.62));
+  --cf-tab-text: #5d728a;
+  --cf-tab-hover-border: rgba(164, 184, 208, 0.34);
+  --cf-tab-hover-fill: rgba(255, 255, 255, 0.72);
+  --cf-tab-active-border: rgba(62, 127, 255, 0.24);
+  --cf-tab-active-fill: linear-gradient(160deg, rgba(62, 127, 255, 0.16), rgba(255, 255, 255, 0.86));
+  --cf-pill-border: rgba(164, 184, 208, 0.34);
+  --cf-pill-fill: rgba(255, 255, 255, 0.72);
+  --cf-pill-text: #455972;
+  --cf-input-border: rgba(164, 184, 208, 0.34);
+  --cf-input-fill: linear-gradient(160deg, rgba(255, 255, 255, 0.8), rgba(232, 241, 250, 0.86));
+  --cf-input-text: #112033;
+  --cf-input-placeholder: #8093a8;
+  --cf-panel-border: rgba(164, 184, 208, 0.3);
+  --cf-panel-fill: linear-gradient(160deg, rgba(255, 255, 255, 0.58), rgba(232, 241, 250, 0.62));
+  --cf-alert-border: rgba(164, 184, 208, 0.34);
+  --cf-alert-fill: linear-gradient(160deg, rgba(255, 255, 255, 0.7), rgba(231, 240, 250, 0.76));
+  --cf-alert-danger-border: rgba(213, 101, 136, 0.22);
+  --cf-alert-danger-fill: linear-gradient(160deg, rgba(255, 232, 238, 0.84), rgba(255, 248, 250, 0.94));
+  --cf-alert-danger-text: #7c2947;
+  --cf-nav-text: #5d728a;
+  --cf-nav-hover-border: rgba(164, 184, 208, 0.3);
+  --cf-nav-hover-fill: linear-gradient(160deg, rgba(255, 255, 255, 0.76), rgba(231, 240, 250, 0.72));
+  --cf-nav-active-border: rgba(62, 127, 255, 0.18);
+  --cf-nav-active-fill: linear-gradient(160deg, rgba(62, 127, 255, 0.14), rgba(255, 255, 255, 0.84));
+  --cf-nav-badge-border: rgba(164, 184, 208, 0.32);
+  --cf-nav-badge-fill: rgba(255, 255, 255, 0.82);
+  --cf-nav-badge-text: #17345a;
+  --cf-nav-badge-accent-fill: rgba(62, 127, 255, 0.16);
+  --cf-theme-toggle-border: rgba(164, 184, 208, 0.34);
+  --cf-theme-toggle-fill: linear-gradient(160deg, rgba(255, 255, 255, 0.76), rgba(231, 240, 250, 0.76));
+  --cf-theme-toggle-btn-fill: transparent;
+  --cf-theme-toggle-btn-text: #5d728a;
+  --cf-theme-toggle-btn-active-fill: linear-gradient(160deg, rgba(62, 127, 255, 0.14), rgba(255, 255, 255, 0.88));
+  --cf-theme-toggle-btn-active-border: rgba(62, 127, 255, 0.22);
+  --cf-theme-toggle-btn-active-text: #17345a;
+  --cf-hover-shadow: 0 16px 26px rgba(149, 169, 197, 0.18);
+  --cf-nav-active-shadow: 0 12px 22px rgba(149, 169, 197, 0.16);
+  --cf-legacy-fill-black: rgba(255, 255, 255, 0.94);
+  --cf-legacy-fill-strong: rgba(248, 252, 255, 0.9);
+  --cf-legacy-fill-soft: rgba(240, 247, 253, 0.82);
+  --cf-legacy-fill-softer: rgba(235, 244, 252, 0.68);
+  --cf-legacy-border: rgba(171, 191, 214, 0.34);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 700px at 10% 6%, var(--cf-bg-radial-a), transparent 56%),
+    radial-gradient(980px 640px at 90% 0%, var(--cf-bg-radial-b), transparent 54%),
+    linear-gradient(180deg, var(--cf-bg-deep) 0%, var(--cf-bg-ink) 55%, var(--cf-bg-bottom) 100%);
+  background-attachment: fixed;
+  color: var(--cf-text-primary);
+}
+
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::before {
+  background:
+    radial-gradient(480px 280px at 12% 88%, var(--cf-bg-radial-c), transparent 74%),
+    radial-gradient(520px 320px at 84% 80%, var(--cf-bg-radial-b), transparent 72%);
+}
+
+body::after {
+  opacity: 0.06;
+  background-image:
+    repeating-linear-gradient(0deg, var(--cf-grid-line) 0, var(--cf-grid-line) 1px, transparent 1px, transparent 2px),
+    repeating-linear-gradient(90deg, var(--cf-grid-line-soft) 0, var(--cf-grid-line-soft) 1px, transparent 1px, transparent 2px);
+  mix-blend-mode: var(--cf-grid-blend);
+}
+
+.cf-app-shell {
+  position: relative;
+  z-index: 1;
+}
+
+.cf-phase-shell {
+  position: relative;
+}
+
+.cf-glass-surface,
+.cf-glass-nav,
+.cf-glass-soft,
+.cf-glass-strong {
+  position: relative;
+  isolation: isolate;
+  transition: box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease;
+}
+
+.cf-glass-surface::before,
+.cf-glass-nav::before,
+.cf-glass-soft::before,
+.cf-glass-strong::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--cf-glass-highlight);
+  pointer-events: none;
+  opacity: 0.62;
+}
+
+.cf-glass-surface {
+  border-color: var(--cf-glass-border) !important;
+  background: var(--cf-glass-fill) !important;
+  box-shadow: var(--cf-glass-shadow) !important;
+}
+
+.cf-glass-nav {
+  border-color: rgba(148, 163, 184, 0.26) !important;
+  background: var(--cf-glass-fill-nav) !important;
+  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.28), 0 1px 0 rgba(255, 255, 255, 0.045) inset !important;
+}
+
+.cf-glass-soft {
+  border-color: var(--cf-glass-border-soft) !important;
+  background: var(--cf-glass-fill-soft) !important;
+  box-shadow: var(--cf-glass-shadow-soft) !important;
+}
+
+.cf-glass-strong {
+  border-color: rgba(148, 163, 184, 0.29) !important;
+  background: var(--cf-glass-fill-strong) !important;
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.32), 0 1px 0 rgba(255, 255, 255, 0.05) inset !important;
+}
+
+.cf-btn,
+.cf-tab-btn,
+.cf-input-shell,
+.cf-panel-muted,
+.cf-alert,
+.cf-nav-item {
+  position: relative;
+  isolation: isolate;
+}
+
+.cf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.95rem;
+  border: 1px solid var(--cf-control-border);
+  background: var(--cf-control-fill);
+  box-shadow: var(--cf-glass-shadow-soft);
+  color: var(--cf-control-text);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    color 180ms ease;
+}
+
+.cf-btn:hover {
+  border-color: color-mix(in srgb, var(--cf-control-border) 72%, transparent);
+  background: var(--cf-control-fill-hover);
+  box-shadow: var(--cf-hover-shadow);
+  color: var(--cf-control-text-hover);
+  transform: translateY(-1px);
+}
+
+.cf-btn:focus-visible,
+.cf-tab-btn:focus-visible,
+.cf-nav-item:focus-visible,
+.cf-input-shell:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px var(--cf-focus-outline),
+    0 0 0 4px var(--cf-focus-ring),
+    var(--cf-glass-shadow-soft);
+}
+
+.cf-btn:disabled,
+.cf-tab-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+}
+
+.cf-btn-primary {
+  border-color: var(--cf-primary-border) !important;
+  background: var(--cf-primary-fill) !important;
+  color: var(--cf-primary-text) !important;
+}
+
+.cf-btn-primary:hover {
+  border-color: color-mix(in srgb, var(--cf-primary-border) 82%, transparent) !important;
+  background: var(--cf-primary-fill-hover) !important;
+}
+
+.cf-btn-secondary {
+  border-color: var(--cf-control-border) !important;
+  background: var(--cf-control-fill) !important;
+}
+
+.cf-btn-success {
+  border-color: var(--cf-success-border) !important;
+  background: var(--cf-success-fill) !important;
+  color: var(--cf-success-soft) !important;
+}
+
+.cf-btn-success:hover {
+  border-color: color-mix(in srgb, var(--cf-success-border) 82%, transparent) !important;
+  background: var(--cf-success-fill-hover) !important;
+}
+
+.cf-btn-danger {
+  border-color: var(--cf-danger-border) !important;
+  background: var(--cf-danger-fill) !important;
+  color: var(--cf-danger-soft) !important;
+}
+
+.cf-btn-danger:hover {
+  border-color: color-mix(in srgb, var(--cf-danger-border) 82%, transparent) !important;
+  background: var(--cf-danger-fill-hover) !important;
+}
+
+.cf-btn-warning {
+  border-color: var(--cf-warning-border) !important;
+  background: var(--cf-warning-fill) !important;
+  color: var(--cf-warning-soft) !important;
+}
+
+.cf-btn-warning:hover {
+  border-color: color-mix(in srgb, var(--cf-warning-border) 82%, transparent) !important;
+  background: var(--cf-warning-fill-hover) !important;
+}
+
+.cf-tab-rail {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.35rem;
+  border: 1px solid var(--cf-rail-border);
+  border-radius: 1rem;
+  background: var(--cf-rail-fill);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.cf-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+  border-radius: 0.8rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--cf-tab-text);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.cf-tab-btn:hover {
+  border-color: var(--cf-tab-hover-border);
+  background: var(--cf-tab-hover-fill);
+  color: var(--cf-text-primary);
+}
+
+.cf-tab-btn-active {
+  border-color: var(--cf-tab-active-border) !important;
+  background: var(--cf-tab-active-fill) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  color: var(--cf-text-primary) !important;
+}
+
+.cf-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--cf-pill-border);
+  background: var(--cf-pill-fill);
+  padding: 0.25rem 0.65rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cf-pill-text);
+}
+
+.cf-input-shell {
+  width: 100%;
+  border: 1px solid var(--cf-input-border);
+  border-radius: 0.95rem;
+  background: var(--cf-input-fill);
+  color: var(--cf-input-text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+input.cf-input-shell,
+textarea.cf-input-shell,
+select.cf-input-shell {
+  padding: 0.75rem 0.9rem;
+}
+
+textarea.cf-input-shell {
+  resize: vertical;
+}
+
+.cf-input-shell::placeholder {
+  color: var(--cf-input-placeholder);
+}
+
+.cf-input-shell:hover {
+  border-color: color-mix(in srgb, var(--cf-input-border) 82%, transparent);
+}
+
+.cf-panel-muted {
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 1rem;
+  background: var(--cf-panel-fill);
+  box-shadow: var(--cf-glass-shadow-soft);
+}
+
+.cf-alert {
+  border: 1px solid var(--cf-alert-border);
+  border-radius: 1rem;
+  background: var(--cf-alert-fill);
+  box-shadow: var(--cf-glass-shadow-soft);
+}
+
+.cf-alert-info {
+  border-color: var(--cf-primary-border) !important;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--cf-accent-primary) 12%, transparent), var(--cf-alert-fill)) !important;
+  color: var(--cf-text-primary);
+}
+
+.cf-alert-success {
+  border-color: var(--cf-success-border) !important;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--cf-success) 12%, transparent), var(--cf-alert-fill)) !important;
+  color: var(--cf-text-primary);
+}
+
+.cf-alert-warning {
+  border-color: var(--cf-warning-border) !important;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--cf-warning) 12%, transparent), var(--cf-alert-fill)) !important;
+  color: var(--cf-text-primary);
+}
+
+.cf-alert-danger {
+  border-color: var(--cf-alert-danger-border) !important;
+  background: var(--cf-alert-danger-fill) !important;
+  color: var(--cf-alert-danger-text);
+}
+
+.cf-nav-item {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--cf-nav-text);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.cf-nav-item:hover {
+  border-color: var(--cf-nav-hover-border);
+  background: var(--cf-nav-hover-fill);
+  color: var(--cf-text-primary);
+}
+
+.cf-nav-item-active {
+  border-color: var(--cf-nav-active-border) !important;
+  background: var(--cf-nav-active-fill) !important;
+  box-shadow: var(--cf-nav-active-shadow);
+  color: var(--cf-text-primary) !important;
+}
+
+.cf-nav-badge {
+  border-radius: 999px;
+  border: 1px solid var(--cf-nav-badge-border);
+  background: var(--cf-nav-badge-fill);
+  color: var(--cf-nav-badge-text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.cf-nav-badge-accent {
+  border-color: var(--cf-primary-border) !important;
+  background: var(--cf-nav-badge-accent-fill) !important;
+  color: var(--cf-primary-text) !important;
+}
+
+.cf-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--cf-theme-toggle-border);
+  border-radius: 1rem;
+  background: var(--cf-theme-toggle-fill);
+  box-shadow: var(--cf-glass-shadow-soft);
+}
+
+.cf-theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  min-width: 6.25rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid transparent;
+  border-radius: 0.8rem;
+  background: var(--cf-theme-toggle-btn-fill);
+  color: var(--cf-theme-toggle-btn-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.cf-theme-toggle-btn:hover {
+  color: var(--cf-text-primary);
+  transform: translateY(-1px);
+}
+
+.cf-theme-toggle-btn.is-active {
+  border-color: var(--cf-theme-toggle-btn-active-border);
+  background: var(--cf-theme-toggle-btn-active-fill);
+  color: var(--cf-theme-toggle-btn-active-text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.cf-code-block {
+  border: 1px solid var(--cf-panel-border);
+  border-radius: 1rem;
+  overflow: hidden;
+  background: var(--cf-panel-fill);
+  box-shadow: var(--cf-glass-shadow-soft);
+}
+
+.cf-code-block-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--cf-panel-border);
+  background: var(--cf-glass-fill-soft);
+}
+
+.cf-code-block-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cf-text-secondary);
+}
+
+.cf-code-block-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--cf-accent-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: color 180ms ease;
+}
+
+.cf-code-block-copy:hover {
+  color: var(--cf-text-primary);
+}
+
+html[data-builder-theme='light'] .cf-app-shell {
+  color: var(--cf-text-primary);
+}
+
+html[data-builder-theme='light'] .cf-app-shell [class~='text-white'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-slate-200'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-slate-100'] {
+  color: var(--cf-text-primary) !important;
+}
+
+html[data-builder-theme='light'] .cf-app-shell [class~='text-slate-300'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-slate-400'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-slate-500'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-slate-600'] {
+  color: var(--cf-text-secondary) !important;
+}
+
+html[data-builder-theme='light'] .cf-app-shell [class~='text-blue-400'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-blue-300'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-indigo-300'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-indigo-400'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-sky-400'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-cyan-400'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-purple-400'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-purple-600'] {
+  color: var(--cf-accent-primary) !important;
+}
+
+html[data-builder-theme='light'] .cf-app-shell [class~='text-emerald-300'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-emerald-400'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-emerald-600'] {
+  color: var(--cf-success) !important;
+}
+
+html[data-builder-theme='light'] .cf-app-shell [class~='text-amber-400'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-amber-500'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-orange-400'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-orange-600'] {
+  color: var(--cf-warning) !important;
+}
+
+html[data-builder-theme='light'] .cf-app-shell [class~='text-rose-300'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-rose-400'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-rose-500'],
+html[data-builder-theme='light'] .cf-app-shell [class~='text-rose-600'] {
+  color: var(--cf-danger) !important;
+}
+
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-black'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-black/30'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-black/50'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-slate-950'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-slate-950/80'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-slate-950/70'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-slate-950/60'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-slate-950/55'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-slate-950/50'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-slate-950/35'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-slate-950/25'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-slate-900'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-slate-900/80'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-slate-900/70'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-slate-900/60'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-slate-900/50'],
+html[data-builder-theme='light'] .cf-app-shell [class~='bg-slate-900/40'] {
+  background-color: var(--cf-legacy-fill-strong) !important;
+}
+
+html[data-builder-theme='light'] .cf-app-shell [class~='border-slate-900'],
+html[data-builder-theme='light'] .cf-app-shell [class~='border-slate-800'],
+html[data-builder-theme='light'] .cf-app-shell [class~='border-slate-800/80'],
+html[data-builder-theme='light'] .cf-app-shell [class~='border-slate-800/70'],
+html[data-builder-theme='light'] .cf-app-shell [class~='border-slate-700'],
+html[data-builder-theme='light'] .cf-app-shell [class~='border-slate-700/80'],
+html[data-builder-theme='light'] .cf-app-shell [class~='border-slate-700/70'],
+html[data-builder-theme='light'] .cf-app-shell [class~='border-slate-600'] {
+  border-color: var(--cf-legacy-border) !important;
+}
+
+html[data-builder-theme='light'] .cf-app-shell [class~='hover:bg-slate-900']:hover,
+html[data-builder-theme='light'] .cf-app-shell [class~='hover:bg-slate-900/70']:hover,
+html[data-builder-theme='light'] .cf-app-shell [class~='hover:bg-slate-800']:hover,
+html[data-builder-theme='light'] .cf-app-shell [class~='hover:bg-slate-800/50']:hover {
+  background-color: var(--cf-legacy-fill-soft) !important;
+}
+
+html[data-builder-theme='light'] .cf-app-shell [class~='hover:text-white']:hover {
+  color: var(--cf-text-primary) !important;
+}
+
+html[data-builder-theme='light'] .cf-app-shell .cf-rich-editor a {
+  color: var(--cf-accent-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf-btn,
+  .cf-tab-btn,
+  .cf-nav-item,
+  .cf-input-shell,
+  .cf-glass-surface,
+  .cf-glass-nav,
+  .cf-glass-soft,
+  .cf-glass-strong {
+    transition: none !important;
+  }
+}
+
+@supports ((-webkit-backdrop-filter: blur(2px)) or (backdrop-filter: blur(2px))) {
+  .cf-glass-surface,
+  .cf-glass-nav,
+  .cf-glass-soft,
+  .cf-glass-strong {
+    -webkit-backdrop-filter: blur(var(--cf-glass-blur-main)) saturate(var(--cf-glass-sat-main));
+    backdrop-filter: blur(var(--cf-glass-blur-main)) saturate(var(--cf-glass-sat-main));
+  }
+
+  .cf-glass-soft {
+    -webkit-backdrop-filter: blur(var(--cf-glass-blur-soft)) saturate(var(--cf-glass-sat-soft));
+    backdrop-filter: blur(var(--cf-glass-blur-soft)) saturate(var(--cf-glass-sat-soft));
+  }
+}
+
 .cf-rich-editor p {
   margin: 0.6rem 0;
 }
@@ -42,7 +819,7 @@
 }
 
 .cf-rich-editor a {
-  color: #7dd3fc;
+  color: var(--cf-accent-primary);
   text-decoration: underline;
 }
 

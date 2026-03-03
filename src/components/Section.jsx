@@ -5,23 +5,19 @@ const Section = ({ title, icon: Icon, isActive, onClick, badge, badgeColor, coll
     onClick={onClick}
     title={title}
     aria-label={title}
-    className={`relative w-full flex items-center ${collapsed ? 'justify-center px-0 py-2.5' : 'justify-between gap-2 px-3 py-2'} rounded-lg text-sm font-bold transition-all ${
-      isActive
-        ? 'bg-blue-600 text-white shadow-lg'
-        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-    }`}
+    className={`cf-nav-item relative flex w-full items-center rounded-xl ${collapsed ? 'justify-center px-0 py-2.5' : 'justify-between gap-2 px-3 py-2.5'} ${isActive ? 'cf-nav-item-active' : ''}`}
   >
     <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2 min-w-0'}`}>
       <Icon size={16} />
-      {!collapsed ? <span>{title}</span> : null}
+      {!collapsed ? <span className="text-[13px] font-semibold">{title}</span> : null}
     </div>
     {badge !== undefined && (
       collapsed ? (
-        <span className={`absolute right-1.5 top-1.5 ${badgeColor || 'bg-slate-700'} text-white text-[9px] font-bold min-w-[18px] px-1.5 py-0.5 rounded-full`}>
+        <span className={`cf-nav-badge absolute right-1.5 top-1.5 min-w-[18px] rounded-full px-1.5 py-0.5 text-[9px] font-bold ${badgeColor || ''}`}>
           {badge}
         </span>
       ) : (
-        <span className={`${badgeColor || 'bg-slate-700'} text-white text-[10px] font-bold px-2 py-0.5 rounded-full`}>
+        <span className={`cf-nav-badge rounded-full px-2 py-0.5 text-[10px] font-bold ${badgeColor || ''}`}>
           {badge}
         </span>
       )

@@ -672,14 +672,14 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 min-w-0 overflow-x-hidden">
-      <div className="bg-slate-800 p-6 rounded-lg border border-slate-700 min-w-0">
+    <div className="cf-phase-shell space-y-6 animate-in fade-in duration-500 min-w-0 overflow-x-hidden">
+      <div className="cf-glass-surface rounded-2xl border border-slate-700/70 p-6 min-w-0">
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-          <Package className="text-purple-400" /> Phase 4: Compile & Export
+          <Package className="text-indigo-300" /> Phase 4: Compile & Export
         </h2>
 
         {/* ASSET BASE URL CONFIG */}
-        <div className="mb-6 p-4 bg-slate-900/50 rounded-xl border border-slate-700">
+        <div className="cf-glass-soft mb-6 rounded-xl border border-slate-800/70 p-4">
             <div className="flex items-center gap-2 mb-2">
                 <h3 className="text-xs font-bold text-slate-400 uppercase">Asset Base URL (CDN)</h3>
                 <span className="text-[10px] bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded border border-blue-800">Required for Google Sites</span>
@@ -696,69 +696,61 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                     "Course Settings": { ...prev["Course Settings"], assetBaseUrl: e.target.value }
                 }))}
                 placeholder="https://username.github.io/repo-name"
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm font-mono focus:border-blue-500 outline-none"
+                className="cf-input-shell font-mono text-sm"
             />
         </div>
 
         {/* --- PUBLISHING MODE SELECTOR --- */}
-        <div className="mb-6 p-4 bg-slate-900/50 rounded-xl border border-slate-700">
-          <label className="block text-xs font-bold text-slate-400 uppercase mb-3">Publishing Mode</label>
-          <div className="flex gap-2">
+        <div className="cf-glass-soft mb-6 rounded-xl border border-slate-800/70 p-4">
+          <label className="mb-3 block text-[11px] font-semibold text-slate-400">Publishing Mode</label>
+          <div className="cf-tab-rail">
             <button
               onClick={() => setPublishMode('legacy')}
-              className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all ${
-                publishMode === 'legacy'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              className={`cf-tab-btn flex-1 px-4 py-3 text-sm font-bold ${
+                publishMode === 'legacy' ? 'cf-tab-btn-active' : ''
               }`}
             >
               Legacy Compile (Single HTML)
             </button>
             <button
               onClick={() => setPublishMode('beta')}
-              className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${
-                publishMode === 'beta'
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              className={`cf-tab-btn flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-bold ${
+                publishMode === 'beta' ? 'cf-tab-btn-active' : ''
               }`}
             >
               Static Multi-File Publish
-              <span className="text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">BETA</span>
+              <span className="cf-pill text-[9px] tracking-[0.16em] text-amber-300">Beta</span>
             </button>
           </div>
         </div>
 
         {/* --- BETA STATIC PUBLISH UI --- */}
         {publishMode === 'beta' && (
-          <div className="mb-8 bg-gradient-to-br from-emerald-900/20 to-slate-900/50 p-6 rounded-xl border border-emerald-500/30">
+          <div className="cf-glass-soft mb-8 rounded-xl border border-emerald-500/20 p-6">
             <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
               <Zap size={20} className="text-emerald-400" /> Static Multi-File Publish
-              <span className="text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">BETA</span>
+              <span className="cf-pill text-[9px] tracking-[0.16em] text-amber-300">Beta</span>
             </h3>
             <p className="text-xs text-slate-400 mb-4">
               Generate a proper static site structure with <code className="bg-slate-800 px-1 rounded">index.html</code>, <code className="bg-slate-800 px-1 rounded">manifest.json</code>, and individual module pages in <code className="bg-slate-800 px-1 rounded">modules/</code> folder.
             </p>
 
             {/* Structure Mode Selector */}
-            <div className="mb-6 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
-              <label className="block text-xs font-bold text-slate-400 uppercase mb-3">Site Structure</label>
-              <div className="flex gap-2">
+            <div className="cf-glass-soft mb-6 rounded-lg border border-slate-800/70 p-4">
+              <label className="mb-3 block text-[11px] font-semibold text-slate-400">Site Structure</label>
+              <div className="cf-tab-rail">
                 <button
                   onClick={() => setBetaStructureMode('multi-file')}
-                  className={`flex-1 py-2.5 px-4 rounded-lg font-bold text-xs transition-all ${
-                    betaStructureMode === 'multi-file'
-                      ? 'bg-sky-600 text-white'
-                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  className={`cf-tab-btn flex-1 px-4 py-2.5 text-xs font-bold ${
+                    betaStructureMode === 'multi-file' ? 'cf-tab-btn-active' : ''
                   }`}
                 >
                   Multi-File (Separate Pages)
                 </button>
                 <button
                   onClick={() => setBetaStructureMode('single-page')}
-                  className={`flex-1 py-2.5 px-4 rounded-lg font-bold text-xs transition-all ${
-                    betaStructureMode === 'single-page'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  className={`cf-tab-btn flex-1 px-4 py-2.5 text-xs font-bold ${
+                    betaStructureMode === 'single-page' ? 'cf-tab-btn-active' : ''
                   }`}
                 >
                   Single-Page App (With Sidebar)
@@ -790,13 +782,13 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
             )}
 
             {/* Full Publish Section */}
-            <div className="mb-6 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
-              <h4 className="text-sm font-bold text-emerald-400 mb-2 uppercase tracking-wider">Full Publish</h4>
+            <div className="cf-glass-soft mb-6 rounded-lg border border-slate-800/70 p-4">
+              <h4 className="mb-2 text-sm font-semibold text-blue-400">Full publish</h4>
               <p className="text-xs text-slate-500 mb-4">Downloads a complete ZIP containing all active modules.</p>
               
               {/* Preview of files to be generated */}
-              <div className="mb-4 p-3 bg-slate-950 rounded border border-slate-800">
-                <div className="text-[10px] font-bold text-slate-500 uppercase mb-2">Files to be generated:</div>
+              <div className="cf-glass-soft mb-4 rounded border border-slate-800/70 p-3">
+                <div className="mb-2 text-[11px] font-semibold text-slate-500">Files to be generated</div>
                 <div className="text-xs font-mono text-slate-400 space-y-1">
                   {betaStructureMode === 'multi-file' ? (
                     <>
@@ -828,7 +820,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
               <button
                 onClick={handleFullPublishBeta}
                 disabled={betaPublishStatus === 'loading' || modules.filter(m => !excludedIds.includes(m.id) && !m.hidden).length === 0}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all"
+                className="cf-btn cf-btn-success inline-flex w-full items-center justify-center py-3 font-bold disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Download size={16} /> Full Publish (ZIP)
               </button>
@@ -836,8 +828,8 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
 
             {/* Delta Publish Section (only for multi-file mode) */}
             {betaStructureMode === 'multi-file' && (
-            <div className="p-4 bg-slate-900/50 rounded-lg border border-slate-700">
-              <h4 className="text-sm font-bold text-sky-400 mb-2 uppercase tracking-wider">Delta Publish (Selected Modules Only)</h4>
+            <div className="cf-glass-soft rounded-lg border border-slate-800/70 p-4">
+              <h4 className="mb-2 text-sm font-semibold text-blue-400">Delta publish (selected modules only)</h4>
               <p className="text-xs text-slate-500 mb-4">Select specific modules to include in a partial update ZIP.</p>
 
               {/* Include manifest checkbox */}
@@ -854,7 +846,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
               {/* Module selection */}
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold text-slate-400 uppercase">Select Modules</label>
+                  <label className="text-[11px] font-semibold text-slate-400">Select modules</label>
                   <div className="flex gap-2">
                     <button
                       onClick={selectAllBetaModules}
@@ -871,7 +863,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                     </button>
                   </div>
                 </div>
-                <div className="bg-slate-950 rounded-lg border border-slate-800 max-h-48 overflow-y-auto p-2 space-y-1">
+                <div className="rounded-lg border border-slate-800 bg-slate-950/70 max-h-48 overflow-y-auto p-2 space-y-1">
                   {modules.filter(m => !excludedIds.includes(m.id) && !m.hidden).map(m => (
                     <label key={m.id} className="flex items-center gap-2 p-2 rounded hover:bg-slate-900 cursor-pointer">
                       <input
@@ -892,8 +884,8 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
 
               {/* Delta files preview */}
               {betaSelectedModules.length > 0 && (
-                <div className="mb-4 p-3 bg-slate-950 rounded border border-slate-800">
-                  <div className="text-[10px] font-bold text-slate-500 uppercase mb-2">Delta ZIP will contain:</div>
+                <div className="cf-glass-soft mb-4 rounded border border-slate-800/70 p-3">
+                  <div className="mb-2 text-[11px] font-semibold text-slate-500">Delta ZIP will contain</div>
                   <div className="text-xs font-mono text-slate-400 space-y-1">
                     {betaIncludeManifest && (
                       <div className="flex items-center gap-2">
@@ -916,7 +908,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
               <button
                 onClick={handleDeltaPublishBeta}
                 disabled={betaPublishStatus === 'loading' || betaSelectedModules.length === 0}
-                className="w-full bg-sky-600 hover:bg-sky-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all"
+                className="cf-btn cf-btn-primary inline-flex w-full items-center justify-center py-3 font-bold disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Download size={16} /> Publish Selected (Delta ZIP)
                 {betaSelectedModules.length > 0 && (
@@ -929,18 +921,18 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         )}
 
         {/* --- EXPORT MODULE PAGE UI --- */}
-        <div className="mb-8 bg-slate-900/50 p-6 rounded-xl border border-blue-500/30">
+        <div className="cf-glass-soft mb-8 rounded-xl border border-blue-500/20 p-6">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                 <LayoutTemplate size={20} className="text-blue-400" /> Export Single Module Page
             </h3>
             
             <div className="space-y-4">
                 <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Select Primary Module</label>
+                    <label className="mb-2 block text-[11px] font-semibold text-slate-400">Select primary module</label>
                     <select 
                         value={exportModuleId} 
                         onChange={(e) => setExportModuleId(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white text-sm"
+                        className="cf-input-shell text-sm"
                     >
                         <option value="">-- Choose a Module --</option>
                         {modules.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
@@ -948,9 +940,9 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                 </div>
 
                 {exportModuleId && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 h-48 overflow-y-auto">
-                            <label className="block text-xs font-bold text-purple-400 uppercase mb-2 sticky top-0 bg-slate-950 pb-2">Include Assessments</label>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="cf-panel-muted h-48 overflow-y-auto rounded-2xl p-4">
+                            <label className="sticky top-0 mb-2 block bg-slate-950/60 pb-2 text-[11px] font-semibold text-blue-400">Include Assessments</label>
                             <div className="space-y-2">
                                 {modules.flatMap(m => m.assessments || []).map(a => (
                                     <label key={a.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-900 p-1 rounded">
@@ -958,7 +950,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                                             type="checkbox" 
                                             checked={exportAssessments.includes(a.id)}
                                             onChange={(e) => e.target.checked ? setExportAssessments([...exportAssessments, a.id]) : setExportAssessments(exportAssessments.filter(id => id !== a.id))}
-                                            className="rounded border-slate-700 bg-slate-900 text-purple-600"
+                                            className="rounded border-slate-700 bg-slate-900 text-blue-600"
                                         />
                                         <span className="text-xs text-slate-300 truncate">{a.title}</span>
                                     </label>
@@ -966,8 +958,8 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                             </div>
                         </div>
 
-                        <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 h-48 overflow-y-auto">
-                            <label className="block text-xs font-bold text-cyan-400 uppercase mb-2 sticky top-0 bg-slate-950 pb-2">Include Materials</label>
+                        <div className="cf-panel-muted h-48 overflow-y-auto rounded-2xl p-4">
+                            <label className="sticky top-0 mb-2 block bg-slate-950/60 pb-2 text-[11px] font-semibold text-blue-400">Include Materials</label>
                             <div className="space-y-2">
                                 {materials.map(mat => (
                                     <label key={mat.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-900 p-1 rounded">
@@ -975,7 +967,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                                             type="checkbox" 
                                             checked={exportMaterials.includes(mat.id)}
                                             onChange={(e) => e.target.checked ? setExportMaterials([...exportMaterials, mat.id]) : setExportMaterials(exportMaterials.filter(id => id !== mat.id))}
-                                            className="rounded border-slate-700 bg-slate-900 text-cyan-600"
+                                            className="rounded border-slate-700 bg-slate-900 text-blue-600"
                                         />
                                         <span className="text-xs text-slate-300 truncate">{mat.title}</span>
                                     </label>
@@ -983,8 +975,8 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                             </div>
                         </div>
 
-                        <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 h-48 overflow-y-auto">
-                            <label className="block text-xs font-bold text-orange-400 uppercase mb-2 sticky top-0 bg-slate-950 pb-2">Include Tools</label>
+                        <div className="cf-panel-muted h-48 overflow-y-auto rounded-2xl p-4">
+                            <label className="sticky top-0 mb-2 block bg-slate-950/60 pb-2 text-[11px] font-semibold text-blue-400">Include Tools</label>
                             <div className="space-y-2">
                                 {toolkit.map(t => (
                                     <label key={t.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-900 p-1 rounded">
@@ -992,7 +984,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                                             type="checkbox" 
                                             checked={exportTools.includes(t.id)}
                                             onChange={(e) => e.target.checked ? setExportTools([...exportTools, t.id]) : setExportTools(exportTools.filter(id => id !== t.id))}
-                                            className="rounded border-slate-700 bg-slate-900 text-orange-600"
+                                            className="rounded border-slate-700 bg-slate-900 text-blue-600"
                                         />
                                         <span className="text-xs text-slate-300 truncate">{t.title}</span>
                                     </label>
@@ -1005,7 +997,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                 <button 
                     onClick={generateModulePageHTML} 
                     disabled={!exportModuleId}
-                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="cf-btn cf-btn-primary inline-flex w-full items-center justify-center py-3 font-bold disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     <FileCode size={16} /> Generate Module HTML
                 </button>
@@ -1014,9 +1006,9 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                     <div className="animate-in fade-in slide-in-from-top-2">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-xs font-bold text-emerald-400">Successfully generated.</span>
-                            <button onClick={() => navigator.clipboard.writeText(exportedHTML)} className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded flex items-center gap-1"><Copy size={12}/> Copy Code</button>
+                            <button onClick={() => navigator.clipboard.writeText(exportedHTML)} className="cf-btn cf-btn-secondary inline-flex items-center px-3 py-1 text-xs font-bold"><Copy size={12}/> Copy Code</button>
                         </div>
-                        <textarea readOnly value={exportedHTML} className="w-full h-32 bg-black border border-emerald-900/50 rounded-lg p-3 text-[10px] font-mono text-emerald-500/80 focus:outline-none resize-y" />
+                        <textarea readOnly value={exportedHTML} className="cf-input-shell h-32 resize-y border-emerald-900/50 bg-black font-mono text-[10px] text-emerald-500/80 focus:outline-none" />
                     </div>
                 )}
             </div>
@@ -1027,8 +1019,8 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         <>
         {!isGenerated ? (
             <div className="text-center py-6">
-                <div className="mb-6 bg-slate-900 rounded-xl border border-slate-700 overflow-hidden text-left">
-                    <div className="p-3 bg-slate-800 border-b border-slate-700 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <div className="cf-glass-soft mb-6 rounded-xl border border-slate-800/70 overflow-hidden text-left">
+                    <div className="border-b border-slate-800/70 bg-slate-900/40 p-3 text-[11px] font-semibold text-slate-400">
                         Build Configuration
                     </div>
                     <div className="divide-y divide-slate-800">
@@ -1065,8 +1057,8 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
 
                 {/* GLOBAL TOOLKIT CONTROLS */}
                 {toolkit.length > 0 && (
-                    <div className="mb-6 bg-slate-900 rounded-xl border border-slate-700 overflow-hidden text-left">
-                        <div className="p-3 bg-slate-800 border-b border-slate-700 text-xs font-bold text-orange-500 uppercase tracking-wider">
+                    <div className="cf-glass-soft mb-6 rounded-xl border border-slate-800/70 overflow-hidden text-left">
+                        <div className="border-b border-slate-800/70 p-3 text-xs font-bold text-orange-400 uppercase tracking-wider bg-slate-900/40">
                             Global Toolkit (Builder Controls)
                         </div>
                         <div className="divide-y divide-slate-800">
@@ -1178,7 +1170,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                 <button 
                     onClick={handleCompileClick}
                     disabled={modules.length === 0}
-                    className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-transform hover:scale-105 flex items-center gap-3 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="cf-btn cf-btn-primary mx-auto inline-flex items-center px-8 py-4 font-bold disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     <Package size={24} /> Compile Selected Modules
                 </button>
@@ -1186,11 +1178,11 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         ) : (
             <div className="animate-in fade-in slide-in-from-bottom-4">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-bold text-purple-400">Final Assembled Code (index.html)</h3>
+                    <h3 className="text-sm font-bold text-indigo-300">Final Assembled Code (index.html)</h3>
                     <div className="flex gap-2">
-                         <button 
+                        <button 
                             onClick={downloadFile}
-                            className="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded flex items-center gap-2"
+                            className="cf-btn cf-btn-secondary inline-flex items-center px-3 py-1 text-xs font-bold"
                         >
                             <Download size={12} /> Download File
                         </button>
@@ -1203,7 +1195,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                     </div>
                 </div>
                 {compileValidation?.warnings?.length > 0 && (
-                  <div className="mb-4 p-4 bg-amber-950/40 border border-amber-700 rounded-xl text-left">
+                  <div className="cf-glass-soft mb-4 rounded-xl border border-amber-700 p-4 text-left">
                     <div className="flex items-center gap-2 text-amber-300 font-bold mb-2">
                       <AlertTriangle size={16} />
                       Compiled with {compileValidation.warnings.length} warning{compileValidation.warnings.length !== 1 ? 's' : ''}
@@ -1219,7 +1211,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                   </div>
                 )}
                 <CodeBlock label="Full Website Source" code={fullSiteCode} height="h-96" />
-                <div className="mt-4 p-4 bg-purple-900/20 border border-purple-700/50 rounded-lg text-sm text-purple-200">
+                <div className="cf-glass-soft mt-4 rounded-lg border border-indigo-500/25 p-4 text-sm text-indigo-100">
                     <strong>Next Step:</strong> Download the file above, or copy the block and paste it into your Google Sites "Embed Code" widget.
                 </div>
             </div>

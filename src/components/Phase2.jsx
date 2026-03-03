@@ -123,52 +123,52 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+    <div className="cf-phase-shell space-y-6 animate-in fade-in duration-500">
+      <div className="cf-glass-surface rounded-2xl border border-slate-700/70 p-6">
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-          <Eye className="text-purple-400" /> Phase 2: Preview & Test
+          <Eye className="text-indigo-300" /> Phase 2: Preview & Test
         </h2>
         <p className="text-xs text-slate-400 mb-6">
           Browse, preview, and test your modules, assessments, and materials before compiling.
         </p>
 
         {/* SOURCE TOGGLE */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 bg-slate-900 p-1 rounded-lg border border-slate-700 mb-4">
+        <div className="cf-tab-rail mb-4 grid grid-cols-1 md:grid-cols-3">
             <button 
                 onClick={() => { setSourceType('MODULE'); setSearchQuery(""); setSelectedItem(null); }}
-                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all ${sourceType === 'MODULE' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`cf-tab-btn inline-flex w-full items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold ${sourceType === 'MODULE' ? 'cf-tab-btn-active' : ''}`}
             >
-                <Box size={14} /> Modules ({currentCourse.length})
+                <Box size={14} className={sourceType === 'MODULE' ? 'text-blue-300' : 'text-slate-500'} /> Modules ({currentCourse.length})
             </button>
             <button 
                 onClick={() => { setSourceType('ASSESSMENT'); setSearchQuery(""); setSelectedItem(null); }}
-                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all ${sourceType === 'ASSESSMENT' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`cf-tab-btn inline-flex w-full items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold ${sourceType === 'ASSESSMENT' ? 'cf-tab-btn-active' : ''}`}
             >
-                <CheckCircle size={14} /> Assessments
+                <CheckCircle size={14} className={sourceType === 'ASSESSMENT' ? 'text-blue-300' : 'text-slate-500'} /> Assessments
             </button>
             <button 
                 onClick={() => { setSourceType('MATERIAL'); setSearchQuery(""); setSelectedItem(null); }}
-                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all ${sourceType === 'MATERIAL' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`cf-tab-btn inline-flex w-full items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold ${sourceType === 'MATERIAL' ? 'cf-tab-btn-active' : ''}`}
             >
-                <FolderOpen size={14} /> Materials
+                <FolderOpen size={14} className={sourceType === 'MATERIAL' ? 'text-blue-300' : 'text-slate-500'} /> Materials
             </button>
         </div>
 
         {/* SEARCH BAR */}
-        <div className="relative mb-6">
-            <Search size={16} className="absolute left-3 top-3 text-slate-500" />
-            <input 
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by title or ID..."
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white text-sm focus:outline-none focus:border-purple-500"
+        <div className="cf-glass-soft mb-6 flex items-center gap-2 rounded-xl border border-slate-800/70 px-3 focus-within:border-indigo-400/30 focus-within:ring-2 focus-within:ring-indigo-500/20">
+            <Search size={16} className="text-slate-500" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by title or ID..."
+              className="h-11 w-full bg-transparent py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none"
             />
         </div>
 
         {/* ITEM GRID */}
         {filteredItems.length === 0 ? (
-            <div className="p-12 text-center bg-slate-900/50 border border-slate-700 rounded-xl">
+            <div className="cf-glass-soft rounded-2xl border border-slate-800/70 p-12 text-center">
                 <Box size={48} className="mx-auto text-slate-700 mb-4" />
                 <p className="text-slate-400 text-sm mb-2">
                     {searchQuery ? 'No items match your search' : `No ${sourceType === 'MODULE' ? 'modules' : sourceType === 'ASSESSMENT' ? 'assessments' : 'materials'} yet`}
@@ -181,24 +181,19 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredItems.map((item, idx) => {
                     const stats = getCodeStats(item);
+                    const protectedModule = sourceType === 'MODULE' && isProtectedModule(item);
                     
                     return (
                         <div 
                             key={item.id} 
-                            className="bg-slate-900 border border-slate-700 rounded-lg p-4 hover:border-purple-500/50 transition-all group"
+                            className="cf-glass-soft group rounded-xl border border-slate-800/70 p-4 transition-[border-color,transform,filter] hover:border-slate-600/50 hover:-translate-y-0.5 hover:brightness-[1.03]"
                         >
                             <div className="flex items-start justify-between mb-3">
                                 <div className="flex-1 min-w-0">
                                     <h3 className="text-white font-bold text-sm truncate mb-1">{item.title}</h3>
                                     <p className="text-xs text-slate-500 font-mono truncate">{item.id}</p>
                                 </div>
-                                <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
-                                  sourceType === 'MODULE'
-                                    ? 'bg-purple-900/30 text-purple-400'
-                                    : sourceType === 'ASSESSMENT'
-                                      ? 'bg-blue-900/30 text-blue-400'
-                                      : 'bg-cyan-900/30 text-cyan-400'
-                                }`}>
+                                <div className="cf-pill border-blue-400/20 bg-slate-950/35 text-blue-300">
                                     {sourceType === 'MODULE' ? 'Module' : sourceType === 'ASSESSMENT' ? 'Assessment' : 'Material'}
                                 </div>
                             </div>
@@ -214,7 +209,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
 
                             {item.section && (
                                 <div className="mb-3">
-                                    <span className="text-xs bg-slate-800 border border-slate-700 px-2 py-1 rounded text-slate-400">
+                                    <span className="inline-flex items-center rounded-full border border-slate-800/70 bg-slate-950/35 px-2.5 py-1 text-[10px] font-semibold text-slate-300">
                                         {item.section}
                                     </span>
                                 </div>
@@ -223,33 +218,33 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                             <div className="flex gap-2">
                                 <button 
                                     onClick={() => handlePreview(idx)}
-                                    className="flex-1 flex items-center justify-center gap-1 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold py-2 rounded transition-colors"
+                                    className="cf-btn cf-btn-primary flex-1 inline-flex items-center justify-center px-3 py-2 text-xs font-bold"
                                 >
-                                    <Eye size={12} /> Preview
+                                    <Eye size={12} className="text-indigo-300" /> Preview
                                 </button>
                                 <button 
                                     onClick={() => handleEdit(idx)}
-                                    className="flex items-center justify-center gap-1 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold px-3 py-2 rounded transition-colors"
+                                    className="cf-btn cf-btn-secondary inline-flex items-center justify-center px-3 py-2 text-xs font-bold"
                                     title="Edit"
                                 >
-                                    <PenTool size={12} />
+                                    <PenTool size={12} className="text-slate-200" />
                                 </button>
                                 <button 
                                     onClick={() => handleDelete(idx)}
-                                    disabled={sourceType === 'MODULE' && isProtectedModule(item)}
-                                    className={`flex items-center justify-center gap-1 text-white text-xs font-bold px-3 py-2 rounded transition-colors ${
-                                        sourceType === 'MODULE' && isProtectedModule(item) 
-                                            ? 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50' 
-                                            : 'bg-slate-700 hover:bg-rose-600'
+                                    disabled={protectedModule}
+                                    className={`inline-flex items-center justify-center rounded-lg border px-3 py-2 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
+                                        protectedModule
+                                            ? 'border-slate-900/50 bg-slate-950/25 text-slate-600 cursor-not-allowed opacity-70 focus-visible:ring-slate-500/10'
+                                            : 'border-slate-800/80 bg-slate-950/35 text-white hover:border-rose-500/35 hover:bg-rose-950/35 focus-visible:ring-rose-500/20'
                                     }`}
-                                    title={sourceType === 'MODULE' && isProtectedModule(item) ? 'Core modules cannot be deleted. Hide them instead.' : 'Delete'}
+                                    title={protectedModule ? 'Core modules cannot be deleted. Hide them instead.' : 'Delete'}
                                 >
-                                    <Trash2 size={12} />
+                                    <Trash2 size={12} className={protectedModule ? 'text-slate-600' : 'text-slate-200'} />
                                 </button>
                             </div>
                             
                             {/* Protected Module Indicator */}
-                            {sourceType === 'MODULE' && isProtectedModule(item) && (
+                            {protectedModule && (
                                 <div className="mt-2 flex items-center gap-1 text-[10px] text-amber-400">
                                     <Lock size={10} />
                                     <span>Core module (cannot be deleted)</span>
@@ -265,8 +260,8 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
       {/* MATERIAL PREVIEW MODAL */}
       {materialPreview && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setMaterialPreview(null)}>
-          <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
+          <div className="cf-glass-surface rounded-2xl border border-slate-800/70 max-w-5xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="cf-glass-nav border-b border-slate-800/70 p-4 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <Eye size={20} className="text-cyan-400" />
@@ -294,7 +289,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                 </div>
               )}
               
-              <div className="grid grid-cols-2 gap-4 bg-slate-950 p-4 rounded-lg border border-slate-800">
+              <div className="cf-glass-soft grid grid-cols-2 gap-4 rounded-xl border border-slate-800/70 p-4">
                 <div>
                   <span className="text-xs font-bold text-slate-500 uppercase">Number</span>
                   <p className="text-white">{materialPreview.number || 'N/A'}</p>
@@ -331,7 +326,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                     setMaterialPreview(null);
                     setMaterialEdit(materialPreview);
                   }}
-                  className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+                  className="cf-btn cf-btn-primary flex-1 inline-flex items-center justify-center px-4 py-2.5 text-sm font-bold"
                 >
                   <PenTool size={16} /> Edit Material
                 </button>
@@ -340,7 +335,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                     href={materialPreview.downloadUrl} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+                    className="cf-btn cf-btn-secondary flex-1 inline-flex items-center justify-center px-4 py-2.5 text-sm font-bold"
                   >
                     <Download size={16} /> Download
                   </a>
@@ -354,10 +349,10 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
       {/* MATERIAL EDIT MODAL */}
       {materialEdit && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setMaterialEdit(null)}>
-          <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
+          <div className="cf-glass-surface rounded-2xl border border-slate-800/70 max-w-3xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="cf-glass-nav border-b border-slate-800/70 p-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <PenTool size={20} className="text-cyan-400" />
+                <PenTool size={20} className="text-blue-400" />
                 Edit Material
               </h3>
               <button onClick={() => setMaterialEdit(null)} className="text-slate-400 hover:text-white transition-colors">
@@ -369,21 +364,21 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Number</label>
+                    <label className="mb-2 block text-[11px] font-semibold text-slate-400">Number</label>
                     <input 
                       type="text"
                       value={materialEdit.number || ''}
                       onChange={(e) => setMaterialEdit({...materialEdit, number: e.target.value})}
                       placeholder="e.g., 05"
-                      className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                      className="cf-input-shell text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Color</label>
+                    <label className="mb-2 block text-[11px] font-semibold text-slate-400">Color</label>
             <select 
                       value={materialEdit.color || 'slate'}
                       onChange={(e) => setMaterialEdit({...materialEdit, color: e.target.value})}
-                      className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                      className="cf-input-shell text-sm"
                     >
                       <option value="slate">Gray</option>
                       <option value="rose">Red</option>
@@ -396,51 +391,51 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
         </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Title</label>
+                  <label className="mb-2 block text-[11px] font-semibold text-slate-400">Title</label>
                   <input 
                     type="text"
                     value={materialEdit.title || ''}
                     onChange={(e) => setMaterialEdit({...materialEdit, title: e.target.value})}
                     placeholder="Material title"
-                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                    className="cf-input-shell text-sm"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Description</label>
+                  <label className="mb-2 block text-[11px] font-semibold text-slate-400">Description</label>
                   <input 
                     type="text"
                     value={materialEdit.description || ''}
                     onChange={(e) => setMaterialEdit({...materialEdit, description: e.target.value})}
                     placeholder="Brief description"
-                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                    className="cf-input-shell text-sm"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">View URL</label>
+                  <label className="mb-2 block text-[11px] font-semibold text-slate-400">View URL</label>
                   <input 
                     type="text"
                     value={materialEdit.viewUrl || ''}
                     onChange={(e) => setMaterialEdit({...materialEdit, viewUrl: e.target.value})}
                     placeholder="Google Drive /preview or /view link"
-                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-xs font-mono"
+                    className="cf-input-shell font-mono text-xs"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Download URL</label>
+                  <label className="mb-2 block text-[11px] font-semibold text-slate-400">Download URL</label>
                   <input 
                     type="text"
                     value={materialEdit.downloadUrl || ''}
                     onChange={(e) => setMaterialEdit({...materialEdit, downloadUrl: e.target.value})}
                     placeholder="Google Drive /view link"
-                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-xs font-mono"
+                    className="cf-input-shell font-mono text-xs"
                   />
                 </div>
                 
                 {/* Digital Content */}
-                <div className="p-4 bg-black/30 rounded-lg border border-slate-700">
+                <div className="cf-panel-muted rounded-2xl p-4">
                   <label className="flex items-center gap-2 cursor-pointer mb-3">
                     <input 
                       type="checkbox"
@@ -454,7 +449,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                       }}
                       className="rounded border-slate-700 bg-slate-900 text-emerald-600"
                     />
-                    <span className="text-xs font-bold text-emerald-400 uppercase">Enable Digital Resource</span>
+                    <span className="text-[11px] font-semibold text-emerald-400">Enable Digital Resource</span>
                   </label>
                   {materialEdit.digitalContent && (
                     <div>
@@ -475,7 +470,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                           }
                         }}
                         placeholder='{"title": "My Resource", "chapters": [...]}'
-                        className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-xs font-mono h-40 resize-none"
+                        className="cf-input-shell h-40 resize-none font-mono text-xs"
                       />
                       {materialEdit.digitalContentJson && (
                         <div className="mt-2">
@@ -498,7 +493,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                 <div className="flex gap-3 mt-6">
                   <button 
                     onClick={() => setMaterialEdit(null)}
-                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg"
+                    className="cf-btn cf-btn-secondary flex-1 inline-flex items-center justify-center px-4 py-2.5 text-sm font-bold"
                   >
                     Cancel
                   </button>
@@ -509,7 +504,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                       }
                       setMaterialEdit(null);
                     }}
-                    className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+                    className="cf-btn cf-btn-primary flex-1 inline-flex items-center justify-center px-4 py-2.5 text-sm font-bold"
                   >
                     <Save size={16} /> Save Changes
                   </button>
@@ -523,8 +518,8 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
       {/* ASSESSMENT PREVIEW MODAL */}
       {assessmentPreview && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setAssessmentPreview(null)}>
-          <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
+          <div className="cf-glass-surface rounded-2xl border border-slate-800/70 max-w-6xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="cf-glass-nav border-b border-slate-800/70 p-4 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <Eye size={20} className="text-blue-400" />
@@ -552,7 +547,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
               />
             </div>
             
-            <div className="bg-slate-800 border-t border-slate-700 p-4 flex justify-between items-center">
+            <div className="cf-glass-nav border-t border-slate-800/70 p-4 flex justify-between items-center">
               <div className="text-xs text-slate-400">
                 <strong className="text-white">Tip:</strong> This assessment will function exactly like this in your compiled site
               </div>
@@ -561,7 +556,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                   setAssessmentPreview(null);
                   setAssessmentEdit(assessmentPreview);
                 }}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2"
+                className="cf-btn cf-btn-primary inline-flex items-center px-4 py-2.5 text-sm font-bold"
               >
                 <PenTool size={16} /> Edit Assessment
               </button>
@@ -573,8 +568,8 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
       {/* ASSESSMENT EDIT MODAL */}
       {assessmentEdit && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setAssessmentEdit(null)}>
-          <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
+          <div className="cf-glass-surface rounded-2xl border border-slate-800/70 max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="cf-glass-nav border-b border-slate-800/70 p-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <PenTool size={20} className="text-blue-400" />
                 Edit Assessment
@@ -593,27 +588,27 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
               
               <div className="space-y-4">
                         <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Assessment Title</label>
+                  <label className="mb-2 block text-[11px] font-semibold text-slate-400">Assessment Title</label>
                   <input 
                     type="text"
                     value={assessmentEdit.title || ''}
                     onChange={(e) => setAssessmentEdit({...assessmentEdit, title: e.target.value})}
                     placeholder="Assessment title"
-                    className="w-full bg-slate-950 border border-slate-700 rounded p-3 text-white text-sm"
+                    className="cf-input-shell text-sm"
                   />
                         </div>
                 
-                <div className="grid grid-cols-2 gap-4 bg-slate-950 p-4 rounded-lg border border-slate-800">
+                <div className="cf-glass-soft grid grid-cols-2 gap-4 rounded-xl border border-slate-800/70 p-4">
                         <div>
-                    <span className="text-xs font-bold text-slate-500 uppercase">Type</span>
+                    <span className="text-[11px] font-semibold text-slate-500">Type</span>
                     <p className="text-white capitalize">{assessmentEdit.type || 'Quiz'}</p>
                         </div>
                         <div>
-                    <span className="text-xs font-bold text-slate-500 uppercase">Question Count</span>
+                    <span className="text-[11px] font-semibold text-slate-500">Question count</span>
                     <p className="text-white">{assessmentEdit.questionCount || 'N/A'}</p>
                         </div>
                   <div className="col-span-2">
-                    <span className="text-xs font-bold text-slate-500 uppercase">Assessment ID</span>
+                    <span className="text-[11px] font-semibold text-slate-500">Assessment ID</span>
                     <p className="text-blue-400 text-xs font-mono">{assessmentEdit.id}</p>
                     </div>
                 </div>
@@ -621,7 +616,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                 <div className="flex gap-3 mt-6">
                   <button 
                     onClick={() => setAssessmentEdit(null)}
-                    className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg"
+                    className="cf-btn cf-btn-secondary flex-1 inline-flex items-center justify-center px-4 py-2.5 text-sm font-bold"
                   >
                     Cancel
                   </button>
@@ -643,7 +638,7 @@ const Phase2 = ({ projectData, setProjectData, editMaterial, onEdit, onPreview, 
                       }
                       setAssessmentEdit(null);
                     }}
-                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+                    className="cf-btn cf-btn-primary flex-1 inline-flex items-center justify-center px-4 py-2.5 text-sm font-bold"
                   >
                     <Save size={16} /> Save Changes
                   </button>

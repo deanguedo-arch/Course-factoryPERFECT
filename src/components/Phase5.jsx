@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { AlertTriangle, Database, Download, Package, RefreshCw, Settings, Trash2, Upload } from 'lucide-react';
+import { AlertTriangle, Database, Download, Package, RefreshCw, Settings, Upload } from 'lucide-react';
 import { PROJECT_DATA } from '../data/constants.js';
 import { migrateProjectData } from '../utils/migrations.js';
 import { getHubTitle, hasLegacyHubThemeFields } from '../utils/hubConfig.js';
@@ -239,76 +239,83 @@ const Phase5 = ({ projectData, setProjectData, showToast }) => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="rounded-lg border border-slate-700 bg-slate-800 p-6">
-        <h2 className="mb-6 flex items-center gap-2 text-xl font-bold text-white">
-          <Settings className="text-sky-400" /> Phase 5: Ops
+    <div className="cf-phase-shell space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-xl font-bold text-white">
+          <Settings className="text-sky-400" /> Ops
         </h2>
+        <div className="cf-glass-soft inline-flex items-center gap-2 rounded-full border border-slate-800/80 px-3 py-1 text-[11px] font-semibold text-slate-300">
+          <Database size={14} className="text-slate-400" />
+          <span className="text-slate-400">Storage</span> {getStorageSize()}
+        </div>
+      </div>
 
-        <div className="mb-6 rounded-xl border border-slate-700 bg-slate-950/70 p-4">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-bold text-white">{getHubTitle(projectData)}</p>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Operations Panel</p>
-            </div>
-            <div className="rounded-full border border-slate-700 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-              Storage {getStorageSize()}
-            </div>
+      <div className="cf-glass-surface rounded-2xl border border-slate-800/80 p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-white">{getHubTitle(projectData)}</p>
+            <p className="mt-1 text-xs text-slate-500">Project controls and safe maintenance tools.</p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Modules</p>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="cf-glass-soft rounded-xl border border-slate-800/70 px-4 py-3">
+              <p className="text-[11px] font-semibold text-slate-500">Modules</p>
               <p className="mt-1 text-lg font-semibold text-white">{metrics.modules}</p>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Materials</p>
+            <div className="cf-glass-soft rounded-xl border border-slate-800/70 px-4 py-3">
+              <p className="text-[11px] font-semibold text-slate-500">Materials</p>
               <p className="mt-1 text-lg font-semibold text-white">{metrics.materials}</p>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Assessments</p>
+            <div className="cf-glass-soft rounded-xl border border-slate-800/70 px-4 py-3">
+              <p className="text-[11px] font-semibold text-slate-500">Assessments</p>
               <p className="mt-1 text-lg font-semibold text-white">{metrics.assessments}</p>
             </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Toolkit</p>
+            <div className="cf-glass-soft rounded-xl border border-slate-800/70 px-4 py-3">
+              <p className="text-[11px] font-semibold text-slate-500">Toolkit</p>
               <p className="mt-1 text-lg font-semibold text-white">{metrics.toolkit}</p>
             </div>
           </div>
         </div>
 
-        <div className="mb-6 rounded-xl border border-emerald-500/25 bg-slate-900/50 p-6">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-white">
-            <Database size={20} className="text-emerald-400" /> Project JSON
-          </h3>
+        <div className="mt-6 border-t border-slate-800/80 pt-6">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="flex items-center gap-2 text-base font-bold text-white">
+              <Download size={18} className="text-slate-300" /> Project JSON
+            </h3>
+            <p className="text-[11px] text-slate-500">Backup and restore the entire project.</p>
+          </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <button
               type="button"
               onClick={exportProject}
-              className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-500"
+              className="cf-btn cf-btn-primary inline-flex items-center justify-center px-4 py-3 text-sm font-bold"
             >
               <Download size={16} /> Export Project JSON
             </button>
 
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-sky-500">
+            <label className="cf-btn cf-btn-secondary inline-flex cursor-pointer items-center justify-center px-4 py-3 text-sm font-bold">
               <Upload size={16} /> Import Project JSON
               <input type="file" accept=".json" onChange={importProject} className="hidden" />
             </label>
           </div>
         </div>
 
-        <div className="mb-6 rounded-xl border border-amber-500/25 bg-slate-900/50 p-6">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-white">
-            <Package size={20} className="text-amber-400" /> Compile Defaults
-          </h3>
+        <div className="mt-6 border-t border-slate-800/80 pt-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="flex items-center gap-2 text-base font-bold text-white">
+              <Package size={18} className="text-slate-300" /> Compile Defaults
+            </h3>
+            <p className="text-[11px] text-slate-500">Set what gets included when compiling.</p>
+          </div>
 
-          <div className="space-y-3">
-            <label className="flex cursor-pointer items-center gap-3 rounded-lg bg-slate-950 p-3 transition-colors hover:bg-slate-900">
+          <div className="mt-3 space-y-2">
+            <label className="cf-panel-muted flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors hover:bg-slate-950/65">
               <input
                 type="checkbox"
                 checked={Boolean(compilationDefaults.includeMaterials)}
                 onChange={(e) => updateCompilationDefaults({ includeMaterials: e.target.checked })}
-                className="h-5 w-5 rounded border-slate-700 bg-slate-900 text-sky-600"
+                className="h-5 w-5 rounded border-slate-700 bg-slate-900 text-indigo-500"
               />
               <div>
                 <div className="text-sm font-bold text-white">Include Materials</div>
@@ -316,12 +323,12 @@ const Phase5 = ({ projectData, setProjectData, showToast }) => {
               </div>
             </label>
 
-            <label className="flex cursor-pointer items-center gap-3 rounded-lg bg-slate-950 p-3 transition-colors hover:bg-slate-900">
+            <label className="cf-panel-muted flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors hover:bg-slate-950/65">
               <input
                 type="checkbox"
                 checked={Boolean(compilationDefaults.includeAssessments)}
                 onChange={(e) => updateCompilationDefaults({ includeAssessments: e.target.checked })}
-                className="h-5 w-5 rounded border-slate-700 bg-slate-900 text-sky-600"
+                className="h-5 w-5 rounded border-slate-700 bg-slate-900 text-indigo-500"
               />
               <div>
                 <div className="text-sm font-bold text-white">Include Assessments</div>
@@ -329,12 +336,12 @@ const Phase5 = ({ projectData, setProjectData, showToast }) => {
               </div>
             </label>
 
-            <label className="flex cursor-pointer items-center gap-3 rounded-lg bg-slate-950 p-3 transition-colors hover:bg-slate-900">
+            <label className="cf-panel-muted flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors hover:bg-slate-950/65">
               <input
                 type="checkbox"
                 checked={Boolean(compilationDefaults.includeToolkit)}
                 onChange={(e) => updateCompilationDefaults({ includeToolkit: e.target.checked })}
-                className="h-5 w-5 rounded border-slate-700 bg-slate-900 text-sky-600"
+                className="h-5 w-5 rounded border-slate-700 bg-slate-900 text-indigo-500"
               />
               <div>
                 <div className="text-sm font-bold text-white">Include Toolkit</div>
@@ -344,32 +351,27 @@ const Phase5 = ({ projectData, setProjectData, showToast }) => {
           </div>
         </div>
 
-        <div className="rounded-xl border border-rose-500/20 bg-slate-900/50 p-6">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-white">
-            <RefreshCw size={20} className="text-rose-300" /> Maintenance
-          </h3>
+        <div className="mt-6 border-t border-slate-800/80 pt-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="flex items-center gap-2 text-base font-bold text-white">
+              <RefreshCw size={18} className="text-slate-300" /> Maintenance
+            </h3>
+            <p className="text-[11px] text-slate-500">Safe cleanup and reset actions.</p>
+          </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <button
               type="button"
               onClick={resetCourseContent}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-slate-900"
+              className="cf-btn cf-btn-secondary rounded-xl px-4 py-3 text-sm font-bold"
             >
               Reset Course Content
             </button>
 
             <button
               type="button"
-              onClick={resetEverything}
-              className="rounded-lg border border-rose-500/30 bg-rose-950/40 px-4 py-3 text-sm font-bold text-rose-100 transition-colors hover:bg-rose-900/50"
-            >
-              Reset Everything
-            </button>
-
-            <button
-              type="button"
               onClick={clearCache}
-              className="rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-slate-900"
+              className="cf-btn cf-btn-secondary rounded-xl px-4 py-3 text-sm font-bold"
             >
               Clear Cache
             </button>
@@ -377,13 +379,21 @@ const Phase5 = ({ projectData, setProjectData, showToast }) => {
             <button
               type="button"
               onClick={forceRefresh}
-              className="rounded-lg bg-amber-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-amber-500"
+              className="cf-btn cf-btn-warning rounded-xl px-4 py-3 text-sm font-bold"
             >
               Force Refresh
             </button>
+
+            <button
+              type="button"
+              onClick={resetEverything}
+              className="cf-btn cf-btn-danger rounded-xl px-4 py-3 text-sm font-bold"
+            >
+              Reset Everything
+            </button>
           </div>
 
-          <div className="mt-4 flex items-start gap-2 rounded-lg border border-rose-900/40 bg-rose-950/20 px-4 py-3 text-xs text-rose-100">
+          <div className="cf-alert cf-alert-danger mt-4 flex items-start gap-2 rounded-xl px-4 py-3 text-xs">
             <AlertTriangle size={14} className="mt-0.5 shrink-0 text-rose-300" />
             <p>Reset actions are immediate after confirmation. Export a JSON backup first if you may need to roll back.</p>
           </div>

@@ -1,5 +1,5 @@
 ﻿import * as React from 'react';
-import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X, Edit, Clock, RotateCcw, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X, Edit, Clock, RotateCcw, PanelLeftClose, PanelLeftOpen, Moon, Sun } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
@@ -63,6 +63,7 @@ const { useState, useEffect, useRef } = React;
 const appId = 'course-factory-v1';
 
 const SIDEBAR_COLLAPSED_KEY = 'course_factory_sidebar_collapsed_v1';
+const BUILDER_THEME_KEY = 'course_factory_builder_theme_v1';
 
 // ==========================================
 // PROJECT DATA (THE LIVING LIBRARY)
@@ -123,12 +124,19 @@ const SIDEBAR_COLLAPSED_KEY = 'course_factory_sidebar_collapsed_v1';
 
 
 export function App() {
-  const [activePhase, setActivePhase] = useState(0);
+  const [activePhase, setActivePhase] = useState(1);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
       return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
     } catch {
       return false;
+    }
+  });
+  const [builderTheme, setBuilderTheme] = useState(() => {
+    try {
+      return localStorage.getItem(BUILDER_THEME_KEY) === 'light' ? 'light' : 'dark';
+    } catch {
+      return 'dark';
     }
   });
   // Initialize state with PROJECT_DATA constant
@@ -212,6 +220,17 @@ export function App() {
       // Ignore localStorage write failures.
     }
   }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.setAttribute('data-builder-theme', builderTheme);
+    document.documentElement.style.colorScheme = builderTheme === 'light' ? 'light' : 'dark';
+    try {
+      localStorage.setItem(BUILDER_THEME_KEY, builderTheme);
+    } catch {
+      // Ignore localStorage write failures.
+    }
+  }, [builderTheme]);
   
   // Note: Preview scripts execute inside the iframe, not in the parent window
   // The iframe's srcDoc includes the script, so it runs in the iframe's scope
@@ -1098,9 +1117,9 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="cf-app-shell min-h-screen text-white">
       {/* Top Header */}
-      <header className="bg-slate-900 border-b border-slate-800 p-4">
+      <header className="cf-glass-nav border-b border-slate-800/70 p-4">
         <div className="flex items-center justify-between max-w-[1800px] mx-auto">
             <div>
             <h1 className="text-lg font-bold flex items-center gap-2">
@@ -1113,6 +1132,28 @@ export function App() {
           </div>
           
           <div className="flex items-center gap-4">
+            <div className="cf-theme-toggle" role="group" aria-label="Builder theme">
+              <button
+                type="button"
+                onClick={() => setBuilderTheme('dark')}
+                className={`cf-theme-toggle-btn ${builderTheme === 'dark' ? 'is-active' : ''}`}
+                aria-pressed={builderTheme === 'dark'}
+                title="Use dark builder theme"
+              >
+                <Moon size={14} />
+                Dark
+              </button>
+              <button
+                type="button"
+                onClick={() => setBuilderTheme('light')}
+                className={`cf-theme-toggle-btn ${builderTheme === 'light' ? 'is-active' : ''}`}
+                aria-pressed={builderTheme === 'light'}
+                title="Use light builder theme"
+              >
+                <Sun size={14} />
+                Light
+              </button>
+            </div>
             {isRenamingCourse ? (
               <div className="flex items-center gap-2">
                 <input
@@ -1123,14 +1164,22 @@ export function App() {
                     if (e.key === 'Enter') renameCourse(tempCourseName);
                     if (e.key === 'Escape') setIsRenamingCourse(false);
                   }}
-                  className="bg-slate-800 border border-blue-500 rounded px-3 py-1 text-sm"
+                  className="cf-input-shell min-w-[16rem] px-3 py-2 text-sm"
                   placeholder="Course Name"
                   autoFocus
                 />
-                <button onClick={() => renameCourse(tempCourseName)} className="text-emerald-400 hover:text-emerald-300">
+                <button
+                  onClick={() => renameCourse(tempCourseName)}
+                  className="cf-btn cf-btn-success inline-flex h-10 w-10 items-center justify-center rounded-xl p-0"
+                  title="Save project name"
+                >
                   <Check size={18} />
                 </button>
-                <button onClick={() => setIsRenamingCourse(false)} className="text-slate-500 hover:text-slate-400">
+                <button
+                  onClick={() => setIsRenamingCourse(false)}
+                  className="cf-btn cf-btn-secondary inline-flex h-10 w-10 items-center justify-center rounded-xl p-0"
+                  title="Cancel rename"
+                >
                   <X size={18} />
                 </button>
               </div>
@@ -1140,7 +1189,7 @@ export function App() {
                   setTempCourseName(currentCourse.name);
                   setIsRenamingCourse(true);
                 }}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm font-bold flex items-center gap-2 transition-colors"
+                className="cf-btn cf-btn-primary inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold"
               >
                 PROJECT: {currentCourse.name.toUpperCase()}
                 <PenTool size={14} />
@@ -1153,18 +1202,18 @@ export function App() {
       <div className="flex max-w-[1800px] mx-auto w-full min-w-0">
         {/* Left Sidebar */}
         <aside
-          className={`${sidebarCollapsed ? 'w-[78px] p-3' : 'w-64 p-4'} bg-slate-900 border-r border-slate-800 min-h-[calc(100vh-73px)] flex flex-col transition-[width,padding] duration-200 ease-out`}
+          className={`${sidebarCollapsed ? 'w-[78px] p-3' : 'w-64 p-4'} cf-glass-nav border-r border-slate-800/70 min-h-[calc(100vh-73px)] flex flex-col transition-[width,padding] duration-200 ease-out`}
         >
           <div className="flex items-center justify-between mb-4">
             {!sidebarCollapsed ? (
-              <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">Factory Line</h3>
+              <h3 className="text-[11px] font-semibold text-slate-500">Factory line</h3>
             ) : (
               <span className="sr-only">Factory navigation</span>
             )}
             <button
               type="button"
               onClick={() => setSidebarCollapsed((prev) => !prev)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-950/70 text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+              className="cf-btn cf-btn-secondary inline-flex h-9 w-9 items-center justify-center rounded-xl p-0 text-slate-300"
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
@@ -1174,6 +1223,73 @@ export function App() {
 
           <div className={`flex-grow ${sidebarCollapsed ? 'space-y-4' : 'space-y-6'}`}>
             <div>
+              {!sidebarCollapsed ? (
+                <div className="cf-glass-soft mb-4 rounded-2xl border border-slate-800/80 p-3">
+                  <p className="text-[11px] font-semibold text-slate-500">Fast lane</p>
+                  <div className="mt-2 space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setActivePhase(1)}
+                      className="cf-btn cf-btn-primary inline-flex w-full items-center justify-center px-3 py-2.5 text-xs font-bold"
+                      title="Resume Composer"
+                    >
+                      <Zap size={14} /> Resume Composer
+                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setActivePhase(2)}
+                        className="cf-btn cf-btn-secondary inline-flex items-center justify-center px-3 py-2.5 text-[11px] font-bold"
+                        title="Jump to Preview"
+                      >
+                        <Eye size={13} /> Preview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActivePhase(4)}
+                        className="cf-btn cf-btn-secondary inline-flex items-center justify-center px-3 py-2.5 text-[11px] font-bold"
+                        title="Jump to Compile"
+                      >
+                        <Package size={13} /> Compile
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActivePhase(1)}
+                    className="cf-btn cf-btn-primary inline-flex h-11 w-full items-center justify-center rounded-2xl p-0"
+                    title="Resume Composer"
+                    aria-label="Resume Composer"
+                  >
+                    <Zap size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActivePhase(2)}
+                    className="cf-btn cf-btn-secondary inline-flex h-11 w-full items-center justify-center rounded-2xl p-0"
+                    title="Jump to Preview"
+                    aria-label="Jump to Preview"
+                  >
+                    <Eye size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActivePhase(4)}
+                    className="cf-btn cf-btn-secondary inline-flex h-11 w-full items-center justify-center rounded-2xl p-0"
+                    title="Jump to Compile"
+                    aria-label="Jump to Compile"
+                  >
+                    <Package size={16} />
+                  </button>
+                </div>
+              )}
+
+              {!sidebarCollapsed ? (
+                <p className="mb-2 text-[11px] font-semibold text-slate-500">Destinations</p>
+              ) : null}
               <div className="space-y-1">
                 <Section
                   title="Phase 0: Master Shell"
@@ -1195,7 +1311,7 @@ export function App() {
                   isActive={activePhase === 2}
                   onClick={() => setActivePhase(2)}
                   badge={currentCourse.modules.length}
-                  badgeColor="bg-purple-600"
+                  badgeColor="cf-nav-badge-accent"
                   collapsed={sidebarCollapsed}
                 />
                 <Section
@@ -1224,8 +1340,8 @@ export function App() {
 
             {!sidebarCollapsed ? (
               <div>
-                <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3">
-                  IN: {getHubTitle(projectData).toUpperCase()}
+                <h3 className="mb-3 text-[11px] font-semibold text-slate-500">
+                  In {getHubTitle(projectData)}
                 </h3>
                 <div className="space-y-1">
                   {currentCourse.modules.map((mod, idx) => (
@@ -1285,8 +1401,8 @@ export function App() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl border border-slate-800/80 bg-slate-950/70 px-2 py-3 text-center">
-                <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Modules</p>
+              <div className="cf-glass-soft rounded-2xl border border-slate-800/80 px-2 py-3 text-center">
+                <p className="text-[10px] font-semibold text-slate-500">Modules</p>
                 <p className="mt-1 text-sm font-semibold text-white">{currentCourse.modules.length}</p>
               </div>
             )}
@@ -1294,7 +1410,7 @@ export function App() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-grow min-h-[600px] min-w-0 overflow-x-hidden">
+        <main className="flex-grow min-h-[600px] min-w-0 overflow-x-hidden p-4">
           {activePhase === 0 && <Phase0 projectData={projectData} setProjectData={setProjectData} />}
           {activePhase === 1 && <Phase1 
             projectData={projectData} 

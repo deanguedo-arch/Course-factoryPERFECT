@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { Database, Layers } from 'lucide-react';
 
+const { useState } = React;
+
 // --- PHASE 0: MASTER SHELL ---
 const Phase0 = ({ projectData, setProjectData }) => {
   const layoutSettings = projectData?.["Course Settings"]?.layoutSettings || {
@@ -26,8 +28,8 @@ const Phase0 = ({ projectData, setProjectData }) => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+    <div className="cf-phase-shell space-y-6 animate-in fade-in duration-500">
+      <div className="cf-glass-surface rounded-2xl border border-slate-700/70 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Layers className="text-blue-400" /> Phase 0: Master Shell
@@ -35,39 +37,39 @@ const Phase0 = ({ projectData, setProjectData }) => {
         </div>
 
         <div className="space-y-4">
-          <div className="p-4 bg-slate-900/60 rounded-lg border border-slate-700 space-y-3">
-            <div className="flex items-center justify-between">
+          <div className="cf-panel-muted space-y-3 rounded-2xl p-4">
+            <div className="cf-panel-muted flex items-center justify-between rounded-2xl px-4 py-3">
               <div>
                 <p className="text-sm font-bold text-white">Show Sidebar</p>
-                <p className="text-[10px] text-slate-500">Controls left navigation panel</p>
+                <p className="text-xs text-slate-500">Controls the left navigation panel.</p>
               </div>
               <button
                 onClick={() => updateLayoutSetting('showSidebar', !layoutSettings.showSidebar)}
-                className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${layoutSettings.showSidebar ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-slate-700 border-slate-600 text-slate-400'}`}
+                className={`cf-btn ${layoutSettings.showSidebar ? 'cf-btn-success' : 'cf-btn-secondary'} min-w-[4.75rem] px-3 py-1.5 text-xs font-bold`}
               >
                 {layoutSettings.showSidebar ? 'On' : 'Off'}
               </button>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="cf-panel-muted flex items-center justify-between rounded-2xl px-4 py-3">
               <div>
                 <p className="text-sm font-bold text-white">Show Footer</p>
-                <p className="text-[10px] text-slate-500">Controls global footer bar</p>
+                <p className="text-xs text-slate-500">Controls the global footer bar.</p>
               </div>
               <button
                 onClick={() => updateLayoutSetting('showFooter', !layoutSettings.showFooter)}
-                className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${layoutSettings.showFooter ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300' : 'bg-slate-700 border-slate-600 text-slate-400'}`}
+                className={`cf-btn ${layoutSettings.showFooter ? 'cf-btn-success' : 'cf-btn-secondary'} min-w-[4.75rem] px-3 py-1.5 text-xs font-bold`}
               >
                 {layoutSettings.showFooter ? 'On' : 'Off'}
               </button>
             </div>
 
-            <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">Navigation Style</label>
+            <div className="cf-panel-muted rounded-2xl px-4 py-3">
+              <label className="mb-2 block text-[11px] font-semibold text-slate-400">Navigation Style</label>
               <select
                 value={layoutSettings.navPosition}
                 onChange={(e) => updateLayoutSetting('navPosition', e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-xs"
+                className="cf-input-shell text-sm"
               >
                 <option value="side">Side (Left)</option>
                 <option value="top">Top (Header)</option>
@@ -75,7 +77,7 @@ const Phase0 = ({ projectData, setProjectData }) => {
             </div>
           </div>
 
-          <p className="text-[10px] text-slate-500 italic">
+          <p className="text-xs text-slate-500 italic">
             Changes here update the Master Shell layout without touching raw HTML.
           </p>
         </div>
@@ -206,41 +208,41 @@ const BatchHarvester = ({ onImport }) => {
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-right-8 mb-8">
-      <div className="bg-indigo-900/20 p-6 rounded-xl border border-indigo-500/50">
-        <h3 className="text-sm font-bold text-indigo-400 mb-2 flex items-center gap-2"><Database size={16}/> Batch Monolith Importer (V7-GapParser)</h3>
-        <p className="text-xs text-slate-400 mb-4">Paste the full <code className="bg-slate-800 px-1 rounded">index.html</code> code below. This version uses line-by-line Gap Parsing to safely extract code blocks.</p>
+      <div className="cf-glass-soft rounded-2xl border border-slate-700/70 p-6">
+        <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-blue-400"><Database size={16}/> Batch Monolith Importer (V7-GapParser)</h3>
+        <p className="mb-4 text-xs text-slate-400">Paste the full <code className="rounded bg-slate-900/70 px-1.5 py-0.5">index.html</code> code below. This version uses line-by-line gap parsing to safely extract code blocks.</p>
         
         {scanned.length === 0 ? (
             <>
                 <textarea 
                     value={input} 
                     onChange={(e) => setInput(e.target.value)} 
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-300 font-mono h-48 focus:border-indigo-500 outline-none resize-y mb-4" 
+                    className="cf-input-shell mb-4 h-48 resize-y font-mono text-xs text-slate-300" 
                     placeholder="<!DOCTYPE html>..."
                 />
-                <button onClick={scanMonolith} disabled={!input} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg text-xs disabled:opacity-50">Scan Code</button>
+                <button onClick={scanMonolith} disabled={!input} className="cf-btn cf-btn-primary inline-flex w-full items-center justify-center py-3 text-xs font-bold disabled:opacity-50">Scan Code</button>
             </>
         ) : (
             <div className="space-y-4">
-                <div className="max-h-96 overflow-y-auto space-y-2 pr-2 custom-scroll bg-slate-950/50 p-2 rounded-lg border border-slate-800">
+                <div className="cf-panel-muted custom-scroll max-h-96 space-y-2 overflow-y-auto rounded-2xl p-2 pr-2">
                     {scanned.map((item, idx) => (
-                        <label key={idx} className="flex items-start gap-3 p-3 bg-slate-900 rounded border border-slate-800 cursor-pointer hover:border-indigo-500 transition-colors group">
+                        <label key={idx} className="cf-panel-muted group flex cursor-pointer items-start gap-3 rounded-xl border border-slate-800/70 p-3 transition-colors hover:border-blue-400/40">
                             <input 
                                 type="checkbox" 
                                 checked={!!selected[idx]} 
                                 onChange={(e) => setSelected({...selected, [idx]: e.target.checked})}
-                                className="mt-1"
+                                className="mt-1 rounded border-slate-600 bg-slate-900 text-blue-500"
                             />
                             <div className="flex-1">
                                 <div className="flex justify-between items-center">
                                     <div className="text-xs font-bold text-white group-hover:text-indigo-300 transition-colors">{item.title}</div>
-                                    <div className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${item.script.length > 50 ? 'bg-emerald-900/30 text-emerald-400' : 'bg-rose-900/30 text-rose-400'}`}>
+                                    <div className={`cf-pill ${item.script.length > 50 ? 'text-emerald-300' : 'text-rose-300'}`}>
                                         {item.script.length > 50 ? 'JS Found' : 'No JS / Global'}
                                     </div>
                                 </div>
                                 <div className="text-[10px] text-slate-500 font-mono mt-1">{item.id}</div>
                                 {item.script.length > 0 && (
-                                    <div className="mt-2 p-2 bg-black/50 rounded text-[9px] font-mono text-slate-600 truncate border border-slate-800">
+                                    <div className="mt-2 rounded-lg border border-slate-800/70 bg-black/40 p-2 text-[9px] font-mono text-slate-500 truncate">
                                         {item.script.substring(0, 100).replace(/\n/g, ' ')}...
                                     </div>
                                 )}
@@ -249,8 +251,8 @@ const BatchHarvester = ({ onImport }) => {
                     ))}
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={() => setScanned([])} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-lg text-xs font-bold hover:bg-slate-700 hover:text-white transition-colors">Cancel</button>
-                    <button onClick={handleImport} className="flex-1 bg-emerald-600 text-white py-3 rounded-lg text-xs font-bold shadow-lg shadow-emerald-900/20 hover:bg-emerald-500 transition-colors">Import {Object.values(selected).filter(x=>x).length} Modules</button>
+                    <button onClick={() => setScanned([])} className="cf-btn cf-btn-secondary flex-1 py-3 text-xs font-bold">Cancel</button>
+                    <button onClick={handleImport} className="cf-btn cf-btn-success flex-1 py-3 text-xs font-bold">Import {Object.values(selected).filter(x=>x).length} Modules</button>
                 </div>
             </div>
         )}
