@@ -174,39 +174,27 @@ function buildSimpleRowCandidates(targetRow, targetY, metrics) {
   const parsedTargetRow = Math.max(1, Number.parseInt(targetRow, 10) || 1);
   const parsedTargetY = Number(targetY) || 0;
   const bands = Array.isArray(metrics?.rowBands) ? metrics.rowBands : [];
-  const candidates = [];
-  const seen = new Set();
+  const maxBandRow = bands.reduce((largest, band) => Math.max(largest, Math.max(1, Number.parseInt(band?.row, 10) || 1)), 1);
+  const upperBound = Math.max(maxBandRow + 2, parsedTargetRow + 6, 6);
+  const ranked = [];
 
-  const pushCandidate = (value) => {
-    const row = Math.max(1, Number.parseInt(value, 10) || 1);
-    if (seen.has(row)) return;
-    seen.add(row);
-    candidates.push(row);
-  };
-
-  pushCandidate(parsedTargetRow);
-  for (let offset = 1; offset <= 3; offset += 1) {
-    pushCandidate(parsedTargetRow - offset);
-    pushCandidate(parsedTargetRow + offset);
+  for (let row = 1; row <= upperBound; row += 1) {
+    const rowCenter = estimateSimpleRowCenterClient(row, metrics);
+    ranked.push({
+      row,
+      distance: Math.abs(parsedTargetY - rowCenter),
+      rowDelta: Math.abs(row - parsedTargetRow),
+    });
   }
 
-  bands
-    .map((band) => ({
-      row: Math.max(1, Number.parseInt(band?.row, 10) || 1),
-      distance: Math.abs(parsedTargetY - ((Number(band?.topClient) + Number(band?.bottomClient)) / 2 || 0)),
-    }))
-    .sort((left, right) => {
-      if (left.distance !== right.distance) return left.distance - right.distance;
-      return left.row - right.row;
-    })
-    .forEach((band) => pushCandidate(band.row));
+  ranked.sort((left, right) => {
+    if (left.distance !== right.distance) return left.distance - right.distance;
+    if (left.rowDelta !== right.rowDelta) return left.rowDelta - right.rowDelta;
+    return left.row - right.row;
+  });
 
-  if (bands.length > 0) {
-    const maxRow = bands.reduce((largest, band) => Math.max(largest, Math.max(1, Number.parseInt(band?.row, 10) || 1)), 1);
-    pushCandidate(maxRow + 1);
-  }
-
-  return candidates;
+  const cap = Math.min(ranked.length, 36);
+  return ranked.slice(0, cap).map((entry) => entry.row);
 }
 
 function buildSimpleColCandidates(targetCol, maxColumns) {
