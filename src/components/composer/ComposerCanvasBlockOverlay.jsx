@@ -170,6 +170,66 @@ function resolveSimpleRowFromClientY(clientY, metrics, fallbackRow, fallbackHeig
   return last.row + Math.max(1, Math.round((targetY - last.bottomClient) / step));
 }
 
+function buildSimpleRowCandidates(targetRow, targetY, metrics) {
+  const parsedTargetRow = Math.max(1, Number.parseInt(targetRow, 10) || 1);
+  const parsedTargetY = Number(targetY) || 0;
+  const bands = Array.isArray(metrics?.rowBands) ? metrics.rowBands : [];
+  const candidates = [];
+  const seen = new Set();
+
+  const pushCandidate = (value) => {
+    const row = Math.max(1, Number.parseInt(value, 10) || 1);
+    if (seen.has(row)) return;
+    seen.add(row);
+    candidates.push(row);
+  };
+
+  pushCandidate(parsedTargetRow);
+  for (let offset = 1; offset <= 3; offset += 1) {
+    pushCandidate(parsedTargetRow - offset);
+    pushCandidate(parsedTargetRow + offset);
+  }
+
+  bands
+    .map((band) => ({
+      row: Math.max(1, Number.parseInt(band?.row, 10) || 1),
+      distance: Math.abs(parsedTargetY - ((Number(band?.topClient) + Number(band?.bottomClient)) / 2 || 0)),
+    }))
+    .sort((left, right) => {
+      if (left.distance !== right.distance) return left.distance - right.distance;
+      return left.row - right.row;
+    })
+    .forEach((band) => pushCandidate(band.row));
+
+  if (bands.length > 0) {
+    const maxRow = bands.reduce((largest, band) => Math.max(largest, Math.max(1, Number.parseInt(band?.row, 10) || 1)), 1);
+    pushCandidate(maxRow + 1);
+  }
+
+  return candidates;
+}
+
+function resolveSimpleDragValidation(activities, selectedIndex, proposal, metrics, targetY) {
+  const initial = validateComposerSimpleProposal(activities, selectedIndex, proposal, { maxColumns: metrics.cols });
+  if (initial.valid || initial.reason !== 'collision') return initial;
+
+  const rowCandidates = buildSimpleRowCandidates(proposal?.row, targetY, metrics).filter((row) => row !== proposal?.row);
+  for (const candidateRow of rowCandidates) {
+    const attempt = validateComposerSimpleProposal(
+      activities,
+      selectedIndex,
+      {
+        ...proposal,
+        row: candidateRow,
+      },
+      { maxColumns: metrics.cols },
+    );
+    if (attempt.valid) return attempt;
+  }
+
+  return initial;
+}
+
 function formatLayoutChip(layout, isCanvasMode) {
   if (!layout || typeof layout !== 'object') return '';
   if (isCanvasMode) {
@@ -430,7 +490,7 @@ export default function ComposerCanvasBlockOverlay({
           ),
           colSpan: nextSpan,
         };
-        const validation = validateComposerSimpleProposal(activities, selectedIndex, proposal, { maxColumns: metrics.cols });
+        const validation = resolveSimpleDragValidation(activities, selectedIndex, proposal, metrics, moveEvent.clientY);
         lastProposal = validation.layout;
         lastProposalValid = validation.valid;
         nextFrame = frameFromSimpleLayout(validation.layout, metrics, startFrame.height);

@@ -51,6 +51,12 @@ const checks = [
   {
     type: 'include',
     file: 'overlay',
+    pattern: /function resolveSimpleDragValidation\(/,
+    message: 'Missing nearest-row simple drag validation helper in ComposerCanvasBlockOverlay.jsx',
+  },
+  {
+    type: 'include',
+    file: 'overlay',
     pattern: /onSimpleLayoutChange/,
     message: 'Missing simple layout commit callback in ComposerCanvasBlockOverlay.jsx',
   },
@@ -59,6 +65,12 @@ const checks = [
     file: 'overlay',
     pattern: /else if \(operation === 'drag'\)[\s\S]*?validateComposerSimpleProposal/,
     message: 'Simple drag path is not using proposal validation in ComposerCanvasBlockOverlay.jsx',
+  },
+  {
+    type: 'include',
+    file: 'overlay',
+    pattern: /else if \(operation === 'drag'\)[\s\S]*?const validation = resolveSimpleDragValidation\(/,
+    message: 'Simple drag path is not using nearest-row drag validation in ComposerCanvasBlockOverlay.jsx',
   },
   {
     type: 'include',
