@@ -218,6 +218,62 @@ function normalizeEditorTabToken(value, fallback = 'tab') {
   return raw || fallback;
 }
 
+// Keep import parsing local to Phase 1 to avoid cross-phase coupling.
+function sanitizeImportData(input) {
+  let cleanData = [];
+  try {
+    let jsonString = String(input || '').trim().replace(/^```json/, '').replace(/^```/, '').replace(/```$/, '');
+    const parsed = JSON.parse(jsonString);
+    const rawArray = Array.isArray(parsed) ? parsed : (parsed.questions || parsed.data || []);
+
+    cleanData = rawArray.map((q) => {
+      const questionText = String(q.question || q.q || 'Untitled Question');
+      const optionsArray = Array.isArray(q.options) ? q.options.map((opt) => String(opt || '')) : [];
+      const hasOptions = optionsArray.length > 0;
+
+      return {
+        type: hasOptions ? 'multiple-choice' : 'long-answer',
+        question: questionText,
+        options: optionsArray,
+        correct: hasOptions
+          ? ((typeof q.correct === 'string')
+              ? (Number.isNaN(Number(q.correct)) ? q.correct.toUpperCase().charCodeAt(0) - 65 : Number.parseInt(q.correct, 10))
+              : (q.correct || 0))
+          : 0,
+      };
+    });
+    return { data: cleanData, success: true };
+  } catch {
+    const lines = String(input || '').split('\n').filter((line) => line.trim());
+    const questions = [];
+    let current = null;
+
+    lines.forEach((line) => {
+      const trimmed = line.trim();
+      if (/^(Q?\d+[.)]|Question\s+\d+)/i.test(trimmed)) {
+        if (current) questions.push(current);
+        current = {
+          type: 'long-answer',
+          question: trimmed.replace(/^(Q?\d+[.)]|Question\s+\d+)\s*/, ''),
+          options: [],
+          correct: 0,
+        };
+      } else if (/^[a-d][.)]\s/i.test(trimmed) || trimmed.startsWith('- ')) {
+        if (current) {
+          if (current.options.length === 0) current.type = 'multiple-choice';
+          current.options.push(trimmed.replace(/^[a-d][.)]\s/i, '').replace(/^- \s/, ''));
+        }
+      } else if (/^(ans|answer|correct):\s*([a-d])/i.test(trimmed) && current) {
+        current.correct = trimmed.match(/([a-d])/i)[1].toUpperCase().charCodeAt(0) - 65;
+      } else if (current && current.options.length === 0) {
+        current.question += ` ${trimmed}`;
+      }
+    });
+    if (current) questions.push(current);
+    return { data: questions, success: questions.length > 0 };
+  }
+}
+
 function extractRichEditorText(html) {
   const input = String(html || '');
   if (!input) return '';
@@ -382,9 +438,9 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerComposerActivities, setModuleManagerComposerActivities] = useState([]);
   const [moduleManagerComposerExtraRows, setModuleManagerComposerExtraRows] = useState(0);
   const [moduleManagerComposerSelectedIndex, setModuleManagerComposerSelectedIndex] = useState(0);
-  const [moduleManagerComposerDraggingIndex, setModuleManagerComposerDraggingIndex] = useState(null);
-  const [moduleManagerComposerDragOverIndex, setModuleManagerComposerDragOverIndex] = useState(null);
-  const [moduleManagerComposerDragOverSlotKey, setModuleManagerComposerDragOverSlotKey] = useState(null);
+  const [_moduleManagerComposerDraggingIndex, setModuleManagerComposerDraggingIndex] = useState(null);
+  const [_moduleManagerComposerDragOverIndex, setModuleManagerComposerDragOverIndex] = useState(null);
+  const [_moduleManagerComposerDragOverSlotKey, setModuleManagerComposerDragOverSlotKey] = useState(null);
   const [moduleManagerKnowledgeDragIndex, setModuleManagerKnowledgeDragIndex] = useState(null);
   const [moduleManagerKnowledgeDragOverIndex, setModuleManagerKnowledgeDragOverIndex] = useState(null);
   const [moduleManagerWorksheetDragIndex, setModuleManagerWorksheetDragIndex] = useState(null);
@@ -394,7 +450,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerAssessmentId, setModuleManagerAssessmentId] = useState('');
   const [moduleManagerComposerSidebarMode, setModuleManagerComposerSidebarMode] = useState(null); // 'grid' | 'outline' | 'issues' | 'templates'
   const [moduleManagerComposerLeftPaneCollapsed, setModuleManagerComposerLeftPaneCollapsed] = useState(false);
-  const [moduleManagerComposerLeftPaneMode, setModuleManagerComposerLeftPaneMode] = useState('builder'); // 'builder' | 'editor'
+  const [_moduleManagerComposerLeftPaneMode, setModuleManagerComposerLeftPaneMode] = useState('builder'); // 'builder' | 'editor'
   const [moduleManagerComposerPreviewCollapsed, setModuleManagerComposerPreviewCollapsed] = useState(false);
   const [moduleManagerComposerPreviewWidth, setModuleManagerComposerPreviewWidth] = useState(55);
   const [moduleManagerComposerPreviewHeight, setModuleManagerComposerPreviewHeight] = useState(900);
@@ -410,14 +466,14 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerComposerBuilderHeight, setModuleManagerComposerBuilderHeight] = useState(760);
   const [moduleManagerComposerBuilderCellWidth, setModuleManagerComposerBuilderCellWidth] = useState(220);
   const [moduleManagerComposerWorkspaceControlsCollapsed, setModuleManagerComposerWorkspaceControlsCollapsed] = useState(true);
-  const [moduleManagerComposerWorkspaceMode, setModuleManagerComposerWorkspaceMode] = useState(() => {
+  const [moduleManagerComposerWorkspaceMode, _setModuleManagerComposerWorkspaceMode] = useState(() => {
     try {
       return normalizeComposerWorkspaceMode(localStorage.getItem(MODULE_MANAGER_WORKSPACE_MODE_KEY), 'simple');
     } catch {
       return 'simple';
     }
   });
-  const [moduleManagerComposerWorkspacePreset, setModuleManagerComposerWorkspacePreset] = useState(() => {
+  const [moduleManagerComposerWorkspacePreset, _setModuleManagerComposerWorkspacePreset] = useState(() => {
     try {
       const raw = String(localStorage.getItem(MODULE_MANAGER_WORKSPACE_PRESET_KEY) || '').trim().toLowerCase();
       return COMPOSER_WORKSPACE_PRESETS.some((preset) => preset.value === raw) ? raw : 'balanced';
@@ -452,7 +508,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [moduleManagerSetupExpanded, setModuleManagerSetupExpanded] = useState(false);
   const [moduleManagerIdExpanded, setModuleManagerIdExpanded] = useState(false);
 
-  const applyComposerWorkspacePreset = (presetValue) => {
+  const _applyComposerWorkspacePreset = (presetValue) => {
     const preset = COMPOSER_WORKSPACE_PRESETS.find((entry) => entry.value === presetValue);
     if (!preset) return;
     const next = preset.settings || {};
@@ -689,7 +745,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const isModuleManagerSimpleWorkspace = moduleManagerComposerWorkspaceMode === 'simple';
   const moduleManagerShowLeftPane = isModuleManagerSimpleWorkspace ? true : !moduleManagerComposerLeftPaneCollapsed;
   const moduleManagerShowPreviewPane = isModuleManagerSimpleWorkspace ? true : !moduleManagerComposerPreviewCollapsed;
-  const moduleManagerBothWorkspacePanesOpen = moduleManagerShowLeftPane && moduleManagerShowPreviewPane;
+  const _moduleManagerBothWorkspacePanesOpen = moduleManagerShowLeftPane && moduleManagerShowPreviewPane;
   const moduleManagerGridModel = useMemo(
     () =>
       buildComposerGridModel(moduleManagerComposerActivities, moduleManagerComposerMaxColumns, {
@@ -726,7 +782,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     ? normalizedModuleManagerLayout.containerPadding[1]
     : 12;
   const moduleManagerCanvasVisibleRows = Math.max(1, moduleManagerCanvasOccupiedRows + Math.max(0, moduleManagerComposerExtraRows || 0));
-  const moduleManagerCanvasMinHeight =
+  const _moduleManagerCanvasMinHeight =
     moduleManagerCanvasVisibleRows * normalizedModuleManagerLayout.rowHeight +
     Math.max(0, moduleManagerCanvasVisibleRows - 1) * moduleManagerCanvasMarginY +
     moduleManagerCanvasPaddingY * 2;
@@ -875,8 +931,6 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
         </div>
       </div>
     `).join('');
-
-    const answers = quizQuestions.map(q => q.correct);
 
     const html = `<div id="${quizId}" class="w-full h-full custom-scroll p-8">
       <div class="max-w-4xl mx-auto">
@@ -1313,7 +1367,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                   parsedCode = JSON.parse(jsonToUse); 
               }
           } 
-      } catch (e) { 
+      } catch { 
           setAiParseError("Invalid JSON format. Please check your syntax.");
           return; 
       }
@@ -1363,20 +1417,20 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   };
 
   // CSS AUTO-SCOPING FUNCTION
-  const scopeCSS = (css, viewId) => {
+  const _scopeCSS = (css, viewId) => {
     if (!css || !viewId) return css;
-    
+
     // Add #view-{id} prefix to CSS selectors
     // Handle various CSS patterns
     let scoped = css;
-    
+
     // Scope regular selectors (but not @rules)
     scoped = scoped.replace(/([^{}@]+)\{/g, (match, selector) => {
       // Skip if already scoped or is @rule
       if (selector.trim().startsWith('@') || selector.includes(`#${viewId}`)) {
         return match;
       }
-      
+
       // Clean selector and add scope
       const cleanSelector = selector.trim();
       if (cleanSelector) {
@@ -1384,7 +1438,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       }
       return match;
     });
-    
+
     return scoped;
   };
 
@@ -2009,7 +2063,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     : null;
   const moduleManagerComposerResponsiveBreakpoint =
     moduleManagerComposerPreviewViewport === 'desktop' ? 'desktop' : moduleManagerComposerPreviewViewport;
-  const selectedComposerResponsiveLayout = useMemo(
+  const _selectedComposerResponsiveLayout = useMemo(
     () =>
       selectedComposerActivity
         ? resolveComposerActivityLayoutForBreakpoint(selectedComposerActivity, moduleManagerComposerResponsiveBreakpoint, {
@@ -2024,7 +2078,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       selectedComposerActivity,
     ],
   );
-  const selectedComposerResponsiveOverride = useMemo(
+  const _selectedComposerResponsiveOverride = useMemo(
     () =>
       selectedComposerActivity
         ? getComposerActivityBreakpointOverride(selectedComposerActivity, moduleManagerComposerResponsiveBreakpoint, {
@@ -2042,11 +2096,11 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const {
     applySelection: applyComposerSelection,
     clearToPrimary: clearComposerSelectionToPrimary,
-    isSelectedIndex: isComposerSelectionIndex,
+    isSelectedIndex: _isComposerSelectionIndex,
     selectAll: selectAllComposerActivities,
     selectById: selectComposerActivityById,
     selectIndex: selectComposerActivityIndex,
-    selectOnly: selectOnlyComposerActivity,
+    selectOnly: _selectOnlyComposerActivity,
     selectedCount: selectedComposerActivityCount,
     selectedIds: selectedComposerActivityIds,
     selectedIndexes: selectedComposerActivityIndexes,
@@ -2055,7 +2109,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     selectedIndex: moduleManagerComposerSelectedIndex,
     setSelectedIndex: setModuleManagerComposerSelectedIndex,
   });
-  const handleComposerActivitySelection = React.useCallback(
+  const _handleComposerActivitySelection = React.useCallback(
     (index, eventOrOptions = {}) => {
       const options =
         eventOrOptions && typeof eventOrOptions === 'object' && 'preventDefault' in eventOrOptions
@@ -2575,9 +2629,9 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   });
 
   const {
-    applyTransientLayout: applyModuleManagerTransientCanvasLayout,
-    beginInteraction: beginComposerCanvasInteraction,
-    finishInteraction: finishComposerCanvasInteraction,
+    applyTransientLayout: _applyModuleManagerTransientCanvasLayout,
+    beginInteraction: _beginComposerCanvasInteraction,
+    finishInteraction: _finishComposerCanvasInteraction,
     interactionRef: moduleManagerCanvasInteractionRef,
     resetInteraction: resetModuleManagerCanvasInteraction,
   } = useComposerCanvasInteractions({
@@ -2700,7 +2754,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     }
   }, [moduleManagerComposerActivities, updateComposerActivities]);
 
-  const updateSelectedComposerResponsiveLayout = React.useCallback(
+  const _updateSelectedComposerResponsiveLayout = React.useCallback(
     (updates) => {
       if (!selectedComposerActivity || moduleManagerComposerResponsiveBreakpoint === 'desktop') return;
       const nextActivities = moduleManagerComposerActivities.map((activity, idx) => {
@@ -2733,7 +2787,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     ],
   );
 
-  const clearSelectedComposerResponsiveLayout = React.useCallback(() => {
+  const _clearSelectedComposerResponsiveLayout = React.useCallback(() => {
     if (!selectedComposerActivity || moduleManagerComposerResponsiveBreakpoint === 'desktop') return;
     const nextActivities = moduleManagerComposerActivities.map((activity, idx) => {
       if (idx !== moduleManagerComposerSelectedIndex) return activity;
@@ -2760,7 +2814,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     updateComposerActivities,
   ]);
 
-  const applyBulkComposerActivityChanges = React.useCallback(
+  const _applyBulkComposerActivityChanges = React.useCallback(
     (transform) => {
       if (selectedComposerActivityCount <= 1) return;
       const selectedIdSet = new Set(selectedComposerActivityIds);
@@ -3500,7 +3554,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     setModuleManagerComposerExtraRows((count) => Math.min(50, count + 1));
   };
 
-  const removeComposerEmptyRowDraft = (targetRow) => {
+  const _removeComposerEmptyRowDraft = (targetRow) => {
     if (isModuleManagerCanvasMode) return;
     const row = Math.max(1, Number.parseInt(targetRow, 10) || 1);
 
@@ -3561,7 +3615,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     setModuleManagerComposerExtraRows((count) => Math.min(50, count + clampedRows));
   };
 
-  const insertCanvasGapRelativeToSelected = (placement = 'below') => {
+  const _insertCanvasGapRelativeToSelected = (placement = 'below') => {
     if (!isModuleManagerCanvasMode || !selectedComposerActivity) return;
     const selectedY = Number.isInteger(selectedComposerActivity?.layout?.y)
       ? selectedComposerActivity.layout.y
@@ -3571,7 +3625,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     shiftCanvasActivitiesDownFromRow(startRow, moduleManagerCanvasGapRowCount);
   };
 
-  const addCanvasOpenRowsDraft = () => {
+  const _addCanvasOpenRowsDraft = () => {
     pushComposerHistorySnapshot(buildComposerSnapshot());
     setModuleManagerComposerExtraRows((count) => Math.min(50, count + moduleManagerCanvasGapRowCount));
   };
@@ -3629,7 +3683,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     setModuleManagerComposerSelectedIndex(moduleManagerComposerSelectedIndex);
   };
 
-  const moveComposerActivityToGridCell = (fromIndex, targetRow, targetCol) => {
+  const _moveComposerActivityToGridCell = (fromIndex, targetRow, targetCol) => {
     if (isModuleManagerCanvasMode) return;
     if (!Number.isInteger(fromIndex) || !Number.isInteger(targetRow) || !Number.isInteger(targetCol)) return;
     const result = moveComposerActivityToCell(moduleManagerComposerActivities, fromIndex, targetRow, targetCol, {
@@ -6660,7 +6714,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
       try {
-        const response = await fetch(testUrl, { 
+        await fetch(testUrl, { 
           method: 'HEAD', 
           mode: 'no-cors', // This will always "succeed" but we can check if URL is valid
           signal: controller.signal
@@ -7801,7 +7855,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                         const safeHtml = phase1AssessmentPreview.html || '<p class="text-slate-500">No HTML content</p>';
                                                         const safeScript = cleanModuleScript(phase1AssessmentPreview.script || '');
                                                         const scopedStorageBootstrapTag = buildScopedStorageBootstrapTag(phase1AssessmentPreviewScope);
-                                                        return `<!DOCTYPE html><html><head>${scopedStorageBootstrapTag}<script src="https://cdn.tailwindcss.com"><\/script><style>body{background:#020617;color:#e2e8f0;padding:20px;}</style></head><body>${safeHtml}<script>${safeScript}<\/script></body></html>`;
+                                                        return `<!DOCTYPE html><html><head>${scopedStorageBootstrapTag}<script src="https://cdn.tailwindcss.com"></script><style>body{background:#020617;color:#e2e8f0;padding:20px;}</style></head><body>${safeHtml}<script>${safeScript}</script></body></html>`;
                                                     })()}
                                                     className="w-full border-0"
                                                     style={{ minHeight: '600px' }}
@@ -8149,7 +8203,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                             setMigratePrompt('');
                                                             setMigrateOutput('');
                                                             setMode('MANAGE');
-                                                        } catch(e) {
+                                                        } catch {
                                                             alert("Invalid JSON. Please check the output and try again.");
                                                         }
                                                     }}
@@ -8504,7 +8558,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                             setMaterialForm(prev => ({...prev, digitalContent: parsed, digitalContentJson: json}));
                                                         }
                                                     }
-                                                } catch(e) {
+                                                } catch {
                                                     // Invalid JSON, keep raw text
                                                 }
                                             }}
@@ -8890,7 +8944,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                         setMaterialForm(prev => ({...prev, digitalContent: parsed, digitalContentJson: json}));
                                                                     }
                                                                 }
-                                                            } catch(e) {
+                                                            } catch {
                                                                 // Invalid JSON
                                                             }
                                                         }}

@@ -518,9 +518,9 @@ export default function EditModal({
   const [composerPreviewScale, setComposerPreviewScale] = useState(1);
   const [composerCommandPaletteInitialQuery, setComposerCommandPaletteInitialQuery] = useState('');
   const [isComposerCommandPaletteOpen, setIsComposerCommandPaletteOpen] = useState(false);
-  const [draggingActivityIndex, setDraggingActivityIndex] = useState(null);
-  const [dragOverActivityIndex, setDragOverActivityIndex] = useState(null);
-  const [dragOverSlotKey, setDragOverSlotKey] = useState(null);
+  const [_draggingActivityIndex, setDraggingActivityIndex] = useState(null);
+  const [_dragOverActivityIndex, setDragOverActivityIndex] = useState(null);
+  const [_dragOverSlotKey, setDragOverSlotKey] = useState(null);
   const [composerExtraRows, setComposerExtraRows] = useState(0);
   const [newActivityType, setNewActivityType] = useState(activityTypes[0] || 'content_block');
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
@@ -689,7 +689,7 @@ export default function EditModal({
   );
   const selectedPlacement = selectedActivity ? composerPlacementsByIndex.get(selectedActivityIndex) || null : null;
   const composerResponsiveBreakpoint = composerPreviewViewport === 'desktop' ? 'desktop' : composerPreviewViewport;
-  const selectedResponsiveLayout = useMemo(
+  const _selectedResponsiveLayout = useMemo(
     () =>
       selectedActivity
         ? resolveComposerActivityLayoutForBreakpoint(selectedActivity, composerResponsiveBreakpoint, {
@@ -699,7 +699,7 @@ export default function EditModal({
         : null,
     [composerLayout.mode, composerMaxColumns, composerResponsiveBreakpoint, selectedActivity],
   );
-  const selectedResponsiveOverride = useMemo(
+  const _selectedResponsiveOverride = useMemo(
     () =>
       selectedActivity
         ? getComposerActivityBreakpointOverride(selectedActivity, composerResponsiveBreakpoint, {
@@ -712,11 +712,11 @@ export default function EditModal({
   const {
     applySelection: applyActivitySelection,
     clearToPrimary: clearActivitySelectionToPrimary,
-    isSelectedIndex: isSelectedActivityIndex,
+    isSelectedIndex: _isSelectedActivityIndex,
     selectAll: selectAllActivities,
     selectById: selectActivityById,
     selectIndex: selectActivityIndex,
-    selectOnly: selectOnlyActivity,
+    selectOnly: _selectOnlyActivity,
     selectedCount: selectedActivityCount,
     selectedIds: selectedActivityIds,
     selectedIndexes: selectedActivityIndexes,
@@ -725,7 +725,7 @@ export default function EditModal({
     selectedIndex: selectedActivityIndex,
     setSelectedIndex: setSelectedActivityIndex,
   });
-  const handleActivitySelection = React.useCallback(
+  const _handleActivitySelection = React.useCallback(
     (index, eventOrOptions = {}) => {
       const options =
         eventOrOptions && typeof eventOrOptions === 'object' && 'preventDefault' in eventOrOptions
@@ -951,10 +951,10 @@ export default function EditModal({
   });
 
   const {
-    applyTransientLayout: applyComposerTransientCanvasLayout,
-    beginInteraction: beginComposerCanvasInteraction,
-    finishInteraction: finishComposerCanvasInteraction,
-    interactionRef: composerCanvasInteractionRef,
+    applyTransientLayout: _applyComposerTransientCanvasLayout,
+    beginInteraction: _beginComposerCanvasInteraction,
+    finishInteraction: _finishComposerCanvasInteraction,
+    interactionRef: _composerCanvasInteractionRef,
     resetInteraction: resetComposerCanvasInteraction,
   } = useComposerCanvasInteractions({
     enabled: isCanvasMode,
@@ -1066,7 +1066,7 @@ export default function EditModal({
     }
   }, [activities, updateActivities]);
 
-  const updateSelectedActivityResponsiveLayout = React.useCallback(
+  const _updateSelectedActivityResponsiveLayout = React.useCallback(
     (updates) => {
       if (!selectedActivity || composerResponsiveBreakpoint === 'desktop') return;
       const nextActivities = activities.map((activity, idx) => {
@@ -1093,7 +1093,7 @@ export default function EditModal({
     [activities, composerResponsiveBreakpoint, selectedActivity, selectedActivityIndex, updateActivities],
   );
 
-  const clearSelectedActivityResponsiveLayout = React.useCallback(() => {
+  const _clearSelectedActivityResponsiveLayout = React.useCallback(() => {
     if (!selectedActivity || composerResponsiveBreakpoint === 'desktop') return;
     const nextActivities = activities.map((activity, idx) => {
       if (idx !== selectedActivityIndex) return activity;
@@ -1114,7 +1114,7 @@ export default function EditModal({
     updateActivities(nextActivities);
   }, [activities, composerResponsiveBreakpoint, selectedActivity, selectedActivityIndex, updateActivities]);
 
-  const applyBulkActivityChanges = React.useCallback(
+  const _applyBulkActivityChanges = React.useCallback(
     (transform) => {
       if (selectedActivityCount <= 1) return;
       const selectedIdSet = new Set(selectedActivityIds);
@@ -1838,7 +1838,7 @@ export default function EditModal({
     setComposerExtraRows((count) => Math.min(50, count + 1));
   };
 
-  const removeEmptyRowAt = (targetRow) => {
+  const _removeEmptyRowAt = (targetRow) => {
     if (isCanvasMode) return;
     const row = Math.max(1, Number.parseInt(targetRow, 10) || 1);
 
@@ -1917,7 +1917,7 @@ export default function EditModal({
     setSelectedActivityIndex(selectedActivityIndex);
   };
 
-  const moveActivityToCell = (fromIndex, targetRow, targetCol) => {
+  const _moveActivityToCell = (fromIndex, targetRow, targetCol) => {
     if (isCanvasMode) return;
     if (!Number.isInteger(fromIndex) || !Number.isInteger(targetRow) || !Number.isInteger(targetCol)) return;
     const result = moveComposerActivityToCell(activities, fromIndex, targetRow, targetCol, {
