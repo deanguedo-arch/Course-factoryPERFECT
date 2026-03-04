@@ -74,8 +74,38 @@ const checks = [
   {
     type: 'include',
     file: 'phase1',
+    pattern: /moduleManagerComposerPreviewDocSyncSuppressedUntilRef\s*=\s*useRef\(0\)/,
+    message: 'Missing preview-doc suppression window ref for layout-only commits in Phase1.jsx',
+  },
+  {
+    type: 'include',
+    file: 'phase1',
+    pattern: /const suppressModuleManagerComposerPreviewDocSync = React\.useCallback\(/,
+    message: 'Missing preview-doc suppression helper for layout-only commits in Phase1.jsx',
+  },
+  {
+    type: 'include',
+    file: 'phase1',
+    pattern: /const patchComposerPreviewLayoutInIframe = React\.useCallback\(/,
+    message: 'Missing live iframe layout patch helper in Phase1.jsx',
+  },
+  {
+    type: 'include',
+    file: 'phase1',
+    pattern: /const updateSelectedComposerActivityCanvasLayout = \(updates, options = \{\}\) => {[\s\S]*?patchComposerPreviewLayoutInIframe\(/,
+    message: 'Canvas layout commits should patch live iframe layout before state sync in Phase1.jsx',
+  },
+  {
+    type: 'include',
+    file: 'phase1',
     pattern: /const updateSelectedComposerActivityCanvasLayout = \(updates, options = \{\}\) => {[\s\S]*?updateComposerActivities\([\s\S]*?followPreview:\s*false[\s\S]*?\);/,
     message: 'Canvas drag/resize commits should disable preview follow in Phase1 updateSelectedComposerActivityCanvasLayout',
+  },
+  {
+    type: 'include',
+    file: 'phase1',
+    pattern: /const commitSelectedComposerSimpleLayout = React\.useCallback\([\s\S]*?patchComposerPreviewLayoutInIframe\(/,
+    message: 'Simple layout commits should patch live iframe layout before state sync in Phase1.jsx',
   },
   {
     type: 'include',

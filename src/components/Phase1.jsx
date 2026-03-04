@@ -139,6 +139,12 @@ function escapeEditorHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function escapeSelectorAttr(value) {
+  return String(value || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"');
+}
+
 const RICH_EDITOR_FONT_OPTIONS = [
   { value: 'Arial', label: 'Arial (System)' },
   { value: 'Helvetica', label: 'Helvetica (System)' },
@@ -2473,6 +2479,52 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     normalizedModuleManagerLayout,
     projectData,
   ]);
+  const moduleManagerComposerPreviewDocSyncSuppressedUntilRef = useRef(0);
+  const moduleManagerComposerPreviewDocSyncReleaseTimerRef = useRef(0);
+  const [moduleManagerComposerRenderedPreviewDoc, setModuleManagerComposerRenderedPreviewDoc] = useState(
+    () => moduleManagerComposerPreviewDoc,
+  );
+  const suppressModuleManagerComposerPreviewDocSync = React.useCallback((durationMs = 920) => {
+    const duration = Math.max(240, Number.parseInt(durationMs, 10) || 920);
+    moduleManagerComposerPreviewDocSyncSuppressedUntilRef.current = Math.max(
+      moduleManagerComposerPreviewDocSyncSuppressedUntilRef.current,
+      Date.now() + duration,
+    );
+    if (moduleManagerComposerPreviewDocSyncReleaseTimerRef.current) {
+      window.clearTimeout(moduleManagerComposerPreviewDocSyncReleaseTimerRef.current);
+    }
+    moduleManagerComposerPreviewDocSyncReleaseTimerRef.current = window.setTimeout(() => {
+      moduleManagerComposerPreviewDocSyncSuppressedUntilRef.current = 0;
+      moduleManagerComposerPreviewDocSyncReleaseTimerRef.current = 0;
+    }, duration + 60);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (moduleManagerComposerPreviewDocSyncReleaseTimerRef.current) {
+        window.clearTimeout(moduleManagerComposerPreviewDocSyncReleaseTimerRef.current);
+        moduleManagerComposerPreviewDocSyncReleaseTimerRef.current = 0;
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (moduleManagerType !== 'composer') {
+      if (moduleManagerComposerPreviewDocSyncReleaseTimerRef.current) {
+        window.clearTimeout(moduleManagerComposerPreviewDocSyncReleaseTimerRef.current);
+        moduleManagerComposerPreviewDocSyncReleaseTimerRef.current = 0;
+      }
+      moduleManagerComposerPreviewDocSyncSuppressedUntilRef.current = 0;
+      setModuleManagerComposerRenderedPreviewDoc('');
+      return;
+    }
+    if (Date.now() < moduleManagerComposerPreviewDocSyncSuppressedUntilRef.current) {
+      return;
+    }
+    setModuleManagerComposerRenderedPreviewDoc(moduleManagerComposerPreviewDoc);
+  }, [moduleManagerComposerPreviewDoc, moduleManagerType]);
+
   const {
     iframeRef: moduleManagerComposerPreviewIframeRef,
     previewNonce: moduleManagerComposerPreviewNonce,
@@ -2482,7 +2534,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     suspendPreviewFollow: suspendModuleManagerComposerPreviewFollow,
   } = useComposerPreviewBridge({
     enabled: moduleManagerType === 'composer',
-    previewDoc: moduleManagerComposerPreviewDoc,
+    previewDoc: moduleManagerComposerRenderedPreviewDoc,
     selectedActivityId: selectedComposerActivity?.id,
     selectedActivityIds: selectedComposerActivityIds,
     activityIssues: moduleManagerComposerPreviewIssues,
@@ -2500,6 +2552,55 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       resetPhase1ViewportToTop();
     },
     [handleModuleManagerComposerPreviewLoad, resetPhase1ViewportToTop],
+  );
+  const patchComposerPreviewLayoutInIframe = React.useCallback(
+    (nextActivities) => {
+      const iframe = moduleManagerComposerPreviewIframeRef.current;
+      const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
+      if (!doc) return false;
+      const root = doc.querySelector('[data-composer-root]');
+      if (!root) return false;
+      const rootMode = String(root.getAttribute('data-composer-layout-mode') || '').trim().toLowerCase();
+      const isCanvasLayout = rootMode ? rootMode === 'canvas' : isModuleManagerCanvasMode;
+      const list = Array.isArray(nextActivities) ? nextActivities : [];
+      let patchedCount = 0;
+
+      list.forEach((activity) => {
+        const activityId = String(activity?.id || '').trim();
+        if (!activityId) return;
+        const node = doc.querySelector(`[data-activity-id="${escapeSelectorAttr(activityId)}"]`);
+        if (!node) return;
+
+        const layout = activity?.layout && typeof activity.layout === 'object' ? activity.layout : {};
+        const colSpan = Math.max(1, Number.parseInt(layout.colSpan, 10) || 1);
+        const row = Math.max(1, Number.parseInt(layout.row, 10) || 1);
+        const col = Math.max(1, Number.parseInt(layout.col, 10) || 1);
+        const x = Math.max(0, Number.parseInt(layout.x, 10) || (col - 1));
+        const y = Math.max(0, Number.parseInt(layout.y, 10) || (row - 1));
+        const w = Math.max(1, Number.parseInt(layout.w, 10) || colSpan);
+        const h = Math.max(1, Number.parseInt(layout.h, 10) || 4);
+
+        node.setAttribute('data-composer-col-span', String(colSpan));
+        node.setAttribute('data-composer-row', String(row));
+        node.setAttribute('data-composer-col', String(col));
+        node.setAttribute('data-composer-x', String(x));
+        node.setAttribute('data-composer-y', String(y));
+        node.setAttribute('data-composer-w', String(w));
+        node.setAttribute('data-composer-h', String(h));
+
+        if (isCanvasLayout) {
+          node.style.gridColumn = `${x + 1} / span ${w}`;
+          node.style.gridRow = `${y + 1} / span ${h}`;
+        } else {
+          node.style.gridColumn = `${col} / span ${colSpan}`;
+          node.style.gridRow = `${row}`;
+        }
+        patchedCount += 1;
+      });
+
+      return patchedCount > 0;
+    },
+    [isModuleManagerCanvasMode, moduleManagerComposerPreviewIframeRef],
   );
 
   const phase1MaterialCompiledPreviewDoc = useMemo(() => {
@@ -3217,9 +3318,23 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       },
     );
     if (!valid) return;
-    updateComposerActivities(resolvedActivities, moduleManagerComposerLayout, {
+    suppressModuleManagerComposerPreviewDocSync();
+    const patchedPreview = patchComposerPreviewLayoutInIframe(resolvedActivities);
+    const didUpdate = updateComposerActivities(resolvedActivities, moduleManagerComposerLayout, {
       followPreview: false,
     });
+    if (!didUpdate) {
+      moduleManagerComposerPreviewDocSyncSuppressedUntilRef.current = 0;
+      return;
+    }
+    if (!patchedPreview) {
+      window.requestAnimationFrame(() => {
+        patchComposerPreviewLayoutInIframe(resolvedActivities);
+      });
+      window.setTimeout(() => {
+        patchComposerPreviewLayoutInIframe(resolvedActivities);
+      }, 96);
+    }
   };
 
   const updateSelectedComposerActivityData = (updates) => {
@@ -4173,9 +4288,24 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       const result = moveComposerActivityToCell(baseActivities, moduleManagerComposerSelectedIndex, targetRow, targetCol, {
         maxColumns: moduleManagerComposerMaxColumns,
       });
-      return updateComposerActivities(result.activities, moduleManagerComposerLayout, {
+      suppressModuleManagerComposerPreviewDocSync();
+      const patchedPreview = patchComposerPreviewLayoutInIframe(result.activities);
+      const didUpdate = updateComposerActivities(result.activities, moduleManagerComposerLayout, {
         followPreview: false,
       });
+      if (!didUpdate) {
+        moduleManagerComposerPreviewDocSyncSuppressedUntilRef.current = 0;
+        return false;
+      }
+      if (!patchedPreview) {
+        window.requestAnimationFrame(() => {
+          patchComposerPreviewLayoutInIframe(result.activities);
+        });
+        window.setTimeout(() => {
+          patchComposerPreviewLayoutInIframe(result.activities);
+        }, 96);
+      }
+      return didUpdate;
     },
     [
       isModuleManagerCanvasMode,
@@ -4183,6 +4313,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       moduleManagerComposerLayout,
       moduleManagerComposerMaxColumns,
       moduleManagerComposerSelectedIndex,
+      patchComposerPreviewLayoutInIframe,
+      suppressModuleManagerComposerPreviewDocSync,
       selectedComposerActivity,
       selectedComposerPlacement,
       updateComposerActivities,
@@ -9848,7 +9980,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             showPopoutControl
                                             showPreviewScaleControls
                                             showViewportControls
-                                            srcDoc={moduleManagerComposerPreviewDoc}
+                                            srcDoc={moduleManagerComposerRenderedPreviewDoc}
                                             titleText="Composer draft canvas"
                                             onInteractionModeChange={setModuleManagerComposerPreviewInteractionMode}
                                             onReset={resetModuleManagerComposerPreview}
@@ -9911,7 +10043,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                 description: 'Build on the real lesson page and use the inspector for content.',
                                                                 desktopWidthMode: moduleManagerComposerDesktopWidthMode,
                                                                 focusMode: moduleManagerComposerFocusMode,
-                                                                srcDoc: moduleManagerComposerPreviewDoc,
+                                                                srcDoc: moduleManagerComposerRenderedPreviewDoc,
                                                                 iframeRef: moduleManagerComposerPreviewIframeRef,
                                                                 iframeKey: `composer-create-preview-${moduleManagerComposerPreviewNonce}`,
                                                                 iframeStyle: { minHeight: '820px', height: `${moduleManagerPreviewPaneHeight}px` },
