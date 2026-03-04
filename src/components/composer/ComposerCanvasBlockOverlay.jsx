@@ -25,6 +25,61 @@ function clampInteger(value, min, max) {
   return Math.max(min, Math.min(max, parsed));
 }
 
+function isFrameClose(left, right, tolerance = 10) {
+  if (!left || !right) return false;
+  return (
+    Math.abs((Number(left.left) || 0) - (Number(right.left) || 0)) <= tolerance &&
+    Math.abs((Number(left.top) || 0) - (Number(right.top) || 0)) <= tolerance &&
+    Math.abs((Number(left.width) || 0) - (Number(right.width) || 0)) <= tolerance &&
+    Math.abs((Number(left.height) || 0) - (Number(right.height) || 0)) <= tolerance
+  );
+}
+
+function resolveEdgeScrollDelta(pointerClientY, top, bottom, threshold = 72, maxStep = 36) {
+  const safeTop = Number(top) || 0;
+  const safeBottom = Number(bottom) || 0;
+  const safeThreshold = Math.max(24, Number(threshold) || 72);
+  const safeStep = Math.max(8, Number(maxStep) || 36);
+  if (safeBottom <= safeTop) return 0;
+  if (pointerClientY < safeTop + safeThreshold) {
+    const ratio = Math.min(1, (safeTop + safeThreshold - pointerClientY) / safeThreshold);
+    return -Math.max(6, Math.round(ratio * safeStep));
+  }
+  if (pointerClientY > safeBottom - safeThreshold) {
+    const ratio = Math.min(1, (pointerClientY - (safeBottom - safeThreshold)) / safeThreshold);
+    return Math.max(6, Math.round(ratio * safeStep));
+  }
+  return 0;
+}
+
+function scrollElementByDelta(element, deltaY) {
+  if (!element || !Number.isFinite(deltaY) || deltaY === 0) return false;
+  const before = Number(element.scrollTop) || 0;
+  const maxScrollTop = Math.max(0, (Number(element.scrollHeight) || 0) - (Number(element.clientHeight) || 0));
+  const next = Math.max(0, Math.min(maxScrollTop, before + deltaY));
+  if (Math.abs(next - before) < 0.5) return false;
+  element.scrollTop = next;
+  return true;
+}
+
+function autoScrollDragSurface({ clientY, iframe, viewport }) {
+  if (!Number.isFinite(clientY)) return false;
+  const viewportRect = viewport?.getBoundingClientRect?.();
+  if (!viewportRect) return false;
+  const viewportDelta = resolveEdgeScrollDelta(clientY, viewportRect.top, viewportRect.bottom, 72, 34);
+  if (!viewportDelta) return false;
+
+  const iframeDoc = iframe?.contentDocument || iframe?.contentWindow?.document || null;
+  const iframeScrollRoot =
+    iframeDoc?.scrollingElement ||
+    iframeDoc?.documentElement ||
+    iframeDoc?.body ||
+    null;
+  const scrolledIframe = scrollElementByDelta(iframeScrollRoot, viewportDelta);
+  const scrolledViewport = scrolledIframe ? false : scrollElementByDelta(viewport, viewportDelta);
+  return scrolledIframe || scrolledViewport;
+}
+
 function resolveSimpleNodeRow(node, win) {
   const attrRow = Number.parseInt(node?.getAttribute?.('data-composer-row'), 10);
   if (Number.isFinite(attrRow) && attrRow >= 1) return attrRow;
@@ -491,8 +546,12 @@ export default function ComposerCanvasBlockOverlay({
   const [simpleDropHints, setSimpleDropHints] = React.useState([]);
   const metricsRef = React.useRef(null);
   const interactionCleanupRef = React.useRef(null);
+  const commitSettleUntilRef = React.useRef(0);
+  const commitExpectedFrameRef = React.useRef(null);
 
   const clearInteraction = React.useCallback(() => {
+    commitSettleUntilRef.current = 0;
+    commitExpectedFrameRef.current = null;
     interactionCleanupRef.current?.();
     interactionCleanupRef.current = null;
     setPreviewKind('idle');
@@ -501,6 +560,7 @@ export default function ComposerCanvasBlockOverlay({
   }, []);
 
   const updateFrame = React.useCallback(() => {
+    const isSettlingCommit = commitSettleUntilRef.current > Date.now();
     if (hidden) {
       metricsRef.current = null;
       setFrame(null);
@@ -513,7 +573,9 @@ export default function ComposerCanvasBlockOverlay({
     const doc = iframe?.contentDocument || iframe?.contentWindow?.document;
     if (!targetId || !iframe || !viewport || !doc) {
       metricsRef.current = null;
-      setFrame(null);
+      if (!isSettlingCommit) {
+        setFrame(null);
+      }
       setSimpleDropHints([]);
       return;
     }
@@ -521,7 +583,9 @@ export default function ComposerCanvasBlockOverlay({
     const target = doc.querySelector(`[data-activity-id="${escapeSelectorAttr(targetId)}"]`);
     if (!target) {
       metricsRef.current = null;
-      setFrame(null);
+      if (!isSettlingCommit) {
+        setFrame(null);
+      }
       setSimpleDropHints([]);
       return;
     }
@@ -532,12 +596,20 @@ export default function ComposerCanvasBlockOverlay({
     const metrics = computeGridMetrics({ doc, iframe, maxColumns, viewport });
     metricsRef.current = metrics;
 
-    setFrame({
+    const nextFrame = {
       left: targetRect.left + iframeRect.left - viewportRect.left,
       top: targetRect.top + iframeRect.top - viewportRect.top,
       width: targetRect.width,
       height: targetRect.height,
-    });
+    };
+    const expectedCommittedFrame = commitExpectedFrameRef.current;
+    if (isSettlingCommit && expectedCommittedFrame && !isFrameClose(nextFrame, expectedCommittedFrame)) {
+      return;
+    }
+    if (!isSettlingCommit) {
+      commitExpectedFrameRef.current = null;
+    }
+    setFrame(nextFrame);
   }, [hidden, iframeRef, maxColumns, selectedActivityId, viewportRef]);
 
   React.useEffect(() => {
@@ -661,15 +733,31 @@ export default function ComposerCanvasBlockOverlay({
     const startOffsetY = event.clientY - startFrameClientTop;
     let lastProposal = null;
     let lastProposalValid = false;
+    let lastPreviewFrame = startFrame;
+    const iframeElement = iframeRef?.current;
+    const previousPointerEvents = iframeElement?.style?.pointerEvents ?? '';
+    if (iframeElement?.style) {
+      iframeElement.style.pointerEvents = 'none';
+    }
+    const restoreIframePointerEvents = () => {
+      if (!iframeElement?.style) return;
+      iframeElement.style.pointerEvents = previousPointerEvents;
+    };
 
     const handleMove = (moveEvent) => {
       moveEvent.preventDefault();
       moveEvent.stopPropagation();
+      autoScrollDragSurface({
+        clientY: moveEvent.clientY,
+        iframe: iframeRef?.current,
+        viewport: viewportRef?.current,
+      });
       const activeMetrics = readMetrics() || metricsRef.current || metrics;
       if (!activeMetrics) return;
       metricsRef.current = activeMetrics;
       const stepX = Math.max(1, activeMetrics.columnWidth + activeMetrics.gapX);
       const stepY = Math.max(1, activeMetrics.rowHeight + activeMetrics.gapY);
+      const baselineCols = Math.max(1, metrics.cols);
 
       let proposal = null;
       let nextFrame = null;
@@ -711,6 +799,7 @@ export default function ComposerCanvasBlockOverlay({
         nextFrame = frameFromCanvasLayout(validation.rect, activeMetrics);
         setPreviewKind(canApply ? 'canvas-valid' : 'canvas-invalid');
         if (!nextFrame) return;
+        lastPreviewFrame = nextFrame;
         setDraftFrame(nextFrame);
         setDraftChip(canApply ? formatLayoutChip(validation.rect, true) : 'Blocked');
         return;
@@ -727,7 +816,7 @@ export default function ComposerCanvasBlockOverlay({
           col: clampInteger(
             Math.round((proposedLeft - (activeMetrics.rootClientLeft + activeMetrics.paddingLeft)) / stepX) + 1,
             1,
-            Math.max(1, activeMetrics.cols),
+            Math.max(1, activeMetrics.cols || baselineCols),
           ),
           colSpan: nextSpan,
         };
@@ -745,6 +834,7 @@ export default function ComposerCanvasBlockOverlay({
         setSimpleDropHints(buildSimpleDropHintFrames(simpleEvaluation, activeMetrics, startFrame.height));
         setPreviewKind(validation.valid ? 'simple-valid' : 'simple-invalid');
         if (!nextFrame) return;
+        lastPreviewFrame = nextFrame;
         setDraftFrame(nextFrame);
         setDraftChip(validation.valid ? formatLayoutChip(validation.layout, false) : 'Blocked');
         return;
@@ -766,6 +856,7 @@ export default function ComposerCanvasBlockOverlay({
         nextFrame = frameFromSimpleLayout(validation.layout, activeMetrics, startFrame.height);
         setPreviewKind(validation.valid ? 'simple-valid' : 'simple-invalid');
         if (!nextFrame) return;
+        lastPreviewFrame = nextFrame;
         setDraftFrame(nextFrame);
         setDraftChip(validation.valid ? formatLayoutChip(validation.layout, false) : 'Blocked');
         return;
@@ -781,6 +872,7 @@ export default function ComposerCanvasBlockOverlay({
       } catch {
         // Ignore release failures.
       }
+      restoreIframePointerEvents();
       handleElement.removeEventListener('pointermove', handleMove);
       handleElement.removeEventListener('pointerup', handleUp);
       handleElement.removeEventListener('pointercancel', handleCancel);
@@ -799,7 +891,10 @@ export default function ComposerCanvasBlockOverlay({
       }
 
       if (shouldCommitCanvas || shouldCommitSimpleLayout) {
+        commitExpectedFrameRef.current = lastPreviewFrame;
+        commitSettleUntilRef.current = Date.now() + 320;
         window.setTimeout(() => {
+          setFrame(lastPreviewFrame);
           setDraftFrame(null);
           setPreviewKind('idle');
           setDraftChip('');
@@ -829,6 +924,7 @@ export default function ComposerCanvasBlockOverlay({
       } catch {
         // Ignore release failures.
       }
+      restoreIframePointerEvents();
       handleElement.removeEventListener('pointermove', handleMove);
       handleElement.removeEventListener('pointerup', handleUp);
       handleElement.removeEventListener('pointercancel', handleCancel);
@@ -889,6 +985,7 @@ export default function ComposerCanvasBlockOverlay({
           type="button"
           onPointerDown={beginPointerInteraction('drag')}
           className={`cf-composer-block-overlay-grip cf-canvas-handle ${isInvalidPreview ? 'is-invalid' : ''}`}
+          style={{ touchAction: 'none' }}
           title="Drag section"
           aria-label="Drag section"
         >
@@ -906,6 +1003,7 @@ export default function ComposerCanvasBlockOverlay({
           width: '18px',
           height: '28px',
           cursor: 'ew-resize',
+          touchAction: 'none',
         }}
         title={isCanvasMode ? 'Drag to resize width' : 'Drag to change section width'}
       />
@@ -921,6 +1019,7 @@ export default function ComposerCanvasBlockOverlay({
             width: '20px',
             height: '20px',
             cursor: 'nwse-resize',
+            touchAction: 'none',
           }}
           title="Drag to resize width and height"
         />

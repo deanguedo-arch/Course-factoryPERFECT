@@ -3217,7 +3217,9 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       },
     );
     if (!valid) return;
-    updateComposerActivities(resolvedActivities);
+    updateComposerActivities(resolvedActivities, moduleManagerComposerLayout, {
+      followPreview: false,
+    });
   };
 
   const updateSelectedComposerActivityData = (updates) => {
@@ -4171,11 +4173,14 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       const result = moveComposerActivityToCell(baseActivities, moduleManagerComposerSelectedIndex, targetRow, targetCol, {
         maxColumns: moduleManagerComposerMaxColumns,
       });
-      return updateComposerActivities(result.activities);
+      return updateComposerActivities(result.activities, moduleManagerComposerLayout, {
+        followPreview: false,
+      });
     },
     [
       isModuleManagerCanvasMode,
       moduleManagerComposerActivities,
+      moduleManagerComposerLayout,
       moduleManagerComposerMaxColumns,
       moduleManagerComposerSelectedIndex,
       selectedComposerActivity,
