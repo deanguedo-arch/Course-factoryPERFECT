@@ -44,6 +44,7 @@ export function useProjectPersistence({
       console.error('Load failed:', error);
       setIsAutoLoaded(true);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // AUTO-SAVE: Runs when projectData changes

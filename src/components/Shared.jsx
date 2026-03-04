@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import * as React from 'react';
 import { Copy, Check, X, CheckCircle, AlertOctagon, AlertTriangle, ShieldCheck } from 'lucide-react';
 
@@ -112,26 +113,26 @@ export const CodeBlock = ({ label, code, height = "h-32" }) => {
   );
 };
 
-export const Toggle = ({ active, labelA, labelB, labelC, onToggle, iconA: IconA, iconB: IconB, iconC: IconC }) => (
+export const Toggle = ({ active, labelA, labelB, labelC, onToggle, iconA, iconB, iconC }) => (
     <div className="cf-tab-rail mb-6">
         <button 
             onClick={() => onToggle('A')}
             className={`cf-tab-btn flex-1 items-center justify-center gap-2 px-4 py-2 text-xs font-bold ${active === 'A' ? 'cf-tab-btn-active' : ''}`}
         >
-            <IconA size={14} /> {labelA}
+            {iconA ? React.createElement(iconA, { size: 14 }) : null} {labelA}
         </button>
         <button 
             onClick={() => onToggle('B')}
             className={`cf-tab-btn flex-1 items-center justify-center gap-2 px-4 py-2 text-xs font-bold ${active === 'B' ? 'cf-tab-btn-active' : ''}`}
         >
-            <IconB size={14} /> {labelB}
+            {iconB ? React.createElement(iconB, { size: 14 }) : null} {labelB}
         </button>
         {labelC && (
              <button 
                 onClick={() => onToggle('C')}
                 className={`cf-tab-btn flex-1 items-center justify-center gap-2 px-4 py-2 text-xs font-bold ${active === 'C' ? 'cf-tab-btn-active' : ''}`}
             >
-                <IconC size={14} /> {labelC}
+                {iconC ? React.createElement(iconC, { size: 14 }) : null} {labelC}
             </button>
         )}
     </div>

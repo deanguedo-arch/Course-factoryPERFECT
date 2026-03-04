@@ -1,28 +1,8 @@
 ﻿import * as React from 'react';
 import { Terminal, BookOpen, Layers, Copy, Check, FileJson, Settings, Scissors, Sparkles, RefreshCw, Search, Clipboard, Upload, Save, Database, Trash2, LayoutTemplate, PenTool, Plus, FolderOpen, Download, AlertTriangle, AlertOctagon, ShieldCheck, FileCode, Lock, Unlock, Box, ArrowUpCircle, ArrowRight, Zap, CheckCircle, Package, Link as LinkIcon, ToggleLeft, ToggleRight, Eye, EyeOff, ChevronUp, ChevronDown, X, Edit, Clock, RotateCcw, PanelLeftClose, PanelLeftOpen, Moon, Sun } from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
 import {
-  buildSiteHtml,
-  generateMasterShell,
   buildModuleFrameHTML,
   buildPreviewStorageScope,
-  validateProject,
-  validateModule,
-  cleanModuleHTML,
-  cleanModuleScript,
-  extractModuleContent,
-  getModuleType,
-  getFontFamilyGlobal,
-  getAccentColor,
-  escapeHtml,
-  validateUrl,
-  getMaterialBadgeLabel,
-  buildBetaManifest as buildBetaManifestGen,
-  generateHubPageBeta as generateHubPageBetaGen,
-  generateModuleHtmlBeta as generateModuleHtmlBetaGen,
-  buildStaticFilesBeta as buildStaticFilesBetaGen,
 } from './utils/generators.js';
 import { compileModuleToHtml } from './utils/compiler.js';
 import { checkModuleDependencies } from './utils/dependencies.js';
@@ -46,7 +26,7 @@ import Section from './components/Section.jsx';
 import PreviewModal from './components/modals/PreviewModal.jsx';
 import EditModal from './components/modals/EditModal.jsx';
 
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect } = React;
 
 // ==========================================
 // TOAST NOTIFICATION SYSTEM
@@ -56,11 +36,6 @@ const { useState, useEffect, useRef } = React;
 // ==========================================
 // FIREBASE CONFIG & INIT (DISABLED LOCALLY)
 // ==========================================
-// const firebaseConfig = JSON.parse(__firebase_config);
-// const app = initializeApp(firebaseConfig);
-// const auth = getAuth(app);
-// const db = getFirestore(app);
-const appId = 'course-factory-v1';
 
 const SIDEBAR_COLLAPSED_KEY = 'course_factory_sidebar_collapsed_v1';
 const BUILDER_THEME_KEY = 'course_factory_builder_theme_v1';
@@ -151,7 +126,7 @@ export function App() {
   const { toasts, showToast, removeToast } = useToast();
 
   // --- AUTO-LOAD / AUTO-SAVE ---
-  const { isAutoLoaded, lastSaved } = useProjectPersistence({
+  const { lastSaved } = useProjectPersistence({
     projectData,
     setProjectData,
     showToast,
@@ -317,7 +292,11 @@ export function App() {
   const isProtectedModule = (item) => {
     let itemCode = item.code || {};
     if (typeof itemCode === 'string') {
-      try { itemCode = JSON.parse(itemCode); } catch(e) {}
+      try {
+        itemCode = JSON.parse(itemCode);
+      } catch {
+        itemCode = {};
+      }
     }
     return itemCode.id === 'view-materials' || 
            item.id === 'item-assessments' || 
@@ -380,46 +359,9 @@ export function App() {
     setDeleteConfirmation(null);
   };
 
-  // MATERIALS MANAGEMENT FUNCTIONS
-  const getMaterialsModule = () => {
-    const currentCourse = projectData["Current Course"] || { modules: [] };
-    return currentCourse.modules.find(m => {
-      let itemCode = m.code || {};
-      if (typeof itemCode === 'string') {
-        try { itemCode = JSON.parse(itemCode); } catch(e) {}
-      }
-      return itemCode.id === "view-materials";
-    });
-  };
-
   // ASSESSMENTS MANAGEMENT FUNCTIONS
   const getAssessmentsModule = () => {
     return currentCourse.modules.find(m => m.id === "item-assessments" || m.title === "Assessments");
-  };
-
-  const updateMaterialsModule = (updatedMaterials) => {
-    const moduleIndex = currentCourse.modules.findIndex(m => {
-      let itemCode = m.code || {};
-      if (typeof itemCode === 'string') {
-        try { itemCode = JSON.parse(itemCode); } catch(e) {}
-      }
-      return itemCode.id === "view-materials";
-    });
-    if (moduleIndex === -1) return;
-    
-    const newModules = [...currentCourse.modules];
-    newModules[moduleIndex] = {
-      ...newModules[moduleIndex],
-      materials: updatedMaterials
-    };
-    
-    setProjectData({
-      ...projectData,
-      "Current Course": {
-        ...projectData["Current Course"],
-        modules: newModules
-      }
-    });
   };
 
   function updateAssessmentsModule(updatedAssessments) {
@@ -531,16 +473,6 @@ export function App() {
         materials: updated
       }
     });
-  };
-
-  const handleVaultSelect = (file) => {
-    if (vaultTargetField === 'view') {
-        setMaterialForm(prev => ({ ...prev, viewUrl: file.path }));
-    } else if (vaultTargetField === 'download') {
-        setMaterialForm(prev => ({ ...prev, downloadUrl: file.path }));
-    }
-    setIsVaultOpen(false);
-    setVaultTargetField(null);
   };
 
   const addAssessment = (assessment) => {
@@ -728,8 +660,6 @@ export function App() {
     
     // Build HTML for all questions
     let questionsHtml = '';
-    let questionIndex = 0;
-    let mcIndex = 0;
     let laIndex = 0;
 
     masterQuestions.forEach((q, idx) => {
@@ -751,7 +681,6 @@ export function App() {
             </div>
           </div>
         `;
-        mcIndex++;
       } else {
         // Long Answer Question
         questionsHtml += `
@@ -767,7 +696,6 @@ export function App() {
         `;
         laIndex++;
       }
-      questionIndex++;
     });
 
     const html = `<div id="${assessmentId}" class="w-full h-full custom-scroll p-8">

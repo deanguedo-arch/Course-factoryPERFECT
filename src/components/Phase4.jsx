@@ -5,9 +5,7 @@ import {
   buildSiteHtml,
   buildModuleFrameHTML,
   validateProject,
-  getFontFamilyGlobal,
   buildBetaManifest as buildBetaManifestGen,
-  generateHubPageBeta as generateHubPageBetaGen,
   generateModuleHtmlBeta as generateModuleHtmlBetaGen,
   buildStaticFilesBeta as buildStaticFilesBetaGen,
 } from '../utils/generators.js';
@@ -28,11 +26,6 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
   const [exportTools, setExportTools] = useState([]);
   const [exportedHTML, setExportedHTML] = useState('');
   
-  // --- HUB PAGE STATE ---
-  const [hubPageHTML, setHubPageHTML] = useState('');
-  const [hubCourseTitle, setHubCourseTitle] = useState('Mental Fitness Course');
-  const [hubCourseDescription, setHubCourseDescription] = useState('Master your mental game and unlock peak performance.');
-
   // --- BETA STATIC PUBLISH STATE ---
   const [publishMode, setPublishMode] = useState('legacy'); // 'legacy' | 'beta'
   const [betaStructureMode, setBetaStructureMode] = useState('multi-file'); // 'multi-file' | 'single-page'
@@ -61,7 +54,6 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
 
   // Beta generator wrappers (moved to src/utils/generators.js)
   const buildBetaManifest = () => buildBetaManifestGen({ projectData, modules, excludedIds });
-  const generateHubPageBeta = (manifest) => generateHubPageBetaGen({ projectData, manifest });
   const generateModuleHtmlBeta = (moduleId) => generateModuleHtmlBetaGen({ projectData, modules, moduleId });
   const buildStaticFilesBeta = () => buildStaticFilesBetaGen({ projectData, modules, excludedIds });
 
@@ -188,7 +180,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
         if (res.ok) {
           return await res.blob();
         }
-      } catch (e) {
+      } catch {
         // Try next candidate.
       }
     }
@@ -347,272 +339,6 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       }
       console.error('Module page generation error:', error);
     }
-  };
-
-  const generateHubPage = () => {
-    const courseSettings = projectData["Course Settings"] || {};
-    const accentColor = courseSettings.accentColor || "sky";
-    const backgroundColor = courseSettings.backgroundColor || "slate-900";
-    const fontFamily = courseSettings.fontFamily || "inter";
-    const font = getFontFamilyGlobal(fontFamily);
-    
-    const bgColorMap = {
-      'slate-900': '#0f172a',
-      'slate-950': '#020617',
-      'zinc-900': '#18181b',
-      'neutral-900': '#171717',
-      'stone-900': '#1c1917',
-      'gray-900': '#111827',
-      'slate-50': '#f8fafc',
-      'zinc-50': '#fafafa',
-      'neutral-50': '#fafafa',
-      'stone-50': '#fafaf9',
-      'gray-50': '#f9fafb',
-      'white': '#ffffff'
-    };
-    const bgHex = bgColorMap[backgroundColor] || bgColorMap['slate-900'];
-    const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
-    const headingTextColor = courseSettings.headingTextColor || (isLightBg ? 'slate-900' : 'white');
-    const secondaryTextColor = courseSettings.secondaryTextColor || (isLightBg ? 'slate-600' : 'slate-400');
-    const buttonColor = courseSettings.buttonColor || `${accentColor}-600`;
-    const toTextClass = (value) => value.startsWith('text-') ? value : `text-${value}`;
-    const toBgBase = (value) => value.startsWith('bg-') ? value.slice(3) : value;
-    const headingTextClass = toTextClass(headingTextColor);
-    const secondaryTextClass = toTextClass(secondaryTextColor);
-    const buttonBgBase = toBgBase(buttonColor);
-    const buttonBgClass = `bg-${buttonBgBase}`;
-    const buttonHoverClass = buttonBgBase.endsWith('-600') ? `hover:bg-${buttonBgBase.replace(/-600$/, '-500')}` : `hover:bg-${buttonBgBase}`;
-    const buttonTextClass = secondaryTextClass;
-    const badgeBgClass = isLightBg ? 'bg-black/10' : 'bg-white/20';
-    const containerColor = courseSettings.containerColor || (isLightBg ? 'white/80' : 'slate-900/80');
-    const hexToRgba = (hex, alpha = 1) => {
-      if (!hex) return `rgba(15, 23, 42, ${alpha})`;
-      const clean = hex.replace('#', '');
-      if (clean.length !== 6) return `rgba(15, 23, 42, ${alpha})`;
-      const r = parseInt(clean.slice(0, 2), 16);
-      const g = parseInt(clean.slice(2, 4), 16);
-      const b = parseInt(clean.slice(4, 6), 16);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    };
-    const parseColorToken = (value) => {
-      const raw = (value || '').toString().trim();
-      if (!raw) return { base: isLightBg ? 'white' : 'slate-900', alpha: 0.8, alphaRaw: '80' };
-      let token = raw;
-      if (token.startsWith('bg-')) token = token.slice(3);
-      if (token.startsWith('text-')) token = token.slice(5);
-      const parts = token.split('/');
-      const base = parts[0] || (isLightBg ? 'white' : 'slate-900');
-      const alphaRaw = parts[1] || null;
-      const alpha = alphaRaw ? Math.max(0, Math.min(1, parseInt(alphaRaw, 10) / 100)) : 1;
-      return { base, alpha, alphaRaw };
-    };
-    const colorHexMap = {
-      'slate-900': '#0f172a',
-      'slate-800': '#1e293b',
-      'slate-700': '#334155',
-      'slate-600': '#475569',
-      'slate-500': '#64748b',
-      'slate-950': '#020617',
-      'gray-900': '#111827',
-      'gray-800': '#1f2937',
-      'gray-700': '#374151',
-      'gray-600': '#4b5563',
-      'zinc-900': '#18181b',
-      'zinc-800': '#27272a',
-      'neutral-900': '#171717',
-      'stone-900': '#1c1917',
-      'white': '#ffffff'
-    };
-    const containerToken = parseColorToken(containerColor);
-    const containerBgClass = containerToken.alphaRaw ? `bg-${containerToken.base}/${containerToken.alphaRaw}` : `bg-${containerToken.base}`;
-    const containerHex = colorHexMap[containerToken.base] || (isLightBg ? '#ffffff' : '#0f172a');
-    const containerBgRgba = hexToRgba(containerHex, containerToken.alpha);
-    const cardBorderClass = isLightBg ? 'border-slate-300' : 'border-slate-700';
-
-    // Filter out special modules
-    const regularModules = modules.filter(m => {
-      let itemCode = m.code || {};
-      if (typeof itemCode === 'string') {
-        try { itemCode = JSON.parse(itemCode); } catch(e) {}
-      }
-      return itemCode.id !== 'view-materials' && 
-             m.title !== 'Assessments' &&
-             !m.title.includes('Empty');
-    });
-    
-    const allAssessments = modules.flatMap(m => m.assessments || []);
-    const assessmentCount = allAssessments.length;
-    const materialCount = materials.length;
-    
-    // Generate module cards
-    let moduleCardsHTML = '';
-    regularModules.forEach((mod, idx) => {
-      const modAssessments = mod.assessments || [];
-      const colorClasses = [
-        'from-rose-500 to-pink-500',
-        'from-amber-500 to-orange-500',
-        'from-emerald-500 to-teal-500',
-        'from-sky-500 to-blue-500',
-        'from-purple-500 to-violet-500',
-        'from-indigo-500 to-purple-500'
-      ];
-      const gradientClass = colorClasses[idx % colorClasses.length];
-      
-      moduleCardsHTML += `
-        <div class="group relative ${containerBgClass} rounded-2xl border ${cardBorderClass} overflow-hidden hover:border-slate-600 transition-all duration-300 hover:shadow-2xl hover:shadow-${gradientClass.split(' ')[0].split('-')[1]}-500/20">
-          <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradientClass}"></div>
-          <div class="p-6">
-            <div class="flex items-start justify-between mb-4">
-              <div class="w-12 h-12 rounded-xl bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white font-black text-xl shadow-lg">
-                ${idx + 1}
-              </div>
-              <div class="flex gap-2">
-                ${modAssessments.length > 0 ? `<span class="px-2 py-1 bg-purple-500/10 border border-purple-500/30 rounded text-purple-400 text-xs font-bold">${modAssessments.length} ${modAssessments.length === 1 ? 'Assessment' : 'Assessments'}</span>` : ''}
-              </div>
-            </div>
-            <h3 class="text-xl font-black ${headingTextClass} mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:${gradientClass} transition-all">
-              ${mod.title}
-            </h3>
-            <p class="text-sm ${secondaryTextClass} mb-4 line-clamp-2">
-              ${mod.description || 'Click to explore this module'}
-            </p>
-            <div class="flex gap-3">
-              <button 
-                onclick="window.open('MODULE_${mod.id}_URL', '_blank')"
-                class="flex-1 bg-gradient-to-r ${gradientClass} text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-opacity text-sm"
-              >
-                Start Module
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-    });
-    
-    const htmlContent = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${hubCourseTitle}</title>
-    <script src="https://cdn.tailwindcss.com"><\/script>
-    <link href="${font.url}" rel="stylesheet">
-    <style>
-        body {
-            ${font.css}
-            background: ${bgHex};
-            background-color: ${bgHex};
-            min-height: 100vh;
-        }
-        :root { --cf-container-bg: ${containerBgRgba}; }
-        .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        .hero-gradient {
-            background: ${bgHex};
-            background-color: ${bgHex};
-        }
-        .stat-card {
-            background: var(--cf-container-bg);
-            backdrop-filter: blur(10px);
-        }
-    </style>
-</head>
-<body class="antialiased">
-    <!-- Hero Section -->
-    <div class="hero-gradient">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <div class="text-center">
-                <h1 class="text-5xl md:text-6xl font-black ${headingTextClass} mb-4 tracking-tight">
-                    ${hubCourseTitle}
-                </h1>
-                <p class="text-xl ${secondaryTextClass} mb-8 max-w-2xl mx-auto">
-                    ${hubCourseDescription}
-                </p>
-                <div class="flex flex-wrap justify-center gap-4">
-                    ${materialCount > 0 ? `
-                    <a href="MATERIALS_PAGE_URL" target="_blank" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2">
-                        Course Materials
-                        <span class="${badgeBgClass} px-2 py-1 rounded text-sm">${materialCount}</span>
-                    </a>
-                    ` : ''}
-                    ${assessmentCount > 0 ? `
-                    <a href="ASSESSMENTS_PAGE_URL" target="_blank" class="${buttonBgClass} ${buttonHoverClass} ${buttonTextClass} px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2">
-                        All Assessments
-                        <span class="${badgeBgClass} px-2 py-1 rounded text-sm">${assessmentCount}</span>
-                    </a>
-                    ` : ''}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stats Bar -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="stat-card border ${cardBorderClass} rounded-xl p-6 text-center">
-                <div class="text-4xl font-black text-sky-400 mb-2">${regularModules.length}</div>
-                <div class="text-sm ${secondaryTextClass} uppercase tracking-wider font-bold">Modules</div>
-            </div>
-            <div class="stat-card border ${cardBorderClass} rounded-xl p-6 text-center">
-                <div class="text-4xl font-black text-purple-400 mb-2">${assessmentCount}</div>
-                <div class="text-sm ${secondaryTextClass} uppercase tracking-wider font-bold">Assessments</div>
-            </div>
-            <div class="stat-card border ${cardBorderClass} rounded-xl p-6 text-center">
-                <div class="text-4xl font-black text-emerald-400 mb-2">${materialCount}</div>
-                <div class="text-sm ${secondaryTextClass} uppercase tracking-wider font-bold">Materials</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modules Grid -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div class="mb-12">
-            <h2 class="text-3xl font-black ${headingTextClass} mb-2">Course Modules</h2>
-            <p class="${secondaryTextClass}">Select a module to begin your journey</p>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            ${moduleCardsHTML}
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-t border-slate-800">
-    <div class="text-center ${secondaryTextClass} text-sm">
-      <p class="font-bold">Built with Course Factory</p>
-      <p class="mt-2">Ready to begin? Click any module above to start.</p>
-    </div>
-    </div>
-
-    <script>
-        // Progress tracking (localStorage based)
-        const courseId = '${projectData["Current Course"]?.name || "course"}';
-        const progressKey = courseId + '_progress';
-        
-        function getProgress() {
-            try {
-                return JSON.parse(localStorage.getItem(progressKey) || '{}');
-            } catch(e) {
-                return {};
-            }
-        }
-        
-        function saveProgress(moduleId, status) {
-            const progress = getProgress();
-            progress[moduleId] = status;
-            localStorage.setItem(progressKey, JSON.stringify(progress));
-        }
-        
-        console.log('Hub Page Loaded - Course: ${hubCourseTitle}');
-    <\/script>
-</body>
-</html>`;
-    
-    setHubPageHTML(htmlContent);
   };
 
   const generateFullSite = () => {

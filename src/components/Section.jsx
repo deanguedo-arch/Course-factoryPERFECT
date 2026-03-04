@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-const Section = ({ title, icon: Icon, isActive, onClick, badge, badgeColor, collapsed = false }) => (
+const Section = ({ title, icon, isActive, onClick, badge, badgeColor, collapsed = false }) => (
   <button
     onClick={onClick}
     title={title}
@@ -8,7 +8,7 @@ const Section = ({ title, icon: Icon, isActive, onClick, badge, badgeColor, coll
     className={`cf-nav-item relative flex w-full items-center rounded-xl ${collapsed ? 'justify-center px-0 py-2.5' : 'justify-between gap-2 px-3 py-2.5'} ${isActive ? 'cf-nav-item-active' : ''}`}
   >
     <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2 min-w-0'}`}>
-      <Icon size={16} />
+      {icon ? React.createElement(icon, { size: 16 }) : null}
       {!collapsed ? <span className="text-[13px] font-semibold">{title}</span> : null}
     </div>
     {badge !== undefined && (

@@ -12,16 +12,20 @@ export function useComposerHistory({
   getSnapshotSignature = defaultGetSignature,
 } = {}) {
   const historyRef = React.useRef({ past: [], future: [] });
-  const [, setVersion] = React.useState(0);
+  const [historyState, setHistoryState] = React.useState({ canUndo: false, canRedo: false });
 
-  const bumpVersion = React.useCallback(() => {
-    setVersion((value) => value + 1);
+  const syncHistoryState = React.useCallback(() => {
+    const history = historyRef.current;
+    setHistoryState({
+      canUndo: history.past.length > 0,
+      canRedo: history.future.length > 0,
+    });
   }, []);
 
   const resetHistory = React.useCallback(() => {
     historyRef.current = { past: [], future: [] };
-    bumpVersion();
-  }, [bumpVersion]);
+    syncHistoryState();
+  }, [syncHistoryState]);
 
   const pushHistorySnapshot = React.useCallback(
     (snapshot) => {
@@ -36,9 +40,9 @@ export function useComposerHistory({
         history.past = history.past.slice(history.past.length - HISTORY_LIMIT);
       }
       history.future = [];
-      bumpVersion();
+      syncHistoryState();
     },
-    [buildSnapshot, bumpVersion, getSnapshotSignature],
+    [buildSnapshot, getSnapshotSignature, syncHistoryState],
   );
 
   const undoHistory = React.useCallback(() => {
@@ -52,9 +56,9 @@ export function useComposerHistory({
       history.future = history.future.slice(0, HISTORY_LIMIT);
     }
     applySnapshot(previousSnapshot);
-    bumpVersion();
+    syncHistoryState();
     return true;
-  }, [applySnapshot, buildSnapshot, bumpVersion]);
+  }, [applySnapshot, buildSnapshot, syncHistoryState]);
 
   const redoHistory = React.useCallback(() => {
     if (typeof buildSnapshot !== 'function' || typeof applySnapshot !== 'function') return false;
@@ -67,13 +71,13 @@ export function useComposerHistory({
       history.past = history.past.slice(history.past.length - HISTORY_LIMIT);
     }
     applySnapshot(nextSnapshot);
-    bumpVersion();
+    syncHistoryState();
     return true;
-  }, [applySnapshot, buildSnapshot, bumpVersion]);
+  }, [applySnapshot, buildSnapshot, syncHistoryState]);
 
   return {
-    canUndo: historyRef.current.past.length > 0,
-    canRedo: historyRef.current.future.length > 0,
+    canUndo: historyState.canUndo,
+    canRedo: historyState.canRedo,
     historyRef,
     pushHistorySnapshot,
     redoHistory,

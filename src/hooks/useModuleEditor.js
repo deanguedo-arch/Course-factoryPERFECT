@@ -145,7 +145,7 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
         '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>' +
         (item.title || 'Module') +
         '</title>\n';
-      fullDocument += '<script src="https://cdn.tailwindcss.com"><\/script>\n';
+      fullDocument += '<script src="https://cdn.tailwindcss.com"></script>\n';
 
       if (item.css) {
         fullDocument += '<style>\n' + item.css + '\n</style>\n';
@@ -188,7 +188,9 @@ export function useModuleEditor({ projectData, setProjectData } = {}) {
     if (typeof itemCode === 'string') {
       try {
         itemCode = JSON.parse(itemCode);
-      } catch (e) {}
+      } catch {
+        itemCode = {};
+      }
     }
     setEditForm({
       title: item.title,

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   AlertCircle,
   ChevronLeft,
@@ -21,15 +21,15 @@ const VaultBrowser = ({ onSelect, onClose, mode = 'file' }) => {
   const [search, setSearch] = useState('');
   const [cwd, setCwd] = useState([]); // path segments under /materials/
 
-  const files = vaultIndex?.files || [];
+  const files = useMemo(() => (Array.isArray(vaultIndex?.files) ? vaultIndex.files : []), []);
 
-  const normalizePath = (value) => String(value || '').replace(/\\/g, '/');
-  const getMaterialsRelativePath = (value) => {
+  const normalizePath = useCallback((value) => String(value || '').replace(/\\/g, '/'), []);
+  const getMaterialsRelativePath = useCallback((value) => {
     const clean = normalizePath(value).replace(/^\/+/, '');
     const idx = clean.toLowerCase().indexOf('materials/');
     if (idx !== -1) return clean.slice(idx + 'materials/'.length);
     return clean;
-  };
+  }, [normalizePath]);
 
   const indexedFiles = useMemo(() => {
     return files.map((file) => {
@@ -42,7 +42,7 @@ const VaultBrowser = ({ onSelect, onClose, mode = 'file' }) => {
         __folderSegments: folderSegments,
       };
     });
-  }, [files]);
+  }, [files, getMaterialsRelativePath]);
 
   const filtered = useMemo(() => {
     const q = String(search || '').trim().toLowerCase();

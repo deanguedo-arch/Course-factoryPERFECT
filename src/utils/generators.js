@@ -552,8 +552,8 @@ ${footerHtml}
         function isGoogleSitesHost() {
             var ref = '';
             try { ref = document.referrer || ''; } catch (e) { ref = ''; }
-            if (/sites\.google\.com/i.test(ref)) return true;
-            try { return /sites\.google\.com/i.test(window.top.location.host || ''); } catch (e) { return /sites\.google\.com/i.test(ref); }
+            if (/sites\\.google\\.com/i.test(ref)) return true;
+            try { return /sites\\.google\\.com/i.test(window.top.location.host || ''); } catch (e) { return /sites\\.google\\.com/i.test(ref); }
         }
         function getPdfEmbedUrl(url) {
             if (!url) return url;
@@ -562,7 +562,7 @@ ${footerHtml}
             if (clean.indexOf('docs.google.com/viewer') !== -1) return clean;
             var isDrive = clean.indexOf('drive.google.com') !== -1;
             if (isDrive) {
-                var driveIdMatch = clean.match(/\/file\/d\/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+                var driveIdMatch = clean.match(/\\/file\\/d\\/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
                 if (driveIdMatch && driveIdMatch[1]) {
                     return 'https://drive.google.com/file/d/' + driveIdMatch[1] + '/preview';
                 }
@@ -571,7 +571,7 @@ ${footerHtml}
                 }
                 return clean;
             }
-            if (/^(\/|\.\/|\.\.\/|blob:|data:)/i.test(clean)) {
+            if (/^(\\/|\\.\\/|\\.\\.\\/|blob:|data:)/i.test(clean)) {
                 return clean;
             }
             var isSameOrigin = false;
@@ -585,7 +585,7 @@ ${footerHtml}
                 return clean;
             }
             var forceViewer = isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
-            if (forceViewer && /^https?:\/\//i.test(clean)) {
+            if (forceViewer && /^https?:\\/\\//i.test(clean)) {
                 return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(clean);
             }
             return clean;
@@ -791,7 +791,7 @@ export function validateUrl(url) {
       return { isValid: false, safeUrl: '#', error: `Unsupported protocol: ${urlObj.protocol}` };
     }
     return { isValid: true, safeUrl: trimmed };
-  } catch (e) {
+  } catch {
     // If URL parsing fails, it might be a relative URL - allow it but escape it
     return { isValid: true, safeUrl: escapeHtml(trimmed) };
   }
@@ -975,7 +975,7 @@ export function cleanModuleScript(script) {
   return script ? script.trim() : '';
 }
 
-export function validateModule(module, isNew = false) {
+export function validateModule(module) {
   const errors = [];
   const warnings = [];
 
@@ -1020,7 +1020,7 @@ export function validateModule(module, isNew = false) {
       // URL validation
       try {
         new URL(module.url);
-      } catch (e) {
+      } catch {
         errors.push('Invalid URL format');
       }
     }
@@ -1036,7 +1036,7 @@ export function validateModule(module, isNew = false) {
       if (typeof code === 'string') {
         try {
           code = JSON.parse(code);
-        } catch (e) {
+        } catch {
           errors.push('Invalid code JSON format');
           return { isValid: false, errors, warnings };
         }
@@ -1099,18 +1099,18 @@ export function validateProject(projectData) {
     }
   };
 
-  modules.forEach((mod, idx) => {
+  modules.forEach((mod) => {
     const ctx = `Module "${mod.title || mod.id || 'Untitled'}"`;
     checkDuplicateId(mod.id, ctx, 'module');
-    const v = validateModule(mod, false);
+    const v = validateModule(mod);
     v.errors.forEach((e) => errors.push({ message: e, context: ctx }));
     v.warnings.forEach((w) => warnings.push({ message: w, context: ctx }));
   });
 
-  toolkit.forEach((t, idx) => {
+  toolkit.forEach((t) => {
     const ctx = `Toolkit "${t.title || t.id || 'Untitled'}"`;
     checkDuplicateId(t.id, ctx, 'toolkit');
-    const v = validateModule(t, false);
+    const v = validateModule(t);
     v.errors.forEach((e) => errors.push({ message: e, context: ctx }));
     v.warnings.forEach((w) => warnings.push({ message: w, context: ctx }));
   });
@@ -1155,9 +1155,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
   };
   const bgHex = palette.background;
   const isLightBg = ['slate-50', 'zinc-50', 'neutral-50', 'stone-50', 'gray-50', 'white'].includes(backgroundColor);
-  const textColor = isLightBg ? 'text-slate-900' : 'text-white';
   const textColorSecondary = isLightBg ? 'text-slate-600' : 'text-slate-400';
-  const textColorTertiary = isLightBg ? 'text-slate-500' : 'text-slate-500';
   const cardBorder = isLightBg ? 'border-slate-300' : 'border-slate-700';
   const headingTextColor = settings.headingTextColor || (isLightBg ? 'slate-900' : 'white');
   const secondaryTextColor = settings.secondaryTextColor || (isLightBg ? 'slate-600' : 'slate-400');
@@ -1253,7 +1251,11 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
 
   let itemCode = module.code || {};
   if (typeof itemCode === 'string') {
-    try { itemCode = JSON.parse(itemCode); } catch (e) {}
+    try {
+      itemCode = JSON.parse(itemCode);
+    } catch {
+      itemCode = {};
+    }
   }
   const isMaterialsModule = itemCode.id === "view-materials";
   const isAssessmentsModule = module.id === "item-assessments" || module.title === "Assessments";
@@ -1321,7 +1323,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
                       finalDownloadUrl = assetBaseUrl + finalDownloadUrl;
                   }
               }
-          } catch(e) {
+          } catch {
               if (finalViewUrl.startsWith('/')) finalViewUrl = assetBaseUrl + finalViewUrl;
               if (finalDownloadUrl.startsWith('/')) finalDownloadUrl = assetBaseUrl + finalDownloadUrl;
           }
@@ -1749,7 +1751,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${module.title} | ${courseName}</title>
-  <script src="https://cdn.tailwindcss.com"><\/script>
+  <script src="https://cdn.tailwindcss.com"></script>
   ${scopedStorageBootstrapTag}
   <style>
     * {
@@ -1803,7 +1805,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
       setTimeout(setBackground, 100);
       setTimeout(setBackground, 500);
     })();
-  <\/script>
+  </script>
 </head>
 <body class="custom-scroll" style="background: ${bgHex} !important; background-color: ${bgHex} !important;">
   <header class="sticky top-0 z-50 ${palette.isLight ? 'bg-white/95' : 'bg-slate-950/88'} backdrop-blur border-b ${hubBorderClass}">
@@ -1829,7 +1831,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
     ${toolkitScripts}
     ${moduleScript}
     ${autosaveScript}
-  <\/script>
+  </script>
 </body>
 </html>`;
 };
@@ -1932,7 +1934,11 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
     activeModules = activeModules.filter(m => {
       let itemCode = m.code || {};
       if (typeof itemCode === 'string') {
-        try { itemCode = JSON.parse(itemCode); } catch(e) {}
+        try {
+          itemCode = JSON.parse(itemCode);
+        } catch {
+          itemCode = {};
+        }
       }
       return itemCode.id !== "view-materials";
     });
@@ -1961,7 +1967,11 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
   activeModules.forEach(item => {
     let itemCode = item.code || {};
     if (typeof itemCode === 'string') {
-        try { itemCode = JSON.parse(itemCode); } catch(e) {}
+        try {
+          itemCode = JSON.parse(itemCode);
+        } catch {
+          itemCode = {};
+        }
     }
     
     // Special handling for Course Materials module - detect by code.id
@@ -1998,14 +2008,6 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
         const badgeTextClass = mat.mediaType && mat.mediaType !== 'number'
           ? 'text-[9px] font-black uppercase tracking-widest'
           : 'font-black italic text-xl';
-        const isCustomColor = colorClass !== 'slate';
-        const actionBtnBase = isCustomColor
-          ? `bg-${colorClass}-600 hover:bg-${colorClass}-500 text-white`
-          : `${buttonBgClass} ${buttonHoverClass} ${buttonTextClass}`;
-        const actionBtnBorder = isCustomColor
-          ? `border border-${colorClass}-500/30`
-          : 'border border-slate-600';
-        
         // Apply Asset Base URL logic (Smart Join to prevent repo name duplication)
         let finalViewUrl = mat.viewUrl || '';
         let finalDownloadUrl = mat.downloadUrl || '';
@@ -2151,7 +2153,7 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
                               if (clean.indexOf('docs.google.com/viewer') !== -1) return clean;
                               var isDrive = clean.indexOf('drive.google.com') !== -1;
                               if (isDrive) {
-                                var driveIdMatch = clean.match(/\/file\/d\/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+                                var driveIdMatch = clean.match(/\\/file\\/d\\/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
                                 if (driveIdMatch && driveIdMatch[1]) {
                                   return 'https://drive.google.com/file/d/' + driveIdMatch[1] + '/preview';
                                 }
@@ -2160,7 +2162,7 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
                                 }
                                 return clean;
                               }
-                              if (/^(\/|\.\/|\.\.\/|blob:|data:)/i.test(clean)) {
+                              if (/^(\\/|\\.\\/|\\.\\.\\/|blob:|data:)/i.test(clean)) {
                                 return clean;
                               }
                               var sameOrigin = false;
@@ -2174,7 +2176,7 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
                               var isSites = /sites\\.google\\.com/i.test(ref);
                               try { isSites = isSites || /sites\\.google\\.com/i.test(window.top.location.host || ''); } catch (e) {}
                               var forceViewer = isSites || window.CF_FORCE_PDF_VIEWER === true;
-                              if (forceViewer && /^https?:\/\//i.test(clean)) {
+                              if (forceViewer && /^https?:\\/\\//i.test(clean)) {
                                 return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(clean);
                               }
                               return clean;
@@ -2672,7 +2674,7 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.tailwindcss.com"><\/script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,700;1,400;1,900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <style>
         body { 
@@ -2695,7 +2697,7 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
         (function() {
             ${rawScript}
         })();
-    <\/script>
+    </script>
 </body>
 </html>`;
         }
@@ -2935,8 +2937,6 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
 
   return finalCode;
 };
-
-const getFontFamily = getFontFamilyGlobal;
 
 export const buildBetaManifest = ({ projectData, modules, excludedIds = [] }) => {
   const courseName = getHubTitle(projectData) || "Course";

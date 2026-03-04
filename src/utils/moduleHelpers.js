@@ -82,7 +82,7 @@ export function extractModuleContent(module) {
  * Validate module before saving
  * Returns: { isValid, errors, warnings }
  */
-export function validateModule(module, isNew = false) {
+export function validateModule(module) {
   const errors = [];
   const warnings = [];
 
@@ -118,7 +118,7 @@ export function validateModule(module, isNew = false) {
         if (!rootElement) {
           warnings.push(`HTML should contain a root element with id="${module.id}"`);
         }
-      } catch (e) {
+      } catch {
         warnings.push('Could not parse HTML to check for root element');
       }
     }
@@ -129,7 +129,7 @@ export function validateModule(module, isNew = false) {
       // URL validation
       try {
         new URL(module.url);
-      } catch (e) {
+      } catch {
         errors.push('Invalid URL format');
       }
     }
@@ -145,7 +145,7 @@ export function validateModule(module, isNew = false) {
       if (typeof code === 'string') {
         try {
           code = JSON.parse(code);
-        } catch (e) {
+        } catch {
           errors.push('Invalid code JSON format');
           return { isValid: false, errors, warnings };
         }

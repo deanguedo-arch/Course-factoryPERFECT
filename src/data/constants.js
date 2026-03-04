@@ -129,8 +129,8 @@ export const PROJECT_DATA = {
         function isGoogleSitesHost() {
             var ref = '';
             try { ref = document.referrer || ''; } catch (e) { ref = ''; }
-            if (/sites\.google\.com/i.test(ref)) return true;
-            try { return /sites\.google\.com/i.test(window.top.location.host || ''); } catch (e) { return /sites\.google\.com/i.test(ref); }
+            if (/sites\\.google\\.com/i.test(ref)) return true;
+            try { return /sites\\.google\\.com/i.test(window.top.location.host || ''); } catch (e) { return /sites\\.google\\.com/i.test(ref); }
         }
         function getPdfEmbedUrl(url) {
             if (!url) return url;
@@ -139,7 +139,7 @@ export const PROJECT_DATA = {
             if (clean.indexOf('docs.google.com/viewer') !== -1) return clean;
             var isDrive = clean.indexOf('drive.google.com') !== -1;
             if (isDrive) {
-                var driveIdMatch = clean.match(/\/file\/d\/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+                var driveIdMatch = clean.match(/\\/file\\/d\\/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
                 if (driveIdMatch && driveIdMatch[1]) {
                     return 'https://drive.google.com/file/d/' + driveIdMatch[1] + '/preview';
                 }
@@ -148,7 +148,7 @@ export const PROJECT_DATA = {
                 }
                 return clean;
             }
-            if (/^(\/|\.\/|\.\.\/|blob:|data:)/i.test(clean)) {
+            if (/^(\\/|\\.\\/|\\.\\.\\/|blob:|data:)/i.test(clean)) {
                 return clean;
             }
             var isSameOrigin = false;
@@ -162,7 +162,7 @@ export const PROJECT_DATA = {
                 return clean;
             }
             var forceViewer = isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
-            if (forceViewer && /^https?:\/\//i.test(clean)) {
+            if (forceViewer && /^https?:\\/\\//i.test(clean)) {
                 return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(clean);
             }
             return clean;
@@ -633,8 +633,8 @@ export const MASTER_SHELL = `<!DOCTYPE html>
         function isGoogleSitesHost() {
             var ref = '';
             try { ref = document.referrer || ''; } catch (e) { ref = ''; }
-            if (/sites\.google\.com/i.test(ref)) return true;
-            try { return /sites\.google\.com/i.test(window.top.location.host || ''); } catch (e) { return /sites\.google\.com/i.test(ref); }
+            if (/sites\\.google\\.com/i.test(ref)) return true;
+            try { return /sites\\.google\\.com/i.test(window.top.location.host || ''); } catch (e) { return /sites\\.google\\.com/i.test(ref); }
         }
         function getPdfEmbedUrl(url) {
             if (!url) return url;
@@ -643,7 +643,7 @@ export const MASTER_SHELL = `<!DOCTYPE html>
             if (clean.indexOf('docs.google.com/viewer') !== -1) return clean;
             var isDrive = clean.indexOf('drive.google.com') !== -1;
             if (isDrive) {
-                var driveIdMatch = clean.match(/\/file\/d\/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+                var driveIdMatch = clean.match(/\\/file\\/d\\/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
                 if (driveIdMatch && driveIdMatch[1]) {
                     return 'https://drive.google.com/file/d/' + driveIdMatch[1] + '/preview';
                 }
@@ -652,7 +652,7 @@ export const MASTER_SHELL = `<!DOCTYPE html>
                 }
                 return clean;
             }
-            if (/^(\/|\.\/|\.\.\/|blob:|data:)/i.test(clean)) {
+            if (/^(\\/|\\.\\/|\\.\\.\\/|blob:|data:)/i.test(clean)) {
                 return clean;
             }
             var isSameOrigin = false;
@@ -666,7 +666,7 @@ export const MASTER_SHELL = `<!DOCTYPE html>
                 return clean;
             }
             var forceViewer = isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
-            if (forceViewer && /^https?:\/\//i.test(clean)) {
+            if (forceViewer && /^https?:\\/\\//i.test(clean)) {
                 return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(clean);
             }
             return clean;

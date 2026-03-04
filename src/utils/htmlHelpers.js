@@ -36,7 +36,7 @@ export function validateUrl(url) {
       return { isValid: false, safeUrl: '#', error: `Unsupported protocol: ${urlObj.protocol}` };
     }
     return { isValid: true, safeUrl: trimmed };
-  } catch (e) {
+  } catch {
     // If URL parsing fails, it might be a relative URL - allow it but escape it
     return { isValid: true, safeUrl: escapeHtml(trimmed) };
   }
