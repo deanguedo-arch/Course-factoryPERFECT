@@ -1,2 +1,5 @@
-﻿export const normalizeAssessment = (input) => input;
-
+﻿export {
+  normalizeAssessment,
+  normalizeQuestion,
+  validateAssessment,
+} from './schema.js';
