@@ -1,3 +1,5 @@
+import { normalizeQuestion as normalizeSchemaQuestion } from '../schema.js';
+
 const DEFAULT_PRINT_INSTRUCTIONS = `<li>Complete all required work on a separate sheet</li>
 <li>Review your answers carefully</li>
 <li>Print this page as a cover sheet</li>
@@ -37,8 +39,7 @@ const toFilenameBase = (value) => {
 
 const normalizeMode = (value) => {
   const raw = asString(value).toLowerCase();
-  if (raw === 'long-answer') return 'longanswer';
-  if (raw === 'longanswer') return 'longanswer';
+  if (raw === 'long-answer' || raw === 'longanswer') return 'longanswer';
   if (raw === 'print') return 'print';
   if (raw === 'mixed') return 'mixed';
   return 'quiz';
@@ -48,9 +49,7 @@ const makeAssessmentId = (mode, idSeed) => {
   const safeMode = normalizeMode(mode);
   const hasSeed = Number.isFinite(Number(idSeed));
   const seed = hasSeed ? Math.trunc(Number(idSeed)) : Date.now();
-  if (safeMode === 'mixed') {
-    return `mixed_${seed}`;
-  }
+  if (safeMode === 'mixed') return `mixed_${seed}`;
   return `quiz_${seed}`;
 };
 
@@ -62,42 +61,22 @@ const normalizeIdentifier = (value) => {
 };
 
 const normalizeQuestion = (rawQuestion, index, mode) => {
-  const raw = rawQuestion && typeof rawQuestion === 'object' ? rawQuestion : {};
-  const fallback = `Question ${index + 1}`;
-  const question = asString(raw.question || raw.prompt || fallback);
-  const options = Array.isArray(raw.options)
-    ? raw.options.map((opt) => asString(opt)).filter((opt) => opt.length > 0)
-    : [];
-  const hasOptions = options.length > 0;
-
-  let type = 'long-answer';
+  const normalized = normalizeSchemaQuestion(rawQuestion, index);
   if (mode === 'quiz') {
-    type = 'multiple-choice';
-  } else if (mode === 'longanswer') {
-    type = 'long-answer';
-  } else if (mode === 'mixed') {
-    type = raw.type === 'multiple-choice' || raw.type === 'long-answer'
-      ? raw.type
-      : hasOptions
-        ? 'multiple-choice'
-        : 'long-answer';
+    return normalizeSchemaQuestion({
+      ...normalized,
+      type: 'multiple-choice',
+      choices: normalized.choices?.length ? normalized.choices : normalized.options,
+      correctIndex: normalized.correctIndex ?? normalized.correct ?? 0,
+    }, index);
   }
-
-  if (type === 'multiple-choice') {
-    const safeOptions = options.length ? options : ['', '', '', ''];
-    const parsedCorrect = Number.parseInt(raw.correct, 10);
-    const correct = Number.isFinite(parsedCorrect) && parsedCorrect >= 0 && parsedCorrect < safeOptions.length
-      ? parsedCorrect
-      : 0;
-    return { question, type, options: safeOptions, correct };
+  if (mode === 'longanswer') {
+    return normalizeSchemaQuestion({
+      ...normalized,
+      type: 'long-answer',
+    }, index);
   }
-
-  return {
-    question,
-    type: 'long-answer',
-    options: [],
-    correct: 0,
-  };
+  return normalized;
 };
 
 const resolveTheme = (courseSettings = {}) => {
@@ -115,48 +94,95 @@ const resolveTheme = (courseSettings = {}) => {
   const headingTextClass = toTextClass(headingTextColor);
   const secondaryTextClass = toTextClass(secondaryTextColor);
   const assessmentTextClass = toTextClass(assessmentTextColor);
-  const bodyTextClass = assessmentTextClass;
 
   const buttonBgBase = toBgBase(buttonColor);
   const buttonBgClass = `bg-${buttonBgBase}`;
   const buttonHoverClass = buttonBgBase.endsWith('-600')
     ? `hover:bg-${buttonBgBase.replace(/-600$/, '-500')}`
     : `hover:bg-${buttonBgBase}`;
-  const buttonTextClass = isLightBg ? 'text-slate-900' : 'text-white';
 
   return {
     accentColor,
     headingTextClass,
     secondaryTextClass,
     assessmentTextClass,
-    bodyTextClass,
     buttonBgClass,
     buttonHoverClass,
-    buttonTextClass,
+    buttonTextClass: isLightBg ? 'text-slate-900' : 'text-white',
     cardBgClass: isLightBg ? 'bg-white' : 'bg-slate-900',
     cardBorderClass: isLightBg ? 'border-slate-300' : 'border-slate-700',
     optionBgClass: isLightBg ? 'bg-slate-100' : 'bg-slate-800',
     optionHoverClass: isLightBg ? 'hover:bg-slate-200' : 'hover:bg-slate-750',
     inputBgClass: isLightBg ? 'bg-white' : 'bg-slate-950',
-    inputTextClass: assessmentTextClass,
+    inputTextClass: isLightBg ? 'text-slate-900' : 'text-white',
     modalBgClass: isLightBg ? 'bg-white' : 'bg-slate-900',
     modalBorderClass: isLightBg ? 'border-slate-300' : 'border-slate-700',
   };
 };
 
-const buildQuestionHeader = (theme, questionNumber, questionText, extraClass = '') => {
+const buildQuestionHeader = (theme, number, prompt, extraClass = '') => {
   const suffix = extraClass ? ` ${extraClass}` : '';
-  return `<h3 class="text-lg font-bold ${theme.headingTextClass} mb-4${suffix}">${questionNumber}. ${escapeHtml(questionText || 'Untitled Question')}</h3>`;
+  return `<h3 class="text-lg font-bold ${theme.headingTextClass} mb-4${suffix}">${number}. ${escapeHtml(prompt || 'Untitled Question')}</h3>`;
 };
 
-const buildMixedDescription = (mcCount, laCount) => {
-  if (mcCount > 0 && laCount > 0) {
-    return `Complete ${mcCount} multiple-choice and ${laCount} long-answer questions.`;
+const buildMixedDescription = (questions) => {
+  if (questions.every((question) => ['multiple-choice', 'true-false'].includes(question.type))) {
+    return `Select the best answer for each of ${questions.length} questions.`;
   }
-  if (mcCount > 0) {
-    return `Select the best answer for each of ${mcCount} questions.`;
+  if (questions.every((question) => ['long-answer', 'short-answer'].includes(question.type))) {
+    return `Complete all ${questions.length} questions. Your responses are auto-saved.`;
   }
-  return `Complete all ${laCount} questions. Your responses are auto-saved.`;
+  return `Complete all ${questions.length} questions using the controls provided for each item.`;
+};
+
+const buildChoiceGroup = ({
+  id,
+  index,
+  choices,
+  inputType,
+  theme,
+}) => choices.map((choice, optionIndex) => {
+  const inputId = `${id}-q${index}-${inputType}-${optionIndex}`;
+  return `
+    <label for="${inputId}" class="flex items-center gap-3 p-3 ${theme.optionBgClass} rounded-lg cursor-pointer ${theme.optionHoverClass} transition-colors">
+      <input
+        id="${inputId}"
+        type="${inputType}"
+        name="${inputType === 'radio' ? `q${index}` : `q${index}[]`}"
+        value="${optionIndex}"
+        data-choice-label="${escapeHtml(choice)}"
+        class="w-4 h-4 assessment-input"
+      />
+      <span data-choice-label class="${theme.assessmentTextClass}">${escapeHtml(choice)}</span>
+    </label>
+  `;
+}).join('');
+
+const buildMatchingRows = ({
+  id,
+  index,
+  question,
+  theme,
+}) => {
+  const rightItems = question.pairs.map((pair) => pair.right);
+  const optionsHtml = rightItems.map((rightItem, optionIndex) => (
+    `<option value="${optionIndex}">${escapeHtml(rightItem)}</option>`
+  )).join('');
+
+  return question.pairs.map((pair, pairIndex) => `
+    <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.9fr)] items-center p-3 ${theme.optionBgClass} rounded-lg">
+      <div class="${theme.assessmentTextClass} font-medium">${escapeHtml(pair.left)}</div>
+      <select
+        id="${id}-matching-${index}-${pairIndex}"
+        data-match-row="${pairIndex}"
+        data-left-label="${escapeHtml(pair.left)}"
+        class="assessment-input w-full ${theme.inputBgClass} border ${theme.cardBorderClass} rounded p-3 ${theme.inputTextClass} focus:border-${theme.accentColor}-500 focus:outline-none"
+      >
+        <option value="">Select a match</option>
+        ${optionsHtml}
+      </select>
+    </div>
+  `).join('');
 };
 
 const buildQuestionBlocks = ({
@@ -164,68 +190,86 @@ const buildQuestionBlocks = ({
   questions,
   theme,
 }) => {
-  let longAnswerIndex = 0;
+  const html = questions.map((question, index) => {
+    const number = index + 1;
+    const prompt = question.prompt || question.question;
+    const type = question.type;
+    const rootClass = `mb-8 p-6 ${theme.cardBgClass} rounded-xl border ${theme.cardBorderClass} assessment-question${['long-answer', 'short-answer'].includes(type) ? ' print-section' : ''}`;
 
-  const questionBlocks = questions.map((question, index) => {
-    const questionNumber = index + 1;
-    const isMultipleChoice = question.type === 'multiple-choice';
-
-    if (isMultipleChoice) {
-      const optionsHtml = question.options.map((option, optionIndex) => `
-        <label class="flex items-center gap-3 p-3 ${theme.optionBgClass} rounded-lg cursor-pointer ${theme.optionHoverClass} transition-colors">
-          <input type="radio" name="q${index}" value="${optionIndex}" class="w-4 h-4 assessment-input" />
-          <span class="${theme.bodyTextClass}">${escapeHtml(option)}</span>
-        </label>
-      `).join('');
-
+    if (type === 'multiple-choice' || type === 'true-false') {
       return `
-        <div class="mb-8 p-6 ${theme.cardBgClass} rounded-xl border ${theme.cardBorderClass}">
-          ${buildQuestionHeader(theme, questionNumber, question.question)}
+        <div class="${rootClass}" data-question-index="${index}" data-question-type="${type}">
+          ${buildQuestionHeader(theme, number, prompt)}
           <div class="space-y-2">
-            ${optionsHtml}
+            ${buildChoiceGroup({ id, index, choices: question.choices, inputType: 'radio', theme })}
           </div>
         </div>
       `;
     }
 
-    const answerIndex = longAnswerIndex;
-    longAnswerIndex += 1;
+    if (type === 'multi-select') {
+      return `
+        <div class="${rootClass}" data-question-index="${index}" data-question-type="${type}">
+          ${buildQuestionHeader(theme, number, prompt)}
+          <p class="text-xs ${theme.secondaryTextClass} uppercase tracking-[0.16em] mb-3">Select all that apply</p>
+          <div class="space-y-2">
+            ${buildChoiceGroup({ id, index, choices: question.choices, inputType: 'checkbox', theme })}
+          </div>
+        </div>
+      `;
+    }
+
+    if (type === 'matching') {
+      return `
+        <div class="${rootClass}" data-question-index="${index}" data-question-type="${type}">
+          ${buildQuestionHeader(theme, number, prompt)}
+          <div class="space-y-3">
+            ${buildMatchingRows({ id, index, question, theme })}
+          </div>
+        </div>
+      `;
+    }
+
+    if (type === 'short-answer') {
+      return `
+        <div class="${rootClass}" data-question-index="${index}" data-question-type="${type}">
+          ${buildQuestionHeader(theme, number, prompt, 'print-question')}
+          <input
+            id="${id}-short-answer-${index}"
+            type="text"
+            placeholder="Enter a short answer..."
+            class="assessment-input w-full ${theme.inputBgClass} border ${theme.cardBorderClass} rounded-lg p-4 ${theme.inputTextClass} focus:border-${theme.accentColor}-500 focus:outline-none"
+          />
+          <p class="text-xs ${theme.secondaryTextClass} italic mt-2 no-print">Auto-saved to browser</p>
+        </div>
+      `;
+    }
 
     return `
-      <div class="mb-8 p-6 ${theme.cardBgClass} rounded-xl border ${theme.cardBorderClass} print-section">
-        ${buildQuestionHeader(theme, questionNumber, question.question, ' print-question')}
+      <div class="${rootClass}" data-question-index="${index}" data-question-type="${type}">
+        ${buildQuestionHeader(theme, number, prompt, 'print-question')}
         <textarea
-          id="${id}-answer-${answerIndex}"
+          id="${id}-long-answer-${index}"
           placeholder="Type your answer here..."
-          class="w-full h-48 ${theme.inputBgClass} border ${theme.cardBorderClass} rounded-lg p-4 ${theme.inputTextClass} resize-none focus:border-${theme.accentColor}-500 focus:outline-none print-response assessment-input"
+          class="assessment-input w-full h-48 ${theme.inputBgClass} border ${theme.cardBorderClass} rounded-lg p-4 ${theme.inputTextClass} resize-none focus:border-${theme.accentColor}-500 focus:outline-none print-response"
         ></textarea>
         <p class="text-xs ${theme.secondaryTextClass} italic mt-2 no-print">Auto-saved to browser</p>
       </div>
     `;
   }).join('');
 
-  return {
-    html: questionBlocks,
-    longAnswerCount: longAnswerIndex,
-  };
+  return { html };
 };
 
-const buildHeaderSubtitle = (mode, mcCount, laCount) => {
-  if (mode === 'mixed') {
-    return buildMixedDescription(mcCount, laCount);
-  }
-  if (mode === 'quiz') {
-    return 'Select the best answer for each question.';
-  }
-  if (mode === 'longanswer') {
-    return 'Complete all questions. Your responses are auto-saved.';
-  }
+const buildHeaderSubtitle = (mode, questions) => {
+  if (mode === 'mixed') return buildMixedDescription(questions);
+  if (mode === 'quiz') return 'Select the best answer for each question.';
+  if (mode === 'longanswer') return 'Complete all questions. Your responses are auto-saved.';
   return 'Complete this assignment and submit to your instructor.';
 };
 
 const buildStudentInfoHtml = (id, mode, theme) => {
   if (mode === 'quiz' || mode === 'print') return '';
-
   return `
     <div class="grid grid-cols-2 gap-4 mb-8 p-6 ${theme.cardBgClass} rounded-xl border ${theme.cardBorderClass} print-header${mode === 'mixed' ? ' no-print' : ''}">
       <div>
@@ -234,7 +278,7 @@ const buildStudentInfoHtml = (id, mode, theme) => {
           type="text"
           id="${id}-student-name"
           placeholder="Enter your name..."
-          class="w-full ${theme.inputBgClass} border ${theme.cardBorderClass} rounded p-3 ${theme.inputTextClass} text-sm focus:border-${theme.accentColor}-500 focus:outline-none assessment-input"
+          class="assessment-input w-full ${theme.inputBgClass} border ${theme.cardBorderClass} rounded p-3 ${theme.inputTextClass} text-sm focus:border-${theme.accentColor}-500 focus:outline-none"
         />
       </div>
       <div>
@@ -242,7 +286,7 @@ const buildStudentInfoHtml = (id, mode, theme) => {
         <input
           type="date"
           id="${id}-student-date"
-          class="w-full ${theme.inputBgClass} border ${theme.cardBorderClass} rounded p-3 ${theme.inputTextClass} text-sm focus:border-${theme.accentColor}-500 focus:outline-none assessment-input"
+          class="assessment-input w-full ${theme.inputBgClass} border ${theme.cardBorderClass} rounded p-3 ${theme.inputTextClass} text-sm focus:border-${theme.accentColor}-500 focus:outline-none"
         />
       </div>
     </div>
@@ -252,33 +296,31 @@ const buildStudentInfoHtml = (id, mode, theme) => {
 const buildActionButtonsHtml = ({
   id,
   theme,
-  includeLongAnswerActions,
-}) => {
-  return `
-    <div class="flex flex-wrap gap-3 mt-8 no-print">
-      <button type="button" onclick="${id}_reset()" class="${theme.buttonBgClass} ${theme.buttonHoverClass} ${theme.buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-        Reset
-      </button>
-      ${includeLongAnswerActions ? `
-      <button type="button" onclick="${id}_download()" class="${theme.buttonBgClass} ${theme.buttonHoverClass} ${theme.buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-        Download Backup
-      </button>
-      <button type="button" onclick="document.getElementById('${id}-upload').click()" class="${theme.buttonBgClass} ${theme.buttonHoverClass} ${theme.buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-        Upload Backup
-      </button>
-      ` : ''}
-      <button type="button" onclick="${id}_generateReport()" class="${theme.buttonBgClass} ${theme.buttonHoverClass} ${theme.buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
-        Print & Submit
-      </button>
-    </div>
-  `;
-};
+  includeBackupActions,
+}) => `
+  <div class="flex flex-wrap gap-3 mt-8 no-print">
+    <button type="button" onclick="${id}_reset()" class="${theme.buttonBgClass} ${theme.buttonHoverClass} ${theme.buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+      Reset
+    </button>
+    ${includeBackupActions ? `
+    <button type="button" onclick="${id}_download()" class="${theme.buttonBgClass} ${theme.buttonHoverClass} ${theme.buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+      Download Backup
+    </button>
+    <button type="button" onclick="document.getElementById('${id}-upload').click()" class="${theme.buttonBgClass} ${theme.buttonHoverClass} ${theme.buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+      Upload Backup
+    </button>
+    ` : ''}
+    <button type="button" onclick="${id}_generateReport()" class="${theme.buttonBgClass} ${theme.buttonHoverClass} ${theme.buttonTextClass} font-bold py-3 px-6 rounded-lg flex items-center gap-2">
+      Print & Submit
+    </button>
+  </div>
+`;
 
 const buildResetModalHtml = (id, theme) => `
   <div id="${id}-reset-modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden">
     <div class="${theme.modalBgClass} border ${theme.modalBorderClass} rounded-xl p-6 max-w-md mx-4">
       <h3 class="text-lg font-bold ${theme.headingTextClass} mb-4">Reset Assessment?</h3>
-      <p class="${theme.bodyTextClass} mb-6">Are you sure you want to reset all your answers? This cannot be undone.</p>
+      <p class="${theme.assessmentTextClass} mb-6">Are you sure you want to reset all your answers? This cannot be undone.</p>
       <div class="flex gap-3">
         <button onclick="document.getElementById('${id}-reset-modal').classList.add('hidden')" class="flex-1 ${theme.buttonBgClass} ${theme.buttonHoverClass} ${theme.buttonTextClass} font-bold py-2 rounded">Cancel</button>
         <button onclick="${id}_confirmReset()" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded">Reset</button>
@@ -295,7 +337,8 @@ const buildPrintStylesHtml = `
       .print-title { color: black !important; font-size: 24pt; text-align: center; border-bottom: 3px solid black; padding-bottom: 10px; margin-bottom: 20px; }
       .print-header { background: white !important; border: 2px solid black !important; margin-bottom: 20px; }
       .print-header label { color: black !important; }
-      .print-header input { border: none !important; border-bottom: 1px solid black !important; background: white !important; color: black !important; }
+      .print-header input,
+      .print-header select { border: none !important; border-bottom: 1px solid black !important; background: white !important; color: black !important; }
       .print-section { page-break-inside: avoid; background: white !important; border: 1px solid #ccc !important; margin-bottom: 20px; }
       .print-question { color: black !important; border-bottom: 2px solid #666; padding-bottom: 5px; }
       .print-response { background: white !important; color: black !important; border: 1px solid #999 !important; min-height: 200px; font-family: Arial, sans-serif; }
@@ -308,11 +351,11 @@ const buildPrintModeHtml = ({ id, title, theme, instructions }) => `
     <div class="max-w-4xl mx-auto">
       <header class="mb-8">
         <h1 class="text-3xl font-black ${theme.headingTextClass} italic mb-2">${escapeHtml(title)}</h1>
-        <p class="text-sm ${theme.secondaryTextClass}">${buildHeaderSubtitle('print')}</p>
+        <p class="text-sm ${theme.secondaryTextClass}">${buildHeaderSubtitle('print', [])}</p>
       </header>
       <div class="p-8 ${theme.cardBgClass} rounded-xl border ${theme.cardBorderClass}">
         <h3 class="text-lg font-bold ${theme.headingTextClass} mb-4">Instructions:</h3>
-        <ol class="list-decimal list-inside space-y-2 ${theme.bodyTextClass} mb-8">
+        <ol class="list-decimal list-inside space-y-2 ${theme.assessmentTextClass} mb-8">
           ${instructions || DEFAULT_PRINT_INSTRUCTIONS}
         </ol>
         <div class="border-t ${theme.cardBorderClass} pt-6 space-y-4">
@@ -331,7 +374,7 @@ const buildPrintModeHtml = ({ id, title, theme, instructions }) => `
   </div>
 `;
 
-const buildSharedScript = ({ id, title, backupBase, hasLongAnswer }) => {
+const buildSharedScript = ({ id, title, backupBase, enablePersistence }) => {
   const titleJs = escapeJsSingle(title);
   const backupBaseJs = escapeJsSingle(backupBase);
 
@@ -339,9 +382,39 @@ const buildSharedScript = ({ id, title, backupBase, hasLongAnswer }) => {
   var ${id}_title = '${titleJs}';
   var ${id}_backupBase = '${backupBaseJs}';
 
+  function ${id}_escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function ${id}_reset() {
     var modal = document.getElementById('${id}-reset-modal');
     if (modal) modal.classList.remove('hidden');
+  }
+
+  function ${id}_persistFields() {
+    var container = document.getElementById('${id}');
+    if (!container) return [];
+    return Array.from(container.querySelectorAll('.assessment-input[id]'));
+  }
+
+  function ${id}_readFieldValue(field) {
+    if (!field) return '';
+    if (field.type === 'checkbox' || field.type === 'radio') return field.checked ? '1' : '0';
+    return field.value || '';
+  }
+
+  function ${id}_writeFieldValue(field, value) {
+    if (!field) return;
+    if (field.type === 'checkbox' || field.type === 'radio') {
+      field.checked = value === '1';
+      return;
+    }
+    field.value = value || '';
   }
 
   function ${id}_confirmReset() {
@@ -350,18 +423,42 @@ const buildSharedScript = ({ id, title, backupBase, hasLongAnswer }) => {
     var form = document.getElementById('${id}-form');
     if (form) form.reset();
 
-    if (${hasLongAnswer ? 'true' : 'false'}) {
+    if (${enablePersistence ? 'true' : 'false'}) {
       try {
-        localStorage.removeItem('${id}-student-name');
-        localStorage.removeItem('${id}-student-date');
-        var container = document.getElementById('${id}');
-        if (container) {
-          container.querySelectorAll('textarea, input').forEach(function(el) {
-            if (el.id) localStorage.removeItem(el.id);
-          });
-        }
+        ${id}_persistFields().forEach(function(field) {
+          localStorage.removeItem(field.id);
+        });
       } catch (e) {}
     }
+  }
+
+  function ${id}_getQuestionAnswer(block) {
+    var type = String(block.getAttribute('data-question-type') || '');
+
+    if (type === 'multiple-choice' || type === 'true-false') {
+      var selectedRadio = block.querySelector('input[type="radio"]:checked');
+      return selectedRadio ? (selectedRadio.getAttribute('data-choice-label') || '') : '';
+    }
+
+    if (type === 'multi-select') {
+      return Array.from(block.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(function(field) { return field.getAttribute('data-choice-label') || ''; })
+        .filter(Boolean)
+        .join(', ');
+    }
+
+    if (type === 'matching') {
+      return Array.from(block.querySelectorAll('select[data-match-row]'))
+        .map(function(select) {
+          var left = select.getAttribute('data-left-label') || 'Item';
+          var text = select.value === '' ? 'No match selected' : (select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : '');
+          return left + ' -> ' + text;
+        })
+        .join('\\n');
+    }
+
+    var field = block.querySelector('textarea, input[type="text"]');
+    return field ? (field.value || '') : '';
   }
 
   function ${id}_generateReport() {
@@ -372,28 +469,20 @@ const buildSharedScript = ({ id, title, backupBase, hasLongAnswer }) => {
     var studentDate = document.getElementById('${id}-student-date')?.value || new Date().toLocaleDateString();
 
     var questionsHTML = '';
-    var questions = container.querySelectorAll('[class*="print-section"], [class*="mb-8 p-6"]');
-    var qNum = 1;
+    var questions = container.querySelectorAll('.assessment-question');
 
-    questions.forEach(function(q) {
-      var questionText = q.querySelector('h3')?.textContent || ('Question ' + qNum);
-      var textarea = q.querySelector('textarea');
-      var answer = textarea ? textarea.value : '';
+    questions.forEach(function(block, index) {
+      var questionText = block.querySelector('h3')?.textContent || ('Question ' + (index + 1));
+      var answer = ${id}_getQuestionAnswer(block);
+      var answerHtml = answer
+        ? ${id}_escapeHtml(answer)
+        : '<em style="color:#999;">No answer provided</em>';
 
-      var selectedRadio = q.querySelector('input[type="radio"]:checked');
-      if (selectedRadio) {
-        var label = selectedRadio.closest('label');
-        answer = label ? label.textContent.trim() : ('Selected: Option ' + (parseInt(selectedRadio.value, 10) + 1));
-      }
-
-      if (questionText.trim()) {
-        questionsHTML += '<div style="margin-bottom:25px; border-left:4px solid #333; padding-left:15px;">'
-          + '<h3 style="font-size:14px; font-weight:bold; margin-bottom:10px; color:#333;">' + questionText + '</h3>'
-          + '<div style="background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #ddd; min-height:60px; white-space:pre-wrap; font-size:13px;">'
-          + (answer || '<em style="color:#999;">No answer provided</em>')
-          + '</div></div>';
-        qNum += 1;
-      }
+      questionsHTML += '<div style="margin-bottom:25px; border-left:4px solid #333; padding-left:15px;">'
+        + '<h3 style="font-size:14px; font-weight:bold; margin-bottom:10px; color:#333;">' + ${id}_escapeHtml(questionText) + '</h3>'
+        + '<div style="background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #ddd; min-height:60px; white-space:pre-wrap; font-size:13px;">'
+        + answerHtml
+        + '</div></div>';
     });
 
     var printHTML = '<!DOCTYPE html><html><head><title>' + ${id}_title + ' - Submission</title>'
@@ -405,8 +494,8 @@ const buildSharedScript = ({ id, title, backupBase, hasLongAnswer }) => {
       + '.student-info div { font-size: 14px; }'
       + '.student-info strong { display: block; font-size: 11px; text-transform: uppercase; color: #666; margin-bottom: 4px; }'
       + '</style></head><body>'
-      + '<div class="header"><h1>' + ${id}_title + '</h1><p style="font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#666; margin-top:5px;">Assessment Submission</p></div>'
-      + '<div class="student-info"><div><strong>Student Name</strong>' + studentName + '</div><div><strong>Date</strong>' + studentDate + '</div></div>'
+      + '<div class="header"><h1>' + ${id}_escapeHtml(${id}_title) + '</h1><p style="font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#666; margin-top:5px;">Assessment Submission</p></div>'
+      + '<div class="student-info"><div><strong>Student Name</strong>' + ${id}_escapeHtml(studentName) + '</div><div><strong>Date</strong>' + ${id}_escapeHtml(studentDate) + '</div></div>'
       + '<div class="questions">' + questionsHTML + '</div>'
       + '<div style="margin-top:40px; border-top:2px solid #333; padding-top:20px; text-align:center;"><p style="font-size:10px; text-transform:uppercase; letter-spacing:2px; color:#999;">End of Submission</p></div>'
       + '<script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }<\\/script>'
@@ -422,69 +511,39 @@ const buildSharedScript = ({ id, title, backupBase, hasLongAnswer }) => {
     }
   }
 
-  ${hasLongAnswer ? `
+  ${enablePersistence ? `
   window.addEventListener('load', function() {
     ${id}_loadFromLocalStorage();
   });
 
   function ${id}_setupAutoSave() {
-    var nameField = document.getElementById('${id}-student-name');
-    var dateField = document.getElementById('${id}-student-date');
-    if (nameField) {
-      nameField.addEventListener('input', function() {
-        localStorage.setItem('${id}-student-name', this.value);
-      });
-    }
-    if (dateField) {
-      dateField.addEventListener('input', function() {
-        localStorage.setItem('${id}-student-date', this.value);
-      });
-    }
-
-    var textareas = document.querySelectorAll('#${id} textarea[id^="${id}-answer-"]');
-    textareas.forEach(function(textarea) {
-      textarea.addEventListener('input', function() {
-        if (textarea.id) {
-          localStorage.setItem(textarea.id, textarea.value);
-        }
+    ${id}_persistFields().forEach(function(field) {
+      var eventName = (field.tagName === 'SELECT' || field.type === 'checkbox' || field.type === 'radio') ? 'change' : 'input';
+      field.addEventListener(eventName, function() {
+        localStorage.setItem(field.id, ${id}_readFieldValue(field));
       });
     });
   }
 
   function ${id}_loadFromLocalStorage() {
-    var nameField = document.getElementById('${id}-student-name');
-    var dateField = document.getElementById('${id}-student-date');
-
-    if (nameField) {
-      var savedName = localStorage.getItem('${id}-student-name');
-      if (savedName) nameField.value = savedName;
-    }
-    if (dateField) {
-      var savedDate = localStorage.getItem('${id}-student-date');
-      if (savedDate) dateField.value = savedDate;
-    }
-
-    var textareas = document.querySelectorAll('#${id} textarea[id^="${id}-answer-"]');
-    textareas.forEach(function(textarea) {
-      if (!textarea.id) return;
-      var savedValue = localStorage.getItem(textarea.id);
-      if (savedValue) textarea.value = savedValue;
+    ${id}_persistFields().forEach(function(field) {
+      var savedValue = localStorage.getItem(field.id);
+      if (savedValue !== null) {
+        ${id}_writeFieldValue(field, savedValue);
+      }
     });
-
     ${id}_setupAutoSave();
   }
 
   function ${id}_download() {
     var payload = {
-      studentName: document.getElementById('${id}-student-name')?.value || '',
-      studentDate: document.getElementById('${id}-student-date')?.value || '',
-      answers: [],
+      fields: ${id}_persistFields().map(function(field) {
+        return {
+          id: field.id,
+          value: ${id}_readFieldValue(field),
+        };
+      }),
     };
-
-    var textareas = document.querySelectorAll('#${id} textarea[id^="${id}-answer-"]');
-    textareas.forEach(function(textarea) {
-      payload.answers.push(textarea?.value || '');
-    });
 
     var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     var url = URL.createObjectURL(blob);
@@ -504,25 +563,12 @@ const buildSharedScript = ({ id, title, backupBase, hasLongAnswer }) => {
       try {
         var data = JSON.parse(e.target?.result || '{}');
 
-        var nameField = document.getElementById('${id}-student-name');
-        var dateField = document.getElementById('${id}-student-date');
-
-        if (nameField && data.studentName) {
-          nameField.value = data.studentName;
-          localStorage.setItem('${id}-student-name', data.studentName);
-        }
-        if (dateField && data.studentDate) {
-          dateField.value = data.studentDate;
-          localStorage.setItem('${id}-student-date', data.studentDate);
-        }
-
-        if (Array.isArray(data.answers)) {
-          data.answers.forEach(function(answer, index) {
-            var textarea = document.getElementById('${id}-answer-' + index);
-            if (textarea) {
-              textarea.value = answer || '';
-              localStorage.setItem('${id}-answer-' + index, answer || '');
-            }
+        if (Array.isArray(data.fields)) {
+          data.fields.forEach(function(entry) {
+            var field = document.getElementById(entry.id);
+            if (!field) return;
+            ${id}_writeFieldValue(field, entry.value);
+            localStorage.setItem(entry.id, entry.value || '');
           });
         }
 
@@ -559,22 +605,18 @@ const buildAssessmentPage = ({
     };
   }
 
-  const { html: questionBlocksHtml, longAnswerCount } = buildQuestionBlocks({
-    id,
-    questions,
-    theme,
-  });
-  const mcCount = questions.filter((question) => question.type === 'multiple-choice').length;
-  const laCount = longAnswerCount;
+  const { html: questionBlocksHtml } = buildQuestionBlocks({ id, questions, theme });
+  const mcCount = questions.filter((question) => ['multiple-choice', 'true-false'].includes(question.type)).length;
+  const laCount = questions.filter((question) => ['long-answer', 'short-answer'].includes(question.type)).length;
   const questionCount = questions.length;
-  const includeLongAnswerActions = laCount > 0;
+  const includeBackupActions = mode !== 'quiz';
 
   const html = `
     <div id="${id}" class="w-full h-full custom-scroll p-8">
       <div class="max-w-4xl mx-auto">
         <header class="mb-8">
           <h1 class="text-3xl font-black ${theme.headingTextClass} italic mb-2${mode !== 'quiz' ? ' print-title' : ''}">${escapeHtml(title)}</h1>
-          <p class="text-sm ${theme.secondaryTextClass}${mode !== 'quiz' ? ' no-print' : ''}">${buildHeaderSubtitle(mode, mcCount, laCount)}</p>
+          <p class="text-sm ${theme.secondaryTextClass}${mode !== 'quiz' ? ' no-print' : ''}">${buildHeaderSubtitle(mode, questions)}</p>
         </header>
 
         ${buildStudentInfoHtml(id, mode, theme)}
@@ -583,13 +625,9 @@ const buildAssessmentPage = ({
           ${questionBlocksHtml}
         </form>
 
-        ${buildActionButtonsHtml({
-          id,
-          theme,
-          includeLongAnswerActions,
-        })}
+        ${buildActionButtonsHtml({ id, theme, includeBackupActions })}
 
-        ${includeLongAnswerActions ? `
+        ${includeBackupActions ? `
           <input type="file" id="${id}-upload" accept=".json" style="display: none;" onchange="${id}_loadBackup(this)" />
           <div id="${id}-loaded" class="hidden mt-6 p-4 rounded-xl bg-blue-900/20 border border-blue-500">
             <p class="text-blue-400 font-bold">Backup loaded successfully!</p>
@@ -610,16 +648,14 @@ const buildAssessmentPage = ({
     </div>
   `;
 
-  const script = buildSharedScript({
-    id,
-    title,
-    backupBase: toFilenameBase(title),
-    hasLongAnswer: includeLongAnswerActions,
-  });
-
   return {
     html,
-    script,
+    script: buildSharedScript({
+      id,
+      title,
+      backupBase: toFilenameBase(title),
+      enablePersistence: includeBackupActions,
+    }),
     questionCount,
     mcCount,
     laCount,
