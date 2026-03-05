@@ -3,7 +3,7 @@ import { normalizeQuestion } from '../schema.js';
 const QUESTION_PATTERN = /^(Q?\d+[.)]|Question\s+\d+)/i;
 const OPTION_PATTERN = /^[a-d][.)]\s+/i;
 const BULLET_PATTERN = /^-\s+/;
-const ANSWER_PATTERN = /^(ans|answer|correct)\s*[:\-]\s*([a-d]|\d+)/i;
+const ANSWER_PATTERN = /^(ans|answer|correct)\s*[:-]\s*([a-d]|\d+)/i;
 
 const toCorrectIndex = (raw) => {
   const token = String(raw || '').trim();

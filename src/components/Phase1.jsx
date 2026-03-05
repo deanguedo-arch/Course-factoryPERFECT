@@ -128,7 +128,7 @@ import { useComposerHistory } from '../hooks/useComposerHistory.js';
 import { useComposerPreviewBridge } from '../hooks/useComposerPreviewBridge.js';
 import { getComposerSelectionIntent, useComposerSelection } from '../hooks/useComposerSelection.js';
 import { useComposerUndoRedoShortcuts } from '../hooks/useComposerUndoRedoShortcuts.js';
-import { canPublish, renderAssessment, toAssessmentFlowStep } from '../assessment/index.js';
+import { canPublish, parseAssessmentImport, renderAssessment, toAssessmentFlowStep } from '../assessment/index.js';
 
 const { useEffect, useMemo, useRef, useState } = React;
 
@@ -232,60 +232,21 @@ function normalizeEditorTabToken(value, fallback = 'tab') {
   return raw || fallback;
 }
 
-// Keep import parsing local to Phase 1 to avoid cross-phase coupling.
-function sanitizeImportData(input) {
-  let cleanData = [];
-  try {
-    let jsonString = String(input || '').trim().replace(/^```json/, '').replace(/^```/, '').replace(/```$/, '');
-    const parsed = JSON.parse(jsonString);
-    const rawArray = Array.isArray(parsed) ? parsed : (parsed.questions || parsed.data || []);
-
-    cleanData = rawArray.map((q) => {
-      const questionText = String(q.question || q.q || 'Untitled Question');
-      const optionsArray = Array.isArray(q.options) ? q.options.map((opt) => String(opt || '')) : [];
-      const hasOptions = optionsArray.length > 0;
-
-      return {
-        type: hasOptions ? 'multiple-choice' : 'long-answer',
-        question: questionText,
-        options: optionsArray,
-        correct: hasOptions
-          ? ((typeof q.correct === 'string')
-              ? (Number.isNaN(Number(q.correct)) ? q.correct.toUpperCase().charCodeAt(0) - 65 : Number.parseInt(q.correct, 10))
-              : (q.correct || 0))
-          : 0,
-      };
-    });
-    return { data: cleanData, success: true };
-  } catch {
-    const lines = String(input || '').split('\n').filter((line) => line.trim());
-    const questions = [];
-    let current = null;
-
-    lines.forEach((line) => {
-      const trimmed = line.trim();
-      if (/^(Q?\d+[.)]|Question\s+\d+)/i.test(trimmed)) {
-        if (current) questions.push(current);
-        current = {
-          type: 'long-answer',
-          question: trimmed.replace(/^(Q?\d+[.)]|Question\s+\d+)\s*/, ''),
-          options: [],
-          correct: 0,
-        };
-      } else if (/^[a-d][.)]\s/i.test(trimmed) || trimmed.startsWith('- ')) {
-        if (current) {
-          if (current.options.length === 0) current.type = 'multiple-choice';
-          current.options.push(trimmed.replace(/^[a-d][.)]\s/i, '').replace(/^- \s/, ''));
-        }
-      } else if (/^(ans|answer|correct):\s*([a-d])/i.test(trimmed) && current) {
-        current.correct = trimmed.match(/([a-d])/i)[1].toUpperCase().charCodeAt(0) - 65;
-      } else if (current && current.options.length === 0) {
-        current.question += ` ${trimmed}`;
-      }
-    });
-    if (current) questions.push(current);
-    return { data: questions, success: questions.length > 0 };
+function parsePhase1ImportInput(input) {
+  const content = String(input || '').trim();
+  if (!content) {
+    return { questions: [], issues: [] };
   }
+  const normalizedContent = content
+    .replace(/^```json/i, '')
+    .replace(/^```/i, '')
+    .replace(/```$/, '')
+    .trim();
+  const result = parseAssessmentImport({ kind: 'auto', content: normalizedContent });
+  return {
+    questions: Array.isArray(result.questions) ? result.questions : [],
+    issues: Array.isArray(result.issues) ? result.issues : [],
+  };
 }
 
 function extractRichEditorText(html) {
@@ -430,7 +391,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [mode, setMode] = useState('IMPORT');
   const [importSource, setImportSource] = useState('smart');
   const [importInput, setImportInput] = useState("");
-  const [importPreview, setImportPreview] = useState([]); 
+  const [importPreview, setImportPreview] = useState([]);
+  const [importIssues, setImportIssues] = useState([]);
   
   // MODULE MANAGER STATE
   const [moduleManagerType, setModuleManagerType] = useState('composer'); // 'standalone' | 'composer' | 'external'
@@ -8117,9 +8079,11 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         <textarea
                                             value={importInput}
                                             onChange={(e) => {
-                                                setImportInput(e.target.value);
-                                                const result = sanitizeImportData(e.target.value);
-                                                setImportPreview(result.data);
+                                                const nextInput = e.target.value;
+                                                setImportInput(nextInput);
+                                                const result = parsePhase1ImportInput(nextInput);
+                                                setImportPreview(result.questions);
+                                                setImportIssues(result.issues);
                                             }}
                                             className="w-full h-64 bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs font-mono text-white focus:border-purple-500 outline-none resize-none"
                                             placeholder="Paste JSON here... OR Paste raw text like:&#10;Multiple-choice:&#10;1. Question?&#10;a. Yes&#10;b. No&#10;Answer: A&#10;&#10;Long-answer:&#10;2. Explain your answer."
@@ -8148,6 +8112,23 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                         )}
                                     </div>
 
+                                    {importIssues.length > 0 && (
+                                        <div className="mb-4 space-y-2">
+                                            {importIssues.map((issue, idx) => {
+                                                const isError = issue?.type === 'error';
+                                                return (
+                                                    <div
+                                                        key={`import-issue-${idx}`}
+                                                        className={`rounded-lg border px-3 py-2 text-xs ${isError ? 'border-rose-500/40 bg-rose-900/20 text-rose-200' : 'border-amber-500/30 bg-amber-900/20 text-amber-200'}`}
+                                                    >
+                                                        <span className="font-bold uppercase mr-2">{isError ? 'Error' : 'Warning'}</span>
+                                                        {issue?.message || 'Import issue detected.'}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
                                     <div className="flex-1 overflow-y-auto space-y-3 custom-scroll pr-2 mb-4 bg-slate-950/50 rounded-lg p-2 border border-slate-800 h-64">
                                         {importPreview.length === 0 ? (
                                             <div className="h-full flex items-center justify-center text-slate-500 text-xs italic">Paste content to preview...</div>
@@ -8157,6 +8138,9 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                 const optionsArray = Array.isArray(q.options) ? q.options : [];
                                                 const questionType = q.type || (optionsArray.length > 0 ? 'multiple-choice' : 'long-answer');
                                                 const isLongAnswer = questionType === 'long-answer';
+                                                const confidenceLabel = typeof q.confidence === 'number'
+                                                    ? `${Math.round(q.confidence * 100)}%`
+                                                    : null;
                                                 
                                                 return (
                                                     <div key={idx} className="p-3 bg-slate-900 border border-slate-700 rounded-lg text-xs">
@@ -8172,6 +8156,11 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                             }`}>
                                                                 {isLongAnswer ? 'Long Answer' : 'Multiple Choice'}
                                                             </span>
+                                                            {confidenceLabel && (
+                                                                <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-slate-700 text-slate-200">
+                                                                    {confidenceLabel}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         {isLongAnswer ? (
                                                             <div className="text-slate-500 italic text-[10px] pl-4">
@@ -8203,7 +8192,6 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                     <button
                                         onClick={() => {
                                             if (importPreview.length === 0) return;
-                                            // Convert to format expected by masterQuestions
                                             const formattedQuestions = importPreview.map(q => ({
                                                 type: q.type || (q.options?.length > 0 ? 'multiple-choice' : 'long-answer'),
                                                 question: q.question,
@@ -8213,15 +8201,16 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                             formattedQuestions.forEach(q => addQuestionToMaster(q));
                                             const mcCount = formattedQuestions.filter(q => q.type === 'multiple-choice').length;
                                             const laCount = formattedQuestions.filter(q => q.type === 'long-answer').length;
-                                            alert(`Imported ${formattedQuestions.length} questions. (${mcCount} multiple-choice, ${laCount} long-answer)`);
+                                            alert(`Imported ${formattedQuestions.length} questions locally. (${mcCount} multiple-choice, ${laCount} long-answer)`);
                                             setImportInput("");
                                             setImportPreview([]);
-                                            setMode('MASTER');
+                                            setImportIssues([]);
+                                            setMode('ADD');
                                         }}
                                         disabled={importPreview.length === 0}
                                         className="cf-btn cf-btn-primary w-full py-3 text-sm font-bold shadow-lg disabled:opacity-50"
                                     >
-                                        Import to Master Assessment
+                                        Import To Review
                                     </button>
                                 </div>
                             </div>
