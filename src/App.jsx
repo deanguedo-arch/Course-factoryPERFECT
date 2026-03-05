@@ -6,6 +6,7 @@ import {
 } from './utils/generators.js';
 import { compileModuleToHtml } from './utils/compiler.js';
 import { checkModuleDependencies } from './utils/dependencies.js';
+import { normalizePlacements } from './assessment/index.js';
 import { useToast, ToastContainer, CodeBlock, Toggle } from './components/Shared.jsx';
 // Shared UI (useToast/ToastContainer/CodeBlock/Toggle) moved to src/components/Shared.jsx
 import { PROJECT_DATA, MASTER_SHELL } from './data/constants.js';
@@ -482,7 +483,8 @@ export function App() {
       ...assessment,
       id: `assess_${Date.now()}`,
       order: assessments.length,
-      hidden: false
+      hidden: false,
+      placements: normalizePlacements(assessment?.placements || [{ targetType: 'hub' }]),
     };
     const updated = [...assessments, newAssessment];
     updateAssessmentsModule(updated);
@@ -491,8 +493,12 @@ export function App() {
   const editAssessment = (assessmentId, updates) => {
     const assessmentsModule = getAssessmentsModule();
     const assessments = assessmentsModule?.assessments || [];
+    const normalizedUpdates = { ...updates };
+    if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'placements')) {
+      normalizedUpdates.placements = normalizePlacements(normalizedUpdates.placements);
+    }
     const updated = assessments.map(a => 
-      a.id === assessmentId ? { ...a, ...updates } : a
+      a.id === assessmentId ? { ...a, ...normalizedUpdates } : a
     );
     updateAssessmentsModule(updated);
   };
@@ -500,7 +506,9 @@ export function App() {
   const deleteAssessment = (assessmentId) => {
     const assessmentsModule = getAssessmentsModule();
     const assessments = assessmentsModule?.assessments || [];
-    const updated = assessments.filter(a => a.id !== assessmentId);
+    const updated = assessments
+      .filter(a => a.id !== assessmentId)
+      .map((assessment, index) => ({ ...assessment, order: index }));
     updateAssessmentsModule(updated);
   };
 
