@@ -12,6 +12,11 @@ export {
 } from './questionTypes.js';
 
 export {
+  gradeAssessment,
+  gradeQuestion,
+} from './grading.js';
+
+export {
   configurePdfWorker,
   detectScannedPdf,
   extractDocxText,
