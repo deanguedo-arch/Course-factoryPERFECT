@@ -1,10 +1,21 @@
-﻿export {
+export {
   normalizeAssessment,
   normalizeQuestion,
   validateAssessment,
 } from './schema.js';
 
 export {
+  isAutoGradedQuestionType,
+  isGradableQuestionType,
+  normalizeQuestionType,
+  QUESTION_TYPE_OPTIONS,
+} from './questionTypes.js';
+
+export {
+  configurePdfWorker,
+  detectScannedPdf,
+  extractDocxText,
+  extractPdfText,
   parseAssessmentImport,
   parseJsonImport,
   parseTextImport,
@@ -21,7 +32,9 @@ export {
 } from './compiler/renderAssessment.js';
 
 export {
+  canParseExtractedImport,
   canPublish,
+  createImportExtractionState,
   createAssessmentFlowState,
   getAssessmentFlowSteps,
   toAssessmentFlowStep,
