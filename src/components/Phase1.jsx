@@ -128,7 +128,7 @@ import { useComposerHistory } from '../hooks/useComposerHistory.js';
 import { useComposerPreviewBridge } from '../hooks/useComposerPreviewBridge.js';
 import { getComposerSelectionIntent, useComposerSelection } from '../hooks/useComposerSelection.js';
 import { useComposerUndoRedoShortcuts } from '../hooks/useComposerUndoRedoShortcuts.js';
-import { renderAssessment } from '../assessment/index.js';
+import { canPublish, renderAssessment, toAssessmentFlowStep } from '../assessment/index.js';
 
 const { useEffect, useMemo, useRef, useState } = React;
 
@@ -427,7 +427,8 @@ const MODULE_MANAGER_WORKSPACE_PRESET_KEY = 'course_factory_composer_workspace_p
 // --- PHASE 1: HARVEST ---
 const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, assessmentType, setAssessmentType, assessmentTitle, setAssessmentTitle, quizQuestions, setQuizQuestions, printInstructions, setPrintInstructions, editingAssessment, setEditingAssessment, isVaultOpen, setIsVaultOpen, setVaultTargetField, vaultTargetField }) => {
   const [harvestType, setHarvestType] = useState('MODULE_MANAGER'); // 'ASSESSMENT', 'MATERIALS', 'AI_MODULE', 'MODULE_MANAGER'
-  const [mode, setMode] = useState('ADD');
+  const [mode, setMode] = useState('IMPORT');
+  const [importSource, setImportSource] = useState('smart');
   const [importInput, setImportInput] = useState("");
   const [importPreview, setImportPreview] = useState([]); 
   
@@ -645,6 +646,18 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [aiOutput, setAiOutput] = useState("");
   const [parsedAiModule, setParsedAiModule] = useState(null);
   const [aiParseError, setAiParseError] = useState(null);
+  const publishBlockingErrors = useMemo(() => {
+    const issues = [];
+    if (!generatedAssessment) {
+      issues.push('Generate an assessment in Compose before publishing.');
+    }
+    return issues;
+  }, [generatedAssessment]);
+  const publishReady = canPublish({
+    step: toAssessmentFlowStep(mode),
+    blockingErrors: publishBlockingErrors.length,
+    hasGeneratedAssessment: Boolean(generatedAssessment),
+  });
   const normalizedModuleManagerLayout = normalizeComposerLayout(moduleManagerComposerLayout);
   const moduleManagerComposerMaxColumns = normalizedModuleManagerLayout.maxColumns;
   const moduleManagerComposerLayoutMode = normalizedModuleManagerLayout.mode;
@@ -6926,42 +6939,59 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                         
                         {/* Assessment Mode Tabs */}
                         <div className="cf-tab-rail mb-6">
-                            <button 
-                                onClick={() => setMode('ADD')} 
+                            <button
+                                onClick={() => setMode('IMPORT')}
+                                className={`cf-tab-btn px-4 py-2 text-xs font-bold ${mode === 'IMPORT' ? 'cf-tab-btn-active' : ''}`}
+                            >
+                                <FileJson size={14} /> Import
+                            </button>
+                            <button
+                                onClick={() => setMode('ADD')}
                                 className={`cf-tab-btn px-4 py-2 text-xs font-bold ${mode === 'ADD' ? 'cf-tab-btn-active' : ''}`}
                             >
-                                <Plus size={14} /> Add Questions
+                                <Plus size={14} /> Review
                             </button>
-                            <button 
-                                onClick={() => setMode('MASTER')} 
+                            <button
+                                onClick={() => setMode('MASTER')}
                                 className={`cf-tab-btn px-4 py-2 text-xs font-bold ${mode === 'MASTER' ? 'cf-tab-btn-active' : ''}`}
                             >
-                                <Sparkles size={14} /> Master Assessment
+                                <Sparkles size={14} /> Compose
                             </button>
-                            <button 
-                                onClick={() => setMode('MANAGE')} 
+                            <button
+                                onClick={() => setMode('PUBLISH')}
+                                className={`cf-tab-btn px-4 py-2 text-xs font-bold ${mode === 'PUBLISH' ? 'cf-tab-btn-active' : ''}`}
+                            >
+                                <Zap size={14} /> Publish
+                            </button>
+                            <button
+                                onClick={() => setMode('MANAGE')}
                                 className={`cf-tab-btn px-4 py-2 text-xs font-bold ${mode === 'MANAGE' ? 'cf-tab-btn-active' : ''}`}
                             >
                                 <Clipboard size={14} /> Manage
                             </button>
-                            <button 
-                                onClick={() => setMode('MIGRATE')} 
-                                className={`cf-tab-btn px-4 py-2 text-xs font-bold ${mode === 'MIGRATE' ? 'cf-tab-btn-active' : ''}`}
-                            >
-                                <RefreshCw size={14} /> Migrate
-                            </button>
-                            <button 
-                                onClick={() => setMode('IMPORT')} 
-                                className={`cf-tab-btn px-4 py-2 text-xs font-bold ${mode === 'IMPORT' ? 'cf-tab-btn-active' : ''}`}
-                            >
-                                <FileJson size={14} /> Smart Import
-                            </button>
                         </div>
+
+                        {mode === 'IMPORT' && (
+                            <div className="cf-tab-rail mb-4">
+                                <button
+                                    onClick={() => setImportSource('smart')}
+                                    className={`cf-tab-btn px-4 py-2 text-xs font-bold ${importSource === 'smart' ? 'cf-tab-btn-active' : ''}`}
+                                >
+                                    <FileJson size={14} /> Smart Import
+                                </button>
+                                <button
+                                    onClick={() => setImportSource('migrate')}
+                                    className={`cf-tab-btn px-4 py-2 text-xs font-bold ${importSource === 'migrate' ? 'cf-tab-btn-active' : ''}`}
+                                >
+                                    <RefreshCw size={14} /> Migrate
+                                </button>
+                            </div>
+                        )}
 
                         {/* ADD QUESTIONS MODE */}
                         {mode === 'ADD' && (
                             <div className="space-y-4">
-                                <p className="text-xs text-slate-400 italic">Build individual questions to add to your Master Assessment.</p>
+                                <p className="text-xs text-slate-400 italic">Review imported questions or add new ones before composing the final assessment.</p>
                                 
                                 {/* Question Type Selector */}
                                 <div className="cf-tab-rail mb-4">
@@ -7092,7 +7122,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                 {/* Quick Info */}
                                 <div className="cf-panel-muted p-4">
                                     <p className="text-purple-300 text-xs">
-                                        <strong>Tip:</strong> Add all your questions here, then go to the "Master Assessment" tab to organize them and generate the final assessment.
+                                        <strong>Tip:</strong> Add questions here, then use the "Compose" step to order and generate your final assessment.
                                     </p>
                  </div>
              </div>
@@ -7283,10 +7313,10 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                             </>
                         )}
 
-                        {/* MASTER ASSESSMENT MODE */}
+                        {/* COMPOSE MODE */}
                         {mode === 'MASTER' && (
                             <div className="space-y-4">
-                                <p className="text-xs text-slate-400 italic">Organize your questions and generate the final assessment.</p>
+                                <p className="text-xs text-slate-400 italic">Compose your final assessment by ordering questions and generating code.</p>
                                 
                                 {/* Assessment Title */}
                                 <div>
@@ -7319,7 +7349,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                     {masterQuestions.length === 0 ? (
                                         <div className="text-center py-12 bg-slate-900/30 rounded-xl border border-slate-800">
                                             <p className="text-sm text-slate-500 italic">No questions yet.</p>
-                                            <p className="text-xs text-slate-600 mt-2">Go to "Add Questions" tab to add questions.</p>
+                                            <p className="text-xs text-slate-600 mt-2">Go to "Review" to add or import questions first.</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-2">
@@ -7398,45 +7428,78 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                         <Sparkles size={18} /> Generate Assessment Code
                                     </button>
                                 )}
-
-                                {/* Generated Assessment Preview */}
                                 {generatedAssessment && (
-                                    <div className="mt-4">
-                                        <CodeBlock label="Assessment JSON Preview" code={generatedAssessment} height="h-64" />
-                                        <button 
-                                            onClick={() => {
-                                                try {
-                                                    const parsed = JSON.parse(generatedAssessment);
-                                                    addAssessment({
-                                                        title: masterAssessmentTitle,
-                                                        type: 'mixed',
-                                                        html: parsed.html,
-                                                        script: parsed.script,
-                                                        questionCount: masterQuestions.length,
-                                                        generatedId: parsed.id || null,
-                                                        source: 'master',
-                                                        masterAssessmentTitle,
-                                                        masterQuestionsSnapshot: masterQuestions.map((q) => ({
-                                                            ...q,
-                                                            options: q.options ? [...q.options] : []
-                                                        }))
-                                                    });
-                                                    alert("Assessment added successfully! Switching to Manage tab...");
-                                                    setGeneratedAssessment("");
-                                                    setMasterAssessmentTitle("");
-                                                    setMasterQuestions([]);
-                                                    setMode('MANAGE');
-                                                } catch(e) {
-                                                    alert("Error adding assessment. Please try again.");
-                                                    console.error(e);
-                                                }
-                                            }}
-                                            className="cf-btn cf-btn-success mt-3 w-full py-3 text-xs font-bold"
+                                    <button
+                                        type="button"
+                                        onClick={() => setMode('PUBLISH')}
+                                        className="cf-btn cf-btn-success w-full py-3 text-xs font-bold"
+                                    >
+                                        <Zap size={14} /> Continue To Publish
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {/* PUBLISH MODE */}
+                        {mode === 'PUBLISH' && (
+                            <div className="space-y-4">
+                                <p className="text-xs text-slate-400 italic">Publish generated output into the Assessments module after validation passes.</p>
+
+                                {publishBlockingErrors.length > 0 ? (
+                                    <div className="cf-alert p-4 space-y-2">
+                                        <p className="text-amber-300 text-xs font-bold uppercase">Blocking Issues</p>
+                                        {publishBlockingErrors.map((issue, idx) => (
+                                            <p key={`${issue}-${idx}`} className="text-xs text-amber-200">- {issue}</p>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            onClick={() => setMode('MASTER')}
+                                            className="cf-btn cf-btn-secondary mt-2 py-2 px-3 text-xs font-bold"
                                         >
-                                            <Zap size={14} /> Add Assessment to Module
+                                            Go To Compose
                                         </button>
                                     </div>
+                                ) : (
+                                    <CodeBlock label="Assessment JSON Preview" code={generatedAssessment} height="h-64" />
                                 )}
+
+                                <button
+                                    type="button"
+                                    disabled={!publishReady}
+                                    onClick={() => {
+                                        try {
+                                            const parsed = JSON.parse(generatedAssessment);
+                                            const title = parsed.title || masterAssessmentTitle || assessmentTitle || 'Untitled Assessment';
+                                            const type = parsed.type || (masterQuestions.length > 0 ? 'mixed' : assessmentType || 'quiz');
+                                            const payload = {
+                                                title,
+                                                type,
+                                                html: parsed.html || '',
+                                                script: parsed.script || '',
+                                                questionCount: typeof parsed.questionCount === 'number' ? parsed.questionCount : masterQuestions.length,
+                                                generatedId: parsed.id || null,
+                                            };
+                                            if (type === 'mixed' || masterQuestions.length > 0) {
+                                                payload.source = 'master';
+                                                payload.masterAssessmentTitle = masterAssessmentTitle || title;
+                                                payload.masterQuestionsSnapshot = masterQuestions.map((q) => ({
+                                                    ...q,
+                                                    options: q.options ? [...q.options] : [],
+                                                }));
+                                            }
+                                            addAssessment(payload);
+                                            alert('Assessment published successfully! Switching to Manage...');
+                                            setGeneratedAssessment('');
+                                            setMode('MANAGE');
+                                        } catch (err) {
+                                            alert('Error publishing assessment. Please regenerate and try again.');
+                                            console.error(err);
+                                        }
+                                    }}
+                                    className="cf-btn cf-btn-success w-full py-3 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <Zap size={14} /> Publish To Assessments Module
+                                </button>
                             </div>
                         )}
 
@@ -7451,7 +7514,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                         const assessments = assessmentsModule?.assessments || [];
                                         
                                         if (assessments.length === 0) {
-                                            return <p className="text-xs text-slate-500 italic text-center py-4">No assessments yet. Create one using "Create New" tab.</p>;
+                                            return <p className="text-xs text-slate-500 italic text-center py-4">No assessments yet. Generate in "Compose" and publish in "Publish".</p>;
                                         }
 
                                         return assessments.sort((a, b) => a.order - b.order).map((assess) => {
@@ -7667,7 +7730,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
 
                                                 <div className="cf-alert p-4">
                                                     <p className="text-amber-300 text-xs">
-                                                        <strong>Note:</strong> To edit questions/prompts, you'll need to recreate the assessment in the "Create New" tab with your changes.
+                                                        <strong>Note:</strong> To edit questions/prompts, recreate the assessment from the Compose step with your changes.
                                                     </p>
                                                 </div>
 
@@ -7850,8 +7913,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                 </div>
                             );
                         })()}
-                        {/* MIGRATE MODE - Assessment Migrator */}
-                        {mode === 'MIGRATE' && (
+                        {/* IMPORT SOURCE: MIGRATE */}
+                        {mode === 'IMPORT' && importSource === 'migrate' && (
                             <div className="space-y-4">
                                 <p className="text-xs text-slate-400">Convert existing assessment code to work with the Assessment Center using AI Studio.</p>
                                 
@@ -7996,8 +8059,8 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                             </div>
                         )}
 
-                        {/* IMPORT MODE - Smart Import */}
-                        {mode === 'IMPORT' && (
+                        {/* IMPORT SOURCE: SMART IMPORT */}
+                        {mode === 'IMPORT' && importSource === 'smart' && (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in">
                                 {/* LEFT COLUMN: Input & AI Instructions */}
                                 <div className="space-y-4">
@@ -10133,4 +10196,5 @@ ${aiDescription}
 };
 
 export default Phase1;
+
 

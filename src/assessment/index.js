@@ -19,3 +19,10 @@ export {
 export {
   renderAssessment,
 } from './compiler/renderAssessment.js';
+
+export {
+  canPublish,
+  createAssessmentFlowState,
+  getAssessmentFlowSteps,
+  toAssessmentFlowStep,
+} from './flow.js';
