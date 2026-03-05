@@ -1,5 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
   ArrowUpCircle,
@@ -130,6 +131,11 @@ import { useComposerUndoRedoShortcuts } from '../hooks/useComposerUndoRedoShortc
 import { renderAssessment } from '../assessment/index.js';
 
 const { useEffect, useMemo, useRef, useState } = React;
+
+const renderGlobalOverlay = (content) => {
+  if (typeof document === 'undefined') return content;
+  return createPortal(content, document.body);
+};
 
 function escapeEditorHtml(value) {
   return String(value ?? '')
@@ -1968,6 +1974,17 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     () => buildPreviewStorageScope('phase1-assessment-preview', phase1AssessmentPreview?.id || phase1AssessmentPreview?.title || 'assessment'),
     [phase1AssessmentPreview?.id, phase1AssessmentPreview?.title],
   );
+
+  useEffect(() => {
+    if (!phase1AssessmentPreview) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setPhase1AssessmentPreview(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [phase1AssessmentPreview]);
 
   const moduleManagerComposerPreviewDoc = useMemo(() => {
     if (moduleManagerType !== 'composer') return '';
@@ -7534,11 +7551,22 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                     })()}
                                 </div>
 
-                                {phase1AssessmentPreview && (
+                                {phase1AssessmentPreview && renderGlobalOverlay(
                                     <div
-                                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[120] flex items-center justify-center p-4"
                                         onClick={() => setPhase1AssessmentPreview(null)}
+                                        role="dialog"
+                                        aria-modal="true"
+                                        aria-label="Assessment preview modal"
                                     >
+                                        <button
+                                            type="button"
+                                            onClick={() => setPhase1AssessmentPreview(null)}
+                                            className="cf-btn cf-btn-secondary fixed bottom-6 right-6 z-[130] px-4 py-2 text-xs font-bold"
+                                            title="Close preview (Esc)"
+                                        >
+                                            <X size={14} /> Close Preview
+                                        </button>
                                         <div
                                             className="cf-glass-surface max-w-6xl w-full max-h-[90vh] overflow-hidden rounded-2xl border border-slate-800/70"
                                             onClick={(e) => e.stopPropagation()}
@@ -7551,7 +7579,12 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                     </h3>
                                                     <p className="text-xs text-slate-400 mt-1">Phase 1 live preview</p>
                                                 </div>
-                                                <button onClick={() => setPhase1AssessmentPreview(null)} className="text-slate-400 hover:text-white transition-colors">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPhase1AssessmentPreview(null)}
+                                                    className="text-slate-400 hover:text-white transition-colors"
+                                                    title="Close preview"
+                                                >
                                                     <X size={24} />
                                                 </button>
                                             </div>
