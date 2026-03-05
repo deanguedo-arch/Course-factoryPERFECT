@@ -10,25 +10,24 @@ if exist "%NODE_DIR%\node.exe" (
 
 echo.
 echo ========================================
-echo INSTALLING GH-PAGES (if needed)
+echo VERIFYING DEPLOY TOOLING
 echo ========================================
-if not exist "node_modules\gh-pages\" (
-  call npm.cmd install --save-dev gh-pages
+if not exist "node_modules\" (
+  call npm.cmd install
   if errorlevel 1 goto :fail_install
 )
 
-REM gh-pages cache can leave a stale index.lock if a deploy is interrupted.
-set "GHP_LOCK=node_modules\.cache\gh-pages\https!github.com!deanguedo-arch!Course-factoryPERFECT.git\.git\index.lock"
-if exist "%GHP_LOCK%" (
-  del /f /q "%GHP_LOCK%" >nul 2>nul
+if not exist "node_modules\gh-pages\" (
+  call npm.cmd install
+  if errorlevel 1 goto :fail_install
 )
 
 echo.
 echo ========================================
-echo DEPLOYING TO GITHUB PAGES
+echo DEPLOYING COMMITTED MAIN HEAD TO GITHUB PAGES
 echo ========================================
 echo.
-call npm.cmd run deploy
+call node scripts\deploy_gh_pages.mjs
 if errorlevel 1 goto :fail_deploy
 
 echo.
@@ -58,4 +57,3 @@ echo ========================================
 echo.
 pause
 exit /b 1
-
