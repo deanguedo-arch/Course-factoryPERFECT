@@ -15,3 +15,7 @@ export {
   isPublishedToModule,
   normalizePlacements,
 } from './placement.js';
+
+export {
+  renderAssessment,
+} from './compiler/renderAssessment.js';
