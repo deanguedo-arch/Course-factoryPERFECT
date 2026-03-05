@@ -21,6 +21,12 @@ function runCommand(command, args, { capture = false } = {}) {
     env: process.env,
   });
 
+  if (result.error) {
+    const error = new Error(`Command failed to start: ${command} ${args.join(' ')}`);
+    error.result = result;
+    throw error;
+  }
+
   if (result.status !== 0) {
     const error = new Error(`Command failed: ${command} ${args.join(' ')}`);
     error.result = result;
@@ -42,8 +48,13 @@ function runNpm(args) {
     return;
   }
 
-  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  runCommand(npmCommand, args);
+  if (process.platform === 'win32') {
+    const cmd = process.env.ComSpec || 'cmd.exe';
+    runCommand(cmd, ['/d', '/s', '/c', 'npm.cmd', ...args]);
+    return;
+  }
+
+  runCommand('npm', args);
 }
 
 function removeGhPagesLocks(rootDir) {
