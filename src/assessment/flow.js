@@ -11,15 +11,30 @@ const normalizeBlockingErrors = (value) => {
   return count;
 };
 
+const normalizeExtractionStatus = (value) => {
+  const raw = String(value || '').trim().toLowerCase();
+  return ['idle', 'extracting', 'ready', 'error'].includes(raw) ? raw : 'idle';
+};
+
 export const createAssessmentFlowState = (rawState = {}) => ({
   step: normalizeStep(rawState.step),
   blockingErrors: normalizeBlockingErrors(rawState.blockingErrors),
   hasGeneratedAssessment: Boolean(rawState.hasGeneratedAssessment),
 });
 
+export const createImportExtractionState = (rawState = {}) => ({
+  extractionStatus: normalizeExtractionStatus(rawState.extractionStatus),
+  extractedText: String(rawState.extractedText || ''),
+});
+
 export const canPublish = (rawState = {}) => {
   const state = createAssessmentFlowState(rawState);
   return state.step === 'publish' && state.blockingErrors === 0 && state.hasGeneratedAssessment;
+};
+
+export const canParseExtractedImport = (rawState = {}) => {
+  const state = createImportExtractionState(rawState);
+  return state.extractionStatus === 'ready' && state.extractedText.trim().length > 0;
 };
 
 export const getAssessmentFlowSteps = () => [...STEP_SEQUENCE];

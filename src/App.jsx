@@ -6,7 +6,12 @@ import {
 } from './utils/generators.js';
 import { compileModuleToHtml } from './utils/compiler.js';
 import { checkModuleDependencies } from './utils/dependencies.js';
-import { normalizePlacements, renderAssessment } from './assessment/index.js';
+import {
+  buildMasterQuestionRecord,
+  createQuestionDraft,
+  normalizePlacements,
+  renderAssessment,
+} from './assessment/index.js';
 import { useToast, ToastContainer, CodeBlock, Toggle } from './components/Shared.jsx';
 // Shared UI (useToast/ToastContainer/CodeBlock/Toggle) moved to src/components/Shared.jsx
 import { PROJECT_DATA, MASTER_SHELL } from './data/constants.js';
@@ -182,11 +187,7 @@ export function App() {
   const [masterQuestions, setMasterQuestions] = useState([]);
   const [masterAssessmentTitle, setMasterAssessmentTitle] = useState("");
   const [currentQuestionType, setCurrentQuestionType] = useState('multiple-choice');
-  const [currentQuestion, setCurrentQuestion] = useState({
-    question: '',
-    options: ['', '', '', ''],
-    correct: 0
-  });
+  const [currentQuestion, setCurrentQuestion] = useState(() => createQuestionDraft('multiple-choice'));
   const [editingQuestion, setEditingQuestion] = useState(null);
 
   useEffect(() => {
@@ -544,18 +545,6 @@ export function App() {
   // MASTER ASSESSMENT FUNCTIONS
   const generateQuestionId = () => `q-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-  const buildMasterQuestion = (payload, fallbackType = 'multiple-choice') => {
-    const questionType = payload.type || fallbackType;
-    return {
-      id: payload.id || generateQuestionId(),
-      question: payload.question || '',
-      options: payload.options?.slice() || ['', '', '', ''],
-      correct: typeof payload.correct === 'number' ? payload.correct : 0,
-      type: questionType,
-      order: typeof payload.order === 'number' ? payload.order : 0
-    };
-  };
-
   const addQuestionToMaster = (questionData = null) => {
     const payload = questionData || { ...currentQuestion, type: currentQuestionType };
     setMasterQuestions(prev => {
@@ -565,23 +554,27 @@ export function App() {
         const preservedOrder = updated[existingIndex]?.order ?? existingIndex;
         updated[existingIndex] = {
           ...updated[existingIndex],
-          ...buildMasterQuestion(payload, currentQuestionType),
+          ...buildMasterQuestionRecord(payload, {
+            fallbackType: currentQuestionType,
+            generateId: generateQuestionId,
+            order: preservedOrder,
+          }),
           order: preservedOrder
         };
         return updated;
       }
       const newQuestion = {
-        ...buildMasterQuestion(payload, currentQuestionType),
+        ...buildMasterQuestionRecord(payload, {
+          fallbackType: currentQuestionType,
+          generateId: generateQuestionId,
+          order: prev.length,
+        }),
         order: prev.length
       };
       return [...prev, newQuestion];
     });
 
-    setCurrentQuestion({
-      question: '',
-      options: ['', '', '', ''],
-      correct: 0
-    });
+    setCurrentQuestion(createQuestionDraft(currentQuestionType));
   };
 
   const moveQuestion = (questionId, direction) => {
@@ -604,13 +597,25 @@ export function App() {
   };
 
   const updateQuestion = (questionId, updates) => {
-    setMasterQuestions(prev => prev.map(q => q.id === questionId ? { ...q, ...updates } : q));
+    setMasterQuestions(prev => prev.map((question, index) => (
+      question.id === questionId
+        ? buildMasterQuestionRecord(
+          { ...question, ...updates, id: question.id },
+          {
+            fallbackType: updates?.type || question.type || currentQuestionType,
+            generateId: generateQuestionId,
+            order: question.order ?? index,
+          },
+        )
+        : question
+    )));
   };
 
   const clearMasterAssessment = () => {
     setMasterQuestions([]);
     setMasterAssessmentTitle("");
-    setCurrentQuestion({ question: '', options: ['', '', '', ''], correct: 0 });
+    setCurrentQuestionType('multiple-choice');
+    setCurrentQuestion(createQuestionDraft('multiple-choice'));
     setEditingQuestion(null);
   };
 

@@ -45,6 +45,7 @@ import ComposerUndoRedoControls from './composer/ComposerUndoRedoControls.jsx';
 import ComposerWorkspaceControls from './composer/ComposerWorkspaceControls.jsx';
 import ComposerWorkspaceFrame from './composer/ComposerWorkspaceFrame.jsx';
 import HotspotEditor from './composer/HotspotEditor.jsx';
+import AssessmentQuestionEditor from './assessment/AssessmentQuestionEditor.jsx';
 import {
   alignSelectedCanvasActivities,
   distributeSelectedCanvasActivities,
@@ -128,9 +129,50 @@ import { useComposerHistory } from '../hooks/useComposerHistory.js';
 import { useComposerPreviewBridge } from '../hooks/useComposerPreviewBridge.js';
 import { getComposerSelectionIntent, useComposerSelection } from '../hooks/useComposerSelection.js';
 import { useComposerUndoRedoShortcuts } from '../hooks/useComposerUndoRedoShortcuts.js';
-import { canPublish, parseAssessmentImport, renderAssessment, toAssessmentFlowStep } from '../assessment/index.js';
+import {
+  canParseExtractedImport,
+  canPublish,
+  cloneQuestionRecord,
+  configurePdfWorker,
+  detectScannedPdf,
+  extractDocxText,
+  extractPdfText,
+  getQuestionDraftSummaryLines,
+  getQuestionTypeMeta,
+  parseAssessmentImport,
+  QUESTION_TYPE_OPTIONS,
+  renderAssessment,
+  toAssessmentFlowStep,
+} from '../assessment/index.js';
+import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 
 const { useEffect, useMemo, useRef, useState } = React;
+
+configurePdfWorker({ workerSrc: pdfWorkerUrl });
+
+const QUESTION_TYPE_LABELS = new Map(
+  QUESTION_TYPE_OPTIONS.map((option) => [option.value, option.label]),
+);
+
+const QUESTION_TONE_CLASSES = {
+  blue: 'bg-blue-500/20 text-blue-300',
+  indigo: 'bg-indigo-500/20 text-indigo-300',
+  violet: 'bg-violet-500/20 text-violet-300',
+  cyan: 'bg-cyan-500/20 text-cyan-300',
+  emerald: 'bg-emerald-500/20 text-emerald-300',
+  amber: 'bg-amber-500/20 text-amber-300',
+};
+
+const getQuestionTypeBadgeClasses = (type) => (
+  QUESTION_TONE_CLASSES[getQuestionTypeMeta(type).tone] || QUESTION_TONE_CLASSES.emerald
+);
+
+const ASSESSMENT_TYPE_LABELS = {
+  quiz: 'Quiz',
+  longanswer: 'Long Answer',
+  mixed: 'Mixed Assessment',
+  print: 'Print & Submit',
+};
 
 const renderGlobalOverlay = (content) => {
   if (typeof document === 'undefined') return content;
@@ -247,6 +289,29 @@ function parsePhase1ImportInput(input) {
     questions: Array.isArray(result.questions) ? result.questions : [],
     issues: Array.isArray(result.issues) ? result.issues : [],
   };
+}
+
+function getAssessmentImportFileKind(file) {
+  const fileName = String(file?.name || '').trim().toLowerCase();
+  const fileType = String(file?.type || '').trim().toLowerCase();
+
+  if (fileName.endsWith('.docx') || fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+    return 'docx';
+  }
+
+  if (fileName.endsWith('.pdf') || fileType === 'application/pdf') {
+    return 'pdf';
+  }
+
+  return '';
+}
+
+function formatImportFileSize(bytes) {
+  const size = Number(bytes);
+  if (!Number.isFinite(size) || size <= 0) return '';
+  if (size < 1024) return `${size} B`;
+  if (size < (1024 * 1024)) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function extractRichEditorText(html) {
@@ -390,9 +455,15 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [harvestType, setHarvestType] = useState('MODULE_MANAGER'); // 'ASSESSMENT', 'MATERIALS', 'AI_MODULE', 'MODULE_MANAGER'
   const [mode, setMode] = useState('IMPORT');
   const [importSource, setImportSource] = useState('smart');
+  const [smartImportMode, setSmartImportMode] = useState('paste');
   const [importInput, setImportInput] = useState("");
   const [importPreview, setImportPreview] = useState([]);
   const [importIssues, setImportIssues] = useState([]);
+  const [importFileMeta, setImportFileMeta] = useState(null);
+  const [importExtractionStatus, setImportExtractionStatus] = useState('idle');
+  const [importExtractedText, setImportExtractedText] = useState('');
+  const [importExtractionNotes, setImportExtractionNotes] = useState([]);
+  const [importExtractionError, setImportExtractionError] = useState('');
   
   // MODULE MANAGER STATE
   const [moduleManagerType, setModuleManagerType] = useState('composer'); // 'standalone' | 'composer' | 'external'
@@ -460,6 +531,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   });
   const [moduleManagerComposerCanvasGapRows, setModuleManagerComposerCanvasGapRows] = useState(1);
   const [moduleManagerComposerLockBuilderScale, setModuleManagerComposerLockBuilderScale] = useState(true);
+  const importFileInputRef = useRef(null);
   const moduleManagerRichEditorRef = useRef(null);
   const moduleManagerRichEditorSelectionRef = useRef(null);
   const moduleManagerRichEditorUpdateTimerRef = useRef(null);
@@ -620,6 +692,10 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     blockingErrors: publishBlockingErrors.length,
     hasGeneratedAssessment: Boolean(generatedAssessment),
   });
+  const importCanParseExtracted = canParseExtractedImport({
+    extractionStatus: importExtractionStatus,
+    extractedText: importExtractedText,
+  });
   const normalizedModuleManagerLayout = normalizeComposerLayout(moduleManagerComposerLayout);
   const moduleManagerComposerMaxColumns = normalizedModuleManagerLayout.maxColumns;
   const moduleManagerComposerLayoutMode = normalizedModuleManagerLayout.mode;
@@ -628,6 +704,100 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const hubConfig = useMemo(() => resolveHubConfigFromProject(projectData), [projectData]);
   const hubPresentation = useMemo(() => resolveHubPresentation(hubConfig), [hubConfig]);
   const hubPreviewTitle = hubConfig.brand.title || projectData?.['Current Course']?.name || 'Course';
+  const resetImportExtractionState = React.useCallback(() => {
+    setImportFileMeta(null);
+    setImportExtractionStatus('idle');
+    setImportExtractedText('');
+    setImportExtractionNotes([]);
+    setImportExtractionError('');
+    setImportPreview([]);
+    setImportIssues([]);
+  }, []);
+  const resetSmartImportState = React.useCallback(() => {
+    setImportInput('');
+    setImportPreview([]);
+    setImportIssues([]);
+    resetImportExtractionState();
+  }, [resetImportExtractionState]);
+  const updateImportPreviewFromContent = React.useCallback((content) => {
+    const result = parsePhase1ImportInput(content);
+    setImportPreview(result.questions);
+    setImportIssues(result.issues);
+    return result;
+  }, []);
+  const handlePasteImportChange = React.useCallback((nextInput) => {
+    setImportInput(nextInput);
+    updateImportPreviewFromContent(nextInput);
+  }, [updateImportPreviewFromContent]);
+  const commitImportPreviewToReview = React.useCallback(() => {
+    if (importPreview.length === 0) return;
+    importPreview.forEach((question) => addQuestionToMaster(question));
+    const summary = Object.entries(importPreview.reduce((counts, question) => {
+      const type = question.type || (question.options?.length > 0 ? 'multiple-choice' : 'long-answer');
+      counts[type] = (counts[type] || 0) + 1;
+      return counts;
+    }, {})).map(([type, count]) => `${count} ${QUESTION_TYPE_LABELS.get(type) || type}`).join(', ');
+    alert(`Imported ${importPreview.length} questions locally. (${summary})`);
+    resetSmartImportState();
+    setMode('ADD');
+  }, [addQuestionToMaster, importPreview, resetSmartImportState]);
+  const parseExtractedImportToPreview = React.useCallback(() => {
+    if (!importCanParseExtracted) return;
+    updateImportPreviewFromContent(importExtractedText);
+  }, [importCanParseExtracted, importExtractedText, updateImportPreviewFromContent]);
+  const handleImportFileSelection = React.useCallback(async (event) => {
+    const inputElement = event.target;
+    const file = inputElement?.files?.[0];
+
+    if (!file) return;
+
+    const kind = getAssessmentImportFileKind(file);
+    const nextMeta = {
+      kind,
+      name: file.name || 'Uploaded file',
+      size: Number(file.size) || 0,
+    };
+
+    setSmartImportMode('upload');
+    setImportInput('');
+    setImportPreview([]);
+    setImportIssues([]);
+    setImportFileMeta(nextMeta);
+    setImportExtractedText('');
+    setImportExtractionNotes([]);
+    setImportExtractionError('');
+    setImportExtractionStatus('extracting');
+
+    try {
+      if (!kind) {
+        throw new Error('Only .docx and .pdf files are supported for local import.');
+      }
+
+      if (kind === 'docx') {
+        const result = await extractDocxText(file);
+        setImportExtractedText(result.text);
+        setImportExtractionNotes(result.warnings.filter(Boolean));
+        setImportExtractionStatus('ready');
+      } else {
+        const result = await extractPdfText(file);
+        const detection = detectScannedPdf(result);
+        setImportFileMeta((current) => ({ ...(current || nextMeta), pageCount: result.pageCount }));
+        setImportExtractedText(result.text);
+        setImportExtractionNotes([
+          ...result.warnings.filter(Boolean),
+          ...(detection.isLikelyScanned ? [detection.reason] : []),
+        ]);
+        setImportExtractionStatus('ready');
+      }
+    } catch (error) {
+      setImportExtractionStatus('error');
+      setImportExtractionError(error?.message || 'Unable to extract text from that file.');
+    } finally {
+      if (inputElement) {
+        inputElement.value = '';
+      }
+    }
+  }, []);
   const updateHubConfig = (updates) => {
     setProjectData((prev) => {
       const currentHubConfig = resolveHubConfigFromProject(prev);
@@ -6954,132 +7124,19 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                         {mode === 'ADD' && (
                             <div className="space-y-4">
                                 <p className="text-xs text-slate-400 italic">Review imported questions or add new ones before composing the final assessment.</p>
-                                
-                                {/* Question Type Selector */}
-                                <div className="cf-tab-rail mb-4">
-                                    <button 
-                                        onClick={() => {
-                                            setCurrentQuestionType('multiple-choice');
-                                            setCurrentQuestion({ question: '', options: ['', '', '', ''], correct: 0 });
-                                        }} 
-                                        className={`cf-tab-btn flex-1 px-4 py-3 text-xs font-bold ${currentQuestionType === 'multiple-choice' ? 'cf-tab-btn-active' : ''}`}
-                                    >
-                                        <CheckCircle size={14} /> Multiple Choice
-                                    </button>
-                                    <button 
-                                        onClick={() => {
-                                            setCurrentQuestionType('long-answer');
-                                            setCurrentQuestion({ question: '', options: ['', '', '', ''], correct: 0 });
-                                        }} 
-                                        className={`cf-tab-btn flex-1 px-4 py-3 text-xs font-bold ${currentQuestionType === 'long-answer' ? 'cf-tab-btn-active' : ''}`}
-                                    >
-                                        <Edit size={14} /> Long Answer
-                                    </button>
-                        </div>
-
-                                {/* Multiple Choice Question Builder */}
-                                {currentQuestionType === 'multiple-choice' && (
-                                    <div className="cf-panel-muted space-y-4 p-4">
-                                        <h4 className="text-sm font-bold text-blue-400">Multiple Choice Question</h4>
-                                        
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Question</label>
-                                            <textarea 
-                                                value={currentQuestion.question}
-                                                onChange={(e) => setCurrentQuestion({...currentQuestion, question: e.target.value})}
-                                                placeholder="Enter your question..."
-                                                className="cf-input-shell h-20 text-sm"
-                                            />
-                    </div>
-                    
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Answer Options</label>
-                                            <div className="space-y-2">
-                                                {currentQuestion.options.map((opt, idx) => (
-                                                    <div key={idx} className="flex items-center gap-2">
-                                                        <input 
-                                                            type="radio"
-                                                            name="correct-answer"
-                                                            checked={currentQuestion.correct === idx}
-                                                            onChange={() => setCurrentQuestion({...currentQuestion, correct: idx})}
-                                                            className="w-4 h-4"
-                                                        />
-                                                        <input 
-                                                            type="text"
-                                                            value={opt}
-                                                            onChange={(e) => {
-                                                                const newOptions = [...currentQuestion.options];
-                                                                newOptions[idx] = e.target.value;
-                                                                setCurrentQuestion({...currentQuestion, options: newOptions});
-                                                            }}
-                                                            placeholder={`Option ${idx + 1}`}
-                                                            className="cf-input-shell flex-1 text-xs"
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <p className="text-[9px] text-slate-500 italic mt-2">Select the correct answer by clicking the radio button</p>
-                                        </div>
-
-                                        <button 
-                                            onClick={() => {
-                                                if (!currentQuestion.question.trim()) {
-                                                    alert("Please enter a question");
-                                                    return;
-                                                }
-                                                if (currentQuestion.options.some(opt => !opt.trim())) {
-                                                    alert("Please fill in all answer options");
-                                                    return;
-                                                }
-                                                addQuestionToMaster({
-                                                    type: 'multiple-choice',
-                                                    question: currentQuestion.question,
-                                                    options: currentQuestion.options,
-                                                    correct: currentQuestion.correct
-                                                });
-                                                alert("Question added to Master Assessment.");
-                                            }}
-                                            className="cf-btn cf-btn-primary w-full py-3 text-sm font-bold"
-                                        >
-                                            <Plus size={16} /> Add to Master Assessment
-                        </button>
-                    </div>
-                                )}
-
-                                {/* Long Answer Question Builder */}
-                                {currentQuestionType === 'long-answer' && (
-                                    <div className="cf-panel-muted space-y-4 p-4">
-                                        <h4 className="text-sm font-bold text-emerald-400">Long Answer Question</h4>
-                                        
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Question / Prompt</label>
-                                            <textarea 
-                                                value={currentQuestion.question}
-                                                onChange={(e) => setCurrentQuestion({...currentQuestion, question: e.target.value})}
-                                                placeholder="Enter your question or prompt..."
-                                                className="cf-input-shell h-32 text-sm"
-                                            />
-                                            <p className="text-[9px] text-slate-500 italic mt-2">Students will see a large text area to respond</p>
-                                        </div>
-
-                                        <button 
-                                            onClick={() => {
-                                                if (!currentQuestion.question.trim()) {
-                                                    alert("Please enter a question or prompt");
-                                                    return;
-                                                }
-                                                addQuestionToMaster({
-                                                    type: 'long-answer',
-                                                    question: currentQuestion.question
-                                                });
-                                                alert("Question added to Master Assessment.");
-                                            }}
-                                            className="cf-btn cf-btn-success w-full py-3 text-sm font-bold"
-                                        >
-                                            <Plus size={16} /> Add to Master Assessment
-                                        </button>
-                         </div>
-                    )}
+                                <AssessmentQuestionEditor
+                                    draft={{ ...currentQuestion, type: currentQuestionType }}
+                                    onChange={(nextDraft) => {
+                                        setCurrentQuestionType(nextDraft.type || currentQuestionType);
+                                        setCurrentQuestion(nextDraft);
+                                    }}
+                                    onSubmit={(draft) => {
+                                        addQuestionToMaster(draft);
+                                        alert('Question added to Master Assessment.');
+                                    }}
+                                    submitLabel="Add to Master Assessment"
+                                    submitClassName="cf-btn cf-btn-primary flex-1 py-3 text-sm font-bold"
+                                />
 
                                 {/* Quick Info */}
                                 <div className="cf-panel-muted p-4">
@@ -7317,22 +7374,28 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                         <div className="space-y-2">
                                             {masterQuestions.sort((a, b) => a.order - b.order).map((q, idx) => (
                                                 <div key={q.id} className="p-4 bg-slate-900 rounded-lg border border-slate-800 hover:bg-slate-800/70 transition-colors">
+                                                    {(() => {
+                                                        const questionTypeMeta = getQuestionTypeMeta(q.type);
+                                                        const summaryLines = getQuestionDraftSummaryLines(q);
+                                                        return (
                                                     <div className="flex items-start gap-3">
                                                         <div className="w-8 h-8 rounded flex items-center justify-center bg-purple-500/10 border border-purple-500/20 text-purple-400 font-bold text-sm flex-shrink-0">
                                                             {idx + 1}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2 mb-1">
-                                                                <span className={`text-[9px] font-bold uppercase px-2 py-1 rounded ${q.type === 'multiple-choice' ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                                                                    {q.type === 'multiple-choice' ? 'MC' : 'LA'}
+                                                                <span className={`text-[9px] font-bold uppercase px-2 py-1 rounded ${getQuestionTypeBadgeClasses(q.type)}`}>
+                                                                    {questionTypeMeta.shortLabel}
                                                                 </span>
                                                             </div>
                                                             <p className="text-sm text-slate-200 font-medium mb-1">{q.question}</p>
-                                                            {q.type === 'multiple-choice' && (
-                                                                <p className="text-[10px] text-slate-500">
-                                                                    Correct: {q.options[q.correct]}
-                                                                </p>
-                                                            )}
+                                                            <div className="space-y-1">
+                                                                {summaryLines.map((line) => (
+                                                                    <p key={`${q.id}-${line}`} className="text-[10px] text-slate-500">
+                                                                        {line}
+                                                                    </p>
+                                                                ))}
+                                                            </div>
                                                         </div>
                                                         <div className="flex items-center gap-1 flex-shrink-0">
                                                             <button 
@@ -7367,6 +7430,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                             </button>
                                                         </div>
                                                     </div>
+                                                        );
+                                                    })()}
                                                 </div>
                                             ))}
                                         </div>
@@ -7444,10 +7509,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                             if (type === 'mixed' || masterQuestions.length > 0) {
                                                 payload.source = 'master';
                                                 payload.masterAssessmentTitle = masterAssessmentTitle || title;
-                                                payload.masterQuestionsSnapshot = masterQuestions.map((q) => ({
-                                                    ...q,
-                                                    options: q.options ? [...q.options] : [],
-                                                }));
+                                                payload.masterQuestionsSnapshot = masterQuestions.map((question) => cloneQuestionRecord(question));
                                             }
                                             addAssessment(payload);
                                             alert('Assessment published successfully! Switching to Manage...');
@@ -7493,7 +7555,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                                     {assess.title} {assess.hidden && <span className="text-[9px] text-slate-600">(HIDDEN)</span>}
                                                                 </div>
                                                                 <div className="text-[10px] text-slate-500">
-                                                                    Type: {assess.type === 'quiz' ? 'Multiple Choice' : assess.type === 'longanswer' ? 'Long Answer' : 'Print & Submit'}
+                                                                    Type: {ASSESSMENT_TYPE_LABELS[assess.type] || assess.type || 'Assessment'}
+                                                                    {typeof assess.questionCount === 'number' ? ` | ${assess.questionCount} question${assess.questionCount === 1 ? '' : 's'}` : ''}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -7536,10 +7599,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                                         ? 'This will replace your current Master Assessment questions and title. Continue?'
                                                                         : 'Send this assessment back to Master Assessment for editing?';
                                                                     if (!confirm(warningMessage)) return;
-                                                                    const restoredQuestions = assess.masterQuestionsSnapshot.map((q) => ({
-                                                                        ...q,
-                                                                        options: q.options ? [...q.options] : []
-                                                                    }));
+                                                                    const restoredQuestions = assess.masterQuestionsSnapshot.map((question) => cloneQuestionRecord(question));
                                                                     setMasterQuestions(restoredQuestions.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
                                                                     setMasterAssessmentTitle(assess.masterAssessmentTitle || assess.title || '');
                                                                     setGeneratedAssessment('');
@@ -7658,7 +7718,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                 <div>
                                                     <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Assessment Type</label>
                                                     <div className="cf-panel-muted p-3 text-sm text-slate-300">
-                                                        {editingAssessment.type === 'quiz' ? 'Multiple Choice' : editingAssessment.type === 'longanswer' ? 'Long Answer' : 'Print & Submit'}
+                                                        {ASSESSMENT_TYPE_LABELS[editingAssessment.type] || editingAssessment.type || 'Assessment'}
                                                         <span className="text-[10px] text-slate-500 block mt-1">Type cannot be changed after creation</span>
                                                     </div>
                                                 </div>
@@ -7727,47 +7787,6 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                         {/* EDIT QUESTION MODAL */}
                         {/* Rendered at the bottom so the same modal can be shown from any mode */}
                         {editingQuestion && (() => {
-                            const isMC = editingQuestion.type === 'multiple-choice';
-                            const optionsList = editingQuestion.options?.length ? editingQuestion.options : ['', '', '', ''];
-                            const allOptionsFilled = optionsList.every(opt => opt && opt.trim());
-                            const canSave = editingQuestion.question?.trim() && (!isMC || allOptionsFilled);
-
-                            const setOptionValue = (idx, value) => {
-                                setEditingQuestion(prev => {
-                                    if (!prev) return prev;
-                                    const updatedOptions = prev.options ? [...prev.options] : ['', '', '', ''];
-                                    updatedOptions[idx] = value;
-                                    return { ...prev, options: updatedOptions };
-                                });
-                            };
-
-                            const switchQuestionType = (type) => {
-                                setEditingQuestion(prev => {
-                                    if (!prev) return prev;
-                                    if (type === 'multiple-choice') {
-                                        return {
-                                            ...prev,
-                                            type,
-                                            options: prev.options?.length ? [...prev.options] : ['', '', '', ''],
-                                            correct: typeof prev.correct === 'number' ? prev.correct : 0
-                                        };
-                                    }
-                                    return { ...prev, type };
-                                });
-                            };
-
-                            const saveChanges = () => {
-                                updateQuestion(editingQuestion.id, {
-                                    question: editingQuestion.question.trim(),
-                                    type: editingQuestion.type,
-                                    options: editingQuestion.type === 'multiple-choice'
-                                        ? (editingQuestion.options || ['', '', '', '']).map(opt => opt.trim())
-                                        : editingQuestion.options,
-                                    correct: editingQuestion.type === 'multiple-choice' ? (typeof editingQuestion.correct === 'number' ? editingQuestion.correct : 0) : 0
-                                });
-                                setEditingQuestion(null);
-                            };
-
                             return (
                                 <div
                                     className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -7790,87 +7809,16 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                             </button>
                                         </div>
 
-                                        <div className="space-y-4">
-                                            <div className="cf-tab-rail">
-                                                <button
-                                                    onClick={() => switchQuestionType('multiple-choice')}
-                                                    className={`cf-tab-btn flex-1 px-3 py-2 text-xs font-bold ${isMC ? 'cf-tab-btn-active' : ''}`}
-                                                >
-                                                    <CheckCircle size={14} /> Multiple Choice
-                                                </button>
-                                                <button
-                                                    onClick={() => switchQuestionType('long-answer')}
-                                                    className={`cf-tab-btn flex-1 px-3 py-2 text-xs font-bold ${!isMC ? 'cf-tab-btn-active' : ''}`}
-                                                >
-                                                    <Edit size={14} /> Long Answer
-                                                </button>
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
-                                                    Question
-                                                </label>
-                                                <textarea
-                                                    value={editingQuestion.question}
-                                                    onChange={(e) => setEditingQuestion({ ...editingQuestion, question: e.target.value })}
-                                                    placeholder="Enter your question or prompt..."
-                                                    className="cf-input-shell h-24 text-sm"
-                                                />
-                                            </div>
-
-                                            {isMC ? (
-                                                <div className="cf-panel-muted space-y-3 p-4">
-                                                    <div>
-                                                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
-                                                            Answer Options
-                                                        </label>
-                                                        <div className="space-y-2">
-                                                            {optionsList.map((opt, idx) => (
-                                                                <div key={idx} className="flex items-center gap-2">
-                                                                    <input
-                                                                        type="radio"
-                                                                        name="editing-correct-answer"
-                                                                        checked={editingQuestion.correct === idx}
-                                                                        onChange={() => setEditingQuestion({ ...editingQuestion, correct: idx })}
-                                                                        className="w-4 h-4"
-                                                                    />
-                                                                    <input
-                                                                        type="text"
-                                                                        value={opt}
-                                                                        onChange={(e) => setOptionValue(idx, e.target.value)}
-                                                                        placeholder={`Option ${idx + 1}`}
-                                                                        className="cf-input-shell flex-1 text-xs"
-                                                                    />
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                    <p className="text-[9px] text-slate-500 italic">
-                                                        Select the correct answer by clicking the radio button.
-                                                    </p>
-                                                </div>
-                                            ) : (
-                                                <p className="text-[9px] text-slate-500 italic">
-                                                    Students will see a large text area to respond to this prompt.
-                                                </p>
-                                            )}
-
-                                            <div className="flex gap-3 pt-4">
-                                                <button
-                                                    onClick={() => setEditingQuestion(null)}
-                                                    className="cf-btn cf-btn-secondary flex-1 py-2 font-bold"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    onClick={saveChanges}
-                                                    disabled={!canSave}
-                                                    className="cf-btn cf-btn-primary flex-1 py-2 font-bold disabled:opacity-50"
-                                                >
-                                                    <Save size={16} /> Save Changes
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <AssessmentQuestionEditor
+                                            draft={editingQuestion}
+                                            onChange={setEditingQuestion}
+                                            onCancel={() => setEditingQuestion(null)}
+                                            onSubmit={(draft) => {
+                                                updateQuestion(editingQuestion.id, draft);
+                                                setEditingQuestion(null);
+                                            }}
+                                            submitLabel="Save Changes"
+                                        />
                                     </div>
                                 </div>
                             );
@@ -8023,93 +7971,242 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
 
                         {/* IMPORT SOURCE: SMART IMPORT */}
                         {mode === 'IMPORT' && importSource === 'smart' && (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in">
-                                {/* LEFT COLUMN: Input & AI Instructions */}
+                            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-6 animate-in fade-in">
+                                {/* LEFT COLUMN: Local Intake */}
                                 <div className="space-y-4">
-                                    <div className="bg-slate-900 border border-purple-500/30 p-4 rounded-xl space-y-3">
-                                        <h3 className="text-sm font-bold text-purple-400 mb-2 flex items-center gap-2">
-                                            <Sparkles size={16}/> Option A: AI Super-Import
-                                        </h3>
-                                        <div>
-                                            <p className="text-xs font-bold text-slate-300 mb-1">For Multiple-Choice Questions:</p>
-                                            <div className="bg-black p-2 rounded border border-slate-700 relative group mb-2">
-                                                <code className="text-[10px] text-emerald-400 font-mono block break-words">
-                                                    Convert this quiz text into JSON. For multiple-choice: [{"{"} "question": "...", "options": ["A","B","C","D"], "correct": 0 {"}"}]. For long-answer: [{"{"} "question": "...", "options": [] {"}"}]. (Correct index: A=0, B=1, C=2, D=3). Output JSON ONLY.
-                                                </code>
-                                                <button 
-                                                    className="absolute top-1 right-1 text-slate-500 hover:text-white"
-                                                    onClick={() => navigator.clipboard.writeText('Convert this quiz text into JSON. For multiple-choice: [{ "question": "...", "options": ["A","B","C","D"], "correct": 0 }]. For long-answer/short-answer: [{ "question": "...", "options": [] }]. (Correct index: A=0, B=1, C=2, D=3). Output JSON ONLY.')}
-                                                >
-                                                    <Copy size={12}/>
-                                                </button>
+                                    <input
+                                        ref={importFileInputRef}
+                                        type="file"
+                                        accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                        className="hidden"
+                                        onChange={handleImportFileSelection}
+                                    />
+                                    <div className="rounded-2xl border border-sky-500/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(10,18,34,0.92))] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.28)]">
+                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                            <div className="space-y-2">
+                                                <div className="flex items-center gap-2 text-sky-300">
+                                                    <Sparkles size={16} />
+                                                    <span className="text-xs font-black uppercase tracking-[0.2em]">Local Import Intake</span>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-black text-white">Bring assessments in without leaving Phase 1</h3>
+                                                    <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-300">
+                                                        Paste text directly or upload a temporary `docx` / text-based `pdf`, inspect the extracted text, then parse it into Review.
+                                                    </p>
+                                                </div>
                                             </div>
+                                            <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-300">
+                                                In-House
+                                            </span>
                                         </div>
-                                        <div>
-                                            <p className="text-xs font-bold text-slate-300 mb-1">For Long-Answer/Short-Answer Questions:</p>
-                                            <div className="bg-black p-2 rounded border border-slate-700 relative group mb-2">
-                                                <code className="text-[10px] text-cyan-400 font-mono block break-words">
-                                                    Convert these open-ended questions into JSON: [{"{"} "question": "What is...?", "options": [] {"}"}]. Include ALL questions, even if they have no answer choices. Output JSON ONLY.
-                                                </code>
-                                                <button 
-                                                    className="absolute top-1 right-1 text-slate-500 hover:text-white"
-                                                    onClick={() => navigator.clipboard.writeText('Convert these open-ended questions into JSON: [{ "question": "What is...?", "options": [] }]. Include ALL questions, even if they have no answer choices. Output JSON ONLY.')}
-                                                >
-                                                    <Copy size={12}/>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-bold text-amber-300 mb-1">For Mixed Types (Recommended):</p>
-                                            <div className="bg-black p-2 rounded border border-amber-700 relative group">
-                                                <code className="text-[10px] text-amber-400 font-mono block break-words">
-                                                    Convert this mixed assessment into JSON. Multiple-choice: [{"{"} "question": "...", "options": ["A","B","C","D"], "correct": 0 {"}"}]. Long-answer: [{"{"} "question": "...", "options": [] {"}"}]. Include ALL questions in order. Output JSON ONLY.
-                                                </code>
-                                                <button 
-                                                    className="absolute top-1 right-1 text-slate-500 hover:text-white"
-                                                    onClick={() => navigator.clipboard.writeText('Convert this mixed assessment into JSON. For multiple-choice questions: [{ "question": "...", "options": ["A","B","C","D"], "correct": 0 }]. For long-answer/short-answer questions: [{ "question": "...", "options": [] }]. Include ALL questions in the order they appear. (Correct index: A=0, B=1, C=2, D=3). Output JSON ONLY.')}
-                                                >
-                                                    <Copy size={12}/>
-                                                </button>
-                                            </div>
+
+                                        <div className="cf-tab-rail mt-4">
+                                            <button
+                                                onClick={() => setSmartImportMode('paste')}
+                                                className={`cf-tab-btn px-4 py-2 text-xs font-bold ${smartImportMode === 'paste' ? 'cf-tab-btn-active' : ''}`}
+                                            >
+                                                <PenTool size={14} /> Paste
+                                            </button>
+                                            <button
+                                                onClick={() => setSmartImportMode('upload')}
+                                                className={`cf-tab-btn px-4 py-2 text-xs font-bold ${smartImportMode === 'upload' ? 'cf-tab-btn-active' : ''}`}
+                                            >
+                                                <FolderOpen size={14} /> Upload File
+                                            </button>
                                         </div>
                                     </div>
 
-                                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-4">
-                                        <h3 className="text-sm font-bold text-slate-300 mb-2">Paste Data (JSON or Text)</h3>
-                                        <textarea
-                                            value={importInput}
-                                            onChange={(e) => {
-                                                const nextInput = e.target.value;
-                                                setImportInput(nextInput);
-                                                const result = parsePhase1ImportInput(nextInput);
-                                                setImportPreview(result.questions);
-                                                setImportIssues(result.issues);
-                                            }}
-                                            className="w-full h-64 bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs font-mono text-white focus:border-purple-500 outline-none resize-none"
-                                            placeholder="Paste JSON here... OR Paste raw text like:&#10;Multiple-choice:&#10;1. Question?&#10;a. Yes&#10;b. No&#10;Answer: A&#10;&#10;Long-answer:&#10;2. Explain your answer."
-                                        />
-                                    </div>
+                                    {smartImportMode === 'paste' ? (
+                                        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-4">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div>
+                                                    <h3 className="text-sm font-bold text-white">Paste JSON or raw assessment text</h3>
+                                                    <p className="mt-1 text-xs text-slate-400">
+                                                        Best results come from numbered questions, answer keys, and clean option labels.
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={resetSmartImportState}
+                                                    className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 transition-colors hover:text-white"
+                                                >
+                                                    Reset
+                                                </button>
+                                            </div>
+
+                                            <textarea
+                                                value={importInput}
+                                                onChange={(e) => handlePasteImportChange(e.target.value)}
+                                                className="w-full h-72 bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs font-mono text-white focus:border-sky-400 outline-none resize-none"
+                                                placeholder="Paste JSON here... OR raw text like:&#10;1. Question?&#10;A. Yes&#10;B. No&#10;Answer: A&#10;&#10;2. Explain why..."
+                                            />
+
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px] text-slate-400">
+                                                <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-3">
+                                                    Raw text is supported directly. You do not need external AI for normal imports.
+                                                </div>
+                                                <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-3">
+                                                    JSON still works if you already have structured questions from another source.
+                                                </div>
+                                                <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-3">
+                                                    If the parser is weak, adjust the text in place and re-run the preview.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-4">
+                                            <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
+                                                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                                    <div>
+                                                        <h3 className="text-sm font-bold text-white">Upload DOCX or text PDF</h3>
+                                                        <p className="mt-1 text-xs text-slate-400">
+                                                            Files stay temporary. Scanned or image-based PDFs will be flagged instead of silently imported.
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => importFileInputRef.current?.click()}
+                                                        className="cf-btn cf-btn-secondary px-4 py-2 text-xs font-bold"
+                                                    >
+                                                        <FolderOpen size={14} /> Choose File
+                                                    </button>
+                                                </div>
+
+                                                {importFileMeta ? (
+                                                    <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px]">
+                                                        <span className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 font-semibold text-slate-200">
+                                                            {importFileMeta.name}
+                                                        </span>
+                                                        {importFileMeta.kind && (
+                                                            <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 font-bold uppercase tracking-[0.14em] text-sky-300">
+                                                                {importFileMeta.kind}
+                                                            </span>
+                                                        )}
+                                                        {importFileMeta.pageCount ? (
+                                                            <span className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 font-semibold text-slate-300">
+                                                                {importFileMeta.pageCount} page{importFileMeta.pageCount === 1 ? '' : 's'}
+                                                            </span>
+                                                        ) : null}
+                                                        {importFileMeta.size ? (
+                                                            <span className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 font-semibold text-slate-300">
+                                                                {formatImportFileSize(importFileMeta.size)}
+                                                            </span>
+                                                        ) : null}
+                                                    </div>
+                                                ) : (
+                                                    <p className="mt-3 text-[11px] text-slate-500">
+                                                        Accepted files: `.docx` and text-based `.pdf`
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            {importExtractionStatus === 'extracting' && (
+                                                <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-xs text-sky-100 flex items-center gap-2">
+                                                    <RefreshCw size={14} className="animate-spin" />
+                                                    Extracting text locally...
+                                                </div>
+                                            )}
+
+                                            {importExtractionError && (
+                                                <div className="rounded-xl border border-rose-500/40 bg-rose-900/20 px-4 py-3 text-xs text-rose-100">
+                                                    <span className="font-bold uppercase mr-2">Import Error</span>
+                                                    {importExtractionError}
+                                                </div>
+                                            )}
+
+                                            {importExtractionNotes.length > 0 && (
+                                                <div className="space-y-2">
+                                                    {importExtractionNotes.map((note, idx) => (
+                                                        <div
+                                                            key={`import-extraction-note-${idx}`}
+                                                            className="rounded-xl border border-amber-500/30 bg-amber-900/20 px-4 py-3 text-xs text-amber-100 flex items-start gap-2"
+                                                        >
+                                                            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                                                            <span>{note}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div>
+                                                        <h3 className="text-sm font-bold text-white">Extracted text checkpoint</h3>
+                                                        <p className="mt-1 text-xs text-slate-400">
+                                                            Clean up line breaks, numbering, or answer keys here before parsing.
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        onClick={resetImportExtractionState}
+                                                        className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 transition-colors hover:text-white"
+                                                    >
+                                                        Clear
+                                                    </button>
+                                                </div>
+
+                                                <textarea
+                                                    value={importExtractedText}
+                                                    onChange={(e) => setImportExtractedText(e.target.value)}
+                                                    className="mt-4 w-full h-72 bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs font-mono text-white focus:border-sky-400 outline-none resize-none"
+                                                    placeholder="Upload a file to extract text locally..."
+                                                />
+
+                                                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                    <p className="text-[11px] leading-5 text-slate-400">
+                                                        Parse the cleaned text into a structured preview, then commit it to Review on the right.
+                                                    </p>
+                                                    <button
+                                                        onClick={parseExtractedImportToPreview}
+                                                        disabled={!importCanParseExtracted}
+                                                        className="cf-btn cf-btn-primary px-4 py-2 text-xs font-bold disabled:opacity-50"
+                                                    >
+                                                        Parse To Preview
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* RIGHT COLUMN: Live Preview & Commit */}
-                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col h-full">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="text-sm font-bold text-white">Preview ({importPreview.length} Qs)</h3>
-                                        {importPreview.length > 0 && (
-                                            <div className="flex items-center gap-2">
-                                                {(() => {
-                                                    const mcCount = importPreview.filter(q => (q.type || (q.options?.length > 0 ? 'multiple-choice' : 'long-answer')) === 'multiple-choice').length;
-                                                    const laCount = importPreview.filter(q => (q.type || (q.options?.length > 0 ? 'multiple-choice' : 'long-answer')) === 'long-answer').length;
-                                                    return (
-                                                        <>
-                                                            {mcCount > 0 && <span className="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-400 font-bold">{mcCount} MC</span>}
-                                                            {laCount > 0 && <span className="text-xs px-2 py-1 rounded bg-cyan-500/20 text-cyan-400 font-bold">{laCount} LA</span>}
-                                                            <span className="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-400 font-bold">Valid</span>
-                                                        </>
-                                                    );
-                                                })()}
-                                            </div>
-                                        )}
+                                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col h-full">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-white">Structured Preview ({importPreview.length} Qs)</h3>
+                                            <p className="mt-1 text-xs text-slate-400">
+                                                Review what the parser understood before sending questions into the Review step.
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            {importPreview.length > 0 && (() => {
+                                                const counts = importPreview.reduce((map, question) => {
+                                                    const type = question.type || (question.options?.length > 0 ? 'multiple-choice' : 'long-answer');
+                                                    map[type] = (map[type] || 0) + 1;
+                                                    return map;
+                                                }, {});
+                                                return (
+                                                    <>
+                                                        {Object.entries(counts).map(([type, count]) => {
+                                                            const typeMeta = getQuestionTypeMeta(type);
+                                                            return (
+                                                                <span
+                                                                    key={`import-type-count-${type}`}
+                                                                    className={`text-xs px-2 py-1 rounded font-bold ${getQuestionTypeBadgeClasses(type)}`}
+                                                                >
+                                                                    {count} {typeMeta.shortLabel}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                        <span className={`text-xs px-2 py-1 rounded font-bold ${importIssues.length > 0 ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                                                            {importIssues.length > 0 ? 'Needs Review' : 'Ready'}
+                                                        </span>
+                                                    </>
+                                                );
+                                            })()}
+                                            <button
+                                                onClick={resetSmartImportState}
+                                                className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 transition-colors hover:text-white"
+                                            >
+                                                Reset Import
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {importIssues.length > 0 && (
@@ -8131,30 +8228,30 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
 
                                     <div className="flex-1 overflow-y-auto space-y-3 custom-scroll pr-2 mb-4 bg-slate-950/50 rounded-lg p-2 border border-slate-800 h-64">
                                         {importPreview.length === 0 ? (
-                                            <div className="h-full flex items-center justify-center text-slate-500 text-xs italic">Paste content to preview...</div>
+                                            <div className="h-full flex items-center justify-center text-slate-500 text-xs italic px-6 text-center">
+                                                {smartImportMode === 'upload'
+                                                    ? 'Upload a file, inspect the extracted text, then parse it to preview the questions.'
+                                                    : 'Paste content to preview how the parser will structure the questions.'}
+                                            </div>
                                         ) : (
                                             importPreview.map((q, idx) => {
                                                 const questionText = typeof q.question === 'string' ? q.question : (q.question || 'Untitled Question');
-                                                const optionsArray = Array.isArray(q.options) ? q.options : [];
-                                                const questionType = q.type || (optionsArray.length > 0 ? 'multiple-choice' : 'long-answer');
-                                                const isLongAnswer = questionType === 'long-answer';
+                                                const questionType = q.type || (q.options?.length > 0 ? 'multiple-choice' : 'long-answer');
+                                                const questionTypeMeta = getQuestionTypeMeta(questionType);
+                                                const summaryLines = getQuestionDraftSummaryLines(q);
                                                 const confidenceLabel = typeof q.confidence === 'number'
                                                     ? `${Math.round(q.confidence * 100)}%`
                                                     : null;
-                                                
+
                                                 return (
                                                     <div key={idx} className="p-3 bg-slate-900 border border-slate-700 rounded-lg text-xs">
-                                                        <div className="flex items-start justify-between mb-2">
+                                                        <div className="flex items-start justify-between mb-2 gap-2">
                                                             <div className="font-bold text-slate-200 flex gap-2 flex-1">
-                                                                <span className="text-purple-400">{idx + 1}.</span> 
+                                                                <span className="text-purple-400">{idx + 1}.</span>
                                                                 <span>{questionText}</span>
                                                             </div>
-                                                            <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
-                                                                isLongAnswer 
-                                                                    ? 'bg-cyan-500/20 text-cyan-400' 
-                                                                    : 'bg-purple-500/20 text-purple-400'
-                                                            }`}>
-                                                                {isLongAnswer ? 'Long Answer' : 'Multiple Choice'}
+                                                            <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${getQuestionTypeBadgeClasses(questionType)}`}>
+                                                                {questionTypeMeta.label}
                                                             </span>
                                                             {confidenceLabel && (
                                                                 <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-slate-700 text-slate-200">
@@ -8162,27 +8259,16 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        {isLongAnswer ? (
-                                                            <div className="text-slate-500 italic text-[10px] pl-4">
-                                                                Open-ended response
-                                                            </div>
-                                                        ) : (
-                                                            <div className="space-y-1 pl-4">
-                                                                {optionsArray.length > 0 ? (
-                                                                    optionsArray.map((opt, oIdx) => {
-                                                                        const optionText = typeof opt === 'string' ? opt : String(opt || '');
-                                                                        return (
-                                                                            <div key={oIdx} className={`flex items-center gap-2 ${q.correct === oIdx ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
-                                                                                <span>{String.fromCharCode(65+oIdx)}.</span> <span>{optionText}</span>
-                                                                                {q.correct === oIdx && <span className="text-[10px] text-emerald-400">(Correct)</span>}
-                                                                            </div>
-                                                                        );
-                                                                    })
-                                                                ) : (
-                                                                    <div className="text-slate-500 italic text-[10px]">No options provided</div>
-                                                                )}
-                                                            </div>
-                                                        )}
+                                                        <div className="space-y-1 pl-4">
+                                                            {summaryLines.map((line) => (
+                                                                <div key={`${idx}-${line}`} className="text-slate-500 text-[10px]">
+                                                                    {line}
+                                                                </div>
+                                                            ))}
+                                                            {summaryLines.length === 0 && (
+                                                                <div className="text-slate-500 italic text-[10px]">No additional details</div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 );
                                             })
@@ -8190,23 +8276,7 @@ Please convert the code following these guidelines and return ONLY the JSON.`;
                                     </div>
 
                                     <button
-                                        onClick={() => {
-                                            if (importPreview.length === 0) return;
-                                            const formattedQuestions = importPreview.map(q => ({
-                                                type: q.type || (q.options?.length > 0 ? 'multiple-choice' : 'long-answer'),
-                                                question: q.question,
-                                                options: q.options || [],
-                                                correct: typeof q.correct === 'number' ? q.correct : 0
-                                            }));
-                                            formattedQuestions.forEach(q => addQuestionToMaster(q));
-                                            const mcCount = formattedQuestions.filter(q => q.type === 'multiple-choice').length;
-                                            const laCount = formattedQuestions.filter(q => q.type === 'long-answer').length;
-                                            alert(`Imported ${formattedQuestions.length} questions locally. (${mcCount} multiple-choice, ${laCount} long-answer)`);
-                                            setImportInput("");
-                                            setImportPreview([]);
-                                            setImportIssues([]);
-                                            setMode('ADD');
-                                        }}
+                                        onClick={commitImportPreviewToReview}
                                         disabled={importPreview.length === 0}
                                         className="cf-btn cf-btn-primary w-full py-3 text-sm font-bold shadow-lg disabled:opacity-50"
                                     >

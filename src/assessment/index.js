@@ -1,4 +1,17 @@
 export {
+  buildMasterQuestionRecord,
+  cloneQuestionRecord,
+  convertQuestionDraftType,
+  createQuestionDraft,
+} from './drafts.js';
+
+export {
+  getQuestionDraftBlockingErrors,
+  getQuestionDraftSummaryLines,
+  getQuestionTypeMeta,
+} from './review.js';
+
+export {
   normalizeAssessment,
   normalizeQuestion,
   validateAssessment,
