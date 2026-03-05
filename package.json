@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test:assessment": "node --test tests/assessment/*.test.mjs",
     "preview": "vite preview",
     "deploy": "vite build && gh-pages -d dist",
     "exports:render": "node scripts/render_exports.mjs",
