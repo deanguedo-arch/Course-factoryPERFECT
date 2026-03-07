@@ -3,6 +3,7 @@ import {
   normalizeComposerThemeValue,
   normalizeComposerVisualQualityValue,
 } from '../composer/themeCatalog.js';
+import { normalizePlacements } from '../assessment/placement.js';
 import { normalizeHubConfig, resolveHubConfigFromProject } from './hubConfig.js';
 
 export const CURRENT_PROJECT_SCHEMA_VERSION = 4;
@@ -31,6 +32,15 @@ function withModuleDefaults(module) {
   const next = { ...(module || {}) };
   if (next.mode !== 'custom_html' && next.mode !== 'composer') {
     next.mode = 'custom_html';
+  }
+  if (Array.isArray(next.assessments)) {
+    next.assessments = next.assessments.map((assessment) => {
+      const normalizedPlacements = normalizePlacements(assessment?.placements);
+      return {
+        ...(assessment || {}),
+        placements: normalizedPlacements.length > 0 ? normalizedPlacements : [{ targetType: 'hub' }],
+      };
+    });
   }
   next.template = normalizeTemplateValue(next.template, null);
   next.theme = normalizeThemeValue(next.theme, null);

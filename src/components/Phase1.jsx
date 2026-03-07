@@ -139,9 +139,9 @@ import {
   extractPdfText,
   getQuestionDraftSummaryLines,
   getQuestionTypeMeta,
+  normalizePlacements,
   parseAssessmentImport,
   QUESTION_TYPE_OPTIONS,
-  renderAssessment,
   toAssessmentFlowStep,
 } from '../assessment/index.js';
 import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
@@ -172,6 +172,22 @@ const ASSESSMENT_TYPE_LABELS = {
   longanswer: 'Long Answer',
   mixed: 'Mixed Assessment',
   print: 'Print & Submit',
+};
+
+const ASSESSMENTS_MODULE_ID = 'item-assessments';
+
+const normalizeAssessmentPlacementsWithFallback = (placements) => {
+  const normalized = normalizePlacements(placements);
+  return normalized.length > 0 ? normalized : [{ targetType: 'hub' }];
+};
+
+const formatAssessmentPlacementLabel = (placement, moduleTitleById = new Map()) => {
+  if (placement?.targetType === 'hub') return 'Assessment Center (Hub)';
+  if (placement?.targetType === 'module') {
+    const moduleTitle = moduleTitleById.get(placement.moduleId);
+    return moduleTitle ? `Module: ${moduleTitle}` : `Module: ${placement.moduleId}`;
+  }
+  return 'Unknown target';
 };
 
 const renderGlobalOverlay = (content) => {
@@ -451,7 +467,7 @@ const MODULE_MANAGER_WORKSPACE_MODE_KEY = 'course_factory_composer_workspace_mod
 const MODULE_MANAGER_WORKSPACE_PRESET_KEY = 'course_factory_composer_workspace_preset_v1';
 
 // --- PHASE 1: HARVEST ---
-const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, assessmentType, setAssessmentType, assessmentTitle, setAssessmentTitle, quizQuestions, setQuizQuestions, printInstructions, setPrintInstructions, editingAssessment, setEditingAssessment, isVaultOpen, setIsVaultOpen, setVaultTargetField, vaultTargetField }) => {
+const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, deleteMaterial, moveMaterial, toggleMaterialHidden, addAssessment, editAssessment, deleteAssessment, moveAssessment, toggleAssessmentHidden, addQuestionToMaster, moveQuestion, deleteQuestion, updateQuestion, clearMasterAssessment, masterQuestions, setMasterQuestions, masterAssessmentTitle, setMasterAssessmentTitle, currentQuestionType, setCurrentQuestionType, currentQuestion, setCurrentQuestion, editingQuestion, setEditingQuestion, generateMixedAssessment, generatedAssessment, setGeneratedAssessment, editingAssessment, setEditingAssessment, isVaultOpen, setIsVaultOpen, setVaultTargetField, vaultTargetField }) => {
   const [harvestType, setHarvestType] = useState('MODULE_MANAGER'); // 'ASSESSMENT', 'MATERIALS', 'AI_MODULE', 'MODULE_MANAGER'
   const [mode, setMode] = useState('IMPORT');
   const [importSource, setImportSource] = useState('smart');
@@ -620,6 +636,19 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
       .flatMap((mod) => (mod.assessments || []).map((assessment) => ({ ...assessment, moduleId: mod.id, moduleTitle: mod.title })))
       .filter((assessment) => !assessment.hidden);
   }, [projectData]);
+  const assessmentPlacementModuleTargets = useMemo(() => {
+    const modules = projectData?.['Current Course']?.modules || [];
+    return modules
+      .filter((module) => module && module.id && module.id !== ASSESSMENTS_MODULE_ID)
+      .map((module) => ({
+        id: String(module.id),
+        title: String(module.title || module.id),
+      }));
+  }, [projectData]);
+  const assessmentPlacementModuleTitleById = useMemo(
+    () => new Map(assessmentPlacementModuleTargets.map((module) => [module.id, module.title])),
+    [assessmentPlacementModuleTargets],
+  );
   const courseComposerComponents = useMemo(
     () => normalizeComposerComponentLibrary(projectData?.['Current Course']?.composerComponents, { fallbackPrefix: 'course-cmp' }),
     [projectData],
@@ -662,6 +691,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [editingMaterial, setEditingMaterial] = useState(null);
   const [phase1MaterialPreview, setPhase1MaterialPreview] = useState(null);
   const [phase1AssessmentPreview, setPhase1AssessmentPreview] = useState(null);
+  const [publishToHub, setPublishToHub] = useState(true);
+  const [publishTargetModuleIds, setPublishTargetModuleIds] = useState([]);
   const [materialForm, setMaterialForm] = useState({
     number: '',
     title: '',
@@ -680,13 +711,31 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
   const [aiOutput, setAiOutput] = useState("");
   const [parsedAiModule, setParsedAiModule] = useState(null);
   const [aiParseError, setAiParseError] = useState(null);
+  const publishPlacements = useMemo(
+    () =>
+      normalizePlacements([
+        publishToHub ? { targetType: 'hub' } : null,
+        ...publishTargetModuleIds.map((moduleId) => ({ targetType: 'module', moduleId })),
+      ]),
+    [publishToHub, publishTargetModuleIds],
+  );
+  useEffect(() => {
+    const validModuleIds = new Set(assessmentPlacementModuleTargets.map((module) => module.id));
+    setPublishTargetModuleIds((current) => {
+      const next = current.filter((moduleId) => validModuleIds.has(moduleId));
+      return next.length === current.length ? current : next;
+    });
+  }, [assessmentPlacementModuleTargets]);
   const publishBlockingErrors = useMemo(() => {
     const issues = [];
     if (!generatedAssessment) {
       issues.push('Generate an assessment in Compose before publishing.');
     }
+    if (publishPlacements.length === 0) {
+      issues.push('Choose at least one publish target (hub or module).');
+    }
     return issues;
-  }, [generatedAssessment]);
+  }, [generatedAssessment, publishPlacements.length]);
   const publishReady = canPublish({
     step: toAssessmentFlowStep(mode),
     blockingErrors: publishBlockingErrors.length,
@@ -1023,41 +1072,6 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
     }
     setIsVaultOpen(false);
     setVaultTargetField(null);
-  };
-
-  const addQuizQuestion = () => {
-    setQuizQuestions([...quizQuestions, { question: '', options: ['', '', '', ''], correct: 0 }]);
-  };
-
-  const updateQuizQuestion = (index, field, value) => {
-    const newQuestions = [...quizQuestions];
-    if (field === 'question' || field === 'correct') {
-      newQuestions[index][field] = value;
-    } else if (field.startsWith('option-')) {
-      const optIndex = parseInt(field.split('-')[1]);
-      newQuestions[index].options[optIndex] = value;
-    }
-    setQuizQuestions(newQuestions);
-  };
-
-  const generateQuizAssessment = () => {
-    const renderInput = {
-      title: assessmentTitle,
-      type: assessmentType,
-      questions: assessmentType === 'print' ? [] : quizQuestions,
-      printInstructions,
-    };
-
-    const rendered = renderAssessment(renderInput, {
-      courseSettings: projectData["Course Settings"] || {},
-      idSeed: Date.now(),
-    });
-
-    setGeneratedAssessment(JSON.stringify(rendered, null, 2));
-
-    if (assessmentType === 'print') {
-      setPrintInstructions('');
-    }
   };
 
   const handleSessionSave = (overrideJson = null) => {
@@ -7147,191 +7161,6 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
              </div>
         )}
 
-                        {/* CREATE NEW MODE - OLD (KEEPING FOR BACKWARDS COMPAT) */}
-                        {mode === 'CREATE' && (
-                            <>
-                    <div className="mb-4">
-                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Assessment Title</label>
-                        <input 
-                            type="text" 
-                            value={assessmentTitle} 
-                            onChange={(e) => setAssessmentTitle(e.target.value)} 
-                            placeholder="e.g., Mental Fitness Quiz 1" 
-                            className="cf-input-shell text-sm"
-                        />
-                    </div>
-
-                    <div className="cf-tab-rail mb-4">
-                        <button 
-                            onClick={() => setAssessmentType('quiz')} 
-                            className={`cf-tab-btn flex-1 px-3 py-2 text-xs font-bold ${assessmentType === 'quiz' ? 'cf-tab-btn-active' : ''}`}
-                        >
-                            Multiple Choice
-                        </button>
-                                    <button 
-                                        onClick={() => setAssessmentType('longanswer')} 
-                                        className={`cf-tab-btn flex-1 px-3 py-2 text-xs font-bold ${assessmentType === 'longanswer' ? 'cf-tab-btn-active' : ''}`}
-                                    >
-                                        Long Answer
-                                    </button>
-                        <button 
-                            onClick={() => setAssessmentType('print')} 
-                            className={`cf-tab-btn flex-1 px-3 py-2 text-xs font-bold ${assessmentType === 'print' ? 'cf-tab-btn-active' : ''}`}
-                        >
-                            Print & Submit
-                        </button>
-                    </div>
-                            </>
-                        )}
-
-                        {mode === 'CREATE' && assessmentType === 'quiz' && (
-                        <div className="space-y-4">
-                            <div className="cf-panel-muted max-h-96 space-y-3 overflow-y-auto p-3">
-                                {quizQuestions.map((q, idx) => (
-                                    <div key={idx} className="cf-panel-muted p-3">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-bold text-purple-400">Question {idx + 1}</span>
-                                            {quizQuestions.length > 1 && (
-                                                <button 
-                                                    onClick={() => setQuizQuestions(quizQuestions.filter((_, i) => i !== idx))}
-                                                    className="text-rose-400 hover:text-rose-300"
-                                                >
-                                                    <Trash2 size={12} />
-                                                </button>
-                                            )}
-                                        </div>
-                                        <input 
-                                            type="text" 
-                                            value={q.question}
-                                            onChange={(e) => updateQuizQuestion(idx, 'question', e.target.value)}
-                                            placeholder="Enter question..."
-                                            className="cf-input-shell mb-2 text-xs"
-                                        />
-                                        <div className="space-y-1">
-                                            {q.options.map((opt, optIdx) => (
-                                                <div key={optIdx} className="flex items-center gap-2">
-                                                    <input 
-                                                        type="radio" 
-                                                        name={`correct-${idx}`}
-                                                        checked={q.correct === optIdx}
-                                                        onChange={() => updateQuizQuestion(idx, 'correct', optIdx)}
-                                                        className="w-3 h-3"
-                                                    />
-                                                    <input 
-                                                        type="text"
-                                                        value={opt}
-                                                        onChange={(e) => updateQuizQuestion(idx, `option-${optIdx}`, e.target.value)}
-                                                        placeholder={`Option ${optIdx + 1}`}
-                                                        className="cf-input-shell flex-1 text-xs"
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            <button 
-                                onClick={addQuizQuestion}
-                                className="cf-btn cf-btn-secondary w-full py-2 text-xs font-bold"
-                            >
-                                <Plus size={14} /> Add Question
-                            </button>
-                        </div>
-                    )}
-
-                        {mode === 'CREATE' && assessmentType === 'longanswer' && (
-                            <div className="space-y-4">
-                                <div className="cf-panel-muted max-h-96 space-y-3 overflow-y-auto p-3">
-                                    {quizQuestions.map((q, idx) => (
-                                        <div key={idx} className="cf-panel-muted p-3">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-xs font-bold text-purple-400">Prompt {idx + 1}</span>
-                                                {quizQuestions.length > 1 && (
-                                                    <button 
-                                                        onClick={() => setQuizQuestions(quizQuestions.filter((_, i) => i !== idx))}
-                                                        className="text-rose-400 hover:text-rose-300"
-                                                    >
-                                                        <Trash2 size={12} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <textarea 
-                                                value={q.question}
-                                                onChange={(e) => updateQuizQuestion(idx, 'question', e.target.value)}
-                                                placeholder="Enter your question or prompt..."
-                                                className="cf-input-shell h-20 text-xs"
-                                            />
-                                            <p className="text-[9px] text-slate-500 italic mt-1">Students will see a large text area to respond to this prompt.</p>
-                                        </div>
-                                    ))}
-                                </div>
-                                <button 
-                                    onClick={addQuizQuestion}
-                                    className="cf-btn cf-btn-secondary w-full py-2 text-xs font-bold"
-                                >
-                                    <Plus size={14} /> Add Prompt
-                                </button>
-                        </div>
-                    )}
-
-                        {mode === 'CREATE' && assessmentType === 'print' && (
-                            <div className="space-y-4">
-                                <label className="block text-xs font-bold text-slate-400 uppercase">Custom Instructions (Optional)</label>
-                                <textarea 
-                                    value={printInstructions}
-                                    onChange={(e) => setPrintInstructions(e.target.value)}
-                                    placeholder="Enter custom instructions for students... (Leave blank for default)"
-                                    className="cf-input-shell h-32 text-xs"
-                                />
-                                <p className="text-[9px] text-slate-500 italic">Default: Standard print & submit instructions with name/date fields</p>
-                            </div>
-                        )}
-
-                        {mode === 'CREATE' && (
-                            <>
-                    <div className="flex gap-2 mt-4">
-                        <button 
-                            onClick={generateQuizAssessment} 
-                                        disabled={!assessmentTitle || (assessmentType === 'quiz' && quizQuestions.some(q => !q.question)) || (assessmentType === 'longanswer' && quizQuestions.some(q => !q.question))}
-                            className="cf-btn cf-btn-primary flex-1 py-3 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            Generate Assessment Code
-                        </button>
-                    </div>
-
-                    {generatedAssessment && (
-                        <div className="mt-4">
-                                        <CodeBlock label="Assessment JSON Preview" code={generatedAssessment} height="h-64" />
-                                        <button 
-                                            onClick={() => {
-                                                try {
-                                                    const parsed = JSON.parse(generatedAssessment);
-                                                    addAssessment({
-                                                        title: assessmentTitle,
-                                                        type: assessmentType,
-                                                        html: parsed.html,
-                                                        script: parsed.script,
-                                                        generatedId: parsed.id || null
-                                                    });
-                                                    alert("Assessment added successfully! Switching to Manage tab...");
-                                                    setGeneratedAssessment("");
-                                                    setAssessmentTitle("");
-                                                    setQuizQuestions([{ question: '', options: ['', '', '', ''], correct: 0 }]);
-                                                    setMode('MANAGE'); // Switch to Manage tab to see it
-                                                } catch(e) {
-                                                    alert("Error adding assessment. Please try again.");
-                                                    console.error(e);
-                                                }
-                                            }}
-                                            className="cf-btn cf-btn-success mt-3 w-full py-3 text-xs font-bold"
-                                        >
-                                            <Zap size={14} /> Add Assessment to Assessments Module
-                                        </button>
-                                    </div>
-                                )}
-                            </>
-                        )}
-
                         {/* COMPOSE MODE */}
                         {mode === 'MASTER' && (
                             <div className="space-y-4">
@@ -7490,14 +7319,58 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                     <CodeBlock label="Assessment JSON Preview" code={generatedAssessment} height="h-64" />
                                 )}
 
+                                <div className="cf-panel-muted p-4 space-y-3">
+                                    <div>
+                                        <p className="text-xs font-bold uppercase text-slate-300">Publish Targets</p>
+                                        <p className="text-[10px] text-slate-500 mt-1">Choose where this assessment is available in compiled output.</p>
+                                    </div>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={publishToHub}
+                                            onChange={(event) => setPublishToHub(event.target.checked)}
+                                            className="rounded border-slate-700 bg-slate-900 text-purple-600"
+                                        />
+                                        <span className="text-xs text-slate-200">Assessment Center (Hub)</span>
+                                    </label>
+                                    <div className="space-y-2">
+                                        <p className="text-[11px] font-semibold text-slate-400">Module Targets</p>
+                                        {assessmentPlacementModuleTargets.length === 0 ? (
+                                            <p className="text-[10px] text-slate-500 italic">No module targets available yet.</p>
+                                        ) : (
+                                            <div className="max-h-36 space-y-1 overflow-y-auto pr-1">
+                                                {assessmentPlacementModuleTargets.map((module) => (
+                                                    <label key={module.id} className="flex items-center gap-2 cursor-pointer rounded px-1.5 py-1 hover:bg-slate-800/70">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={publishTargetModuleIds.includes(module.id)}
+                                                            onChange={(event) => {
+                                                                const checked = event.target.checked;
+                                                                setPublishTargetModuleIds((current) => {
+                                                                    if (checked) {
+                                                                        return current.includes(module.id) ? current : [...current, module.id];
+                                                                    }
+                                                                    return current.filter((moduleId) => moduleId !== module.id);
+                                                                });
+                                                            }}
+                                                            className="rounded border-slate-700 bg-slate-900 text-purple-600"
+                                                        />
+                                                        <span className="text-xs text-slate-300">{module.title}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
                                 <button
                                     type="button"
                                     disabled={!publishReady}
                                     onClick={() => {
                                         try {
                                             const parsed = JSON.parse(generatedAssessment);
-                                            const title = parsed.title || masterAssessmentTitle || assessmentTitle || 'Untitled Assessment';
-                                            const type = parsed.type || (masterQuestions.length > 0 ? 'mixed' : assessmentType || 'quiz');
+                                            const title = parsed.title || masterAssessmentTitle || 'Untitled Assessment';
+                                            const type = parsed.type || (masterQuestions.length > 0 ? 'mixed' : 'quiz');
                                             const payload = {
                                                 title,
                                                 type,
@@ -7505,6 +7378,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                 script: parsed.script || '',
                                                 questionCount: typeof parsed.questionCount === 'number' ? parsed.questionCount : masterQuestions.length,
                                                 generatedId: parsed.id || null,
+                                                placements: publishPlacements,
                                             };
                                             if (type === 'mixed' || masterQuestions.length > 0) {
                                                 payload.source = 'master';
@@ -7514,6 +7388,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                             addAssessment(payload);
                                             alert('Assessment published successfully! Switching to Manage...');
                                             setGeneratedAssessment('');
+                                            setPublishToHub(true);
+                                            setPublishTargetModuleIds([]);
                                             setMode('MANAGE');
                                         } catch (err) {
                                             alert('Error publishing assessment. Please regenerate and try again.');
@@ -7534,7 +7410,7 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                 
                                 <div className="space-y-2">
                                     {(() => {
-                                        const assessmentsModule = projectData["Current Course"].modules.find(m => m.id === "item-assessments");
+                                        const assessmentsModule = projectData["Current Course"].modules.find((m) => m.id === ASSESSMENTS_MODULE_ID);
                                         const assessments = assessmentsModule?.assessments || [];
                                         
                                         if (assessments.length === 0) {
@@ -7543,6 +7419,8 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
 
                                         return assessments.sort((a, b) => a.order - b.order).map((assess) => {
                                             const canSendToMaster = Array.isArray(assess.masterQuestionsSnapshot) && assess.masterQuestionsSnapshot.length > 0;
+                                            const placementLabels = normalizeAssessmentPlacementsWithFallback(assess.placements)
+                                                .map((placement) => formatAssessmentPlacementLabel(placement, assessmentPlacementModuleTitleById));
                                             return (
                                                 <div key={assess.id} className="p-3 bg-slate-900 rounded-lg border border-slate-800 hover:bg-slate-800/70 transition-colors">
                                                     <div className="flex items-center justify-between">
@@ -7557,6 +7435,9 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                                 <div className="text-[10px] text-slate-500">
                                                                     Type: {ASSESSMENT_TYPE_LABELS[assess.type] || assess.type || 'Assessment'}
                                                                     {typeof assess.questionCount === 'number' ? ` | ${assess.questionCount} question${assess.questionCount === 1 ? '' : 's'}` : ''}
+                                                                </div>
+                                                                <div className="text-[10px] text-slate-500">
+                                                                    Targets: {placementLabels.join(' | ')}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -7614,7 +7495,10 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                             </button>
                                                             <button 
                                                                 onClick={() => {
-                                                                    setEditingAssessment(assess);
+                                                                    setEditingAssessment({
+                                                                        ...assess,
+                                                                        placements: normalizeAssessmentPlacementsWithFallback(assess.placements),
+                                                                    });
                                                                 }}
                                                                 className="p-1.5 hover:bg-blue-900 hover:text-blue-400 rounded"
                                                                 title="Edit"
@@ -7724,6 +7608,62 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                 </div>
 
                                                 <div>
+                                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Publish Targets</label>
+                                                    <div className="cf-panel-muted p-3 space-y-3">
+                                                        <label className="flex items-center gap-2 cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={normalizePlacements(editingAssessment.placements).some((entry) => entry.targetType === 'hub')}
+                                                                onChange={(event) => {
+                                                                    const checked = event.target.checked;
+                                                                    setEditingAssessment((current) => {
+                                                                        if (!current) return current;
+                                                                        const base = normalizePlacements(current.placements).filter((entry) => entry.targetType !== 'hub');
+                                                                        const next = checked ? [{ targetType: 'hub' }, ...base] : base;
+                                                                        return { ...current, placements: normalizePlacements(next) };
+                                                                    });
+                                                                }}
+                                                                className="rounded border-slate-700 bg-slate-900 text-purple-600"
+                                                            />
+                                                            <span className="text-xs text-slate-300">Assessment Center (Hub)</span>
+                                                        </label>
+
+                                                        <div className="space-y-2">
+                                                            <p className="text-[11px] font-semibold text-slate-400">Module Targets</p>
+                                                            {assessmentPlacementModuleTargets.length === 0 ? (
+                                                                <p className="text-[10px] text-slate-500 italic">No module targets available yet.</p>
+                                                            ) : (
+                                                                <div className="max-h-32 space-y-1 overflow-y-auto pr-1">
+                                                                    {assessmentPlacementModuleTargets.map((module) => (
+                                                                        <label key={module.id} className="flex items-center gap-2 cursor-pointer rounded px-1.5 py-1 hover:bg-slate-800/70">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={normalizePlacements(editingAssessment.placements).some(
+                                                                                    (entry) => entry.targetType === 'module' && entry.moduleId === module.id,
+                                                                                )}
+                                                                                onChange={(event) => {
+                                                                                    const checked = event.target.checked;
+                                                                                    setEditingAssessment((current) => {
+                                                                                        if (!current) return current;
+                                                                                        const base = normalizePlacements(current.placements).filter(
+                                                                                            (entry) => entry.targetType !== 'module' || entry.moduleId !== module.id,
+                                                                                        );
+                                                                                        const next = checked ? [...base, { targetType: 'module', moduleId: module.id }] : base;
+                                                                                        return { ...current, placements: normalizePlacements(next) };
+                                                                                    });
+                                                                                }}
+                                                                                className="rounded border-slate-700 bg-slate-900 text-purple-600"
+                                                                            />
+                                                                            <span className="text-xs text-slate-300">{module.title}</span>
+                                                                        </label>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div>
                                                     <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Text Color Override</label>
                                                     <p className="text-[10px] text-slate-500 mb-1 italic">Overrides the course assessment text default for this assessment only</p>
                                                     <select
@@ -7765,10 +7705,16 @@ const Phase1 = ({ projectData, setProjectData, addMaterial, editMaterial, delete
                                                     </button>
                                                     <button 
                                                         onClick={() => {
+                                                            const normalizedPlacements = normalizePlacements(editingAssessment.placements);
+                                                            if (normalizedPlacements.length === 0) {
+                                                                alert('Select at least one publish target before saving.');
+                                                                return;
+                                                            }
                                                             editAssessment(editingAssessment.id, {
                                                                 title: editingAssessment.title,
                                                                 textColorOverride: editingAssessment.textColorOverride || null,
-                                                                boxColorOverride: editingAssessment.boxColorOverride || null
+                                                                boxColorOverride: editingAssessment.boxColorOverride || null,
+                                                                placements: normalizedPlacements,
                                                             });
                                                             setEditingAssessment(null);
                                                         }}

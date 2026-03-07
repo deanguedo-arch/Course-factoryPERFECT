@@ -176,11 +176,7 @@ export function App() {
   const [tempCourseName, setTempCourseName] = useState("");
 
   // Assessment Builder State
-  const [assessmentType, setAssessmentType] = useState('quiz');
-  const [assessmentTitle, setAssessmentTitle] = useState("");
-  const [quizQuestions, setQuizQuestions] = useState([{ question: '', options: ['', '', '', ''], correct: 0 }]);
   const [generatedAssessment, setGeneratedAssessment] = useState("");
-  const [printInstructions, setPrintInstructions] = useState("");
   const [editingAssessment, setEditingAssessment] = useState(null);
   
   // Master Assessment System
@@ -963,14 +959,6 @@ export function App() {
             generateMixedAssessment={generateMixedAssessment} 
             generatedAssessment={generatedAssessment} 
             setGeneratedAssessment={setGeneratedAssessment} 
-            assessmentType={assessmentType} 
-            setAssessmentType={setAssessmentType} 
-            assessmentTitle={assessmentTitle} 
-            setAssessmentTitle={setAssessmentTitle} 
-            quizQuestions={quizQuestions} 
-            setQuizQuestions={setQuizQuestions} 
-            printInstructions={printInstructions} 
-            setPrintInstructions={setPrintInstructions} 
             editingAssessment={editingAssessment} 
             setEditingAssessment={setEditingAssessment} 
             isVaultOpen={isVaultOpen}

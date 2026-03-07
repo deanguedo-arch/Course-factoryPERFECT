@@ -1,37 +1,51 @@
 <!DOCTYPE html>
-<html lang="en" style="background: #0f172a !important; background-color: #0f172a !important;">
+<html lang="en" style="background: #09111f !important; background-color: #09111f !important;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NEW COURSE | MASTER CONSOLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css?family=Inter:ital,wght@0,400;0,700;1,400;1,900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <style>
                 /* --- GLOBAL & SHARED STYLES --- */
-        html, body { background-color: #0f172a !important; }
-        body { font-family: 'Inter', sans-serif; color: #e2e8f0; margin: 0; height: 100vh; overflow: hidden; }
-        :root { --cf-container-bg: rgba(15, 23, 42, 0.8); }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        .glass-panel { background: rgba(15, 23, 42, 0.95); border-right: 1px solid rgba(51, 65, 85, 0.5); }
+        :root {
+            --cf-container-bg: rgba(15, 23, 42, 0.8);
+            --cf-shell-bg: #09111f;
+            --cf-shell-panel: rgba(9, 17, 31, 0.82);
+            --cf-shell-panel-strong: #132033;
+            --cf-shell-panel-hover: #172338;
+            --cf-shell-border: rgba(148, 163, 184, 0.16);
+            --cf-shell-text: #f8fafc;
+            --cf-shell-muted: #94a3b8;
+            --cf-shell-subtle: #64748b;
+            --cf-shell-accent: #a855f7;
+            --cf-shell-accent-soft: rgba(168, 85, 247, 0.18);
+            --cf-shell-accent-outline: rgba(168, 85, 247, 0.32);
+        }
+        html, body { background-color: var(--cf-shell-bg) !important; }
+        body { font-family: 'Segoe UI', 'Inter', system-ui, sans-serif; color: var(--cf-shell-text); margin: 0; height: 100vh; overflow: hidden; }
+        .mono { font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace; }
+        .cf-accent { color: var(--cf-shell-accent); }
+        .cf-shell-meta { color: var(--cf-shell-muted); }
+        .cf-shell-subtle { color: var(--cf-shell-subtle); }
+        .glass-panel { background: var(--cf-shell-panel); border-right: 1px solid var(--cf-shell-border); backdrop-filter: blur(22px); }
         .custom-scroll { overflow-y: auto; }
-        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(51, 65, 85, 0.5); }
-        input:not(.assessment-input), textarea:not(.assessment-input), select:not(.assessment-input) { background: #0f172a !important; border: 1px solid #1e293b !important; transition: all 0.2s; color: #e2e8f0; }
-        input:not(.assessment-input):focus, textarea:not(.assessment-input):focus, select:not(.assessment-input):focus { border-color: #a855f7 !important; outline: none; box-shadow: 0 0 0 1px #a855f7; }
+        .glass { background: var(--cf-shell-panel); backdrop-filter: blur(10px); border: 1px solid var(--cf-shell-border); }
+        input:not(.assessment-input), textarea:not(.assessment-input), select:not(.assessment-input) { background: #0f172a !important; border: 1px solid rgba(51, 65, 85, 0.85) !important; transition: all 0.2s; color: var(--cf-shell-text); }
+        input:not(.assessment-input):focus, textarea:not(.assessment-input):focus, select:not(.assessment-input):focus { border-color: var(--cf-shell-accent) !important; outline: none; box-shadow: 0 0 0 1px var(--cf-shell-accent); }
         
         /* Navigation */
-        .nav-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; transition: all 0.2s; border-left: 2px solid transparent; }
-        .nav-item:hover { background: rgba(30, 41, 59, 0.5); color: #e2e8f0; }
-        .nav-item.active { background: rgba(14, 165, 233, 0.1); color: #c084fc; border-left: 2px solid #c084fc; }
+        .nav-item { display: flex; align-items: center; gap: 12px; width: calc(100% - 1rem); margin: 0 0.5rem; padding: 14px 16px; color: var(--cf-shell-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; transition: all 0.2s; border-left: 2px solid transparent; border-radius: 16px; }
+        .nav-item:hover { background: var(--cf-shell-panel-hover); color: var(--cf-shell-text); }
+        .nav-item.active { background: var(--cf-shell-accent-soft); color: var(--cf-shell-text); border-left: 2px solid var(--cf-shell-accent); box-shadow: inset 0 0 0 1px var(--cf-shell-accent-outline); }
 
         /* Module Buttons & Tabs */
-        .score-btn, .mod-nav-btn, .nav-btn { background: #0f172a; border: 1px solid #1e293b; color: #64748b; transition: all 0.2s; }
-        .score-btn:hover, .mod-nav-btn:hover, .nav-btn:hover { border-color: #a855f7; color: white; }
-        .score-btn.active, .mod-nav-btn.active, .nav-btn.active { background: #a855f7; color: #000; font-weight: 900; border-color: #a855f7; }
+        .score-btn, .mod-nav-btn, .nav-btn { background: #0f172a; border: 1px solid #1e293b; color: var(--cf-shell-muted); transition: all 0.2s; }
+        .score-btn:hover, .mod-nav-btn:hover, .nav-btn:hover { border-color: var(--cf-shell-accent); color: var(--cf-shell-text); }
+        .score-btn.active, .mod-nav-btn.active, .nav-btn.active { background: var(--cf-shell-accent); color: #02131d; font-weight: 900; border-color: var(--cf-shell-accent); }
         
         /* Layout Helpers */
         .phase-header { border-left: 4px solid #334155; padding-left: 1rem; margin-bottom: 1rem; }
-        .phase-header.active { border-color: #a855f7; }
+        .phase-header.active { border-color: var(--cf-shell-accent); }
         .step-content { display: none; }
         .step-content.active { display: block; }
         .rubric-cell { cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
@@ -39,8 +53,8 @@
         .active-proficient { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
         .active-developing { background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
         .active-emerging { background: rgba(244, 63, 94, 0.2); border: 1px solid #f43f5e; color: #f43f5e; }
-        .helper-text { font-size: 8px; color: #64748b; font-style: italic; margin-top: 4px; line-height: 1.2; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
-        .info-card { background: rgba(30, 41, 59, 0.4); border-left: 3px solid #a855f7; padding: 1.5rem; border-radius: 0.75rem; }
+        .helper-text { font-size: 8px; color: var(--cf-shell-muted); font-style: italic; margin-top: 4px; line-height: 1.2; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+        .info-card { background: var(--cf-shell-panel-hover); border-left: 3px solid var(--cf-shell-accent); padding: 1.5rem; border-radius: 0.75rem; }
         .top-ten-input { font-size: 0.75rem; padding: 0.5rem !important; border-radius: 0.375rem !important; }
         
         /* Animations */
@@ -55,9 +69,9 @@
             top: 1rem; 
             left: 1rem; 
             z-index: 100; 
-            background: rgba(15, 23, 42, 0.95); 
-            border: 1px solid rgba(51, 65, 85, 0.5); 
-            color: #e2e8f0; 
+            background: var(--cf-shell-panel-strong); 
+            border: 1px solid var(--cf-shell-border); 
+            color: var(--cf-shell-text); 
             padding: 0.75rem; 
             border-radius: 0.5rem; 
             cursor: pointer; 
@@ -69,7 +83,7 @@
             width: 44px;
             height: 44px;
         }
-        .sidebar-toggle:hover { background: rgba(30, 41, 59, 0.95); border-color: #a855f7; }
+        .sidebar-toggle:hover { background: var(--cf-shell-panel-hover); border-color: var(--cf-shell-accent); box-shadow: 0 0 0 1px var(--cf-shell-accent-outline); }
 
         /* Materials & Assessments Container Colors */
         /* Material cards use per-material theme (Phase 1 card theme); do NOT override. */
@@ -93,7 +107,7 @@
         /* Sidebar - Collapsible on all sizes */
         #sidebar-nav {
             transition: width 0.3s ease, min-width 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
-            min-width: 16rem;
+            min-width: 18rem;
             overflow: hidden;
         }
         #sidebar-nav.collapsed {
@@ -109,8 +123,8 @@
             flex: 1;
             transition: all 0.3s ease;
             width: 100%;
-            background: #0f172a !important;
-            background-color: #0f172a !important;
+            background: var(--cf-shell-bg) !important;
+            background-color: var(--cf-shell-bg) !important;
         }
         
         /* Toggle button position */
@@ -118,7 +132,7 @@
             transition: left 0.3s ease;
         }
         body:not(.sidebar-collapsed) .sidebar-toggle {
-            left: calc(16rem + 1rem); /* 16rem = w-64 sidebar width + margin */
+            left: calc(18rem + 1rem);
         }
         body.sidebar-collapsed .sidebar-toggle {
             left: 1rem;
@@ -159,11 +173,11 @@
         // Force background color after Tailwind loads
         (function() {
             function setBackground() {
-                document.documentElement.style.backgroundColor = '#0f172a';
-                document.documentElement.style.background = '#0f172a';
+                document.documentElement.style.backgroundColor = '#09111f';
+                document.documentElement.style.background = '#09111f';
                 if (document.body) {
-                    document.body.style.backgroundColor = '#0f172a';
-                    document.body.style.background = '#0f172a';
+                    document.body.style.backgroundColor = '#09111f';
+                    document.body.style.background = '#09111f';
                 }
             }
             setBackground();
@@ -175,20 +189,22 @@
         })();
     </script>
 </head>
-<body class="flex" style="background: #0f172a !important; background-color: #0f172a !important;">
+<body class="flex flex-col" style="background: #09111f !important; background-color: #09111f !important;">
     <!-- Sidebar Toggle Button (Works on ALL screen sizes) -->
-    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation" title="Toggle Menu">&#9776;</button>
-    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
 
-    <div id="sidebar-nav" class="w-64 glass-panel flex flex-col h-full z-50">
-        <div class="p-8 border-b border-slate-800">
-            <h1 class="text-xl font-black italic text-white tracking-tighter uppercase leading-none"><span class="text-purple-500">New Course</span></h1>
-            <p class="text-[10px] text-slate-500 mt-2 mono uppercase tracking-widest">Master Console v2.0</p>
-        </div>
-        <nav class="flex-1 overflow-y-auto py-4 space-y-1" id="main-nav">
-            <div class="px-4 py-2 mt-4 text-[9px] font-bold text-slate-600 uppercase tracking-widest mono">System Modules</div>
-            
+    <header class="w-full border-b border-slate-800/80 backdrop-blur-sm" style="background: rgba(9, 17, 31, 0.82);">
+        <div class="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+                
+                <div class="min-w-0">
+                    <h1 class="text-lg font-bold flex items-center gap-2 text-white"><span class="cf-accent">New Course</span></h1>
+                    <p class="text-[10px] cf-shell-meta uppercase tracking-wider mt-1 font-mono">Hub Shell</p>
+                </div>
+            </div>
+            <nav class="flex-1 overflow-x-auto">
+                <div class="flex items-center gap-2 justify-end min-w-max">
+                    
             <button onclick="switchView('materials')" id="nav-materials" class="nav-item">
                 <span class="w-2 h-2 rounded-full bg-slate-600"></span>Course Materials
             </button>
@@ -223,9 +239,11 @@
             <button onclick="switchView('FINAL')" id="nav-FINAL" class="nav-item">
                 <span class="w-2 h-2 rounded-full bg-slate-600"></span>MENTAL FITNESS FINAL
             </button>
-        </nav>
-        <div class="p-6 border-t border-slate-800 text-center"><p class="text-[9px] text-slate-600 italic">"Recognition is the trigger for regulation."</p></div>
-    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
 
     <div class="flex-1 relative h-full overflow-hidden" id="content-container">
         
@@ -6064,7 +6082,11 @@
         <iframe id="view-external" class="w-full h-full hidden" src=""></iframe>
     </div>
 
-
+    <footer class="w-full border-t border-slate-800/80 backdrop-blur-sm" style="background: rgba(9, 17, 31, 0.82);">
+        <div class="max-w-[1800px] mx-auto px-6 py-4 text-[10px] cf-shell-subtle uppercase tracking-widest text-center">
+            MINIMAL HUB
+        </div>
+    </footer>
 
     <!-- MODULE SCRIPTS CONTAINER -->
     <script id="module-scripts">
@@ -6108,7 +6130,7 @@
                               if (clean.indexOf('docs.google.com/viewer') !== -1) return clean;
                               var isDrive = clean.indexOf('drive.google.com') !== -1;
                               if (isDrive) {
-                                var driveIdMatch = clean.match(//file/d/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+                                var driveIdMatch = clean.match(/\/file\/d\/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
                                 if (driveIdMatch && driveIdMatch[1]) {
                                   return 'https://drive.google.com/file/d/' + driveIdMatch[1] + '/preview';
                                 }
@@ -6117,7 +6139,7 @@
                                 }
                                 return clean;
                               }
-                              if (/^(/|./|../|blob:|data:)/i.test(clean)) {
+                              if (/^(\/|\.\/|\.\.\/|blob:|data:)/i.test(clean)) {
                                 return clean;
                               }
                               var sameOrigin = false;
@@ -6131,7 +6153,7 @@
                               var isSites = /sites\.google\.com/i.test(ref);
                               try { isSites = isSites || /sites\.google\.com/i.test(window.top.location.host || ''); } catch (e) {}
                               var forceViewer = isSites || window.CF_FORCE_PDF_VIEWER === true;
-                              if (forceViewer && /^https?:///i.test(clean)) {
+                              if (forceViewer && /^https?:\/\//i.test(clean)) {
                                 return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(clean);
                               }
                               return clean;
@@ -6639,8 +6661,8 @@
         function isGoogleSitesHost() {
             var ref = '';
             try { ref = document.referrer || ''; } catch (e) { ref = ''; }
-            if (/sites.google.com/i.test(ref)) return true;
-            try { return /sites.google.com/i.test(window.top.location.host || ''); } catch (e) { return /sites.google.com/i.test(ref); }
+            if (/sites\.google\.com/i.test(ref)) return true;
+            try { return /sites\.google\.com/i.test(window.top.location.host || ''); } catch (e) { return /sites\.google\.com/i.test(ref); }
         }
         function getPdfEmbedUrl(url) {
             if (!url) return url;
@@ -6649,7 +6671,7 @@
             if (clean.indexOf('docs.google.com/viewer') !== -1) return clean;
             var isDrive = clean.indexOf('drive.google.com') !== -1;
             if (isDrive) {
-                var driveIdMatch = clean.match(//file/d/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+                var driveIdMatch = clean.match(/\/file\/d\/([a-zA-Z0-9_-]+)/i) || clean.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
                 if (driveIdMatch && driveIdMatch[1]) {
                     return 'https://drive.google.com/file/d/' + driveIdMatch[1] + '/preview';
                 }
@@ -6658,7 +6680,7 @@
                 }
                 return clean;
             }
-            if (/^(/|./|../|blob:|data:)/i.test(clean)) {
+            if (/^(\/|\.\/|\.\.\/|blob:|data:)/i.test(clean)) {
                 return clean;
             }
             var isSameOrigin = false;
@@ -6672,7 +6694,7 @@
                 return clean;
             }
             var forceViewer = isGoogleSitesHost() || window.CF_FORCE_PDF_VIEWER === true;
-            if (forceViewer && /^https?:///i.test(clean)) {
+            if (forceViewer && /^https?:\/\//i.test(clean)) {
                 return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(clean);
             }
             return clean;

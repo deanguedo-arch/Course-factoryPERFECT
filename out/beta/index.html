@@ -1,263 +1,371 @@
 <!DOCTYPE html>
-<html lang="en" style="background: #0f172a !important; background-color: #0f172a !important;">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>New Course</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css?family=Inter:ital,wght@0,400;0,700;1,400;1,900&display=swap" rel="stylesheet">
 <style>
-  * { 
+  :root {
+    --cf-bg: #09111f;
+    --cf-bg-alt: #0f172a;
+    --cf-panel: rgba(9, 17, 31, 0.82);
+    --cf-panel-hover: #172338;
+    --cf-border: rgba(148, 163, 184, 0.16);
+    --cf-text: #f8fafc;
+    --cf-muted: #94a3b8;
+    --cf-subtle: #64748b;
+    --cf-accent: #a855f7;
+    --cf-accent-soft: rgba(168, 85, 247, 0.18);
+    --cf-accent-outline: rgba(168, 85, 247, 0.32);
+    --cf-shadow: 0 28px 90px rgba(2, 6, 23, 0.45);
+  }
+  * {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
   }
-  html, body { 
-    background: #0f172a !important;
-    background-color: #0f172a !important;
-    font-family: 'Inter', sans-serif;
+  html, body {
+    min-height: 100%;
+    background: var(--cf-bg);
   }
-  body { 
+  body {
+    font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
+    color: var(--cf-text);
     min-height: 100vh;
   }
-  :root { --cf-container-bg: rgba(15, 23, 42, 0.8); }
-  .custom-scroll::-webkit-scrollbar { width: 6px; }
-  .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
-  .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-  
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .cf-shell {
+    width: min(100%, 72rem);
+    margin: 0 auto;
+    padding: 3.5rem 1.5rem 3rem;
+  }
+  .cf-template-sidebar {
+    display: grid;
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .cf-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+  .cf-template-sidebar .cf-header {
+    position: sticky;
+    top: 1.5rem;
+    margin-bottom: 0;
+    text-align: left;
+  }
+  .cf-brand {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    justify-content: center;
+  }
+  .cf-template-sidebar .cf-brand {
+    justify-content: flex-start;
+  }
+  .cf-logo {
+    width: 3.25rem;
+    height: 3.25rem;
+    object-fit: cover;
+    border-radius: 1.1rem;
+    border: 1px solid var(--cf-border);
+    background: var(--cf-bg-alt);
+    box-shadow: var(--cf-shadow);
+  }
+  .cf-title {
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    line-height: 0.95;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+  }
+  .cf-title span {
+    color: var(--cf-accent);
+  }
+  .cf-subtitle {
+    color: var(--cf-muted);
+    font-size: 0.95rem;
+  }
+  .cf-updated {
+    color: var(--cf-subtle);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+  .cf-module-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+  .cf-module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+  .cf-module-card,
+  .cf-empty-state {
+    display: block;
+    padding: 1.25rem;
+    border-radius: 22px;
+    background: var(--cf-panel);
+    border: 1px solid var(--cf-border);
+    box-shadow: var(--cf-shadow);
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  }
+  .cf-module-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--cf-accent-outline);
+    background: var(--cf-panel-hover);
+  }
+  .cf-module-row,
+  .cf-module-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .cf-module-meta {
+    justify-content: flex-start;
+    min-width: 0;
+  }
+  .cf-module-index {
+    width: 2.75rem;
+    height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.95rem;
+    background: var(--cf-accent-soft);
+    color: var(--cf-accent);
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+  .cf-module-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--cf-text);
+  }
+  .cf-module-id {
+    margin-top: 0.25rem;
+    color: var(--cf-subtle);
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+  .cf-module-arrow {
+    color: var(--cf-muted);
+    font-size: 1.15rem;
+    transition: transform 0.2s ease, color 0.2s ease;
+  }
+  .cf-module-card:hover .cf-module-arrow {
+    color: var(--cf-accent);
+    transform: translateX(4px);
+  }
+  .cf-empty-state {
+    color: var(--cf-muted);
+    text-align: center;
+  }
+  .cf-footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--cf-border);
+    color: var(--cf-subtle);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    text-align: center;
+  }
+  @media (max-width: 900px) {
+    .cf-template-sidebar {
+      grid-template-columns: 1fr;
+    }
+    .cf-template-sidebar .cf-header {
+      position: static;
+      margin-bottom: 2rem;
+    }
+  }
 </style>
-<script>
-  // Force background color after Tailwind loads
-  (function() {
-    function setBackground() {
-      document.documentElement.style.backgroundColor = '#0f172a';
-      document.documentElement.style.background = '#0f172a';
-      if (document.body) {
-        document.body.style.backgroundColor = '#0f172a';
-        document.body.style.background = '#0f172a';
-      }
-    }
-    setBackground();
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', setBackground);
-    }
-    setTimeout(setBackground, 100);
-    setTimeout(setBackground, 500);
-  })();
-</script>
 </head>
-<body class="text-slate-400 custom-scroll" style="background: #0f172a !important; background-color: #0f172a !important;">
-<div class="max-w-4xl mx-auto px-6 py-12">
-  <header class="mb-12 text-center">
-    <h1 class="text-4xl font-black text-white uppercase tracking-tight mb-2">New Course</h1>
-    <p class="text-sm text-slate-400">Select a module to begin</p>
-    <p class="text-xs text-slate-500 mt-2 font-mono">Last updated: 2/17/2026</p>
-  </header>
-  
-  <nav class="space-y-4">
-    
-    <a href="./modules/item-1768749223001.html" class="block p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 hover:bg-slate-900 transition-all group">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
-            01
-          </div>
-          <div>
-            <h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">Course Materials</h3>
-            <p class="text-xs text-slate-500 font-mono">item-1768749223001</p>
-          </div>
+<body>
+  <div class="cf-shell ">
+    <header class="cf-header">
+      <div class="cf-brand">
+        
+        <div>
+          <h1 class="cf-title"><span>New Course</span></h1>
+          <p class="cf-subtitle">Select a module to begin</p>
         </div>
-        <svg class="w-5 h-5 text-slate-400 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
       </div>
-    </a>
-  
+      <p class="cf-updated">Updated 3/5/2026</p>
+    </header>
 
-    <a href="./modules/item-assessments.html" class="block p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 hover:bg-slate-900 transition-all group">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
-            02
+    <nav class="cf-module-stack">
+      
+        <a href="./modules/item-1768749223001.html" class="cf-module-card">
+          <div class="cf-module-row">
+            <div class="cf-module-meta">
+              <span class="cf-module-index">01</span>
+              <div>
+                <h3 class="cf-module-title">Course Materials</h3>
+                <p class="cf-module-id">item-1768749223001</p>
+              </div>
+            </div>
+            <span class="cf-module-arrow">→</span>
           </div>
-          <div>
-            <h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">Assessments</h3>
-            <p class="text-xs text-slate-500 font-mono">item-assessments</p>
-          </div>
-        </div>
-        <svg class="w-5 h-5 text-slate-400 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-      </div>
-    </a>
-  
+        </a>
+      
 
-    <a href="./modules/view-1.html" class="block p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 hover:bg-slate-900 transition-all group">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
-            03
+        <a href="./modules/item-assessments.html" class="cf-module-card">
+          <div class="cf-module-row">
+            <div class="cf-module-meta">
+              <span class="cf-module-index">02</span>
+              <div>
+                <h3 class="cf-module-title">Assessments</h3>
+                <p class="cf-module-id">item-assessments</p>
+              </div>
+            </div>
+            <span class="cf-module-arrow">→</span>
           </div>
-          <div>
-            <h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">HSS3020</h3>
-            <p class="text-xs text-slate-500 font-mono">view-1</p>
-          </div>
-        </div>
-        <svg class="w-5 h-5 text-slate-400 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-      </div>
-    </a>
-  
+        </a>
+      
 
-    <a href="./modules/view-BASE.html" class="block p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 hover:bg-slate-900 transition-all group">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
-            04
+        <a href="./modules/view-1.html" class="cf-module-card">
+          <div class="cf-module-row">
+            <div class="cf-module-meta">
+              <span class="cf-module-index">03</span>
+              <div>
+                <h3 class="cf-module-title">HSS3020</h3>
+                <p class="cf-module-id">view-1</p>
+              </div>
+            </div>
+            <span class="cf-module-arrow">→</span>
           </div>
-          <div>
-            <h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">BASE</h3>
-            <p class="text-xs text-slate-500 font-mono">view-BASE</p>
-          </div>
-        </div>
-        <svg class="w-5 h-5 text-slate-400 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-      </div>
-    </a>
-  
+        </a>
+      
 
-    <a href="./modules/view-arousal.html" class="block p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 hover:bg-slate-900 transition-all group">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
-            05
+        <a href="./modules/view-BASE.html" class="cf-module-card">
+          <div class="cf-module-row">
+            <div class="cf-module-meta">
+              <span class="cf-module-index">04</span>
+              <div>
+                <h3 class="cf-module-title">BASE</h3>
+                <p class="cf-module-id">view-BASE</p>
+              </div>
+            </div>
+            <span class="cf-module-arrow">→</span>
           </div>
-          <div>
-            <h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">AROUSAL</h3>
-            <p class="text-xs text-slate-500 font-mono">view-arousal</p>
-          </div>
-        </div>
-        <svg class="w-5 h-5 text-slate-400 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-      </div>
-    </a>
-  
+        </a>
+      
 
-    <a href="./modules/view-VALUES.html" class="block p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 hover:bg-slate-900 transition-all group">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
-            06
+        <a href="./modules/view-arousal.html" class="cf-module-card">
+          <div class="cf-module-row">
+            <div class="cf-module-meta">
+              <span class="cf-module-index">05</span>
+              <div>
+                <h3 class="cf-module-title">AROUSAL</h3>
+                <p class="cf-module-id">view-arousal</p>
+              </div>
+            </div>
+            <span class="cf-module-arrow">→</span>
           </div>
-          <div>
-            <h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">VALUES</h3>
-            <p class="text-xs text-slate-500 font-mono">view-VALUES</p>
-          </div>
-        </div>
-        <svg class="w-5 h-5 text-slate-400 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-      </div>
-    </a>
-  
+        </a>
+      
 
-    <a href="./modules/view-GOALS.html" class="block p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 hover:bg-slate-900 transition-all group">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
-            07
+        <a href="./modules/view-VALUES.html" class="cf-module-card">
+          <div class="cf-module-row">
+            <div class="cf-module-meta">
+              <span class="cf-module-index">06</span>
+              <div>
+                <h3 class="cf-module-title">VALUES</h3>
+                <p class="cf-module-id">view-VALUES</p>
+              </div>
+            </div>
+            <span class="cf-module-arrow">→</span>
           </div>
-          <div>
-            <h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">GOAL SETTING</h3>
-            <p class="text-xs text-slate-500 font-mono">view-GOALS</p>
-          </div>
-        </div>
-        <svg class="w-5 h-5 text-slate-400 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-      </div>
-    </a>
-  
+        </a>
+      
 
-    <a href="./modules/view-FOCUS.html" class="block p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 hover:bg-slate-900 transition-all group">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
-            08
+        <a href="./modules/view-GOALS.html" class="cf-module-card">
+          <div class="cf-module-row">
+            <div class="cf-module-meta">
+              <span class="cf-module-index">07</span>
+              <div>
+                <h3 class="cf-module-title">GOAL SETTING</h3>
+                <p class="cf-module-id">view-GOALS</p>
+              </div>
+            </div>
+            <span class="cf-module-arrow">→</span>
           </div>
-          <div>
-            <h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">FOCUS</h3>
-            <p class="text-xs text-slate-500 font-mono">view-FOCUS</p>
-          </div>
-        </div>
-        <svg class="w-5 h-5 text-slate-400 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-      </div>
-    </a>
-  
+        </a>
+      
 
-    <a href="./modules/view-CONFIDENCE.html" class="block p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 hover:bg-slate-900 transition-all group">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
-            09
+        <a href="./modules/view-FOCUS.html" class="cf-module-card">
+          <div class="cf-module-row">
+            <div class="cf-module-meta">
+              <span class="cf-module-index">08</span>
+              <div>
+                <h3 class="cf-module-title">FOCUS</h3>
+                <p class="cf-module-id">view-FOCUS</p>
+              </div>
+            </div>
+            <span class="cf-module-arrow">→</span>
           </div>
-          <div>
-            <h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">CONFIDENCE</h3>
-            <p class="text-xs text-slate-500 font-mono">view-CONFIDENCE</p>
-          </div>
-        </div>
-        <svg class="w-5 h-5 text-slate-400 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-      </div>
-    </a>
-  
+        </a>
+      
 
-    <a href="./modules/view-VISUAL.html" class="block p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 hover:bg-slate-900 transition-all group">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
-            10
+        <a href="./modules/view-CONFIDENCE.html" class="cf-module-card">
+          <div class="cf-module-row">
+            <div class="cf-module-meta">
+              <span class="cf-module-index">09</span>
+              <div>
+                <h3 class="cf-module-title">CONFIDENCE</h3>
+                <p class="cf-module-id">view-CONFIDENCE</p>
+              </div>
+            </div>
+            <span class="cf-module-arrow">→</span>
           </div>
-          <div>
-            <h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">VISUALIZATION</h3>
-            <p class="text-xs text-slate-500 font-mono">view-VISUAL</p>
-          </div>
-        </div>
-        <svg class="w-5 h-5 text-slate-400 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-      </div>
-    </a>
-  
+        </a>
+      
 
-    <a href="./modules/view-FINAL.html" class="block p-6 bg-slate-900/80 rounded-xl border border-slate-700 hover:border-purple-500 hover:bg-slate-900 transition-all group">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">
-            11
+        <a href="./modules/view-VISUAL.html" class="cf-module-card">
+          <div class="cf-module-row">
+            <div class="cf-module-meta">
+              <span class="cf-module-index">10</span>
+              <div>
+                <h3 class="cf-module-title">VISUALIZATION</h3>
+                <p class="cf-module-id">view-VISUAL</p>
+              </div>
+            </div>
+            <span class="cf-module-arrow">→</span>
           </div>
-          <div>
-            <h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">MENTAL FITNESS FINAL</h3>
-            <p class="text-xs text-slate-500 font-mono">view-FINAL</p>
+        </a>
+      
+
+        <a href="./modules/view-FINAL.html" class="cf-module-card">
+          <div class="cf-module-row">
+            <div class="cf-module-meta">
+              <span class="cf-module-index">11</span>
+              <div>
+                <h3 class="cf-module-title">MENTAL FITNESS FINAL</h3>
+                <p class="cf-module-id">view-FINAL</p>
+              </div>
+            </div>
+            <span class="cf-module-arrow">→</span>
           </div>
-        </div>
-        <svg class="w-5 h-5 text-slate-400 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-        </svg>
-      </div>
-    </a>
-  
-  </nav>
-  
-  <footer class="mt-16 pt-8 border-t border-slate-700 text-center">
-    <p class="text-xs text-slate-500">Built with Course Factory</p>
-  </footer>
-</div>
+        </a>
+      
+    </nav>
+  </div>
+
+  <footer class="cf-footer">Built with Course Factory</footer>
 </body>
 </html>

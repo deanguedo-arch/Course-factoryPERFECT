@@ -8,9 +8,49 @@ import {
   resolveHubPresentation,
   resolveHubPresentationFromProject,
 } from './hubConfig.js';
+import {
+  isPublishedToHub,
+  isPublishedToModule,
+  normalizePlacements,
+} from '../assessment/placement.js';
 
 const SHELL_FONT_STACK = "'Segoe UI', 'Inter', system-ui, sans-serif";
 const SHELL_MONO_STACK = "'JetBrains Mono', 'SFMono-Regular', Consolas, monospace";
+
+const normalizeIdList = (value) => (
+  Array.isArray(value)
+    ? value.map((entry) => String(entry || '').trim()).filter(Boolean)
+    : []
+);
+
+const resolveAssessmentsForFrame = (module, settings = {}) => {
+  const selectedAssessmentIds = normalizeIdList(settings.__selectedAssessmentIds);
+  const selectedAssessmentIdSet = new Set(selectedAssessmentIds);
+  const sourceAssessments = Array.isArray(settings.__assessments)
+    ? settings.__assessments
+    : (module.assessments || []);
+  const visibleAssessments = sourceAssessments
+    .filter((assessment) => assessment && typeof assessment === 'object' && !assessment.hidden)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  if (selectedAssessmentIdSet.size > 0) {
+    return visibleAssessments.filter((assessment) => selectedAssessmentIdSet.has(String(assessment.id || '').trim()));
+  }
+
+  const exportModuleId = String(settings.__exportModuleId || '').trim();
+  if (exportModuleId && exportModuleId !== 'item-assessments') {
+    return visibleAssessments.filter((assessment) => isPublishedToModule(assessment.placements, exportModuleId));
+  }
+
+  // Legacy records without placements default to hub placement.
+  return visibleAssessments.filter((assessment) => {
+    const normalizedPlacements = normalizePlacements(assessment?.placements);
+    const placements = normalizedPlacements.length > 0
+      ? normalizedPlacements
+      : [{ targetType: 'hub' }];
+    return isPublishedToHub(placements);
+  });
+};
 
 export const getAccentColor = (accentColor) => {
   const colorMap = {
@@ -1550,7 +1590,7 @@ export const buildModuleFrameHTML = (module, courseSettings) => {
       }
       ${digitalReaderScript}`;
   } else if (isAssessmentsModule) {
-    const assessments = (module.assessments || []).filter(a => !a.hidden).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const assessments = resolveAssessmentsForFrame(module, settings);
     const cardBg = containerBgClass;
 
     const assessmentListHTML = assessments.map((assess, idx) => {
@@ -2342,7 +2382,10 @@ export const buildSiteHtml = ({ modules, toolkit, excludedIds = [], initialViewK
     }
     // Special handling for Assessments module
     else if (item.id === "item-assessments" || item.title === "Assessments") {
-      const assessments = (item.assessments || []).filter(a => !a.hidden).sort((a, b) => a.order - b.order);
+      const assessments = resolveAssessmentsForFrame(item, {
+        __assessments: item.assessments || [],
+        __exportModuleId: 'item-assessments',
+      });
       
       // Generate assessment cards for selection page
       const assessmentCards = assessments.map((assess, idx) => {

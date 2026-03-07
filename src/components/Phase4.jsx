@@ -35,6 +35,10 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
   const [betaPublishMessage, setBetaPublishMessage] = useState('');
 
   const modules = projectData["Current Course"]?.modules || [];
+  const assessmentsModule = modules.find((mod) => mod.id === 'item-assessments' || mod.title === 'Assessments');
+  const assessmentBank = (assessmentsModule?.assessments || [])
+    .filter((assessment) => !assessment.hidden)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
 
   // ========================================
   // BETA STATIC PUBLISH HELPER FUNCTIONS
@@ -324,12 +328,34 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
       }
 
       const courseSettings = projectData["Course Settings"] || {};
+      const selectedAssessmentIds = exportAssessments
+        .map((id) => String(id || '').trim())
+        .filter(Boolean);
+      const selectedMaterialIds = exportMaterials
+        .map((id) => String(id || '').trim())
+        .filter(Boolean);
+      const selectedToolIds = exportTools
+        .map((id) => String(id || '').trim())
+        .filter(Boolean);
+      const selectedAssessments = selectedAssessmentIds.length > 0
+        ? assessmentBank.filter((assessment) => selectedAssessmentIds.includes(String(assessment.id || '')))
+        : assessmentBank;
+      const selectedMaterials = selectedMaterialIds.length > 0
+        ? materials.filter((material) => selectedMaterialIds.includes(String(material.id || '')))
+        : materials;
+      const selectedToolkit = selectedToolIds.length > 0
+        ? toolkit.filter((tool) => selectedToolIds.includes(String(tool.id || '')))
+        : toolkit;
+
       const finalHTML = buildModuleFrameHTML(selectedMod, {
         ...courseSettings,
         hubConfig: projectData.hubConfig,
         __courseName: courseSettings.courseName || projectData["Current Course"]?.name || "Course",
-        __toolkit: projectData["Global Toolkit"] || [],
-        __materials: projectData["Current Course"]?.materials || []
+        __toolkit: selectedToolkit,
+        __materials: selectedMaterials,
+        __assessments: selectedAssessments,
+        __selectedAssessmentIds: selectedAssessmentIds,
+        __exportModuleId: exportModuleId,
       });
 
       if (finalHTML) setExportedHTML(finalHTML);
@@ -670,7 +696,7 @@ const Phase4 = ({ projectData, setProjectData, excludedIds, toggleModule, onTogg
                         <div className="cf-panel-muted h-48 overflow-y-auto rounded-2xl p-4">
                             <label className="sticky top-0 mb-2 block bg-slate-950/60 pb-2 text-[11px] font-semibold text-blue-400">Include Assessments</label>
                             <div className="space-y-2">
-                                {modules.flatMap(m => m.assessments || []).map(a => (
+                                {assessmentBank.map(a => (
                                     <label key={a.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-900 p-1 rounded">
                                         <input 
                                             type="checkbox" 

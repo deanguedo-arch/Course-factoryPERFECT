@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" style="background: #0f172a !important; background-color: #0f172a !important;">
+<html lang="en" style="background: #09111f !important; background-color: #09111f !important;">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FOCUS | New Course</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css?family=Inter:ital,wght@0,400;0,700;1,400;1,900&display=swap" rel="stylesheet">
+  
   <style>
     * {
       margin: 0;
@@ -13,17 +13,20 @@
       box-sizing: border-box;
     }
     html, body {
-      background: #0f172a !important;
-      background-color: #0f172a !important;
-      font-family: 'Inter', sans-serif;
+      background: #09111f !important;
+      background-color: #09111f !important;
+      font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
     }
     body {
       min-height: 100vh;
+      color: #f8fafc;
     }
     .custom-scroll::-webkit-scrollbar { width: 6px; }
     .custom-scroll::-webkit-scrollbar-track { background: #1e293b; }
     .custom-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
     .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); }
+    .cf-back-link { color: #94a3b8; transition: color 0.2s ease; }
+    .cf-back-link:hover { color: #a855f7; }
     .material-card { transition: all 0.2s; }
     .material-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
     .assessment-container [class*="bg-slate-9"],
@@ -37,16 +40,15 @@
     }
     :root { --cf-container-bg: rgba(15, 23, 42, 0.8); }
     
-    
   </style>
   <script>
     (function() {
       function setBackground() {
-        document.documentElement.style.backgroundColor = '#0f172a';
-        document.documentElement.style.background = '#0f172a';
+        document.documentElement.style.backgroundColor = '#09111f';
+        document.documentElement.style.background = '#09111f';
         if (document.body) {
-          document.body.style.backgroundColor = '#0f172a';
-          document.body.style.background = '#0f172a';
+          document.body.style.backgroundColor = '#09111f';
+          document.body.style.background = '#09111f';
         }
       }
       setBackground();
@@ -58,10 +60,10 @@
     })();
   </script>
 </head>
-<body class="text-white custom-scroll" style="background: #0f172a !important; background-color: #0f172a !important;">
-  <header class="sticky top-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-700">
+<body class="custom-scroll" style="background: #09111f !important; background-color: #09111f !important;">
+  <header class="sticky top-0 z-50 bg-slate-950/88 backdrop-blur border-b border-slate-800/80">
     <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-      <a href="../index.html" class="flex items-center gap-2 text-slate-400 hover:text-purple-400 transition-colors text-sm font-bold">
+      <a href="../index.html" class="cf-back-link flex items-center gap-2 text-sm font-bold">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
         </svg>
